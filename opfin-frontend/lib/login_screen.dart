@@ -1,0 +1,299 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
+import 'package:opfin/constants.dart';
+import 'package:opfin/forgot_password_screen.dart';
+import 'package:opfin/home_screen.dart';
+import 'package:opfin/input_decoration.dart';
+import 'package:opfin/register_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool _isLoading = false;
+
+  Future<void> _login() async {
+    var phone = _phoneController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (phone.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+    phone = phone.replaceFirst('0', '256');
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('$apiUrl/login'), // Replace with your API endpoint
+        body: {'phone': phone, 'password': password},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          final userId = data['user']['id'];
+          final name = data['user']['name'];
+          final role = data['user']['role'];
+          final phone = data['user']['phone'];
+          final nationalId = data['user']['national_id'] ?? "";
+          final dateOfBirth = data['user']['date_of_birth'] ?? "";
+          final ninStatus = data['user']['nin_status'] ?? "";
+          final accessToken = data['access_token'];
+
+          //credit score from data['credit_score'] if needed
+          if (data['credit_score'] == null) {
+            data['credit_score'] = {
+              "score": 0,
+              "band": "Unknown",
+              "rating": "Unknown",
+              "probability_of_default_percent": 0.0
+            };
+          }
+          final score = data['credit_score']['score'];
+          final band = data['credit_score']['band'];
+          final rating = data['credit_score']['rating'];
+          final defaultingPercentage =
+              data['credit_score']['probability_of_default_percent'];
+          // Save user ID and token
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setInt("user_id", userId);
+          await prefs.setString("access_token", accessToken);
+          await prefs.setString("name", name);
+          await prefs.setString("role", role);
+          await prefs.setString("phone", phone);
+          await prefs.setString("national_id", nationalId);
+          await prefs.setString("date_of_birth", dateOfBirth);
+          await prefs.setString("nin_status", ninStatus);
+
+          // Credit Score
+          await prefs.setInt("credit_score", score);
+          await prefs.setString("credit_band", band);
+          await prefs.setString("credit_rating", rating);
+          await prefs.setDouble(
+              "defaulting_percentage", defaultingPercentage.toDouble());
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data['message'] ?? 'Login failed')),
+          );
+        }
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('An error occurred. Try again later.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Network error: ${e.toString()}')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 26.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 40),
+
+                // App Icon or Animation
+                SizedBox(
+                  height: 140,
+                  child: Lottie.asset(
+                    'assets/lottie/login.json',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                // Title
+                const Text(
+                  "Welcome Back",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 8),
+
+                const Text(
+                  "Login to continue accessing your loan services.",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 40),
+
+                // Phone Input
+                TextField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecorations().inputStyle(
+                    label: "Phone Number",
+                    hint: "0700460055",
+                    icon: Icons.phone_rounded,
+                  ),
+                  style: const TextStyle(color: Colors.black),
+                ),
+
+                const SizedBox(height: 25),
+
+                // Password Input
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecorations().inputStyle(
+                    label: "Password",
+                    hint: "•••••••••••",
+                    icon: Icons.lock_rounded,
+                  ),
+                  style: const TextStyle(color: Colors.black),
+                ),
+
+                const SizedBox(height: 35),
+
+                // Login Button
+                _isLoading
+                    ? const CircularProgressIndicator(color: Colors.black)
+                    : SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _login,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          child: const Text("Login"),
+                        ),
+                      ),
+                const SizedBox(height: 20),
+
+                // Forgot Password (right aligned, subtle)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordScreen()),
+                      );
+                    },
+                    child: const Text(
+                      "Forgot password?",
+                      style: TextStyle(
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.black26)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: Text(
+                        "OR",
+                        style: TextStyle(
+                          color: Colors.black45,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: Colors.black26)),
+                  ],
+                ),
+
+                const SizedBox(height: 30),
+
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                    );
+                  },
+                  child: RichText(
+                    textAlign: TextAlign.center,
+                    text: const TextSpan(
+                      text: "Don’t have an account? ",
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: "Register",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w800,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
