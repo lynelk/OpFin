@@ -151,13 +151,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Proceed with local logout even if the server call fails.
     }
     await UserSession.clear();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('name');
-    await prefs.remove('role');
-    await prefs.remove('credit_score');
-    await prefs.remove('credit_band');
-    await prefs.remove('credit_rating');
-    await prefs.remove('defaulting_percentage');
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,

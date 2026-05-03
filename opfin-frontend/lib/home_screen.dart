@@ -368,7 +368,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ProductsScreen(),
+                        builder: (context) => const ProductsScreen(),
                       ),
                     );
                   },

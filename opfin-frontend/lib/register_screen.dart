@@ -41,7 +41,7 @@ class RegisterScreenState extends State<RegisterScreen> {
     if (password.length < 8 || passwordConfirmation.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('A password should be atleast 8 characters')),
+            content: Text('A password should be at least 8 characters')),
       );
       return;
     }
@@ -54,7 +54,15 @@ class RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    phone = phone.replaceFirst('0', '256');
+    if (!RegExp(r'^0\d{9}$').hasMatch(phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Enter a valid 10-digit phone number starting with 0')),
+      );
+      return;
+    }
+    phone = '256${phone.substring(1)}';
 
     setState(() {
       _isLoading = true;
