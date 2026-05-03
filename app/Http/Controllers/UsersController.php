@@ -32,11 +32,10 @@ class UsersController extends Controller
         User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => bcrypt($request->password),
+            'password' => bcrypt($request->filled('password') ? $request->password : 'Password@123'),
             'role' => $request->role,
             'institution_id' => $request->institution_id,
             'phone' => $request->phone,
-            'password' => 'Password@123'
         ]);
         return redirect()->route('users.index')->with('success', 'User created successfully.');
     }

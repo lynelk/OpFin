@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('loan_products', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('type')->enum('Cash', 'Asset');
+            $table->enum('type', ['Cash', 'Asset']);
             $table->string('status')->default('Active');
             $table->softDeletes();
             $table->timestamps();

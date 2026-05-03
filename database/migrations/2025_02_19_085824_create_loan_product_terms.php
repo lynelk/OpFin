@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('loan_product_terms', function (Blueprint $table) {
             $table->id();
             $table->foreignId('loan_product_id')->constrained();
-            $table->decimal('interest_rate')->default(12);
+            $table->decimal('interest_rate', 8, 2)->default(12);
             $table->enum('interest_type', ['Flat', 'Amortization'])->default('Flat');
             $table->enum('interest_cycle', ['Weekly', 'Monthly'])->default('Monthly');
             $table->enum('repayment_frequency', ['Weekly', 'Monthly'])->default('Monthly');
