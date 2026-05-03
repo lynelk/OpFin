@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:opfin/loan_application_result_screen.dart';
 import 'package:opfin/loan_confirmation_screen.dart';
 import 'package:opfin/models/loan_application.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:opfin/services/user_session.dart';
 
 class LoanApplicationScreen extends StatefulWidget {
   final int loanProductId;
@@ -46,7 +46,6 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
   @override
   void initState() {
     super.initState();
-    print(widget.institutionId);
   }
 
   @override
@@ -283,12 +282,14 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
       if (!mounted) return;
 
+      // Strip Dart's "Exception: " prefix so only the API message is shown.
+      final msg = e.toString().replaceFirst('Exception: ', '');
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => LoanApplicationResultScreen(
             success: false,
-            message: e.toString(),
+            message: msg,
           ),
         ),
       );
@@ -297,8 +298,7 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   // Submit loan application
   Future<void> submitLoanApplication(LoanApplication application) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('access_token');
+    final token = await UserSession.getAccessToken();
     final response = await http.post(
       Uri.parse("$apiUrl/loan-applications"),
       headers: {
@@ -318,7 +318,6 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
   }
 
   Future<int?> getUserId() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getInt("user_id"); // Returns null if not found
+    return UserSession.getUserId();
   }
 }

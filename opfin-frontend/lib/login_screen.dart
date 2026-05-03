@@ -7,7 +7,7 @@ import 'package:opfin/forgot_password_screen.dart';
 import 'package:opfin/home_screen.dart';
 import 'package:opfin/input_decoration.dart';
 import 'package:opfin/register_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:opfin/services/user_session.dart';
 import 'package:http/http.dart' as http;
 
 class LoginScreen extends StatefulWidget {
@@ -33,7 +33,14 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
-    phone = phone.replaceFirst('0', '256');
+    if (!RegExp(r'^0\d{9}$').hasMatch(phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Enter a valid 10-digit phone number starting with 0')),
+      );
+      return;
+    }
+    phone = '256${phone.substring(1)}';
 
     setState(() {
       _isLoading = true;
@@ -41,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('$apiUrl/login'), // Replace with your API endpoint
+        Uri.parse('$apiUrl/login'),
         body: {'phone': phone, 'password': password},
       );
 
@@ -51,13 +58,12 @@ class _LoginScreenState extends State<LoginScreen> {
           final userId = data['user']['id'];
           final name = data['user']['name'];
           final role = data['user']['role'];
-          final phone = data['user']['phone'];
+          final userPhone = data['user']['phone'];
           final nationalId = data['user']['national_id'] ?? "";
           final dateOfBirth = data['user']['date_of_birth'] ?? "";
           final ninStatus = data['user']['nin_status'] ?? "";
           final accessToken = data['access_token'];
 
-          //credit score from data['credit_score'] if needed
           if (data['credit_score'] == null) {
             data['credit_score'] = {
               "score": 0,
@@ -71,23 +77,21 @@ class _LoginScreenState extends State<LoginScreen> {
           final rating = data['credit_score']['rating'];
           final defaultingPercentage =
               data['credit_score']['probability_of_default_percent'];
-          // Save user ID and token
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setInt("user_id", userId);
-          await prefs.setString("access_token", accessToken);
-          await prefs.setString("name", name);
-          await prefs.setString("role", role);
-          await prefs.setString("phone", phone);
-          await prefs.setString("national_id", nationalId);
-          await prefs.setString("date_of_birth", dateOfBirth);
-          await prefs.setString("nin_status", ninStatus);
 
-          // Credit Score
-          await prefs.setInt("credit_score", score);
-          await prefs.setString("credit_band", band);
-          await prefs.setString("credit_rating", rating);
-          await prefs.setDouble(
-              "defaulting_percentage", defaultingPercentage.toDouble());
+          await UserSession.saveSession(
+            userId: userId,
+            accessToken: accessToken,
+            name: name,
+            role: role,
+            phone: userPhone,
+            nationalId: nationalId,
+            dateOfBirth: dateOfBirth,
+            ninStatus: ninStatus,
+            creditScore: score,
+            creditBand: band,
+            creditRating: rating,
+            defaultingPercentage: (defaultingPercentage as num).toDouble(),
+          );
           if (!mounted) return;
           Navigator.pushReplacement(
             context,
@@ -106,8 +110,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Network error: ${e.toString()}')),
+        const SnackBar(content: Text('A network error occurred. Please try again.')),
       );
     } finally {
       setState(() {

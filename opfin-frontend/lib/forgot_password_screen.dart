@@ -34,9 +34,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       );
       return;
     }
-    if (phone.length != 10) {
+    if (!RegExp(r'^0\d{9}$').hasMatch(phone)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Phone number should be 10 digits')),
+        const SnackBar(
+            content: Text('Enter a valid 10-digit phone number starting with 0')),
       );
       return;
     }
@@ -53,21 +54,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       );
       return;
     }
-    if (password != passwordConfirmation) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Provided passwords do not match')),
-      );
-      return;
-    }
-    if (phone.startsWith('0')) {
-      phone = '256${phone.substring(1)}';
-    }
+    phone = '256${phone.substring(1)}';
     setState(() {
       _isLoading = true;
     });
     try {
       final response = await http.post(
-        Uri.parse('$apiUrl/generate-otp'), // Replace with your API endpoint
+        Uri.parse('$apiUrl/generate-otp'),
         body: {'phone': phone},
       );
 
@@ -84,7 +77,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 password: _passwordController.text.trim(),
                 passwordConfirmation:
                     _passwordConfirmationController.text.trim(),
-                otp: data['otp'],
               ),
             ),
           );
@@ -103,7 +95,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Network error: ${e.toString()}')),
+        const SnackBar(content: Text('A network error occurred. Please try again.')),
       );
     } finally {
       setState(() {

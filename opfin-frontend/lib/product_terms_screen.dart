@@ -5,7 +5,7 @@ import 'package:opfin/constants.dart';
 import 'package:opfin/loan_application_screen.dart';
 import 'package:opfin/models/product_term.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:opfin/services/user_session.dart';
 
 class ProductTermsPage extends StatefulWidget {
   final int productId;
@@ -222,8 +222,7 @@ class ProductTermsPageState extends State<ProductTermsPage> {
   }
 
   Future<List<ProductTerm>> fetchProductTerms(int productId) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('access_token');
+    final token = await UserSession.getAccessToken();
 
     final response = await http.get(
       Uri.parse("$apiUrl/product-terms/$productId"),

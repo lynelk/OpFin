@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:opfin/constants.dart';
+import 'package:opfin/services/user_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -26,15 +27,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> getPrefs() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final data = await UserSession.getProfileData();
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      userId = prefs.getInt('user_id');
+      userId = data['user_id'] as int?;
       name = prefs.getString('name');
       role = prefs.getString('role');
-      phone = prefs.getString('phone');
-      dateOfBirth = prefs.getString('date_of_birth');
-      ninStatus = prefs.getString('nin_status');
-      nationalId = prefs.getString('national_id');
+      phone = data['phone'] as String?;
+      dateOfBirth = data['date_of_birth'] as String?;
+      ninStatus = data['nin_status'] as String?;
+      nationalId = data['national_id'] as String?;
 
       // Credit Score
       score = prefs.getInt('credit_score');
@@ -45,13 +47,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> validateNin() async {
-    final prefs = await SharedPreferences.getInstance();
     final nin = ninController.text.trim();
 
     if (userId == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User ID not found in preferences.")),
+        const SnackBar(content: Text("User ID not found. Please log in again.")),
       );
       return;
     }
@@ -65,13 +66,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (nin.length != 14) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("This field expects 14 characters.")),
+        const SnackBar(content: Text("NIN must be exactly 14 characters.")),
+      );
+      return;
+    }
+    if (!RegExp(r'^[A-Za-z0-9]+$').hasMatch(nin)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("NIN must contain only letters and numbers.")),
       );
       return;
     }
 
-    // Show loading indicator
-    if (!mounted) return; // since this is State.context
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -84,10 +92,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'nin': nin,
         'user_id': userId,
       };
-      String url = "$apiUrl/validate-nin";
-      String? token = prefs.getString('access_token');
+      final token = await UserSession.getAccessToken();
       final response = await http.post(
-        Uri.parse(url),
+        Uri.parse("$apiUrl/validate-nin"),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -103,10 +110,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (response.statusCode == 200 && data['success'] == true) {
         final validation = data['data'];
 
-        await prefs.setString('national_id', validation['nin'] ?? '');
-        await prefs.setString(
-            'date_of_birth', validation['date_of_birth'] ?? '');
-        await prefs.setString('nin_status', validation['nin_status'] ?? '');
+        await UserSession.saveNinValidation(
+          nationalId: validation['nin'] ?? '',
+          dateOfBirth: validation['date_of_birth'] ?? '',
+          ninStatus: validation['nin_status'] ?? '',
+        );
 
         getPrefs(); // Refresh UI
         if (!mounted) return;
@@ -122,9 +130,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        const SnackBar(content: Text("A network error occurred. Please try again.")),
       );
     }
+  }
+
+  Future<void> _logout() async {
+    try {
+      final token = await UserSession.getAccessToken();
+      if (token != null && token.isNotEmpty) {
+        await http.post(
+          Uri.parse('$apiUrl/logout'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        );
+      }
+    } catch (_) {
+      // Proceed with local logout even if the server call fails.
+    }
+    await UserSession.clear();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('name');
+    await prefs.remove('role');
+    await prefs.remove('credit_score');
+    await prefs.remove('credit_band');
+    await prefs.remove('credit_rating');
+    await prefs.remove('defaulting_percentage');
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -165,9 +204,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // const Icon(Icons.account_circle, size: 90, color: Colors.black),
-              // const SizedBox(height: 28),
-
               /// PROFILE DETAILS
               ...profileDetails.entries.map((entry) => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,9 +244,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               /// NIN VALIDATION
               if (ninStatus != 'VALID') ...[
                 const SizedBox(height: 10),
-                Align(
+                const Align(
                   alignment: Alignment.centerLeft,
-                  child: const Text(
+                  child: Text(
                     'Enter NIN',
                     style: TextStyle(
                       color: Colors.black,
@@ -262,17 +298,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () async {
-                    SharedPreferences prefs =
-                        await SharedPreferences.getInstance();
-                    await prefs.clear();
-                    if (!context.mounted) return;
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (route) => false,
-                    );
-                  },
+                  onPressed: _logout,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
                     foregroundColor: Colors.white,
@@ -288,7 +314,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
             ],
           ),
         ),

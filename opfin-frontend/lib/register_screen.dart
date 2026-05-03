@@ -80,7 +80,6 @@ class RegisterScreenState extends State<RegisterScreen> {
                 password: _passwordController.text.trim(),
                 passwordConfirmation:
                     _passwordConfirmationController.text.trim(),
-                otp: data['otp'],
               ),
             ),
           );
@@ -99,7 +98,7 @@ class RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Network error: ${e.toString()}')),
+        const SnackBar(content: Text('A network error occurred. Please try again.')),
       );
     } finally {
       setState(() {

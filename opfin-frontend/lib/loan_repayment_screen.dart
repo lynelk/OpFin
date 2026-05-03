@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:opfin/constants.dart';
 import 'package:opfin/home_screen.dart';
+import 'package:opfin/services/user_session.dart';
 import 'dart:convert';
-
-import 'package:shared_preferences/shared_preferences.dart';
 
 class LoanRepaymentScreen extends StatefulWidget {
   final int loanId;
@@ -31,8 +30,7 @@ class LoanRepaymentScreenState extends State<LoanRepaymentScreen> {
       _success = false;
     });
     final amount = int.parse(_amountController.text);
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('access_token');
+    final token = await UserSession.getAccessToken();
     final response = await http.post(
       Uri.parse('$apiUrl/loans/${widget.loanId}/repay'),
       headers: {

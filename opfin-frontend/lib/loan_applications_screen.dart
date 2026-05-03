@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:opfin/constants.dart';
 import 'package:opfin/loan_repayment_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:opfin/services/user_session.dart';
 import 'package:intl/intl.dart';
 
 class LoanApplicationsScreen extends StatefulWidget {
@@ -15,9 +15,8 @@ class LoanApplicationsScreen extends StatefulWidget {
 
 class LoanApplicationsScreenState extends State<LoanApplicationsScreen> {
   Future<List<dynamic>> fetchLoanApplications() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int? userId = prefs.getInt('user_id');
-    String? token = prefs.getString('access_token');
+    final userId = await UserSession.getUserId();
+    final token = await UserSession.getAccessToken();
     final response = await http.get(
       Uri.parse('$apiUrl/loan-applications/$userId'),
       headers: {

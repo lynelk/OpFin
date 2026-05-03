@@ -4,6 +4,7 @@ import 'package:opfin/faq_screen.dart';
 import 'package:opfin/loan_applications_screen.dart';
 import 'package:opfin/products_screen.dart';
 import 'package:opfin/profile_screen.dart';
+import 'package:opfin/services/user_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -100,18 +101,19 @@ class _HomeWidgetState extends State<HomeWidget> {
   }
 
   Future<void> _loadUserInfo() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
+    final phone = await UserSession.getPhone();
+    final ninStatus = await UserSession.getNinStatus();
     setState(() {
       _userName = prefs.getString('name') ?? "Guest User";
-      _isVerified = prefs.getString('nin_status') == 'VALID';
-      _phoneNumber = prefs.getString('phone') ?? "";
+      _isVerified = ninStatus == 'VALID';
+      _phoneNumber = phone ?? "";
     });
   }
 
   Future<Map<String, int>> fetchUserStats() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int? userId = prefs.getInt('user_id');
-    String? token = prefs.getString('access_token');
+    final userId = await UserSession.getUserId();
+    final token = await UserSession.getAccessToken();
     final response = await http.get(
       Uri.parse('$apiUrl/loan-applications/$userId'),
       headers: {
@@ -125,9 +127,9 @@ class _HomeWidgetState extends State<HomeWidget> {
       int disbursed = data.where((a) => a['status'] == 'Disbursed').length;
       int rejected = data.where((a) => a['status'] == 'Rejected').length;
       int pending = data.where((a) => a['status'] == 'Pending').length;
-      _recentApplications = data.take(5).cast<Map<String, dynamic>>().toList();
+      final recent = data.take(5).cast<Map<String, dynamic>>().toList();
       setState(() {
-        _recentApplications = _recentApplications;
+        _recentApplications = recent;
       });
       return {
         'total': total,
@@ -141,9 +143,8 @@ class _HomeWidgetState extends State<HomeWidget> {
   }
 
   Future<void> getLoanBalance() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int? userId = prefs.getInt('user_id');
-    String? token = prefs.getString('access_token');
+    final userId = await UserSession.getUserId();
+    final token = await UserSession.getAccessToken();
     final response = await http.get(
       Uri.parse('$apiUrl/loan-balance/$userId'),
       headers: {

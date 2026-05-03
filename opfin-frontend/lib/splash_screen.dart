@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:opfin/home_screen.dart';
 import 'package:opfin/login_screen.dart';
 import 'package:opfin/onboarding_screen.dart';
+import 'package:opfin/services/user_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -42,15 +43,16 @@ class SplashScreenState extends State<SplashScreen> {
   }
 
   void _navigateToHome() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool("seenOnboarding") == true) {
-      if (prefs.getInt('user_id') == null) {
-        if (!mounted) return;
+      final userId = await UserSession.getUserId();
+      final token = await UserSession.getAccessToken();
+      if (!mounted) return;
+      if (userId == null || token == null || token.isEmpty) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       } else {
-        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );

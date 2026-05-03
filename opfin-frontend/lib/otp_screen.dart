@@ -12,15 +12,13 @@ class OtpScreen extends StatefulWidget {
   final String? name;
   final String password;
   final String passwordConfirmation;
-  final String otp;
 
   const OtpScreen(
       {super.key,
       required this.phone,
       this.name,
       required this.password,
-      required this.passwordConfirmation,
-      required this.otp}); // The phone number will be passed from the registration page
+      required this.passwordConfirmation});
 
   @override
   OtpScreenState createState() => OtpScreenState();
@@ -93,7 +91,7 @@ class OtpScreenState extends State<OtpScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Network error: ${e.toString()}')),
+        const SnackBar(content: Text('A network error occurred. Please try again.')),
       );
     } finally {
       if (mounted && !_isLoading) {
@@ -112,7 +110,7 @@ class OtpScreenState extends State<OtpScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('$apiUrl/generate-otp'), // Replace with your API endpoint
+        Uri.parse('$apiUrl/generate-otp'),
         body: {'phone': widget.phone},
       );
 
@@ -130,7 +128,7 @@ class OtpScreenState extends State<OtpScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Network error: ${e.toString()}')),
+        const SnackBar(content: Text('A network error occurred. Please try again.')),
       );
     } finally {
       setState(() {
@@ -159,7 +157,7 @@ class OtpScreenState extends State<OtpScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('$apiUrl/register'), // Replace with your API endpoint
+        Uri.parse('$apiUrl/register'),
         body: {
           'name': widget.name,
           'phone': widget.phone,
@@ -192,8 +190,9 @@ class OtpScreenState extends State<OtpScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Network error: ${e.toString()}')),
+        const SnackBar(content: Text('A network error occurred. Please try again.')),
       );
     } finally {
       setState(() {
@@ -203,13 +202,12 @@ class OtpScreenState extends State<OtpScreen> {
   }
 
   Future<void> _resetPassword() async {
-    // Navigate to OTP Screen
     setState(() {
       _isLoading = true;
     });
     try {
       final response = await http.post(
-        Uri.parse('$apiUrl/reset-password'), // Replace with your API endpoint
+        Uri.parse('$apiUrl/reset-password'),
         body: {
           'phone': widget.phone,
           'password': widget.password,
@@ -223,7 +221,7 @@ class OtpScreenState extends State<OtpScreen> {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('Password reset successfully successful')),
+                content: Text('Password reset successfully.')),
           );
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -231,7 +229,7 @@ class OtpScreenState extends State<OtpScreen> {
         } else {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data['message'] ?? 'Registration failed')),
+            SnackBar(content: Text(data['message'] ?? 'Password reset failed')),
           );
         }
       } else {
@@ -241,8 +239,9 @@ class OtpScreenState extends State<OtpScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Network error: ${e.toString()}')),
+        const SnackBar(content: Text('A network error occurred. Please try again.')),
       );
     } finally {
       setState(() {
@@ -308,7 +307,7 @@ class OtpScreenState extends State<OtpScreen> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecorations().inputStyle(
                       label: "Enter OTP",
-                      hint: "e.g. ${widget.otp}",
+                      hint: "Enter the code sent to your phone",
                       icon: Icons.lock_rounded,
                     ),
                     style: const TextStyle(color: Colors.black),
