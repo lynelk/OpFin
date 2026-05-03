@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
+    public function __construct(protected SmsService $smsService) {}
+
     // Show account deletion form
     public function showDeleteForm()
     {
@@ -78,7 +80,7 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => json_encode($validator->errors()),
-                ]);
+                ], 422);
             }
 
             // Create the user
@@ -121,7 +123,7 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => json_encode($validator->errors()),
-            ]);
+            ], 422);
         }
 
         // Find user by phone
@@ -131,7 +133,7 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid credentials'
-            ]);
+            ], 401);
         }
 
         // Generate a token for the user
@@ -159,7 +161,7 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => json_encode($validator->errors()),
-            ]);
+            ], 422);
         }
         // Find user by phone
         $user = User::where('phone', $request->phone)->first();
@@ -168,7 +170,7 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid phone number'
-            ]);
+            ], 404);
         }
 
         $user->password = Hash::make($request->password);
@@ -195,7 +197,7 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => json_encode($validator->errors()),
-            ]);
+            ], 422);
         }
 
         // Generate OTP
@@ -209,13 +211,11 @@ class AuthController extends Controller
         );
 
         // Simulate sending the OTP (you can integrate an SMS gateway here)
-        $smsService = new SmsService();
-        $smsService->queueSms($request->phone, 'OpFin: Your otp code is ' . $otp);
+        $this->smsService->queueSms($request->phone, 'OpFin: Your otp code is ' . $otp);
 
         return response()->json([
             'success' => true,
             'message' => 'OTP generated successfully',
-            'otp' => $otp, // Send the OTP only for debugging. Remove in production.
         ]);
     }
 
@@ -230,7 +230,7 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => json_encode($validator->errors()),
-            ]);
+            ], 422);
         }
 
         // Retrieve the OTP record

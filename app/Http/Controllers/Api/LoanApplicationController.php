@@ -12,17 +12,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
-use App\Models\Account;
 use App\Models\Institution;
-use App\Models\JournalEntry;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\AirtelDisbursementService;
 use App\Services\AirtelService;
-use App\Services\CitotechPaymentService;
 use App\Services\MtnMomoService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class LoanApplicationController extends Controller
@@ -46,14 +42,13 @@ class LoanApplicationController extends Controller
             });
             return response()->json(['data' => $applications], 200);
         } catch (Exception $e) {
-            return response()->json(['error', $e->getMessage()], 500);
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id',
             'loan_product_id' => 'required|exists:loan_products,id',
             'loan_product_term_id' => 'required|exists:loan_product_terms,id',
             'institution_id' => 'required|exists:institutions,id',
@@ -80,8 +75,10 @@ class LoanApplicationController extends Controller
         }
 
         try {
+            $userId = $user->id;
+
             // Check if the user has any uncleared loans
-            $unclearedLoan = Loan::where('user_id', $request->user_id)
+            $unclearedLoan = Loan::where('user_id', $userId)
                 ->whereNotIn('status', ['Cleared'])
                 ->first();
 
@@ -93,7 +90,7 @@ class LoanApplicationController extends Controller
             }
 
             // Check if the user has any pending applications
-            $pendingApplication = LoanApplication::where('user_id', $request->user_id)
+            $pendingApplication = LoanApplication::where('user_id', $userId)
                 ->where('status', 'Pending')
                 ->first();
 
@@ -105,17 +102,13 @@ class LoanApplicationController extends Controller
             }
 
             $loanApplication = LoanApplication::create([
-                'user_id' => $request->user_id,
+                'user_id' => $userId,
                 'loan_product_id' => $request->loan_product_id,
                 'loan_product_term_id' => $request->loan_product_term_id,
                 'institution_id' => $request->institution_id,
                 'amount' => $request->amount,
                 'status' => 'Pending',
                 'reason' => $request->reason,
-                'disbursed_at' => null,
-                'approved_at' => now(),
-                'rejected_at' => null,
-                'cancelled_at' => null,
             ]);
             $this->createTransaction($loanApplication);
 
@@ -163,7 +156,6 @@ class LoanApplicationController extends Controller
 
             if ($request->status === 'Approved') {
                 $loanApplication->approved_at = now();
-                // $this->createLoan($loanApplication);
             } elseif ($request->status === 'Rejected') {
                 $loanApplication->rejected_at = now();
             } elseif ($request->status === 'Disbursed') {
@@ -181,13 +173,6 @@ class LoanApplicationController extends Controller
             return response()->json(['error' => 'An error occurred while updating the loan application status.'], 500);
         }
     }
-
-    /**
-     * Create a loan from an approved loan application.
-     *
-     * @param  \App\Models\LoanApplication  $loanApplication
-     * @return void
-     */
 
     public function getProducts()
     {
@@ -211,7 +196,7 @@ class LoanApplicationController extends Controller
             $terms = LoanProductTerm::with('product.institution')->where('loan_product_id', $id)->get();
             return response()->json(['data' => $terms], 200);
         } catch (Exception $e) {
-            return response()->json(['error', $e->getMessage()], 500);
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
@@ -221,7 +206,7 @@ class LoanApplicationController extends Controller
             $institutions = Institution::all();
             return response()->json(['data' => $institutions], 200);
         } catch (Exception $e) {
-            return response()->json(['error', $e->getMessage()], 500);
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 

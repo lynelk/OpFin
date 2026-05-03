@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CreditScore;
-use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -43,18 +43,17 @@ class NinValidationController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'nin' => 'required|string|max:14|min:14',
-            'user_id' => 'required|exists:users,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => json_encode($validator->errors()),
-            ]);
+            ], 422);
         }
         try {
             $nin = $request->nin;
-            $userId = $request->user_id;
+            $user = Auth::user();
             $accessToken = $this->getAccessToken();
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
@@ -64,7 +63,6 @@ class NinValidationController extends Controller
                 'nin' => $nin,
             ]);
             if ($response->successful()) {
-                $user = User::find($userId);
                 $data = $response->json();
                 $validationDetails = Arr::get($data, 'validation', []);
                 $validationDetails = collect($validationDetails);
@@ -108,17 +106,16 @@ class NinValidationController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|exists:users,phone',
-            'user_id' => 'required|exists:users,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => json_encode($validator->errors()),
-            ]);
+            ], 422);
         }
         try {
-            $userId = $request->user_id;
+            $userId = Auth::id();
             // 1. Check DB first
             $cachedScore = $this->getCurrentCreditScore($userId, 30);
 
@@ -170,7 +167,7 @@ class NinValidationController extends Controller
             Log::error($e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to validate NIN: ' . $e->getMessage(),
+                'message' => 'Failed to retrieve credit scores: ' . $e->getMessage(),
             ]);
         }
     }

@@ -10,6 +10,7 @@ use App\Models\JournalEntry;
 use App\Services\SmsService;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class LoanService
@@ -35,27 +36,34 @@ class LoanService
             $interestType = $loanApplication->loanProductTerm->interest_type;
             $interestCycle = $loanApplication->loanProductTerm->interest_cycle;
 
-            $loan = Loan::create([
-                'user_id' => $loanApplication->user_id,
-                'loan_product_id' => $loanApplication->loan_product_id,
-                'loan_product_term_id' => $loanApplication->loan_product_term_id,
-                'institution_id' => $loanApplication->institution_id,
-                'loan_application_id' => $loanApplication->id,
-                'amount' => $loanAmount,
-                'status' => 'Disbursed',
-                'reason' => $loanApplication->reason,
-                'disbursed_at' => now(),
-                'duration' => $duration,
-                'repayment_amount' => Loan::getRepaymentAmount(
-                    $interestRate,
-                    $loanAmount,
-                    $interestType,
-                    $numberOfInstallments,
-                    $interestCycle,
-                    $duration
-                ),
-                'repayment_start_date' => Loan::getRepaymentStartDate($repaymentFrequency),
-            ]);
+            $loan = DB::transaction(function () use (
+                $loanApplication, $loanAmount, $interestRate, $interestType,
+                $numberOfInstallments, $interestCycle, $duration, $repaymentFrequency
+            ) {
+                $loan = Loan::create([
+                    'user_id' => $loanApplication->user_id,
+                    'loan_product_id' => $loanApplication->loan_product_id,
+                    'loan_product_term_id' => $loanApplication->loan_product_term_id,
+                    'institution_id' => $loanApplication->institution_id,
+                    'loan_application_id' => $loanApplication->id,
+                    'amount' => $loanAmount,
+                    'status' => 'Disbursed',
+                    'reason' => $loanApplication->reason,
+                    'disbursed_at' => now(),
+                    'duration' => $duration,
+                    'repayment_amount' => Loan::getRepaymentAmount(
+                        $interestRate,
+                        $loanAmount,
+                        $interestType,
+                        $numberOfInstallments,
+                        $interestCycle,
+                        $duration
+                    ),
+                    'repayment_start_date' => Loan::getRepaymentStartDate($repaymentFrequency),
+                ]);
+
+                return $loan;
+            });
 
             // Associate with transaction
             if ($transaction = Transaction::where('loan_application_id', $loanApplication->id)->first()) {
@@ -118,7 +126,7 @@ class LoanService
     }
 
     /**
-     * Process all disbursement activities
+     * Process all collection (repayment) activities
      */
     public function processCollection(Transaction $transaction, float $interestPaid, float $principalPaid): void
     {

@@ -7,10 +7,9 @@ use App\Models\Loan;
 use App\Models\Transaction;
 use App\Services\AirtelCollectionService;
 use App\Services\AirtelService;
-use App\Services\CitotechPaymentService;
 use App\Services\MtnMomoService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -40,6 +39,13 @@ class LoanRepaymentController extends Controller
 
         try {
             $loan = Loan::findOrFail($loan_id);
+
+            if ($loan->user_id !== Auth::id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized.'
+                ], 403);
+            }
 
             if ($loan->status == 'Cleared') {
                 return response()->json([
@@ -79,12 +85,6 @@ class LoanRepaymentController extends Controller
                 'status' => 'Pending',
             ]);
             $channel = $repaymentTransaction->network;
-            // if ($paymentGateway === 'CITOTECH') {
-            //     $citotechService = new CitotechPaymentService();
-            //     $paymentResponse = $citotechService->collect(
-            //         $repaymentTransaction
-            //     );
-            // } else 
             if ($channel === 'AIRTEL') {
                 $airtelService = new AirtelCollectionService(new AirtelService());
                 $paymentResponse = $airtelService->collect($repaymentTransaction);

@@ -43,6 +43,15 @@ class TransactionController extends Controller
                     'message' => 'Transaction not found'
                 ], 404);
             }
+
+            // Idempotency guard — never reprocess a completed transaction
+            if ($transaction->status === 'SUCCESSFUL') {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Callback already processed'
+                ]);
+            }
+
             // Update transaction status
             $transaction->update([
                 'status' => $validated['status'],
@@ -99,6 +108,14 @@ class TransactionController extends Controller
             ], 404);
         }
 
+        // Idempotency guard — never reprocess a completed transaction
+        if ($transaction->status === 'SUCCESSFUL') {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Callback already processed'
+            ]);
+        }
+
         $transaction->update([
             'status' => $statusCode === 'TS' ? 'SUCCESSFUL' : ($statusCode === 'TF' ? 'FAILED' : 'PENDING'),
             'network_reference' => $airtelMoneyId,
@@ -145,6 +162,14 @@ class TransactionController extends Controller
                 'status' => 'error',
                 'message' => 'Transaction not found'
             ], 404);
+        }
+
+        // Idempotency guard — never reprocess a completed transaction
+        if ($transaction->status === 'SUCCESSFUL') {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Callback already processed'
+            ]);
         }
 
         // Map MTN status to internal status

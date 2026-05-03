@@ -76,9 +76,8 @@ class User extends Authenticatable
     }
     public function creditScore()
     {
-        $latestScore = CreditScore::where('user_id', $this->id)
+        return CreditScore::where('user_id', $this->id)
             ->latest('created_at')
             ->first();
-        return $latestScore ?? null;
     }
 }
