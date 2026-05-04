@@ -12,10 +12,48 @@ use Illuminate\Support\Facades\Log;
 class TransactionController extends Controller
 {
     /**
-     * Approve a pending transaction.
+     * Approve a pending transaction and trigger loan processing.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function approve(Request $request, $id)
+    {
+        try {
+            $transaction = Transaction::findOrFail($id);
+
+            if ($transaction->status !== 'Pending') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only pending transactions can be approved.',
+                ], 400);
+            }
+
+            $transaction->update(['status' => 'SUCCESSFUL']);
+
+            $loanService = app(LoanService::class);
+            $freshTransaction = $transaction->fresh();
+            $loanService->processSuccessfulTransaction($freshTransaction);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaction approved successfully.',
+                'data' => $freshTransaction,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error approving transaction: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error approving transaction: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Handle a generic payment gateway callback.
+     *
+     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function handleCallback(Request $request)
