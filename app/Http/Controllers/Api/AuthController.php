@@ -79,7 +79,8 @@ class AuthController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => json_encode($validator->errors()),
+                    'message' => 'Validation failed.',
+                    'errors' => $validator->errors(),
                 ], 422);
             }
 
@@ -94,15 +95,15 @@ class AuthController extends Controller
             // Generate an access token
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            // Return successful response
+            // Return successful response — same shape as login
             return response()->json([
                 'success' => true,
                 'message' => 'Registration successful',
-                'data' => [
-                    'user' => $user,
-                    'token' => $token,
-                ],
-            ]);
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'user' => $user,
+                'credit_score' => $user->creditScore(),
+            ], 201);
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
@@ -122,7 +123,8 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => json_encode($validator->errors()),
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -160,7 +162,8 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => json_encode($validator->errors()),
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
             ], 422);
         }
         // Find user by phone
@@ -196,7 +199,8 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => json_encode($validator->errors()),
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -229,7 +233,8 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => json_encode($validator->errors()),
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -240,21 +245,21 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'OTP not found for this phone number',
-            ]);
-        }
-
-        if ($otpRecord->otp !== $request->otp) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid OTP',
-            ]);
+            ], 404);
         }
 
         if (Carbon::now()->greaterThan($otpRecord->expires_at)) {
             return response()->json([
                 'success' => false,
                 'message' => 'OTP has expired',
-            ]);
+            ], 400);
+        }
+
+        if ($otpRecord->otp !== $request->otp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP',
+            ], 400);
         }
 
         // OTP is valid, you can perform additional actions (e.g., user login)

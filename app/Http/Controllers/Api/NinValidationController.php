@@ -48,7 +48,8 @@ class NinValidationController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => json_encode($validator->errors()),
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
             ], 422);
         }
         try {
@@ -111,7 +112,8 @@ class NinValidationController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => json_encode($validator->errors()),
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
             ], 422);
         }
         try {
