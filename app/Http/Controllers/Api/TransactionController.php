@@ -33,12 +33,13 @@ class TransactionController extends Controller
             $transaction->update(['status' => 'SUCCESSFUL']);
 
             $loanService = app(LoanService::class);
-            $loanService->processSuccessfulTransaction($transaction->fresh());
+            $freshTransaction = $transaction->fresh();
+            $loanService->processSuccessfulTransaction($freshTransaction);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Transaction approved successfully.',
-                'data' => $transaction->fresh(),
+                'data' => $freshTransaction,
             ]);
         } catch (\Exception $e) {
             Log::error('Error approving transaction: ' . $e->getMessage());
