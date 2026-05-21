@@ -2,9 +2,11 @@
 
 ## Scope
 
-This checkpoint reviews the backend after the current auth, role, audit, KYC/NIN, credit application, loan, repayment, transaction, account, and journal work visible in this checkout.
+This checkpoint reviews the backend after the current auth, role, audit, KYC/NIN, credit application, loan, repayment, transaction, account, journal, and mobile money adapter work visible in this checkout.
 
-No new product features were added. Fixes were limited to role enforcement, transaction/idempotency safety, test coverage, and documentation.
+No new product features were added. Fixes were limited to validation, role enforcement, transaction/idempotency safety, test coverage, and documentation.
+
+The request references consent, affordability checks, and loan offers as implemented modules. They are not present as dedicated backend modules in this repository yet; this checkpoint treats them as missing production requirements rather than adding them as new product features.
 
 ## Verification Environment
 
@@ -22,6 +24,7 @@ Findings:
 - API controllers exist under `app/Http/Controllers/Api`.
 - Domain logic is split inconsistently between controllers, models, and `LoanService`.
 - Foundation services exist for audit logging, SMS, loan processing, mobile money, and RAG/OpenAI support.
+- The mobile money adapter layer is separated under `App\Services\MobileMoney` with a provider contract and mock/placeholder adapters.
 - There are no dedicated `FormRequest`, API resource, policy, consent, affordability, loan offer, or ledger service modules.
 - Loan schedule generation is triggered from the `Loan` model `created` event, which hides financial side effects behind model persistence.
 - `LoanApplicationController` still performs validation, eligibility checks, transaction creation, and gateway triggering in one controller.
@@ -34,6 +37,7 @@ Fixes made:
 - Moved loan application status validation before opening a manual database transaction.
 - Attached sensitive-action audit middleware to loan application status updates and transaction approvals.
 - Added focused checkpoint regression tests for current role enforcement and duplicate disbursement processing.
+- Added mobile money adapter validation so malformed payment commands are rejected before persistence or provider dispatch.
 
 Remaining risks:
 
@@ -54,9 +58,10 @@ Findings:
   - `loan_schedules.principal`, `interest`, and `balance` are `decimal`.
   - `accounts.balance` is `decimal`.
   - `journal_entries.amount`, `previous_balance`, and `current_balance` are `decimal`.
+- `mobile_money_transactions.amount_minor` correctly uses an integer minor-unit column.
 - Some financial timestamp columns are stored as strings, including loan application and loan status timestamps.
 - Transaction references are not currently unique in the migration history.
-- No explicit idempotency-key table or unique command key exists.
+- The mobile money adapter table has an idempotency key for adapter commands. Legacy disbursement and repayment flows still do not have a general idempotency-key table or unique command key.
 - Fresh migration execution could not be verified locally because PHP is unavailable.
 
 Remaining risks:
@@ -75,6 +80,7 @@ Findings:
 - Repayment processing applies payments to schedules and creates journal entries, but ledger balancing is not enforced by a tested double-entry invariant.
 - Pending duplicate repayments are blocked by checking for an existing pending repayment transaction.
 - Callback handlers skip already successful transactions, but there is no general idempotency-key table.
+- Mobile money adapter commands are idempotent by `idempotency_key`, duplicate webhooks are deduplicated by `webhook_event_id`, and adapter webhook processing does not create journal entries directly.
 
 Fixes made:
 
@@ -83,6 +89,7 @@ Fixes made:
 - `LoanService::processSuccessfulTransaction` now wraps processing in a database transaction.
 - Successful disbursement processing now skips work if the transaction already has a loan or if the application already has a loan.
 - Successful repayment processing now skips duplicate ledger application when journal entries already exist for the transaction reference.
+- Mobile money adapter requests now require a positive integer `amount_minor` and a non-empty phone number.
 
 Remaining risks:
 
@@ -125,12 +132,14 @@ Findings:
 - No dedicated consent model, migration, controller, or service exists.
 - No consent revocation enforcement exists.
 - No affordability processing module exists.
+- No loan offer module exists.
 
 Remaining risks:
 
 - Implement first-party consent records before CRB, mobile money, or employer-data processing.
 - Block credit scoring and affordability checks unless a valid consent record exists.
 - Make consent revocation affect future processing.
+- Add dedicated affordability and loan offer modules before production credit decisions.
 - Audit all KYC and consent changes.
 
 ## Tests
@@ -145,6 +154,9 @@ Added tests:
 - `BackendCheckpointTest::test_platform_admin_can_update_credit_application_status`
 - `BackendCheckpointTest::test_operations_user_can_approve_pending_transaction`
 - `BackendCheckpointTest::test_successful_disbursement_processing_is_idempotent`
+- `BackendCheckpointTest::test_customer_cannot_submit_credit_application_without_verified_kyc`
+- `MobileMoneyAdapterTest::test_mobile_money_requires_positive_integer_minor_units`
+- `MobileMoneyAdapterTest::test_mobile_money_requires_phone_number`
 
 Unable to run locally:
 
@@ -160,6 +172,7 @@ Reason: PHP and Composer are not installed or not on PATH in this environment.
 - Prevented duplicate loan creation on repeated successful disbursement processing.
 - Wrapped successful transaction processing in database transactions.
 - Added checkpoint regression tests for RBAC and disbursement idempotency.
+- Added checkpoint regression tests for the KYC gate and mobile money request validation.
 - Replaced Laravel boilerplate README with OpFin setup and module status.
 - Added current API endpoint documentation.
 

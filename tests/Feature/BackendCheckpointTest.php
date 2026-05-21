@@ -102,6 +102,53 @@ class BackendCheckpointTest extends TestCase
         $this->assertSame(Loan::firstOrFail()->id, $transaction->fresh()->loan_id);
     }
 
+    public function test_customer_cannot_submit_credit_application_without_verified_kyc(): void
+    {
+        $institution = Institution::create([
+            'name' => 'KYC Gate Institution',
+            'address' => 'Kampala',
+            'phone' => '256700000003',
+            'email' => fake()->unique()->safeEmail(),
+        ]);
+
+        $user = User::factory()->create([
+            'institution_id' => $institution->id,
+            'nin_status' => 'PENDING',
+        ]);
+
+        $product = LoanProduct::create([
+            'name' => 'KYC Gate Loan',
+            'type' => 'Cash',
+            'institution_id' => $institution->id,
+        ]);
+
+        $term = LoanProductTerm::create([
+            'loan_product_id' => $product->id,
+            'interest_rate' => 10,
+            'interest_type' => 'Flat',
+            'interest_cycle' => 'Monthly',
+            'repayment_frequency' => 'Monthly',
+            'duration' => 30,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/loan-applications', [
+            'loan_product_id' => $product->id,
+            'loan_product_term_id' => $term->id,
+            'institution_id' => $institution->id,
+            'amount' => 100000,
+            'reason' => 'KYC gate test',
+        ])
+            ->assertStatus(400)
+            ->assertJsonPath('success', false);
+
+        $this->assertDatabaseMissing('loan_applications', [
+            'user_id' => $user->id,
+            'amount' => 100000,
+        ]);
+    }
+
     private function createLoanApplication(): LoanApplication
     {
         $institution = Institution::create([

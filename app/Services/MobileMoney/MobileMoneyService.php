@@ -114,7 +114,17 @@ class MobileMoneyService
             throw new InvalidArgumentException('A mobile money idempotency key is required.');
         }
 
-        return DB::transaction(function () use ($direction, $attributes, $providerName, $idempotencyKey) {
+        $amountMinor = Arr::get($attributes, 'amount_minor');
+        if (!is_int($amountMinor) || $amountMinor <= 0) {
+            throw new InvalidArgumentException('Mobile money amount_minor must be a positive integer.');
+        }
+
+        $phone = trim((string) Arr::get($attributes, 'phone', ''));
+        if ($phone === '') {
+            throw new InvalidArgumentException('A mobile money phone number is required.');
+        }
+
+        return DB::transaction(function () use ($direction, $attributes, $providerName, $idempotencyKey, $amountMinor, $phone) {
             $existing = MobileMoneyTransaction::where('idempotency_key', $idempotencyKey)->first();
             if ($existing) {
                 $this->audit("mobile_money.{$direction}.duplicate", $existing, [
@@ -130,9 +140,9 @@ class MobileMoneyService
                 'institution_id' => Arr::get($attributes, 'institution_id'),
                 'provider' => $providerName,
                 'direction' => $direction,
-                'amount_minor' => Arr::get($attributes, 'amount_minor'),
+                'amount_minor' => $amountMinor,
                 'currency' => Arr::get($attributes, 'currency', 'UGX'),
-                'phone' => Arr::get($attributes, 'phone'),
+                'phone' => $phone,
                 'idempotency_key' => $idempotencyKey,
                 'internal_reference' => Arr::get($attributes, 'internal_reference', (string) Str::uuid()),
                 'status' => MobileMoneyTransaction::STATUS_PROCESSING,

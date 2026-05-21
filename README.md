@@ -123,11 +123,13 @@ Implemented/foundation:
 - Transaction approval authorization for platform admin and operations roles.
 - Sensitive-action audit middleware on profile access, loan application status updates, and transaction approvals.
 - Provider-agnostic mobile money adapter foundation with mock provider, MTN/Airtel placeholders, idempotency tracking, webhook signature validation, retry metadata, reconciliation status, and audit logs.
+- Mobile money adapter requests now require positive integer `amount_minor` values and a phone number before persistence or provider dispatch.
 
 Partial or legacy:
 
 - Credit application, disbursement, repayment, accounts, and journal logic exists but still mixes controller and service responsibilities.
 - Financial migrations use a mix of `string`, `decimal`, and integer-like columns for money; the target standard is integer minor units only.
+- The mobile money adapter table uses integer minor units, but the older loan, repayment, account, transaction, and journal tables still require a planned migration.
 - Payment gateway services exist, but demo/live separation needs stronger environment gates.
 - Existing loan disbursement/repayment controllers still call older gateway services directly; new work should migrate through the mobile money adapter layer.
 - Some web controllers and Blade views remain from the older admin surface.

@@ -99,6 +99,30 @@ class MobileMoneyAdapterTest extends TestCase
         ]);
     }
 
+    public function test_mobile_money_requires_positive_integer_minor_units(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        app(MobileMoneyService::class)->collect([
+            'idempotency_key' => 'invalid-amount-key',
+            'amount_minor' => 0,
+            'currency' => 'UGX',
+            'phone' => '256700000002',
+        ]);
+    }
+
+    public function test_mobile_money_requires_phone_number(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        app(MobileMoneyService::class)->disburse([
+            'idempotency_key' => 'missing-phone-key',
+            'amount_minor' => 50000,
+            'currency' => 'UGX',
+            'phone' => '',
+        ]);
+    }
+
     public function test_mtn_and_airtel_adapters_are_placeholders_that_do_not_make_live_calls(): void
     {
         $transaction = new MobileMoneyTransaction([

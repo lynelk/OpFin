@@ -74,6 +74,21 @@ Returns the authenticated user's loan balance. Cross-user access is blocked.
 
 Starts a repayment transaction for the authenticated user's loan. Duplicate pending repayment transactions are blocked.
 
+## Internal Mobile Money Adapter
+
+The provider-agnostic mobile money layer currently exposes service contracts, not public API routes. It supports disbursement requests, repayment collection requests, status lookup, webhook processing, reversal requests, failed-transaction handling, normalized provider responses, idempotency keys, webhook signature validation, reconciliation status, and audit logs.
+
+The mock provider is intended for local development and tests. MTN Mobile Money and Airtel Money adapters are placeholders that do not make live calls.
+
+Adapter requests must provide:
+
+- `idempotency_key`
+- positive integer `amount_minor`
+- `currency`, defaulting to `UGX`
+- `phone`
+
+Payment events from this layer must not mutate loan balances directly; ledger impact should continue to pass through the financial processing service.
+
 ## Operations/Admin Endpoints
 
 ### `GET /api/admin/foundation-check`
@@ -115,4 +130,3 @@ New endpoints should use:
 ```
 
 Legacy endpoints still need normalization before public API stabilization.
-
