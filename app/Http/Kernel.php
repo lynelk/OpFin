@@ -47,6 +47,7 @@ class Kernel extends HttpKernel
      * @var array
      */
     protected $routeMiddleware = [
-        // Other route middleware
+        'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+        'audit.sensitive' => \App\Http\Middleware\RecordSensitiveAction::class,
     ];
 }

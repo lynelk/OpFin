@@ -11,6 +11,28 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
+    public const ROLE_PLATFORM_ADMIN = 'platform_admin';
+    public const ROLE_OPERATIONS = 'operations';
+    public const ROLE_CUSTOMER = 'customer';
+    public const ROLE_EMPLOYER_ADMIN = 'employer_admin';
+    public const ROLE_SUPPORT = 'support';
+
+    public const ROLES = [
+        self::ROLE_PLATFORM_ADMIN,
+        self::ROLE_OPERATIONS,
+        self::ROLE_CUSTOMER,
+        self::ROLE_EMPLOYER_ADMIN,
+        self::ROLE_SUPPORT,
+    ];
+
+    public const ROLE_PERMISSIONS = [
+        self::ROLE_PLATFORM_ADMIN => ['*'],
+        self::ROLE_OPERATIONS => ['profile.view', 'operations.view', 'audit.view'],
+        self::ROLE_CUSTOMER => ['profile.view'],
+        self::ROLE_EMPLOYER_ADMIN => ['profile.view', 'employer.view'],
+        self::ROLE_SUPPORT => ['profile.view', 'support.view'],
+    ];
+
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasApiTokens, SoftDeletes;
 
@@ -79,5 +101,20 @@ class User extends Authenticatable
         return CreditScore::where('user_id', $this->id)
             ->latest('created_at')
             ->first();
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return $this->role === $role;
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        return in_array($this->role, $roles, true);
+    }
+
+    public function permissions(): array
+    {
+        return self::ROLE_PERMISSIONS[$this->role] ?? [];
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Otp;
 use App\Models\User;
 use App\Services\SmsService;
+use App\Support\ApiResponse;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -88,7 +89,7 @@ class AuthController extends Controller
             $user = User::create([
                 'name' => $request->name,
                 'phone' => $request->phone,
-                'role' => 'Member',
+                'role' => User::ROLE_CUSTOMER,
                 'password' => Hash::make($request->password),
             ]);
 
@@ -141,9 +142,12 @@ class AuthController extends Controller
         // Generate a token for the user
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
+        return ApiResponse::success('Login successful', [
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => $user,
+            'credit_score' => $user->creditScore(),
+        ], 200, [
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => $user,
@@ -157,6 +161,7 @@ class AuthController extends Controller
         // Validate input
         $validator = Validator::make($request->all(), [
             'phone' => 'required|string',
+            'otp' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
         if ($validator->fails()) {
@@ -172,12 +177,27 @@ class AuthController extends Controller
         if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid phone number'
+                'message' => 'Invalid reset request'
             ], 404);
+        }
+
+        $otpRecord = Otp::where('phone', $request->phone)->first();
+        if (
+            !$otpRecord ||
+            Carbon::now()->greaterThan($otpRecord->expires_at) ||
+            !hash_equals($otpRecord->otp, $request->otp)
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired OTP'
+            ], 400);
         }
 
         $user->password = Hash::make($request->password);
         if ($user->save()) {
+            $otpRecord->delete();
+            $user->tokens()->delete();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Password has been reset successfully.'
@@ -187,6 +207,16 @@ class AuthController extends Controller
         return response()->json([
             'success' => false,
             'message' => 'Failed to reset password.'
+        ]);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()?->currentAccessToken()?->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out successfully.'
         ]);
     }
 
