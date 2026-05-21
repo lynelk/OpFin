@@ -1,139 +1,94 @@
-# Frontend Screen Map
+# OpFin Frontend Screen Map
 
-## Existing Screens
+## Repository Status
 
-The current Flutter app contains these observed screens and UI modules:
+The repository already had a Flutter mobile application in `opfin-frontend/`, but it did not contain a proper Next.js + TypeScript web frontend for the customer, admin, employer, and investor-demo surfaces requested for OpFin.
 
-- `SplashScreen`: checks onboarding/session state and routes to onboarding, login, or home.
-- `OnboardingScreen`: intro carousel/flow before registration.
-- `LoginScreen`: phone/password login.
-- `RegisterScreen`: registration form and OTP request.
-- `OtpScreen`: OTP verification, registration continuation, and password reset completion.
-- `ForgotPasswordScreen`: initiates password reset OTP flow.
-- `HomeScreen`: customer home with loan applications and loan balance data.
-- `ProductsScreen`: lists available loan products.
-- `ProductTermsPage`: lists terms for a selected product.
-- `LoanApplicationScreen`: captures loan application details.
-- `LoanConfirmationScreen`: displays loan application confirmation details.
-- `LoanApplicationResultScreen`: displays application success/failure state.
-- `LoanApplicationsScreen`: lists customer loan applications.
-- `LoanRepaymentScreen`: submits repayment for a loan.
-- `ProfileScreen`: displays profile/session data, supports NIN validation and logout.
-- `FaqsScreen`: static loan FAQ content.
-- `ApplicationForm`, `LoanAmountScreen`, `LoanDetailsScreen`, and `LoanReviewScreen`: earlier/static loan flow components that may need consolidation with the active API-backed flow.
+A new Next.js App Router scaffold has been added at the repository root. The existing Flutter app remains untouched.
 
-## Current Routing Map
+## Current Web Routes
 
-The app starts at `SplashScreen` through `MaterialApp.home`.
+Authentication:
 
-Observed route flow:
+- `/login`: mock customer login selector.
+- `/admin-login`: mock admin/operations login selector.
+- `/api/mock-login`: local-only route that sets a mock role cookie.
 
-```text
-SplashScreen
-  -> OnboardingScreen
-      -> RegisterScreen
-          -> OtpScreen
-              -> LoginScreen
-  -> LoginScreen
-      -> ForgotPasswordScreen
-          -> OtpScreen
-              -> LoginScreen
-      -> RegisterScreen
-      -> HomeScreen
-  -> HomeScreen
-      -> ProductsScreen
-          -> ProductTermsPage
-              -> LoanApplicationScreen
-                  -> LoanConfirmationScreen
-                  -> LoanApplicationResultScreen
-      -> LoanApplicationsScreen
-          -> LoanRepaymentScreen
-              -> HomeScreen
-      -> ProfileScreen
-          -> LoginScreen
-```
+Customer:
 
-## Routing Gaps
+- `/dashboard`: customer dashboard with KYC status, balance, and applications summary.
+- `/kyc`: KYC/NIN status screen using the profile contract.
+- `/consent`: consent management placeholder because backend consent records are not implemented.
+- `/loans/apply`: loan application form shell using known loan product/application fields.
+- `/loans/decision`: loan decision result placeholder because no decision API exists yet.
+- `/loans/offer`: loan offer placeholder because the backend offer module is missing.
+- `/loans/schedule`: repayment schedule screen using known schedule fields.
+- `/loans/account`: loan account screen using known application and loan fields.
 
-- No named route registry.
-- No route guards.
-- No deep links.
-- No typed route arguments.
-- No bottom navigation or app shell documented for future modules.
-- No explicit separation between unauthenticated, customer, employer admin, support, operations, and platform admin screens.
+Admin and operations:
 
-## Required Screens Before Product Expansion
+- `/admin/dashboard`: admin dashboard placeholder.
+- `/admin/credit-review`: credit application review queue using known loan application fields.
+- `/admin/audit-trail`: audit trail placeholder using audit event concepts from the backend audit log.
 
-Before implementing savings, investments, insurance, employer benefits, CRB, or mobile money integrations, define these screens:
+Employer and future modules:
 
-- Auth guard and session restore states.
-- Profile from backend `/profile`, not only local storage.
-- Consent center with active, revoked, and expired consents.
-- KYC checklist and verification status.
-- Credit eligibility and responsible borrowing education.
-- Loan schedule and repayment detail.
-- Mobile money authorization status and repayment confirmation.
-- Transaction history.
-- Notifications and repayment reminders.
-- Support ticket and complaint flow.
-- Settings and security controls.
+- `/employer`: employer portal placeholder.
+- `/savings`: savings placeholder.
+- `/insurance`: insurance placeholder.
+- `/investments`: investment placeholder.
 
-## Future Module Screens
+## Route Protection
 
-Credit:
+`middleware.ts` protects:
 
-- Product catalog.
-- Eligibility result.
-- Application draft/review.
-- Decision status.
-- Disbursement status.
-- Repayment schedule.
-- Repayment receipt.
+- customer routes
+- loan routes
+- admin routes
+- employer route
+- future module routes
 
-Savings:
+Access is currently mock-cookie based:
 
-- Savings dashboard.
-- Goal creation.
-- Deposit and withdrawal flow.
-- Statement/history.
+- customer routes: any mock role
+- admin routes: `platform_admin`, `operations`, `support`
+- employer route: `platform_admin`, `employer_admin`
 
-Investments:
+Real authentication should replace the mock cookie once the backend session/token contract is finalized for the web frontend.
 
-- Investment product catalog.
-- Suitability/risk acknowledgement.
-- Portfolio summary.
-- Transaction history.
+## Navigation
 
-Insurance:
+Navigation is role-aware through `src/lib/navigation.ts` and `src/lib/auth/session.ts`.
 
-- Insurance product catalog.
-- Policy enrollment.
-- Policy details.
-- Claims flow.
+Groups:
 
-Employer-linked benefits:
+- Customer
+- Future modules
+- Operations
+- Employer
 
-- Employer benefits landing screen.
-- Employee eligibility.
-- Benefit request.
-- Employer approval/status.
+## Screen Contract Policy
 
-Compliance and trust:
+Screens use mock data only where the backend API documentation already exposes comparable fields. Missing backend modules remain placeholders and do not invent request/response shapes.
 
-- Consent center.
-- Data sharing history.
-- Data export request.
-- Account closure request.
-- Regulatory notices.
+Known backend-backed areas:
 
-## Investor Demo Screens
+- profile
+- products
+- product terms
+- loan applications
+- loan balance
+- repayment schedules based on backend model fields
 
-Recommended investor demo screens should be flagged as demo-only and backed by sandbox data:
+Placeholder areas:
 
-- Platform overview dashboard.
-- Customer trust journey: onboarding, KYC, consent.
-- Responsible credit journey: eligibility, application, decision, repayment.
-- Employer-linked benefits preview.
-- Savings/investments/insurance preview with clear "not live" labeling.
-- Compliance/audit preview showing consent trail and sensitive-action history.
+- consent management
+- affordability and decision results
+- loan offers
+- employer portal
+- savings
+- insurance
+- investments
+- admin dashboard metrics
+- audit trail API listing
 

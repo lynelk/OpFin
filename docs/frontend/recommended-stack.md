@@ -2,9 +2,9 @@
 
 ## Recommendation
 
-Continue with the existing Flutter mobile application as the primary OpFin customer frontend. The repository is already scaffolded and contains real screens, so replacing it with Next.js would slow mobile delivery without solving the current architecture gaps.
+Continue with the existing Flutter mobile application for mobile delivery, and use the new root-level Next.js + TypeScript scaffold for web customer, admin, employer, and investor-demo surfaces.
 
-Use Next.js + TypeScript only for future web surfaces such as investor demos, employer admin, operations, support, and compliance dashboards. Do not introduce that web app until the mobile foundation and backend API contracts are stable.
+The Next.js scaffold should remain mock-first until backend contracts are complete. Do not connect placeholder screens to inferred APIs.
 
 ## Mobile App Stack
 
@@ -68,4 +68,3 @@ Recommended web stack:
 - Separate web routes for investor demo, employer admin, operations, support, and compliance.
 
 Do not build this yet inside the current Flutter frontend repository unless the product decision is to create a monorepo.
-

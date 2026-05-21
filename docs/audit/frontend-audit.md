@@ -6,11 +6,23 @@ This audit covers the frontend repository for OpFin. It is documentation-only an
 
 ## Current Application State
 
-The repository contains a real Flutter mobile application scaffold in `opfin-frontend/`. It is not an empty scaffold, so the recommended path is to stabilize and extend the existing Flutter app rather than replace it with a Next.js frontend at this stage.
+The repository contains a real Flutter mobile application scaffold in `opfin-frontend/`. This pass also adds a root-level Next.js + TypeScript frontend scaffold for the customer, admin, employer, and future web portal surfaces requested for OpFin.
 
-The app currently focuses on authentication, onboarding, profile/NIN validation, loan product discovery, loan applications, loan balances, and loan repayment. It is still early-stage and credit-first; it does not yet cover the broader OpFin scope of savings, investments, insurance, employer-linked benefits, consent management, CRB integrations, compliance reporting, or a complete KYC lifecycle.
+The Flutter app currently focuses on authentication, onboarding, profile/NIN validation, loan product discovery, loan applications, loan balances, and loan repayment. The new Next.js app is mock-first and uses placeholders where backend contracts are incomplete.
 
 ## Current Stack
+
+Web scaffold:
+
+- Framework: Next.js App Router.
+- Language: TypeScript.
+- Styling: global CSS with shared layout, panel, table, form, badge, and button primitives.
+- Route protection: `middleware.ts` using mock role cookies until production auth is integrated.
+- API layer: `src/lib/api/client.ts` with mock fallback.
+- Navigation: role-aware navigation in `src/lib/navigation.ts`.
+- Tests: Vitest tests for the mock API client.
+
+Existing mobile app:
 
 - Framework: Flutter mobile app.
 - Language: Dart, SDK constraint `>=3.4.4 <4.0.0`.
@@ -172,4 +184,3 @@ Investor demos should be isolated from live financial operations. Recommended de
 ## Readiness Assessment
 
 The frontend is buildable as a Flutter product directionally, but it is not ready for 1,000+ users or investor demos without hardening. The next work should be foundation work: API client, routing, auth guards, environment config, typed models, error handling, tests, observability, and a documented screen map.
-
