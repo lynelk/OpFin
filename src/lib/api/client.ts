@@ -70,10 +70,14 @@ function envelope<T>(data: T, message = "Mock data loaded"): ApiEnvelope<T> {
   };
 }
 
+function sandboxSessionId(): string {
+  return `sandbox-${globalThis.crypto.randomUUID()}`;
+}
+
 function mockRequest<T>(path: string, init: RequestOptions = {}): Promise<ApiEnvelope<T>> {
   if (path === "/login") {
     return Promise.resolve(envelope({
-      access_token: "sandbox-token",
+      access_token: sandboxSessionId(),
       token_type: "Bearer",
       user: mockProfile.user
     } as T, "Sandbox login successful"));

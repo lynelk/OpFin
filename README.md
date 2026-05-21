@@ -56,7 +56,7 @@ npm run check
 
 ## Route Protection
 
-`middleware.ts` protects customer, admin, employer, savings, insurance, and investment routes using backend login cookies or sandbox cookies. The app stores `opfin_access_token`, `opfin_role`, and `opfin_name` as HTTP-only cookies and clears them through the switch-role action.
+`middleware.ts` protects customer, admin, employer, savings, insurance, and investment routes using backend login cookies or generated sandbox cookies. The app stores `opfin_access_token`, `opfin_role`, and `opfin_name` as HTTP-only cookies and clears them through the switch-role action. Tokens are never hardcoded; sandbox shortcuts generate local demo session IDs.
 
 ## Investor Demo Flow
 

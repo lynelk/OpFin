@@ -16,7 +16,7 @@ export function GET(request: NextRequest) {
   const next = request.nextUrl.searchParams.get("next") ?? "/dashboard";
   const response = NextResponse.redirect(new URL(next, request.url));
 
-  response.cookies.set("opfin_access_token", "sandbox-token", {
+  response.cookies.set("opfin_access_token", `sandbox-${crypto.randomUUID()}`, {
     httpOnly: true,
     sameSite: "lax",
     path: "/"

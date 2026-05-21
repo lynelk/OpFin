@@ -54,7 +54,7 @@ Access is currently mock-cookie based:
 - admin routes: `platform_admin`, `operations`, `support`
 - employer route: `platform_admin`, `employer_admin`
 
-Backend login stores `opfin_access_token`, `opfin_role`, and `opfin_name` cookies for server-rendered API calls and role-aware navigation. Sandbox login sets the same cookie shape for local demo flow, and the switch-role action clears session cookies before returning to `/login`.
+Backend login stores `opfin_access_token`, `opfin_role`, and `opfin_name` cookies for server-rendered API calls and role-aware navigation. Sandbox login sets the same cookie shape with generated local session IDs for demo flow, and the switch-role action clears session cookies before returning to `/login`.
 
 ## Navigation
 

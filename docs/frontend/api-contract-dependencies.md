@@ -184,7 +184,7 @@ Required backend contracts before real integration:
 
 ## Authentication Dependencies
 
-Current web scaffold supports backend login through `/login` and `/admin-login`, storing the returned bearer token in an HTTP-only cookie for server-side API calls. `/api/mock-login` remains available for sandbox investor-demo walkthroughs and sets the same local cookie shape. The switch-role action clears local cookies.
+Current web scaffold supports backend login through `/login` and `/admin-login`, storing the returned bearer token in an HTTP-only cookie for server-side API calls. `/api/mock-login` remains available for sandbox investor-demo walkthroughs and sets the same local cookie shape with a generated sandbox session ID. The switch-role action clears local cookies.
 
 Required production contract:
 
