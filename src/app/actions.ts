@@ -1,0 +1,128 @@
+"use server";
+
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { OpfinApiError } from "@/lib/api/errors";
+import { opfinApi } from "@/lib/api/client";
+import { getAccessToken } from "@/lib/auth/session";
+
+function value(formData: FormData, key: string): string {
+  const raw = formData.get(key);
+  return typeof raw === "string" ? raw : "";
+}
+
+function redirectWith(path: string, params: Record<string, string>) {
+  const search = new URLSearchParams(params);
+  redirect(`${path}?${search.toString()}`);
+}
+
+export async function loginAction(formData: FormData) {
+  const phone = value(formData, "phone");
+  const password = value(formData, "password");
+  const next = value(formData, "next") || "/dashboard";
+
+  try {
+    const response = await opfinApi.login(phone, password);
+    const data = response.data;
+    const cookieStore = await cookies();
+
+    cookieStore.set("opfin_access_token", data.access_token, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/"
+    });
+    cookieStore.set("opfin_role", data.user.role, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/"
+    });
+    cookieStore.set("opfin_name", encodeURIComponent(data.user.name), {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/"
+    });
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/login", { error: error.kind, message: error.message, next });
+    }
+
+    redirectWith("/login", { error: "server", message: "Login failed", next });
+  }
+
+  redirect(next);
+}
+
+export async function logoutAction() {
+  const cookieStore = await cookies();
+  cookieStore.delete("opfin_access_token");
+  cookieStore.delete("opfin_role");
+  cookieStore.delete("opfin_name");
+  cookieStore.delete("opfin_demo_consent");
+
+  redirect("/login");
+}
+
+export async function createConsentAction() {
+  const cookieStore = await cookies();
+  cookieStore.set("opfin_demo_consent", "sandbox-active", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/"
+  });
+
+  redirect("/consent?status=created");
+}
+
+export async function revokeConsentAction() {
+  const cookieStore = await cookies();
+  cookieStore.set("opfin_demo_consent", "sandbox-revoked", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/"
+  });
+
+  redirect("/consent?status=revoked");
+}
+
+export async function submitLoanApplicationAction(formData: FormData) {
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.submitLoanApplication({
+      loan_product_id: Number(value(formData, "loan_product_id")),
+      loan_product_term_id: Number(value(formData, "loan_product_term_id")),
+      institution_id: Number(value(formData, "institution_id")),
+      amount: Number(value(formData, "amount")),
+      reason: value(formData, "reason")
+    }, token);
+
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/loans/apply", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/loans/apply", { error: "server", message: "Loan application failed" });
+  }
+
+  redirect("/loans/decision?status=submitted");
+}
+
+export async function updateLoanApplicationStatusAction(formData: FormData) {
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.updateLoanApplicationStatus(
+      Number(value(formData, "application_id")),
+      value(formData, "status"),
+      token
+    );
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/admin/credit-review", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/admin/credit-review", { error: "server", message: "Application review failed" });
+  }
+
+  redirect("/admin/credit-review?status=updated");
+}

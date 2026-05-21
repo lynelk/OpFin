@@ -11,11 +11,27 @@ Environment variables:
 - `NEXT_PUBLIC_OPFIN_API_URL`
 - `NEXT_PUBLIC_USE_MOCK_API`
 
-When `NEXT_PUBLIC_USE_MOCK_API` is not `false`, the app uses local mock data.
+When `NEXT_PUBLIC_USE_MOCK_API` is not `false`, the app uses local mock data. When it is `false`, documented backend endpoints are called with the Sanctum bearer token stored by the login server action.
 
 ## Known Backend Contracts Used
 
 The frontend only relies on fields visible in the current backend/frontend audit documentation.
+
+### `POST /login`
+
+Used by:
+
+- `/login`
+- `/admin-login`
+
+Expected fields under `data`:
+
+- `access_token`
+- `token_type`
+- `user.id`
+- `user.name`
+- `user.phone`
+- `user.role`
 
 ### `GET /profile`
 
@@ -49,9 +65,22 @@ Expected fields:
 - optional `institution.id`
 - optional `institution.name`
 
+### `GET /institutions`
+
+Used by:
+
+- `/loans/apply`
+
+Expected fields:
+
+- `id`
+- `name`
+
 ### `GET /product-terms/{productId}`
 
-Prepared in the API client.
+Used by:
+
+- `/loans/apply`
 
 Expected fields:
 
@@ -70,7 +99,7 @@ Used by:
 
 - `/dashboard`
 - `/loans/account`
-- `/admin/credit-review`
+- `/loans/decision`
 
 Expected fields:
 
@@ -95,6 +124,38 @@ Expected fields:
 
 - `outstandingAmount`
 
+### `POST /loan-applications`
+
+Used by:
+
+- `/loans/apply`
+
+Submitted fields:
+
+- `loan_product_id`
+- `loan_product_term_id`
+- `institution_id`
+- `amount`
+- `reason`
+
+Expected fields:
+
+- created loan application payload under `data`
+
+### `POST /loan-applications/{id}/status`
+
+Used by:
+
+- `/admin/credit-review`
+
+Submitted fields:
+
+- `status`
+
+Expected fields:
+
+- updated loan application payload under `data`
+
 ## Mock-Only Until Backend Contracts Exist
 
 These screens are intentionally placeholder-backed:
@@ -113,7 +174,7 @@ Required backend contracts before real integration:
 
 - consent records and revocation
 - affordability checks
-- loan decision result
+- formal loan decision result
 - loan offer
 - repayment schedule API endpoint
 - loan account detail endpoint
@@ -123,14 +184,11 @@ Required backend contracts before real integration:
 
 ## Authentication Dependencies
 
-Current web scaffold uses mock cookies through `/api/mock-login`.
+Current web scaffold supports backend login through `/login` and `/admin-login`, storing the returned bearer token in an HTTP-only cookie for server-side API calls. `/api/mock-login` remains available for sandbox investor-demo walkthroughs and sets the same local cookie shape. The switch-role action clears local cookies.
 
 Required production contract:
 
-- login endpoint suitable for browser session handling
 - logout endpoint
-- authenticated profile endpoint
-- role/permission response
 - `401` and `403` behavior
 - CSRF/session or token storage strategy for web
 

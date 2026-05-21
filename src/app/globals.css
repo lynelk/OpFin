@@ -41,6 +41,10 @@ textarea {
   font: inherit;
 }
 
+form {
+  margin: 0;
+}
+
 .auth-shell {
   display: grid;
   min-height: 100vh;
@@ -61,6 +65,11 @@ textarea {
   display: grid;
   gap: 10px;
   margin-top: 22px;
+}
+
+.auth-panel .form-grid + .auth-actions {
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
 }
 
 .app-shell {
@@ -267,6 +276,11 @@ textarea {
   gap: 14px;
 }
 
+.inline-form {
+  display: inline-flex;
+  margin: 0;
+}
+
 .field label {
   display: block;
   color: var(--muted);
@@ -292,6 +306,32 @@ textarea {
   border-radius: var(--radius);
   color: var(--muted);
   padding: 18px;
+}
+
+.placeholder strong {
+  display: block;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.placeholder p {
+  margin: 0;
+}
+
+.state-success {
+  border-color: #a7f3d0;
+}
+
+.state-validation,
+.state-sandbox {
+  border-color: #fed7aa;
+}
+
+.state-unauthorized,
+.state-forbidden,
+.state-network,
+.state-server {
+  border-color: #fecaca;
 }
 
 @media (max-width: 900px) {

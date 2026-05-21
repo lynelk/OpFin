@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { logoutAction } from "@/app/actions";
 import { canSeeGroup, getCurrentSession } from "@/lib/auth/session";
 import { navigationItems } from "@/lib/navigation";
 
@@ -46,9 +47,9 @@ export async function AppShell({ children }: Readonly<{ children: ReactNode }>) 
             <strong>{session.name}</strong>
             <p className="muted">Role: {session.role}</p>
           </div>
-          <Link className="button secondary" href="/login">
-            Switch role
-          </Link>
+          <form action={logoutAction}>
+            <button className="button secondary" type="submit">Switch role</button>
+          </form>
         </header>
         <div className="content">{children}</div>
       </main>

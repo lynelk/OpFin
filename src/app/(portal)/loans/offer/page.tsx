@@ -1,17 +1,20 @@
 import Link from "next/link";
-import { PlaceholderPanel, Screen } from "@/components/Screen";
+import { Screen, StateNotice } from "@/components/Screen";
+import { opfinApi } from "@/lib/api/client";
 
-export default function LoanOfferPage() {
+export default async function LoanOfferPage() {
+  const offer = await opfinApi.loanOffer();
+
   return (
     <Screen
       title="Loan offer"
       description="Offer route prepared for the future offer module without assuming backend offer fields."
       action={<Link className="button" href="/loans/schedule">Review schedule</Link>}
     >
-      <PlaceholderPanel
-        title="Offer API pending"
-        text="The backend checkpoint identified loan offers as missing. This page is intentionally contract-safe."
-      />
+      <section className="panel">
+        <h2>{offer.data.status}</h2>
+        <StateNotice state="sandbox" message={offer.data.message} />
+      </section>
     </Screen>
   );
 }

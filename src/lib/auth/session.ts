@@ -12,11 +12,17 @@ const roleNames: Record<UserRole, string> = {
 export async function getCurrentSession(): Promise<Session> {
   const cookieStore = await cookies();
   const role = (cookieStore.get("opfin_role")?.value ?? "customer") as UserRole;
+  const name = cookieStore.get("opfin_name")?.value;
 
   return {
     role,
-    name: roleNames[role] ?? roleNames.customer
+    name: name ? decodeURIComponent(name) : roleNames[role] ?? roleNames.customer
   };
+}
+
+export async function getAccessToken(): Promise<string | undefined> {
+  const cookieStore = await cookies();
+  return cookieStore.get("opfin_access_token")?.value;
 }
 
 export function canSeeGroup(role: UserRole, group: "customer" | "admin" | "employer" | "wealth"): boolean {

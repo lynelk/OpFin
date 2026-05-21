@@ -12,6 +12,20 @@ export type ApiEnvelope<T> = {
   errors?: Record<string, string[]>;
 };
 
+export type LoginResponse = {
+  access_token: string;
+  token_type: "Bearer" | string;
+  user: {
+    id: number;
+    name: string;
+    phone: string;
+    role: UserRole;
+    national_id?: string | null;
+    date_of_birth?: string | null;
+    nin_status?: string | null;
+  };
+};
+
 export type LoanProduct = {
   id: number;
   name: string;
@@ -20,6 +34,11 @@ export type LoanProduct = {
     id: number;
     name: string;
   } | null;
+};
+
+export type Institution = {
+  id: number;
+  name: string;
 };
 
 export type ProductTerm = {
@@ -53,7 +72,9 @@ export type Profile = {
     id: number;
     name: string;
     phone: string;
+    email?: string | null;
     role: UserRole;
+    institution_id?: number | null;
     national_id?: string | null;
     date_of_birth?: string | null;
     nin_status?: string | null;
@@ -67,4 +88,21 @@ export type RepaymentScheduleRow = {
   principal: number;
   interest: number;
   total_outstanding: number;
+};
+
+export type ConsentState = {
+  status: "sandbox-active" | "sandbox-revoked" | "not-configured";
+  label: string;
+  updatedAt?: string;
+};
+
+export type DemoDecision = {
+  status: string;
+  message: string;
+  source: "backend-application-status" | "sandbox";
+};
+
+export type DemoOffer = {
+  status: "sandbox-offer" | "not-available";
+  message: string;
 };

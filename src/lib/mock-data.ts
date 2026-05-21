@@ -1,4 +1,4 @@
-import type { LoanApplication, LoanProduct, ProductTerm, Profile, RepaymentScheduleRow } from "./types";
+import type { ConsentState, Institution, LoanApplication, LoanProduct, ProductTerm, Profile, RepaymentScheduleRow } from "./types";
 
 export const mockProfile: Profile = {
   user: {
@@ -26,6 +26,10 @@ export const mockProducts: LoanProduct[] = [
     status: "Active",
     institution: null
   }
+];
+
+export const mockInstitutions: Institution[] = [
+  { id: 1, name: "OpFin Demo Institution" }
 ];
 
 export const mockTerms: ProductTerm[] = [
@@ -77,3 +81,8 @@ export const mockAuditEvents = [
   { id: 2, event: "loan_application.status_updated", created_at: "2026-05-21 10:12", actor: "operations" },
   { id: 3, event: "mobile_money.collection.requested", created_at: "2026-05-21 11:30", actor: "system" }
 ];
+
+export const mockConsentState: ConsentState = {
+  status: "not-configured",
+  label: "Consent API contract pending"
+};

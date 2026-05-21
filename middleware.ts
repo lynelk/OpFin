@@ -22,7 +22,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const hasSession = request.cookies.has("opfin_role");
+  const hasSession = request.cookies.has("opfin_access_token") || request.cookies.has("opfin_role");
   if (!hasSession) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);

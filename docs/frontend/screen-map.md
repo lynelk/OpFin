@@ -10,26 +10,26 @@ A new Next.js App Router scaffold has been added at the repository root. The exi
 
 Authentication:
 
-- `/login`: mock customer login selector.
-- `/admin-login`: mock admin/operations login selector.
+- `/login`: backend phone/password login form with sandbox customer shortcut.
+- `/admin-login`: backend phone/password admin login form with sandbox admin/operations shortcuts.
 - `/api/mock-login`: local-only route that sets a mock role cookie.
 
 Customer:
 
 - `/dashboard`: customer dashboard with KYC status, balance, and applications summary.
 - `/kyc`: KYC/NIN status screen using the profile contract.
-- `/consent`: consent management placeholder because backend consent records are not implemented.
-- `/loans/apply`: loan application form shell using known loan product/application fields.
-- `/loans/decision`: loan decision result placeholder because no decision API exists yet.
-- `/loans/offer`: loan offer placeholder because the backend offer module is missing.
-- `/loans/schedule`: repayment schedule screen using known schedule fields.
+- `/consent`: sandbox consent create/revoke state because backend consent records are not implemented.
+- `/loans/apply`: loan application form wired to products, institutions, product terms, and application submission.
+- `/loans/decision`: decision display derived from documented application status because no formal decision API exists yet.
+- `/loans/offer`: sandbox-labelled offer placeholder because the backend offer module is missing.
+- `/loans/schedule`: sandbox-labelled repayment schedule because no schedule API route is documented.
 - `/loans/account`: loan account screen using known application and loan fields.
 
 Admin and operations:
 
 - `/admin/dashboard`: admin dashboard placeholder.
-- `/admin/credit-review`: credit application review queue using known loan application fields.
-- `/admin/audit-trail`: audit trail placeholder using audit event concepts from the backend audit log.
+- `/admin/credit-review`: sandbox queue using known loan application fields, with status update wired to the documented admin endpoint.
+- `/admin/audit-trail`: sandbox-labelled audit trail placeholder using audit event concepts from the backend audit log.
 
 Employer and future modules:
 
@@ -54,7 +54,7 @@ Access is currently mock-cookie based:
 - admin routes: `platform_admin`, `operations`, `support`
 - employer route: `platform_admin`, `employer_admin`
 
-Real authentication should replace the mock cookie once the backend session/token contract is finalized for the web frontend.
+Backend login stores `opfin_access_token`, `opfin_role`, and `opfin_name` cookies for server-rendered API calls and role-aware navigation. Sandbox login sets the same cookie shape for local demo flow, and the switch-role action clears session cookies before returning to `/login`.
 
 ## Navigation
 
@@ -73,22 +73,25 @@ Screens use mock data only where the backend API documentation already exposes c
 
 Known backend-backed areas:
 
+- login
 - profile
 - products
+- institutions
 - product terms
 - loan applications
+- loan application submission
+- loan application status update
 - loan balance
-- repayment schedules based on backend model fields
 
 Placeholder areas:
 
 - consent management
 - affordability and decision results
 - loan offers
+- repayment schedules
 - employer portal
 - savings
 - insurance
 - investments
 - admin dashboard metrics
 - audit trail API listing
-
