@@ -25,6 +25,13 @@ class LoanApplicationController extends Controller
 {
     public function getLoanBalance(User $user)
     {
+        if ($user->id !== Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.'
+            ], 403);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Loan balance retrieved successfully',
@@ -34,6 +41,13 @@ class LoanApplicationController extends Controller
 
     public function index($id)
     {
+        if ((int) $id !== Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.'
+            ], 403);
+        }
+
         try {
             $applications = LoanApplication::where('user_id', $id)->with(['user', 'loanProduct', 'loanProductTerm', 'institution', 'loan'])->latest()->get()->each(function ($application) {
                 if ($application->loan) {
@@ -136,7 +150,13 @@ class LoanApplicationController extends Controller
      */
     public function updateStatus(Request $request, $id)
     {
-        DB::beginTransaction();
+        if (!$this->canManageLoans($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.'
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:Approved,Rejected,Disbursed,Cancelled',
         ]);
@@ -144,6 +164,8 @@ class LoanApplicationController extends Controller
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
+
+        DB::beginTransaction();
 
         try {
             $loanApplication = LoanApplication::findOrFail($id);
@@ -172,6 +194,16 @@ class LoanApplicationController extends Controller
             Log::error('Error updating loan application status: ' . $e->getMessage());
             return response()->json(['error' => 'An error occurred while updating the loan application status.'], 500);
         }
+    }
+
+    private function canManageLoans(Request $request): bool
+    {
+        $user = $request->user();
+
+        return (bool) ($user?->is_admin || $user?->hasAnyRole([
+            User::ROLE_PLATFORM_ADMIN,
+            User::ROLE_OPERATIONS,
+        ]));
     }
 
     public function getProducts()

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\LoanService;
 use Exception;
 use Illuminate\Http\Request;
@@ -20,6 +21,13 @@ class TransactionController extends Controller
      */
     public function approve(Request $request, $id)
     {
+        if (!$this->canManageTransactions($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        }
+
         try {
             $transaction = Transaction::findOrFail($id);
 
@@ -58,6 +66,13 @@ class TransactionController extends Controller
      */
     public function handleCallback(Request $request)
     {
+        if (!$this->hasValidCallbackSecret($request)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized callback'
+            ], 401);
+        }
+
         try {
             // Validate the incoming request
             $validated = $request->validate([
@@ -125,6 +140,10 @@ class TransactionController extends Controller
 
     public function airtelCallback(Request $request)
     {
+        if (!$this->hasValidCallbackSecret($request)) {
+            return response()->json(['status' => 'unauthorized callback'], 401);
+        }
+
         // Validate payload structure
         $data = $request->input('transaction');
         if (!$data || !isset($data['id'])) {
@@ -181,6 +200,10 @@ class TransactionController extends Controller
     }
     public function mtnCallback(Request $request)
     {
+        if (!$this->hasValidCallbackSecret($request)) {
+            return response()->json(['status' => 'unauthorized callback'], 401);
+        }
+
         // Validate expected structure
         $status = $request->input('status');
         $externalId = $request->input('externalId');
@@ -242,5 +265,27 @@ class TransactionController extends Controller
             'status' => 'success',
             'message' => 'Callback processed successfully',
         ]);
+    }
+
+    private function hasValidCallbackSecret(Request $request): bool
+    {
+        $expected = config('services.payment_callback_secret');
+        if (!$expected) {
+            return false;
+        }
+
+        $provided = $request->header('X-Opfin-Callback-Secret') ?? $request->input('signature');
+
+        return is_string($provided) && hash_equals($expected, $provided);
+    }
+
+    private function canManageTransactions(Request $request): bool
+    {
+        $user = $request->user();
+
+        return (bool) ($user?->is_admin || $user?->hasAnyRole([
+            User::ROLE_PLATFORM_ADMIN,
+            User::ROLE_OPERATIONS,
+        ]));
     }
 }

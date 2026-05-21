@@ -28,8 +28,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/loan-applications', [LoanApplicationController::class, 'store']);
     Route::get('/loan-applications/{user}', [LoanApplicationController::class, 'index']);
     Route::get('/loan-balance/{user}', [LoanApplicationController::class, 'getLoanBalance']);
-    Route::post('/loan-applications/{id}/status', [LoanApplicationController::class, 'updateStatus']);
-    Route::patch('/transactions/{id}/approve', [TransactionController::class, 'approve']);
+    Route::post('/loan-applications/{id}/status', [LoanApplicationController::class, 'updateStatus'])->middleware('audit.sensitive:loan_application.status_updated');
+    Route::patch('/transactions/{id}/approve', [TransactionController::class, 'approve'])->middleware('audit.sensitive:transaction.approved');
     Route::post('/loans/{loan_id}/repay', [LoanRepaymentController::class, 'repay']);
     Route::get('/products', [LoanApplicationController::class, 'getProducts']);
     Route::get('/institutions', [LoanApplicationController::class, 'getInstitutions']);

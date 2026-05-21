@@ -70,6 +70,7 @@ return [
         'currency' => env('MTN_MOMO_CURRENCY', 'UGX'),
         'target_env' => env('MTN_MOMO_ENVIRONMENT', 'sandbox'),
     ],
+    'payment_callback_secret' => env('PAYMENT_CALLBACK_SECRET'),
     'openai_api_key' => env('OPENAI_API_KEY'),
     'pinecone' => [
         'key' => env('PINECONE_API_KEY'),

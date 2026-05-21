@@ -1,66 +1,150 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# OpFin Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+OpFin is a Uganda-first personal finance backend built on Laravel 11 and PHP 8.2. The current backend contains API authentication, role foundations, audit logging, NIN validation hooks, credit application flows, loan creation, repayment schedule generation, payment callbacks, transaction records, accounts, and journal entries.
 
-## About Laravel
+This repository is not yet production-ready for regulated financial operations. Several broader OpFin modules, including dedicated consent records, affordability checks, loan offers, compliance reporting, employer benefits, savings, investments, and insurance, still need implementation behind audited service boundaries.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Local Setup
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Required tools:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2+
+- Composer
+- SQLite for local tests, or MySQL/PostgreSQL for development parity
+- Node.js/npm only if working on Laravel UI assets
 
-## Learning Laravel
+Setup:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan db:seed
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+Run the API locally:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+php artisan serve
+```
 
-## Laravel Sponsors
+## Environment Variables
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Core:
 
-### Premium Partners
+- `APP_NAME`
+- `APP_ENV`
+- `APP_KEY`
+- `APP_DEBUG`
+- `APP_URL`
+- `APP_TIMEZONE`
+- `DB_CONNECTION`
+- `DB_DATABASE`
+- `QUEUE_CONNECTION`
+- `CACHE_STORE`
+- `SESSION_DRIVER`
+- `SANCTUM_TOKEN_EXPIRY`
+- `CORS_ALLOWED_ORIGINS`
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+Security and integrations:
 
-## Contributing
+- `PAYMENT_CALLBACK_SECRET`
+- `CRB_URL`
+- `CRB_CLIENT_ID`
+- `CRB_CLIENT_SECRET`
+- `AIRTEL_CLIENT_ID`
+- `AIRTEL_CLIENT_SECRET`
+- `AIRTEL_BASE_URL`
+- `AIRTEL_COUNTRY`
+- `AIRTEL_CURRENCY`
+- `AIRTEL_PIN`
+- `AIRTEL_PUBLIC_KEY`
+- `MTN_MOMO_COLLECTION_SUB_KEY`
+- `MTN_MOMO_DISBURSEMENT_SUB_KEY`
+- `MTN_MOMO_BASE_URL`
+- `MTN_MOMO_CALLBACK_URL`
+- `MTN_MOMO_API_USER`
+- `MTN_MOMO_API_KEY`
+- `MTN_MOMO_CURRENCY`
+- `MTN_MOMO_ENVIRONMENT`
+- `YO_SMS_GATEWAY`
+- `YO_SMS_ACCOUNT`
+- `YO_SMS_PASSWORD`
+- `OPENAI_API_KEY`
+- `PINECONE_API_KEY`
+- `PINECONE_URL`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+No live credentials should be committed. Demo and test environments must use sandbox credentials only.
 
-## Code of Conduct
+## Test and Quality Commands
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Run tests:
 
-## Security Vulnerabilities
+```bash
+php artisan test
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Run a specific test class:
 
-## License
+```bash
+php artisan test --filter=FoundationApiTest
+php artisan test --filter=ApiSecurityTest
+php artisan test --filter=BackendCheckpointTest
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Run migrations from a clean database:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+Run Laravel Pint if installed:
+
+```bash
+./vendor/bin/pint
+```
+
+## Current Module Status
+
+Implemented/foundation:
+
+- Sanctum API login/logout.
+- Standard API response helper for foundation endpoints.
+- User profile endpoint.
+- Role constants for platform admin, operations, customer, employer admin, and support.
+- Audit log model, migration, service, and profile audit middleware.
+- Health check endpoint.
+- NIN validation endpoint backed by CRB configuration.
+- Credit product listing and loan application endpoints.
+- Loan account creation from successful disbursement transactions.
+- Repayment schedule generation from loan terms.
+- Payment callback endpoints with shared-secret protection.
+- Transaction approval authorization for platform admin and operations roles.
+- Sensitive-action audit middleware on profile access, loan application status updates, and transaction approvals.
+
+Partial or legacy:
+
+- Credit application, disbursement, repayment, accounts, and journal logic exists but still mixes controller and service responsibilities.
+- Financial migrations use a mix of `string`, `decimal`, and integer-like columns for money; the target standard is integer minor units only.
+- Payment gateway services exist, but demo/live separation needs stronger environment gates.
+- Some web controllers and Blade views remain from the older admin surface.
+
+Missing or not yet production-grade:
+
+- Dedicated consent module.
+- Consent revocation enforcement.
+- Formal affordability checks.
+- Loan offer module.
+- Policies, form requests, and API resources for the financial API.
+- Idempotency-key tables/unique constraints for disbursement and repayment commands.
+- Full ledger balancing guarantees.
+- Compliance reporting.
+- Savings, investments, insurance, employer-linked benefits, and CRB reporting workflows.
+
+## Documentation
+
+- Backend audit: `docs/audit/backend-audit.md`
+- Architecture guide: `docs/architecture/`
+- Checkpoint findings: `docs/audit/backend-checkpoint.md`
+- API summaries: `docs/api/`

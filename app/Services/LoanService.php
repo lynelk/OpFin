@@ -28,18 +28,20 @@ class LoanService
     public function createLoanFromApplication(LoanApplication $loanApplication): ?Loan
     {
         try {
-            $loanAmount = $loanApplication->amount;
-            $interestRate = $loanApplication->loanProductTerm->interest_rate / 100;
-            $duration = $loanApplication->loanProductTerm->duration;
-            $repaymentFrequency = $loanApplication->loanProductTerm->repayment_frequency;
-            $numberOfInstallments = Loan::getInstallments($duration, $repaymentFrequency);
-            $interestType = $loanApplication->loanProductTerm->interest_type;
-            $interestCycle = $loanApplication->loanProductTerm->interest_cycle;
+            return DB::transaction(function () use ($loanApplication) {
+                $existingLoan = Loan::where('loan_application_id', $loanApplication->id)->first();
+                if ($existingLoan) {
+                    return $existingLoan;
+                }
 
-            $loan = DB::transaction(function () use (
-                $loanApplication, $loanAmount, $interestRate, $interestType,
-                $numberOfInstallments, $interestCycle, $duration, $repaymentFrequency
-            ) {
+                $loanAmount = $loanApplication->amount;
+                $interestRate = $loanApplication->loanProductTerm->interest_rate / 100;
+                $duration = $loanApplication->loanProductTerm->duration;
+                $repaymentFrequency = $loanApplication->loanProductTerm->repayment_frequency;
+                $numberOfInstallments = Loan::getInstallments($duration, $repaymentFrequency);
+                $interestType = $loanApplication->loanProductTerm->interest_type;
+                $interestCycle = $loanApplication->loanProductTerm->interest_cycle;
+
                 $loan = Loan::create([
                     'user_id' => $loanApplication->user_id,
                     'loan_product_id' => $loanApplication->loan_product_id,
@@ -62,20 +64,62 @@ class LoanService
                     'repayment_start_date' => Loan::getRepaymentStartDate($repaymentFrequency),
                 ]);
 
+                if ($transaction = Transaction::where('loan_application_id', $loanApplication->id)->first()) {
+                    $transaction->update(['loan_id' => $loan->id]);
+                    $this->processDisbursement($transaction, $loan);
+                }
+
                 return $loan;
             });
-
-            // Associate with transaction
-            if ($transaction = Transaction::where('loan_application_id', $loanApplication->id)->first()) {
-                $transaction->update(['loan_id' => $loan->id]);
-                $this->processDisbursement($transaction, $loan);
-            }
-
-            return $loan;
         } catch (\Exception $e) {
             Log::error('Loan creation failed: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Process a successful payment event once.
+     */
+    public function processSuccessfulTransaction(Transaction $transaction): void
+    {
+        DB::transaction(function () use ($transaction) {
+            $transaction->refresh();
+
+            if ($transaction->type == 'Disbursement') {
+                if ($transaction->loan_id || Loan::where('loan_application_id', $transaction->loan_application_id)->exists()) {
+                    return;
+                }
+
+                $transaction->loanApplication->update([
+                    'status' => 'Disbursed',
+                    'disbursed_at' => now(),
+                ]);
+                $this->createLoanFromApplication($transaction->loanApplication);
+
+                return;
+            }
+
+            if ($transaction->type == 'Repayment') {
+                if (JournalEntry::where('reference', $transaction->reference)->exists()) {
+                    return;
+                }
+
+                $schedules = $transaction->loan->schedules()->get();
+                $interestPaidTotal = 0;
+                $principalPaidTotal = 0;
+                $remainingPayment = $transaction->amount;
+
+                foreach ($schedules as $schedule) {
+                    if ($remainingPayment <= 0) break;
+
+                    $paymentBreakdown = $schedule->applyPayment($remainingPayment);
+                    $interestPaidTotal += $paymentBreakdown['interestPaid'];
+                    $principalPaidTotal += $paymentBreakdown['principalPaid'];
+                    $remainingPayment -= ($paymentBreakdown['interestPaid'] + $paymentBreakdown['principalPaid']);
+                }
+                $this->processCollection($transaction, $interestPaidTotal, $principalPaidTotal);
+            }
+        });
     }
 
     /**
@@ -282,30 +326,4 @@ class LoanService
         return $message;
     }
 
-    public function processSuccessfulTransaction(Transaction $transaction): void
-    {
-        if ($transaction->type == 'Disbursement') {
-            $transaction->loanApplication->update([
-                'status' => 'Disbursed',
-                'disbursed_at' => now(),
-            ]);
-            $this->createLoanFromApplication($transaction->loanApplication);
-        }
-        if ($transaction->type == 'Repayment') {
-            $schedules = $transaction->loan->schedules()->get();
-            $interestPaidTotal = 0;
-            $principalPaidTotal = 0;
-            $remainingPayment = $transaction->amount;
-
-            foreach ($schedules as $schedule) {
-                if ($remainingPayment <= 0) break;
-
-                $paymentBreakdown = $schedule->applyPayment($remainingPayment);
-                $interestPaidTotal += $paymentBreakdown['interestPaid'];
-                $principalPaidTotal += $paymentBreakdown['principalPaid'];
-                $remainingPayment -= ($paymentBreakdown['interestPaid'] + $paymentBreakdown['principalPaid']);
-            }
-            $this->processCollection($transaction, $interestPaidTotal, $principalPaidTotal);
-        }
-    }
 }
