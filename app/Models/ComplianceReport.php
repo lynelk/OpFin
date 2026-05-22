@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class ComplianceReport extends Model
 {
+    public const STATUS_GENERATED = 'generated';
+    public const STATUS_EXPORTED = 'exported';
+    public const STATUS_APPROVED = 'approved';
+
     protected $fillable = [
         'report_type',
         'period_start',
@@ -26,5 +30,10 @@ class ComplianceReport extends Model
             'summary' => 'array',
             'generated_at' => 'datetime',
         ];
+    }
+
+    public function exports()
+    {
+        return $this->hasMany(ComplianceExport::class);
     }
 }

@@ -119,6 +119,18 @@ class ProductionReadinessApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.runs.0.provider', 'mtn');
 
+        $itemId = $this->getJson('/api/admin/reconciliation-runs/1/items')
+            ->assertOk()
+            ->json('data.items.0.id');
+
+        $this->patchJson("/api/admin/reconciliation-items/{$itemId}", [
+            'status' => 'matched',
+            'provider_amount_minor' => 100000,
+            'notes' => 'Provider statement matches system transaction.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.item.status', 'matched');
+
         $this->postJson('/api/admin/support-cases', [
             'customer_id' => $operations->id,
             'category' => 'payment',
@@ -130,6 +142,16 @@ class ProductionReadinessApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.support_cases.0.category', 'payment');
 
+        $caseId = $this->getJson('/api/admin/support-cases')->json('data.support_cases.0.id');
+
+        $this->patchJson("/api/admin/support-cases/{$caseId}", [
+            'status' => 'resolved',
+            'note' => 'Resolved after confirming provider settlement.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.support_case.status', 'resolved')
+            ->assertJsonPath('data.support_case.notes.0.note', 'Resolved after confirming provider settlement.');
+
         $this->postJson('/api/admin/compliance-reports', [
             'report_type' => 'monthly_credit_register',
             'period_start' => now()->startOfMonth()->toDateString(),
@@ -139,6 +161,14 @@ class ProductionReadinessApiTest extends TestCase
         $this->getJson('/api/admin/compliance-reports')
             ->assertOk()
             ->assertJsonPath('data.reports.0.report_type', 'monthly_credit_register');
+
+        $reportId = $this->getJson('/api/admin/compliance-reports')->json('data.reports.0.id');
+
+        $this->postJson("/api/admin/compliance-reports/{$reportId}/exports", [
+            'format' => 'csv',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.export.format', 'csv');
     }
 
     private function createApplicationWithKycAndConsent(): array

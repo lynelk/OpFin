@@ -74,6 +74,14 @@ Creates a reconciliation run from unreconciled mobile money transactions for a p
 
 Returns recent reconciliation runs for operations review.
 
+### `GET /api/admin/reconciliation-runs/{run}/items`
+
+Returns reconciliation items for a run.
+
+### `PATCH /api/admin/reconciliation-items/{item}`
+
+Resolves a reconciliation item as matched, exception, or written off and updates the linked mobile money reconciliation status when matched.
+
 ### `POST /api/admin/support-cases`
 
 Creates a support case linked to a customer.
@@ -82,6 +90,10 @@ Creates a support case linked to a customer.
 
 Returns recent support cases for operations/support review.
 
+### `PATCH /api/admin/support-cases/{case}`
+
+Updates support case status, assignment, priority, and optional internal note.
+
 ### `POST /api/admin/compliance-reports`
 
 Creates a compliance report record with period counts for KYC cases, consents, credit decisions, and mobile money transactions.
@@ -89,6 +101,10 @@ Creates a compliance report record with period counts for KYC cases, consents, c
 ### `GET /api/admin/compliance-reports`
 
 Returns recent compliance report records.
+
+### `POST /api/admin/compliance-reports/{report}/exports`
+
+Creates a compliance export manifest record for CSV or JSON export workflows.
 
 ### Production ledger service
 

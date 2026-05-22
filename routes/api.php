@@ -64,10 +64,14 @@ Route::middleware(['auth:sanctum', 'role:platform_admin,operations,support'])->g
     Route::post('/admin/loan-applications/{application}/decision', [ProductionCreditController::class, 'decide']);
     Route::get('/admin/reconciliation-runs', [ProductionOperationsController::class, 'reconciliationRuns']);
     Route::post('/admin/reconciliation-runs', [ProductionOperationsController::class, 'createReconciliationRun']);
+    Route::get('/admin/reconciliation-runs/{run}/items', [ProductionOperationsController::class, 'reconciliationItems']);
+    Route::patch('/admin/reconciliation-items/{item}', [ProductionOperationsController::class, 'resolveReconciliationItem']);
     Route::get('/admin/support-cases', [ProductionOperationsController::class, 'supportCases']);
     Route::post('/admin/support-cases', [ProductionOperationsController::class, 'createSupportCase']);
+    Route::patch('/admin/support-cases/{case}', [ProductionOperationsController::class, 'updateSupportCase']);
     Route::get('/admin/compliance-reports', [ProductionOperationsController::class, 'complianceReports']);
     Route::post('/admin/compliance-reports', [ProductionOperationsController::class, 'createComplianceReport']);
+    Route::post('/admin/compliance-reports/{report}/exports', [ProductionOperationsController::class, 'createComplianceExport']);
 });
 Route::post('/airtel-callback', [TransactionController::class, 'airtelCallback']);
 Route::post('/mtn-callback', [TransactionController::class, 'mtnCallback']);

@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReconciliationItem extends Model
 {
+    public const STATUS_REQUIRES_PROVIDER_MATCH = 'requires_provider_match';
+    public const STATUS_MATCHED = 'matched';
+    public const STATUS_EXCEPTION = 'exception';
+    public const STATUS_WRITTEN_OFF = 'written_off';
+
     protected $fillable = [
         'reconciliation_run_id',
         'mobile_money_transaction_id',
