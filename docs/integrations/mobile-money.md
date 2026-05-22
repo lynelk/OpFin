@@ -90,8 +90,10 @@ MOBILE_MONEY_CURRENCY=UGX
 Mock local webhook secret:
 
 ```env
-MOCK_MOBILE_MONEY_WEBHOOK_SECRET=local-mock-secret
+MOCK_MOBILE_MONEY_WEBHOOK_SECRET=
 ```
+
+Set a local-only random value in an uncommitted `.env` file when testing mock webhooks. Do not commit real or reusable webhook secrets.
 
 Live provider credentials:
 

@@ -12,6 +12,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -74,15 +75,11 @@ class AuthController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'phone' => 'required|string|unique:users,phone',
-                'password' => 'required|string|min:8|confirmed',
+                'password' => ['required', 'string', 'confirmed', $this->passwordRule()],
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed.',
-                    'errors' => $validator->errors(),
-                ], 422);
+                return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
             }
 
             // Create the user
@@ -94,22 +91,19 @@ class AuthController extends Controller
             ]);
 
             // Generate an access token
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $token = $this->createAccessToken($user);
 
             // Return successful response — same shape as login
-            return response()->json([
-                'success' => true,
-                'message' => 'Registration successful',
+            return ApiResponse::success('Registration successful', [
                 'access_token' => $token,
                 'token_type' => 'Bearer',
-                'user' => $user,
+                'user' => $this->authUserPayload($user),
                 'credit_score' => $user->creditScore(),
             ], 201);
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ]);
+            report($e);
+
+            return ApiResponse::error('Registration failed.', 500);
         }
     }
 
@@ -122,35 +116,23 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
+            return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
         // Find user by phone
         $user = User::where('phone', $request->phone)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid credentials'
-            ], 401);
+            return ApiResponse::error('Invalid credentials', 401);
         }
 
         // Generate a token for the user
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $this->createAccessToken($user);
 
         return ApiResponse::success('Login successful', [
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user,
-            'credit_score' => $user->creditScore(),
-        ], 200, [
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user,
+            'user' => $this->authUserPayload($user),
             'credit_score' => $user->creditScore(),
         ]);
     }
@@ -162,23 +144,16 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'phone' => 'required|string',
             'otp' => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => ['required', 'string', 'confirmed', $this->passwordRule()],
         ]);
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
+            return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
         // Find user by phone
         $user = User::where('phone', $request->phone)->first();
 
         if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid reset request'
-            ], 404);
+            return ApiResponse::error('Invalid reset request', 404);
         }
 
         $otpRecord = Otp::where('phone', $request->phone)->first();
@@ -187,10 +162,7 @@ class AuthController extends Controller
             Carbon::now()->greaterThan($otpRecord->expires_at) ||
             !hash_equals($otpRecord->otp, $request->otp)
         ) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid or expired OTP'
-            ], 400);
+            return ApiResponse::error('Invalid or expired OTP', 400);
         }
 
         $user->password = Hash::make($request->password);
@@ -198,26 +170,17 @@ class AuthController extends Controller
             $otpRecord->delete();
             $user->tokens()->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Password has been reset successfully.'
-            ]);
+            return ApiResponse::success('Password has been reset successfully.');
         }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to reset password.'
-        ]);
+        return ApiResponse::error('Failed to reset password.', 500);
     }
 
     public function logout(Request $request)
     {
         $request->user()?->currentAccessToken()?->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Logged out successfully.'
-        ]);
+        return ApiResponse::success('Logged out successfully.');
     }
 
     public function generateOtp(Request $request)
@@ -227,11 +190,7 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
+            return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
         // Generate OTP
@@ -247,10 +206,7 @@ class AuthController extends Controller
         // Simulate sending the OTP (you can integrate an SMS gateway here)
         $this->smsService->queueSms($request->phone, 'OpFin: Your otp code is ' . $otp);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'OTP generated successfully',
-        ]);
+        return ApiResponse::success('OTP generated successfully');
     }
 
     public function verifyOtp(Request $request)
@@ -261,41 +217,50 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors(),
-            ], 422);
+            return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
         // Retrieve the OTP record
         $otpRecord = Otp::where('phone', $request->phone)->first();
 
         if (!$otpRecord) {
-            return response()->json([
-                'success' => false,
-                'message' => 'OTP not found for this phone number',
-            ], 404);
+            return ApiResponse::error('Invalid or expired OTP', 404);
         }
 
         if (Carbon::now()->greaterThan($otpRecord->expires_at)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'OTP has expired',
-            ], 400);
+            return ApiResponse::error('Invalid or expired OTP', 400);
         }
 
-        if ($otpRecord->otp !== $request->otp) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid OTP',
-            ], 400);
+        if (! hash_equals($otpRecord->otp, $request->otp)) {
+            return ApiResponse::error('Invalid or expired OTP', 400);
         }
 
         // OTP is valid, you can perform additional actions (e.g., user login)
-        return response()->json([
-            'success' => true,
-            'message' => 'OTP verified successfully',
-        ]);
+        return ApiResponse::success('OTP verified successfully');
+    }
+
+    private function passwordRule(): Password
+    {
+        return Password::min(12)->mixedCase()->numbers()->symbols();
+    }
+
+    private function createAccessToken(User $user): string
+    {
+        return $user->createToken(
+            'auth_token',
+            ['*'],
+            now()->addMinutes((int) config('sanctum.expiration', 10080))
+        )->plainTextToken;
+    }
+
+    private function authUserPayload(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'phone' => $user->phone,
+            'role' => $user->role,
+            'nin_status' => $user->nin_status,
+        ];
     }
 }

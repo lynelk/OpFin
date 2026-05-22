@@ -17,15 +17,17 @@ use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::get('/health', [HealthController::class, 'show']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-Route::post('/generate-otp', [AuthController::class, 'generateOtp']);
-Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
-Route::post('/handleCallback', [TransactionController::class, 'handleCallback'])->name('handleCallback');
+Route::middleware('throttle:auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/generate-otp', [AuthController::class, 'generateOtp']);
+    Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+});
+Route::post('/handleCallback', [TransactionController::class, 'handleCallback'])->middleware('throttle:webhooks')->name('handleCallback');
 
 // Protected routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
     Route::post('/validate-nin', [NinValidationController::class, 'validateNin']);
@@ -57,7 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/demo/admin/investor-snapshot', [InvestorDemoController::class, 'adminSnapshot']);
     }
 });
-Route::middleware(['auth:sanctum', 'role:platform_admin,operations,support'])->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations,support'])->group(function () {
     Route::get('/admin/foundation-check', [FoundationAdminController::class, 'check']);
     Route::patch('/admin/kyc/cases/{case}', [ProductionKycController::class, 'review']);
     Route::post('/admin/crb-reports', [ProductionCreditController::class, 'storeCrbReport']);
@@ -74,5 +76,5 @@ Route::middleware(['auth:sanctum', 'role:platform_admin,operations,support'])->g
     Route::post('/admin/compliance-reports', [ProductionOperationsController::class, 'createComplianceReport']);
     Route::post('/admin/compliance-reports/{report}/exports', [ProductionOperationsController::class, 'createComplianceExport']);
 });
-Route::post('/airtel-callback', [TransactionController::class, 'airtelCallback']);
-Route::post('/mtn-callback', [TransactionController::class, 'mtnCallback']);
+Route::post('/airtel-callback', [TransactionController::class, 'airtelCallback'])->middleware('throttle:webhooks');
+Route::post('/mtn-callback', [TransactionController::class, 'mtnCallback'])->middleware('throttle:webhooks');

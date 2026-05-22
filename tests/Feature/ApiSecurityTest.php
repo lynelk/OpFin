@@ -46,13 +46,33 @@ class ApiSecurityTest extends TestCase
         $this->postJson('/api/reset-password', [
             'phone' => $user->phone,
             'otp' => '123456',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
+            'password' => 'New-password-123!',
+            'password_confirmation' => 'New-password-123!',
         ])->assertOk()->assertJsonPath('success', true);
 
-        $this->assertTrue(Hash::check('new-password', $user->fresh()->password));
+        $this->assertTrue(Hash::check('New-password-123!', $user->fresh()->password));
         $this->assertDatabaseMissing('otps', ['phone' => $user->phone]);
         $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_password_reset_rejects_weak_passwords(): void
+    {
+        $user = User::factory()->create(['phone' => '256700000003']);
+
+        Otp::create([
+            'phone' => $user->phone,
+            'otp' => '123456',
+            'expires_at' => now()->addMinutes(5),
+        ]);
+
+        $this->postJson('/api/reset-password', [
+            'phone' => $user->phone,
+            'otp' => '123456',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
     }
 
     public function test_user_cannot_read_another_users_loan_applications(): void
