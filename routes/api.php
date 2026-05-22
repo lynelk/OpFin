@@ -62,8 +62,11 @@ Route::middleware(['auth:sanctum', 'role:platform_admin,operations,support'])->g
     Route::patch('/admin/kyc/cases/{case}', [ProductionKycController::class, 'review']);
     Route::post('/admin/crb-reports', [ProductionCreditController::class, 'storeCrbReport']);
     Route::post('/admin/loan-applications/{application}/decision', [ProductionCreditController::class, 'decide']);
+    Route::get('/admin/reconciliation-runs', [ProductionOperationsController::class, 'reconciliationRuns']);
     Route::post('/admin/reconciliation-runs', [ProductionOperationsController::class, 'createReconciliationRun']);
+    Route::get('/admin/support-cases', [ProductionOperationsController::class, 'supportCases']);
     Route::post('/admin/support-cases', [ProductionOperationsController::class, 'createSupportCase']);
+    Route::get('/admin/compliance-reports', [ProductionOperationsController::class, 'complianceReports']);
     Route::post('/admin/compliance-reports', [ProductionOperationsController::class, 'createComplianceReport']);
 });
 Route::post('/airtel-callback', [TransactionController::class, 'airtelCallback']);

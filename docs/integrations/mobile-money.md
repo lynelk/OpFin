@@ -2,13 +2,13 @@
 
 ## Status
 
-The mobile money adapter layer is scaffolded for local development and future provider work. It does not make live MTN or Airtel API calls.
+The mobile money adapter layer supports local mock transactions and configured MTN/Airtel HTTP adapters. Live credentials must be configured and certified before production use.
 
 Current providers:
 
 - `mock`: local sandbox adapter for development and tests.
-- `mtn`: placeholder adapter that normalizes webhook payloads but refuses outbound live calls.
-- `airtel`: placeholder adapter that normalizes webhook payloads but refuses outbound live calls.
+- `mtn`: MTN Mobile Money HTTP adapter that requires base URL, access token, and subscription key configuration.
+- `airtel`: Airtel Money HTTP adapter that requires base URL, client ID, and access token configuration.
 
 ## Design Rules
 
@@ -93,7 +93,16 @@ Mock local webhook secret:
 MOCK_MOBILE_MONEY_WEBHOOK_SECRET=local-mock-secret
 ```
 
-MTN and Airtel variables exist for future provider wiring, but placeholder adapters do not use them to make live calls.
+Live provider credentials:
+
+```env
+MTN_MOMO_ACCESS_TOKEN=
+AIRTEL_ACCESS_TOKEN=
+MTN_MOMO_WEBHOOK_SECRET=
+AIRTEL_WEBHOOK_SECRET=
+```
+
+MTN and Airtel adapters fail before making requests if required configuration is missing.
 
 ## Usage Example
 
@@ -131,4 +140,3 @@ The adapter layer records audit logs for:
 4. Add webhook controllers after endpoint-level auth, rate limiting, and replay protection are finalized.
 5. Add reconciliation jobs that compare provider statements against `mobile_money_transactions`.
 6. Add unique provider-reference constraints where provider behavior guarantees uniqueness.
-

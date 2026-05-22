@@ -115,6 +115,10 @@ class ProductionReadinessApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.item_count', 1);
 
+        $this->getJson('/api/admin/reconciliation-runs')
+            ->assertOk()
+            ->assertJsonPath('data.runs.0.provider', 'mtn');
+
         $this->postJson('/api/admin/support-cases', [
             'customer_id' => $operations->id,
             'category' => 'payment',
@@ -122,11 +126,19 @@ class ProductionReadinessApiTest extends TestCase
             'description' => 'Customer requested help reconciling a repayment.',
         ])->assertCreated();
 
+        $this->getJson('/api/admin/support-cases')
+            ->assertOk()
+            ->assertJsonPath('data.support_cases.0.category', 'payment');
+
         $this->postJson('/api/admin/compliance-reports', [
             'report_type' => 'monthly_credit_register',
             'period_start' => now()->startOfMonth()->toDateString(),
             'period_end' => now()->endOfMonth()->toDateString(),
         ])->assertCreated();
+
+        $this->getJson('/api/admin/compliance-reports')
+            ->assertOk()
+            ->assertJsonPath('data.reports.0.report_type', 'monthly_credit_register');
     }
 
     private function createApplicationWithKycAndConsent(): array

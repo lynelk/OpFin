@@ -22,6 +22,13 @@ class ProductionOperationsController extends Controller
 {
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
+    public function reconciliationRuns(): JsonResponse
+    {
+        return ApiResponse::success('Reconciliation runs loaded.', [
+            'runs' => ReconciliationRun::latest()->limit(50)->get(),
+        ]);
+    }
+
     public function createReconciliationRun(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -59,6 +66,13 @@ class ProductionOperationsController extends Controller
         return ApiResponse::success('Reconciliation run created.', ['run' => $run->fresh(), 'item_count' => $transactions->count()], 201);
     }
 
+    public function supportCases(): JsonResponse
+    {
+        return ApiResponse::success('Support cases loaded.', [
+            'support_cases' => SupportCase::latest()->limit(50)->get(),
+        ]);
+    }
+
     public function createSupportCase(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -85,6 +99,13 @@ class ProductionOperationsController extends Controller
         $this->auditLogger->record('support.case.created', $request->user(), $case, ['category' => $case->category], $request);
 
         return ApiResponse::success('Support case created.', ['support_case' => $case], 201);
+    }
+
+    public function complianceReports(): JsonResponse
+    {
+        return ApiResponse::success('Compliance reports loaded.', [
+            'reports' => ComplianceReport::latest()->limit(50)->get(),
+        ]);
     }
 
     public function createComplianceReport(Request $request): JsonResponse

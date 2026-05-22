@@ -70,13 +70,25 @@ Records a production credit decision using KYC, consent, and CRB gates. Applicat
 
 Creates a reconciliation run from unreconciled mobile money transactions for a provider/business date.
 
+### `GET /api/admin/reconciliation-runs`
+
+Returns recent reconciliation runs for operations review.
+
 ### `POST /api/admin/support-cases`
 
 Creates a support case linked to a customer.
 
+### `GET /api/admin/support-cases`
+
+Returns recent support cases for operations/support review.
+
 ### `POST /api/admin/compliance-reports`
 
 Creates a compliance report record with period counts for KYC cases, consents, credit decisions, and mobile money transactions.
+
+### `GET /api/admin/compliance-reports`
+
+Returns recent compliance report records.
 
 ### Production ledger service
 
