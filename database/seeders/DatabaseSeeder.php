@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             AccountSeeder::class,
             TransactionSeeder::class,
             FloatTopupSeeder::class,
+            InvestorDemoSeeder::class,
         ]);
     }
 }

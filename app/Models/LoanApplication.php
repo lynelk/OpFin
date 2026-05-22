@@ -67,4 +67,14 @@ class LoanApplication extends Model
     {
         return $this->hasOne(Loan::class);
     }
+
+    public function demoDecision()
+    {
+        return $this->hasOne(DemoLoanDecision::class);
+    }
+
+    public function demoOffer()
+    {
+        return $this->hasOne(DemoLoanOffer::class);
+    }
 }

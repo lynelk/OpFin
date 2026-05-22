@@ -124,6 +124,8 @@ Implemented/foundation:
 - Sensitive-action audit middleware on profile access, loan application status updates, and transaction approvals.
 - Provider-agnostic mobile money adapter foundation with mock provider, MTN/Airtel placeholders, idempotency tracking, webhook signature validation, retry metadata, reconciliation status, and audit logs.
 - Mobile money adapter requests now require positive integer `amount_minor` values and a phone number before persistence or provider dispatch.
+- Investor-demo vertical slice endpoints under `/api/demo/*` for demo consent, loan application submission, mock affordability decisioning, reason-coded decisions, loan offers, offer acceptance, loan account creation, repayment schedule generation, sandbox mobile money disbursement, ledger entries, and admin snapshot review.
+- Investor demo seed data for customer/admin users, product terms, accounts, and demo consent state.
 
 Partial or legacy:
 
@@ -145,6 +147,32 @@ Missing or not yet production-grade:
 - Full ledger balancing guarantees.
 - Compliance reporting.
 - Savings, investments, insurance, employer-linked benefits, and CRB reporting workflows.
+
+## Investor Demo
+
+Seed demo data:
+
+```bash
+php artisan db:seed --class=InvestorDemoSeeder
+```
+
+Demo users:
+
+- Customer: `256700000001` / `password`
+- Platform admin: `256700000099` / `password`
+
+Demo endpoints are protected by Sanctum and intentionally mock-labelled:
+
+- `GET /api/demo/dashboard`
+- `POST /api/demo/consent`
+- `DELETE /api/demo/consent`
+- `POST /api/demo/loan-applications`
+- `GET /api/demo/loan-applications/{application}/decision`
+- `GET /api/demo/loan-applications/{application}/offer`
+- `POST /api/demo/loan-offers/{offer}/accept`
+- `GET /api/demo/admin/investor-snapshot`
+
+See `docs/demo/investor-demo-script.md`, `docs/demo/screenshots-checklist.md`, and `docs/demo/demo-limitations.md`.
 
 ## Documentation
 
