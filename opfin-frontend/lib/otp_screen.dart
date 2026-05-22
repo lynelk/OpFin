@@ -210,6 +210,7 @@ class OtpScreenState extends State<OtpScreen> {
         Uri.parse('$apiUrl/reset-password'),
         body: {
           'phone': widget.phone,
+          'otp': _otpController.text.trim(),
           'password': widget.password,
           'password_confirmation': widget.passwordConfirmation
         },
