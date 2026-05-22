@@ -58,11 +58,21 @@ Use this checklist before approving OpFin as a replacement for the current live 
 - [x] Database queue configuration exists.
 - [x] Scheduler configuration exists.
 - [x] Support case, reconciliation, compliance, and ledger admin foundations exist.
+- [x] Production operations, queue, monitoring, backup, incident, and callback runbooks are documented.
 - [ ] Queue workers and failed-job handling are verified.
 - [ ] Monitoring and alerting are active.
 - [ ] Backup and restore drill is complete.
 - [ ] Provider callback monitoring is active.
 - [ ] Incident and rollback runbooks are rehearsed.
+
+Runbook references:
+
+- `docs/production/operations-runbook.md`
+- `docs/production/queue-and-scheduler-runbook.md`
+- `docs/production/monitoring-and-alerting-plan.md`
+- `docs/production/backup-and-restore-plan.md`
+- `docs/production/incident-response-runbook.md`
+- `docs/production/provider-callback-runbook.md`
 
 ## Replacement Decision
 

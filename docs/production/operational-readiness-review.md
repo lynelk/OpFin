@@ -4,7 +4,7 @@ Date: 2026-05-22
 
 ## Summary
 
-OpFin has initial operational foundations: health check, queue configuration, scheduler route, reconciliation records, support cases, compliance report records, and admin operations screens. It is not ready for live replacement until toolchain verification, monitoring, provider operations, backup, and incident runbooks are completed.
+OpFin has initial operational foundations: health check, queue configuration, scheduler route, reconciliation records, support cases, compliance report records, and admin operations screens. Production operations runbooks are now documented, but OpFin is not ready for live replacement until toolchain verification, monitoring, provider operations, backup drills, and incident rehearsals are completed.
 
 ## Current Readiness
 
@@ -14,8 +14,8 @@ OpFin has initial operational foundations: health check, queue configuration, sc
 | Queues | Partial | Database queue is configured, SMS jobs exist, but worker operations are not verified. |
 | Scheduler | Partial | Console schedule checks transaction status every minute, but production safety and provider behavior need review. |
 | Logging | Partial | Laravel logging configured; `.env.example` now defaults to `LOG_LEVEL=info`. |
-| Monitoring hooks | Missing/partial | No confirmed uptime, queue, payment, ledger, or provider alerting. |
-| Backups | Missing/partial | Backup strategy is documented as required but not implemented here. |
+| Monitoring hooks | Missing/partial | Monitoring requirements are documented, but no confirmed uptime, queue, payment, ledger, or provider alerting is active. |
+| Backups | Missing/partial | Backup and restore requirements are documented, but no completed restore drill evidence exists. |
 | Error reporting | Missing/partial | No confirmed Sentry/Bugsnag/etc. integration. |
 | Admin support workflows | Partial | Support cases, notes, reconciliation, compliance reports, and ledger view exist, but full support console is incomplete. |
 | Provider operations | Partial/high risk | MTN/Airtel adapter structures exist, but production certification is not complete. |
@@ -26,6 +26,7 @@ OpFin has initial operational foundations: health check, queue configuration, sc
 - Removed duplicate manual API route registration to avoid duplicated route behavior.
 - Added normalized API exception responses.
 - Hardened frontend login/session cookie behavior.
+- Added production operations runbooks for daily operations, queue/scheduler handling, monitoring, backup/restore, incident response, and provider callbacks.
 
 ## Critical / High-Risk Gaps
 
@@ -36,8 +37,17 @@ OpFin has initial operational foundations: health check, queue configuration, sc
 | Scheduler operations | Scheduled jobs may call legacy provider flows. | Review scheduler commands and ensure no unsafe live calls outside approved adapters. |
 | Monitoring | No production alert evidence. | Add uptime, API error, queue backlog, failed payment, ledger imbalance, and provider callback alerts. |
 | Backups | No backup/restore rehearsal evidence. | Define database backup schedule and run restore drill. |
-| Incident response | No incident runbook evidence. | Add runbooks for payment outage, provider callback failure, ledger mismatch, auth outage, and rollback. |
+| Incident response | Runbooks exist but are not rehearsed. | Rehearse payment outage, provider callback failure, ledger mismatch, auth outage, and rollback. |
 | Admin support | Customer lookup, payment exception handling, and identity verification are incomplete. | Complete support console before live replacement. |
+
+## Runbook References
+
+- `docs/production/operations-runbook.md`
+- `docs/production/queue-and-scheduler-runbook.md`
+- `docs/production/monitoring-and-alerting-plan.md`
+- `docs/production/backup-and-restore-plan.md`
+- `docs/production/incident-response-runbook.md`
+- `docs/production/provider-callback-runbook.md`
 
 ## Cutover Requirement
 
