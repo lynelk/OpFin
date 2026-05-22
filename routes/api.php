@@ -36,14 +36,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/institutions', [LoanApplicationController::class, 'getInstitutions']);
     Route::get('/product-terms/{product}', [LoanApplicationController::class, 'getProductTerms']);
 
-    Route::get('/demo/dashboard', [InvestorDemoController::class, 'dashboard']);
-    Route::post('/demo/consent', [InvestorDemoController::class, 'grantConsent']);
-    Route::delete('/demo/consent', [InvestorDemoController::class, 'revokeConsent']);
-    Route::post('/demo/loan-applications', [InvestorDemoController::class, 'submitApplication']);
-    Route::get('/demo/loan-applications/{application}/decision', [InvestorDemoController::class, 'decision']);
-    Route::get('/demo/loan-applications/{application}/offer', [InvestorDemoController::class, 'offer']);
-    Route::post('/demo/loan-offers/{offer}/accept', [InvestorDemoController::class, 'acceptOffer']);
-    Route::get('/demo/admin/investor-snapshot', [InvestorDemoController::class, 'adminSnapshot']);
+    if (config('services.opfin.enable_demo_routes') || app()->environment(['local', 'testing'])) {
+        Route::get('/demo/dashboard', [InvestorDemoController::class, 'dashboard']);
+        Route::post('/demo/consent', [InvestorDemoController::class, 'grantConsent']);
+        Route::delete('/demo/consent', [InvestorDemoController::class, 'revokeConsent']);
+        Route::post('/demo/loan-applications', [InvestorDemoController::class, 'submitApplication']);
+        Route::get('/demo/loan-applications/{application}/decision', [InvestorDemoController::class, 'decision']);
+        Route::get('/demo/loan-applications/{application}/offer', [InvestorDemoController::class, 'offer']);
+        Route::post('/demo/loan-offers/{offer}/accept', [InvestorDemoController::class, 'acceptOffer']);
+        Route::get('/demo/admin/investor-snapshot', [InvestorDemoController::class, 'adminSnapshot']);
+    }
 });
 Route::middleware(['auth:sanctum', 'role:platform_admin,operations'])->group(function () {
     Route::get('/admin/foundation-check', [FoundationAdminController::class, 'check']);

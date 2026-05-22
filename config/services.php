@@ -106,4 +106,7 @@ return [
         'key' => env('PINECONE_API_KEY'),
         'url' => env('PINECONE_URL'),
     ],
+    'opfin' => [
+        'enable_demo_routes' => env('OPFIN_ENABLE_DEMO_ROUTES', false),
+    ],
 ];

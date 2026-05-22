@@ -252,3 +252,10 @@ Commands attempted on 2026-05-22:
 ## Production decision
 
 Do not cut over customers or financial operations to this implementation yet. Treat it as a foundation and demo system until the critical blockers in `blockers-and-risks.md` are resolved and verified with repeatable tests, migrations, builds, reconciliation evidence, and operational sign-off.
+
+## Guardrails added after assessment
+
+- Backend `/api/demo/*` routes are now registered only when `OPFIN_ENABLE_DEMO_ROUTES=true` or the app environment is `local`/`testing`.
+- `OPFIN_ENABLE_DEMO_ROUTES=false` is documented in `.env.example` as the default production posture.
+- Laravel now fails fast in production when `APP_DEBUG=true`, `MOBILE_MONEY_PROVIDER=mock`, or `OPFIN_ENABLE_DEMO_ROUTES=true`.
+- This does not make the production replacement ready; it only prevents demo endpoints from being exposed by default in production.
