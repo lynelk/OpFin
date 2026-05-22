@@ -9,6 +9,7 @@ import {
   mockInvestorSnapshot,
   mockKycCase,
   mockComplianceReports,
+  mockLedgerTransactions,
   mockReconciliationItems,
   mockProducts,
   mockReconciliationRuns,
@@ -33,6 +34,7 @@ import type {
   Institution,
   InvestorDemoSnapshot,
   KycCase,
+  LedgerTransaction,
   LoanApplication,
   LoginResponse,
   LoanProduct,
@@ -155,6 +157,7 @@ function mockRequest<T>(path: string, init: RequestOptions = {}): Promise<ApiEnv
     return Promise.resolve(envelope({ export: { id: 1, compliance_report_id: mockComplianceReports[0].id, format: "csv", status: "generated", manifest: {}, generated_at: new Date().toISOString() } } as T, "Sandbox compliance export created"));
   }
   if (path === "/admin/compliance-reports") return Promise.resolve(envelope({ reports: mockComplianceReports } as T, "Sandbox compliance reports loaded"));
+  if (path === "/admin/ledger-transactions") return Promise.resolve(envelope({ ledger_transactions: mockLedgerTransactions } as T, "Sandbox ledger transactions loaded"));
   if (path === "/demo/dashboard") {
     return Promise.resolve(envelope({
       mock_integrations: ["affordability", "decisioning", "mobile_money_disbursement"],
@@ -267,6 +270,7 @@ export const opfinApi = {
     request<{ report: ComplianceReport }>("/admin/compliance-reports", { method: "POST", bodyJson: payload, token }),
   createComplianceExport: (reportId: number, payload: { format: string }, token?: string) =>
     request<{ export: ComplianceExport }>(`/admin/compliance-reports/${reportId}/exports`, { method: "POST", bodyJson: payload, token }),
+  ledgerTransactions: (token?: string) => request<{ ledger_transactions: LedgerTransaction[] }>("/admin/ledger-transactions", { token }),
   products: (token?: string) => request<LoanProduct[]>("/products", { token }),
   institutions: (token?: string) => request<Institution[]>("/institutions", { token }),
   productTerms: (productId: number, token?: string) => request<ProductTerm[]>(`/product-terms/${productId}`, { token }),

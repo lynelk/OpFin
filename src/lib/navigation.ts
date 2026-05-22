@@ -22,6 +22,7 @@ export const navigationItems: NavItem[] = [
   { href: "/admin/dashboard", label: "Admin dashboard", group: "admin", roles: ["platform_admin", "operations", "support"] },
   { href: "/admin/credit-review", label: "Credit review", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/reconciliation", label: "Reconciliation", group: "admin", roles: ["platform_admin", "operations"] },
+  { href: "/admin/ledger", label: "Ledger", group: "admin", roles: ["platform_admin", "operations", "support"] },
   { href: "/admin/support", label: "Support cases", group: "admin", roles: ["platform_admin", "operations", "support"] },
   { href: "/admin/compliance", label: "Compliance reports", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/audit-trail", label: "Audit trail", group: "admin", roles: ["platform_admin", "operations", "support"] },

@@ -113,6 +113,10 @@ describe("OpFin API client", () => {
 
     const exported = await opfinApi.createComplianceExport(compliance.data.report.id, { format: "csv" });
     expect(exported.data.export.format).toBe("csv");
+
+    const ledger = await opfinApi.ledgerTransactions();
+    expect(ledger.data.ledger_transactions[0].reference).toContain("loan.disbursement");
+    expect(ledger.data.ledger_transactions[0].entries).toHaveLength(2);
   });
 
   it("runs the mock investor demo flow through consent, application, offer, and admin snapshot contracts", async () => {

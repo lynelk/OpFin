@@ -288,6 +288,12 @@ form {
   margin: 0;
 }
 
+.stack-list {
+  display: grid;
+  gap: 4px;
+  min-width: 160px;
+}
+
 .field label {
   display: block;
   color: var(--muted);

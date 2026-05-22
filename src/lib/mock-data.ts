@@ -8,6 +8,7 @@ import type {
   Institution,
   InvestorDemoSnapshot,
   KycCase,
+  LedgerTransaction,
   LoanApplication,
   LoanProduct,
   ProductTerm,
@@ -236,5 +237,42 @@ export const mockComplianceReports: ComplianceReport[] = [
     },
     generated_at: "2026-05-22T08:30:00Z",
     exports: []
+  }
+];
+
+export const mockLedgerTransactions: LedgerTransaction[] = [
+  {
+    id: 1,
+    reference: "loan.disbursement:demo-disbursement-1",
+    event_type: "loan.disbursement",
+    currency: "UGX",
+    source_type: "App\\Models\\Transaction",
+    source_id: 1,
+    posted_by: null,
+    posted_at: "2026-05-22T09:00:00Z",
+    metadata: {
+      loan_id: 77,
+      legacy_transaction_id: 1
+    },
+    entries: [
+      {
+        id: 1,
+        ledger_transaction_id: 1,
+        ledger_account_id: 10,
+        direction: "debit",
+        amount_minor: 250000,
+        currency: "UGX",
+        memo: "Loan principal receivable created"
+      },
+      {
+        id: 2,
+        ledger_transaction_id: 1,
+        ledger_account_id: 11,
+        direction: "credit",
+        amount_minor: 250000,
+        currency: "UGX",
+        memo: "Cash disbursed through mobile money provider"
+      }
+    ]
   }
 ];

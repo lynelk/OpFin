@@ -29,6 +29,10 @@ Admin and operations:
 
 - `/admin/dashboard`: admin dashboard placeholder.
 - `/admin/credit-review`: sandbox queue using known loan application fields, with status update wired to the documented admin endpoint.
+- `/admin/reconciliation`: mobile-money reconciliation runs and exception intake.
+- `/admin/ledger`: read-only immutable production ledger transaction list.
+- `/admin/support`: support case intake, list, and update workflow.
+- `/admin/compliance`: compliance report record and export workflow.
 - `/admin/audit-trail`: sandbox-labelled audit trail placeholder using audit event concepts from the backend audit log.
 
 Employer and future modules:

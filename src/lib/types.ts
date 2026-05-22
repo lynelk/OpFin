@@ -279,3 +279,26 @@ export type ComplianceExport = {
   manifest: Record<string, unknown>;
   generated_at: string;
 };
+
+export type LedgerEntry = {
+  id: number;
+  ledger_transaction_id: number;
+  ledger_account_id: number;
+  direction: "debit" | "credit" | string;
+  amount_minor: number;
+  currency: string;
+  memo?: string | null;
+};
+
+export type LedgerTransaction = {
+  id: number;
+  reference: string;
+  event_type: string;
+  currency: string;
+  source_type: string;
+  source_id: number;
+  posted_by?: number | null;
+  posted_at: string;
+  metadata?: Record<string, unknown> | null;
+  entries: LedgerEntry[];
+};
