@@ -91,6 +91,7 @@ Run a specific test class:
 php artisan test --filter=FoundationApiTest
 php artisan test --filter=ApiSecurityTest
 php artisan test --filter=BackendCheckpointTest
+php artisan test --filter=InvestorDemoSliceTest
 ```
 
 Run migrations from a clean database:

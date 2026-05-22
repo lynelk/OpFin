@@ -9,7 +9,6 @@ use App\Models\DemoLoanOffer;
 use App\Models\JournalEntry;
 use App\Models\Loan;
 use App\Models\LoanApplication;
-use App\Models\LoanProductTerm;
 use App\Models\MobileMoneyTransaction;
 use App\Models\Transaction;
 use App\Models\User;
@@ -117,11 +116,12 @@ class InvestorDemoService
             throw new AccessDeniedHttpException('You cannot accept this offer.');
         }
 
-        if ($offer->status !== DemoLoanOffer::STATUS_PENDING) {
-            throw new BadRequestHttpException('This investor demo offer is not pending acceptance.');
-        }
-
         return DB::transaction(function () use ($user, $offer, $request) {
+            $offer = DemoLoanOffer::whereKey($offer->id)->lockForUpdate()->firstOrFail();
+            if ($offer->status !== DemoLoanOffer::STATUS_PENDING) {
+                throw new BadRequestHttpException('This investor demo offer is not pending acceptance.');
+            }
+
             $offer->update([
                 'status' => DemoLoanOffer::STATUS_ACCEPTED,
                 'accepted_at' => now(),
@@ -172,6 +172,15 @@ class InvestorDemoService
             $this->auditLogger->record('demo.loan_account.created', $user, $loan, [
                 'mock_integration' => true,
                 'application_id' => $application->id,
+            ], $request);
+            $this->auditLogger->record('demo.repayment_schedule.generated', $user, $loan, [
+                'mock_integration' => true,
+                'schedule_count' => $loan->schedules()->count(),
+            ], $request);
+            $this->auditLogger->record('demo.ledger_entries.created', $user, $transaction, [
+                'mock_integration' => true,
+                'entry_count' => JournalEntry::where('reference', $transaction->reference)->count(),
+                'reference' => $transaction->reference,
             ], $request);
             $this->auditLogger->record('demo.disbursement.recorded', $user, $mobileMoney, [
                 'mock_integration' => true,

@@ -89,6 +89,58 @@ Adapter requests must provide:
 
 Payment events from this layer must not mutate loan balances directly; ledger impact should continue to pass through the financial processing service.
 
+## Investor Demo Endpoints
+
+These endpoints are protected by Sanctum and are intentionally labelled as investor-demo/mock flows. They do not call live mobile money, CRB, KYC, savings, insurance, or investment providers.
+
+### `GET /api/demo/dashboard`
+
+Returns the authenticated customer's demo profile, KYC status, consent state, mock integration labels, and latest application with decision, offer, loan, and schedule relationships.
+
+### `POST /api/demo/consent`
+
+Creates or re-grants demo-scoped `credit_processing` consent. Audit logged as `demo.consent.granted`.
+
+### `DELETE /api/demo/consent`
+
+Revokes demo-scoped credit-processing consent. Future demo credit applications are blocked until consent is granted again. Audit logged as `demo.consent.revoked`.
+
+### `POST /api/demo/loan-applications`
+
+Creates a demo loan application, requires verified KYC and granted demo consent, runs mock affordability/decisioning, returns reason codes, and creates a pending loan offer when approved.
+
+Submitted fields:
+
+- `loan_product_id`
+- `loan_product_term_id`
+- `institution_id`
+- `amount`
+- `reason`
+
+### `GET /api/demo/loan-applications/{application}/decision`
+
+Returns the reason-coded mock decision for an application visible to the authenticated customer or admin/support role.
+
+### `GET /api/demo/loan-applications/{application}/offer`
+
+Returns the mock loan offer for an approved demo application visible to the authenticated customer or admin/support role.
+
+### `POST /api/demo/loan-offers/{offer}/accept`
+
+Accepts a pending demo offer, creates the loan account, generates repayment schedules via the existing loan model event, creates ledger entries through `LoanService`, and records a sandbox mobile money disbursement through the mock adapter. The offer row is locked during acceptance to block duplicate acceptance.
+
+Audit events include:
+
+- `demo.loan_offer.accepted`
+- `demo.loan_account.created`
+- `demo.repayment_schedule.generated`
+- `demo.ledger_entries.created`
+- `demo.disbursement.recorded`
+
+### `GET /api/demo/admin/investor-snapshot`
+
+Requires `platform_admin`, `operations`, or `support`. Returns customers, applications, decisions, offers, loans, ledger entries, repayment schedules, mobile money transactions, and audit trail entries for the investor demo review.
+
 ## Operations/Admin Endpoints
 
 ### `GET /api/admin/foundation-check`

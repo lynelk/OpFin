@@ -2,11 +2,11 @@
 
 ## Scope
 
-This checkpoint reviews the backend after the current auth, role, audit, KYC/NIN, credit application, loan, repayment, transaction, account, journal, and mobile money adapter work visible in this checkout.
+This checkpoint reviews the backend after the current auth, role, audit, KYC/NIN, credit application, investor-demo consent, mock affordability/decisioning, demo loan offers, loan account, repayment schedule, transaction, account, journal, and mobile money adapter work visible in this checkout.
 
 No new product features were added. Fixes were limited to validation, role enforcement, transaction/idempotency safety, test coverage, and documentation.
 
-The request references consent, affordability checks, and loan offers as implemented modules. They are not present as dedicated backend modules in this repository yet; this checkpoint treats them as missing production requirements rather than adding them as new product features.
+The repository now includes an investor-demo vertical slice for consent, affordability, and loan offers. These are explicitly demo-scoped and mock-labelled, not production-grade consent, underwriting, or offer modules.
 
 ## Verification Environment
 
@@ -25,7 +25,8 @@ Findings:
 - Domain logic is split inconsistently between controllers, models, and `LoanService`.
 - Foundation services exist for audit logging, SMS, loan processing, mobile money, and RAG/OpenAI support.
 - The mobile money adapter layer is separated under `App\Services\MobileMoney` with a provider contract and mock/placeholder adapters.
-- There are no dedicated `FormRequest`, API resource, policy, consent, affordability, loan offer, or ledger service modules.
+- `InvestorDemoService` centralizes the demo consent, application, decision, offer, acceptance, loan creation, ledger, schedule, and sandbox disbursement flow.
+- There are no dedicated `FormRequest`, API resource, policy, production consent, production affordability, production loan offer, or formal ledger service modules.
 - Loan schedule generation is triggered from the `Loan` model `created` event, which hides financial side effects behind model persistence.
 - `LoanApplicationController` still performs validation, eligibility checks, transaction creation, and gateway triggering in one controller.
 - `LoanRepaymentController` creates repayment transactions and invokes payment gateways directly.
@@ -38,6 +39,9 @@ Fixes made:
 - Attached sensitive-action audit middleware to loan application status updates and transaction approvals.
 - Added focused checkpoint regression tests for current role enforcement and duplicate disbursement processing.
 - Added mobile money adapter validation so malformed payment commands are rejected before persistence or provider dispatch.
+- Added demo checkpoint tests for consent gates, consent revocation, admin snapshot access, offer acceptance replay protection, loan creation, schedules, ledger entries, sandbox mobile money, and demo audit logging.
+- Fixed demo offer acceptance to lock the offer row before state transition, blocking duplicate acceptance races.
+- Added explicit demo audit events for repayment schedule generation and ledger entry creation.
 
 Remaining risks:
 
@@ -49,7 +53,7 @@ Remaining risks:
 
 Findings:
 
-- Migrations cover users, institutions, loan products, loan terms, applications, loans, schedules, repayments, transactions, accounts, journal entries, credit scores, audit logs, chat/RAG tables, jobs, cache, and sessions.
+- Migrations cover users, institutions, loan products, loan terms, applications, loans, schedules, repayments, transactions, accounts, journal entries, credit scores, audit logs, demo consent, demo decisions, demo offers, chat/RAG tables, jobs, cache, and sessions.
 - Foreign keys are present on many financial tables.
 - Several money columns still violate the OpFin integer minor-unit standard:
   - `loan_applications.amount` is `string`.
@@ -59,6 +63,7 @@ Findings:
   - `accounts.balance` is `decimal`.
   - `journal_entries.amount`, `previous_balance`, and `current_balance` are `decimal`.
 - `mobile_money_transactions.amount_minor` correctly uses an integer minor-unit column.
+- Demo decision and offer tables use integer minor-unit fields for requested, approved, principal, repayment, income, and obligation amounts.
 - Some financial timestamp columns are stored as strings, including loan application and loan status timestamps.
 - Transaction references are not currently unique in the migration history.
 - The mobile money adapter table has an idempotency key for adapter commands. Legacy disbursement and repayment flows still do not have a general idempotency-key table or unique command key.
@@ -81,6 +86,7 @@ Findings:
 - Pending duplicate repayments are blocked by checking for an existing pending repayment transaction.
 - Callback handlers skip already successful transactions, but there is no general idempotency-key table.
 - Mobile money adapter commands are idempotent by `idempotency_key`, duplicate webhooks are deduplicated by `webhook_event_id`, and adapter webhook processing does not create journal entries directly.
+- Demo offer acceptance now uses `lockForUpdate()` and rejects replay once an offer is no longer `pending_acceptance`.
 
 Fixes made:
 
@@ -90,6 +96,8 @@ Fixes made:
 - Successful disbursement processing now skips work if the transaction already has a loan or if the application already has a loan.
 - Successful repayment processing now skips duplicate ledger application when journal entries already exist for the transaction reference.
 - Mobile money adapter requests now require a positive integer `amount_minor` and a non-empty phone number.
+- Demo loan offer acceptance creates the loan account, repayment schedule, ledger entries, and mock mobile money record inside an application-level transaction.
+- Demo financial state changes are audit logged for offer acceptance, loan account creation, repayment schedule generation, ledger entry creation, and disbursement recording.
 
 Remaining risks:
 
@@ -129,10 +137,10 @@ Findings:
 - Loan application creation checks `nin_status === VALID`.
 - NIN validation stores fields directly on the `users` table.
 - Credit score retrieval currently sends `client_consented: Yes` to the CRB provider.
-- No dedicated consent model, migration, controller, or service exists.
-- No consent revocation enforcement exists.
-- No affordability processing module exists.
-- No loan offer module exists.
+- Investor-demo credit application processing requires demo-scoped `credit_processing` consent.
+- Investor-demo consent revocation blocks future demo credit processing.
+- Investor-demo affordability and loan offers exist as mock-labelled demo records.
+- No production consent model/service, production affordability module, or production loan offer lifecycle exists yet.
 
 Remaining risks:
 
@@ -157,6 +165,12 @@ Added tests:
 - `BackendCheckpointTest::test_customer_cannot_submit_credit_application_without_verified_kyc`
 - `MobileMoneyAdapterTest::test_mobile_money_requires_positive_integer_minor_units`
 - `MobileMoneyAdapterTest::test_mobile_money_requires_phone_number`
+- `InvestorDemoSliceTest::test_customer_can_complete_investor_demo_credit_flow`
+- `InvestorDemoSliceTest::test_credit_application_requires_demo_consent`
+- `InvestorDemoSliceTest::test_consent_revocation_blocks_future_demo_credit_processing`
+- `InvestorDemoSliceTest::test_customer_cannot_access_demo_admin_snapshot`
+- `InvestorDemoSliceTest::test_demo_offer_acceptance_cannot_be_replayed`
+- `InvestorDemoSliceTest::test_admin_can_view_complete_investor_demo_snapshot`
 
 Unable to run locally:
 
@@ -173,6 +187,8 @@ Reason: PHP and Composer are not installed or not on PATH in this environment.
 - Wrapped successful transaction processing in database transactions.
 - Added checkpoint regression tests for RBAC and disbursement idempotency.
 - Added checkpoint regression tests for the KYC gate and mobile money request validation.
+- Added investor-demo checkpoint tests and row-lock replay protection for offer acceptance.
+- Added explicit demo audit logs for schedule generation and ledger entry creation.
 - Replaced Laravel boilerplate README with OpFin setup and module status.
 - Added current API endpoint documentation.
 
@@ -181,9 +197,9 @@ Reason: PHP and Composer are not installed or not on PATH in this environment.
 1. Run tests and fresh migrations in a PHP 8.2 environment.
 2. Normalize legacy API response shapes.
 3. Convert all financial money columns to integer minor units.
-4. Add consent module and enforce consent gates before credit scoring.
-5. Add formal affordability checks.
-6. Add loan offer module before binding applications to loan accounts.
+4. Replace demo consent with a production consent module and enforce consent gates before credit scoring.
+5. Replace mock affordability with governed affordability policy checks.
+6. Replace demo loan offers with a production offer lifecycle before binding applications to loan accounts.
 7. Introduce idempotency-key persistence and unique constraints.
 8. Replace model-side financial side effects with explicit application services.
 9. Add policy/request/resource layers.

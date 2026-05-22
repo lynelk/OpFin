@@ -55,6 +55,9 @@ class InvestorDemoSliceTest extends TestCase
             'direction' => MobileMoneyTransaction::DIRECTION_DISBURSEMENT,
             'status' => MobileMoneyTransaction::STATUS_PENDING,
         ]);
+        $this->assertDatabaseHas('audit_logs', ['event' => 'demo.repayment_schedule.generated']);
+        $this->assertDatabaseHas('audit_logs', ['event' => 'demo.ledger_entries.created']);
+        $this->assertDatabaseHas('audit_logs', ['event' => 'demo.disbursement.recorded']);
         $this->assertGreaterThan(0, Loan::findOrFail($loanId)->schedules()->count());
         $this->assertGreaterThan(0, JournalEntry::count());
         $this->assertGreaterThanOrEqual(5, AuditLog::where('event', 'like', 'demo.%')->count());
@@ -73,6 +76,59 @@ class InvestorDemoSliceTest extends TestCase
             'reason' => 'Investor demo school fees',
         ])->assertStatus(403)
             ->assertJsonPath('message', 'Credit processing consent is required for the investor demo.');
+    }
+
+    public function test_consent_revocation_blocks_future_demo_credit_processing(): void
+    {
+        [$customer, $product, $term] = $this->seedDemoBasics();
+        Sanctum::actingAs($customer);
+
+        $this->postJson('/api/demo/consent', ['purpose' => 'credit_processing'])->assertOk();
+        $this->deleteJson('/api/demo/consent')->assertOk()
+            ->assertJsonPath('data.status', 'revoked');
+
+        $this->postJson('/api/demo/loan-applications', [
+            'loan_product_id' => $product->id,
+            'loan_product_term_id' => $term->id,
+            'institution_id' => $customer->institution_id,
+            'amount' => 250000,
+            'reason' => 'Investor demo school fees',
+        ])->assertStatus(403)
+            ->assertJsonPath('message', 'Credit processing consent is required for the investor demo.');
+    }
+
+    public function test_customer_cannot_access_demo_admin_snapshot(): void
+    {
+        [$customer] = $this->seedDemoBasics();
+        Sanctum::actingAs($customer);
+
+        $this->getJson('/api/demo/admin/investor-snapshot')
+            ->assertStatus(403)
+            ->assertJsonPath('message', 'Admin access is required for the investor demo snapshot.');
+    }
+
+    public function test_demo_offer_acceptance_cannot_be_replayed(): void
+    {
+        [$customer, $product, $term] = $this->seedDemoBasics();
+        Sanctum::actingAs($customer);
+
+        $this->postJson('/api/demo/consent', ['purpose' => 'credit_processing'])->assertOk();
+        $application = $this->postJson('/api/demo/loan-applications', [
+            'loan_product_id' => $product->id,
+            'loan_product_term_id' => $term->id,
+            'institution_id' => $customer->institution_id,
+            'amount' => 250000,
+            'reason' => 'Investor demo school fees',
+        ])->json('data');
+
+        $this->postJson("/api/demo/loan-offers/{$application['offer']['id']}/accept")
+            ->assertOk();
+        $this->postJson("/api/demo/loan-offers/{$application['offer']['id']}/accept")
+            ->assertStatus(400)
+            ->assertJsonPath('message', 'This investor demo offer is not pending acceptance.');
+
+        $this->assertDatabaseCount('loans', 1);
+        $this->assertDatabaseCount('mobile_money_transactions', 1);
     }
 
     public function test_admin_can_view_complete_investor_demo_snapshot(): void
