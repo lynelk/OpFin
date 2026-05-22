@@ -27,10 +27,10 @@ class User extends Authenticatable
 
     public const ROLE_PERMISSIONS = [
         self::ROLE_PLATFORM_ADMIN => ['*'],
-        self::ROLE_OPERATIONS => ['profile.view', 'operations.view', 'audit.view'],
-        self::ROLE_CUSTOMER => ['profile.view'],
+        self::ROLE_OPERATIONS => ['profile.view', 'operations.view', 'audit.view', 'kyc.review', 'credit.review', 'reconciliation.manage', 'support.manage', 'compliance.report'],
+        self::ROLE_CUSTOMER => ['profile.view', 'kyc.submit', 'consent.manage'],
         self::ROLE_EMPLOYER_ADMIN => ['profile.view', 'employer.view'],
-        self::ROLE_SUPPORT => ['profile.view', 'support.view'],
+        self::ROLE_SUPPORT => ['profile.view', 'support.view', 'kyc.review', 'support.manage'],
     ];
 
     /** @use HasFactory<\Database\Factories\UserFactory> */

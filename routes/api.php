@@ -5,6 +5,10 @@ use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\ProductionConsentController;
+use App\Http\Controllers\Api\ProductionCreditController;
+use App\Http\Controllers\Api\ProductionKycController;
+use App\Http\Controllers\Api\ProductionOperationsController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\LoanRepaymentController;
 use App\Http\Controllers\Api\InvestorDemoController;
@@ -36,6 +40,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/institutions', [LoanApplicationController::class, 'getInstitutions']);
     Route::get('/product-terms/{product}', [LoanApplicationController::class, 'getProductTerms']);
 
+    Route::get('/kyc/status', [ProductionKycController::class, 'show']);
+    Route::post('/kyc/cases', [ProductionKycController::class, 'submit']);
+    Route::get('/consents', [ProductionConsentController::class, 'index']);
+    Route::post('/consents', [ProductionConsentController::class, 'grant']);
+    Route::delete('/consents/{consent}', [ProductionConsentController::class, 'revoke']);
+
     if (config('services.opfin.enable_demo_routes') || app()->environment(['local', 'testing'])) {
         Route::get('/demo/dashboard', [InvestorDemoController::class, 'dashboard']);
         Route::post('/demo/consent', [InvestorDemoController::class, 'grantConsent']);
@@ -47,8 +57,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/demo/admin/investor-snapshot', [InvestorDemoController::class, 'adminSnapshot']);
     }
 });
-Route::middleware(['auth:sanctum', 'role:platform_admin,operations'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:platform_admin,operations,support'])->group(function () {
     Route::get('/admin/foundation-check', [FoundationAdminController::class, 'check']);
+    Route::patch('/admin/kyc/cases/{case}', [ProductionKycController::class, 'review']);
+    Route::post('/admin/crb-reports', [ProductionCreditController::class, 'storeCrbReport']);
+    Route::post('/admin/loan-applications/{application}/decision', [ProductionCreditController::class, 'decide']);
+    Route::post('/admin/reconciliation-runs', [ProductionOperationsController::class, 'createReconciliationRun']);
+    Route::post('/admin/support-cases', [ProductionOperationsController::class, 'createSupportCase']);
+    Route::post('/admin/compliance-reports', [ProductionOperationsController::class, 'createComplianceReport']);
 });
 Route::post('/airtel-callback', [TransactionController::class, 'airtelCallback']);
 Route::post('/mtn-callback', [TransactionController::class, 'mtnCallback']);

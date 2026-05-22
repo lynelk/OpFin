@@ -30,6 +30,58 @@ Verifies a phone/OTP pair.
 
 Requires a valid, unexpired OTP before resetting a user password. Existing tokens are revoked after a successful reset.
 
+## Production Readiness Endpoints
+
+These endpoints are production-shaped persistence and workflow foundations. They do not make live provider calls unless a configured provider implementation is explicitly added.
+
+### `GET /api/kyc/status`
+
+Returns the authenticated customer's latest KYC case.
+
+### `POST /api/kyc/cases`
+
+Submits a KYC case with national ID, provider/reference metadata, and evidence payload.
+
+### `GET /api/consents`
+
+Returns the authenticated customer's consent records.
+
+### `POST /api/consents`
+
+Grants a versioned consent purpose and revokes any currently granted consent for the same purpose.
+
+### `DELETE /api/consents/{consent}`
+
+Revokes a customer-owned consent record.
+
+### `PATCH /api/admin/kyc/cases/{case}`
+
+Reviews a KYC case as verified or rejected. Requires platform admin, operations, or support role.
+
+### `POST /api/admin/crb-reports`
+
+Records a CRB provider report result and provider reference. Requires platform admin, operations, or support role.
+
+### `POST /api/admin/loan-applications/{application}/decision`
+
+Records a production credit decision using KYC, consent, and CRB gates. Applications without current verified KYC, active consent, or current CRB report are referred rather than approved.
+
+### `POST /api/admin/reconciliation-runs`
+
+Creates a reconciliation run from unreconciled mobile money transactions for a provider/business date.
+
+### `POST /api/admin/support-cases`
+
+Creates a support case linked to a customer.
+
+### `POST /api/admin/compliance-reports`
+
+Creates a compliance report record with period counts for KYC cases, consents, credit decisions, and mobile money transactions.
+
+### Production ledger service
+
+The production ledger service is not exposed directly as a public API. `App\Services\ProductionLedgerService` posts immutable `ledger_transactions` and `ledger_entries` in integer minor units only and rejects unbalanced postings.
+
 ## Authenticated Customer Endpoints
 
 ### `GET /api/profile`

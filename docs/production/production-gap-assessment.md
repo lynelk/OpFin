@@ -27,6 +27,7 @@ The safest classification is: suitable for architecture continuation and control
 - SMS/OTP scaffolding.
 - Mobile money adapter layer with provider interface, mock adapter, MTN/Airtel placeholders, signature validator, normalized responses, transaction table, retry/failure/reconciliation fields, and idempotency fields.
 - Investor-demo consent, decision, offer, dashboard, admin snapshot, and demo loan acceptance flow.
+- Production-shaped KYC cases, versioned consent records, CRB reports, credit decisions, immutable minor-unit ledger tables, reconciliation runs/items, support cases, and compliance report records.
 - RAG/chat scaffolding and OpenAI/Pinecone configuration hooks.
 - Feature tests for foundation auth/roles/audit, backend checkpoint flows, API security, mobile money adapter behavior, and investor-demo slice.
 
@@ -108,9 +109,9 @@ Based on code inspection, not runtime proof:
 - Integer minor units across all financial tables.
 - Immutable ledger posting with enforced balanced entries.
 - Production-grade mobile money disbursement, collection, webhook, reversal, reconciliation, retry, and support tooling.
-- Full KYC lifecycle and provider integration.
-- Full consent lifecycle and compliance reporting.
-- CRB integration and credit policy governance.
+- Full live KYC provider integration beyond the new persisted KYC case/review foundation.
+- Full production consent lifecycle reporting beyond the new versioned consent records.
+- Live CRB request integration and credit policy governance beyond the new CRB report and gate-based decision records.
 - Customer support console and case management.
 - Admin operational dashboards with maker-checker controls.
 - Incident response, monitoring, audit export, backups, and disaster recovery.
