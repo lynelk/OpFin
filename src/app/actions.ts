@@ -63,32 +63,43 @@ export async function logoutAction() {
 }
 
 export async function createConsentAction() {
-  const cookieStore = await cookies();
-  cookieStore.set("opfin_demo_consent", "sandbox-active", {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/"
-  });
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.grantDemoConsent(token);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/consent", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/consent", { error: "server", message: "Consent creation failed" });
+  }
 
   redirect("/consent?status=created");
 }
 
 export async function revokeConsentAction() {
-  const cookieStore = await cookies();
-  cookieStore.set("opfin_demo_consent", "sandbox-revoked", {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/"
-  });
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.revokeDemoConsent(token);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/consent", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/consent", { error: "server", message: "Consent revocation failed" });
+  }
 
   redirect("/consent?status=revoked");
 }
 
 export async function submitLoanApplicationAction(formData: FormData) {
   const token = await getAccessToken();
+  let applicationId: number | undefined;
 
   try {
-    await opfinApi.submitLoanApplication({
+    const response = await opfinApi.submitDemoLoanApplication({
       loan_product_id: Number(value(formData, "loan_product_id")),
       loan_product_term_id: Number(value(formData, "loan_product_term_id")),
       institution_id: Number(value(formData, "institution_id")),
@@ -96,6 +107,7 @@ export async function submitLoanApplicationAction(formData: FormData) {
       reason: value(formData, "reason")
     }, token);
 
+    applicationId = response.data.application.id;
   } catch (error) {
     if (error instanceof OpfinApiError) {
       redirectWith("/loans/apply", { error: error.kind, message: error.message });
@@ -104,7 +116,23 @@ export async function submitLoanApplicationAction(formData: FormData) {
     redirectWith("/loans/apply", { error: "server", message: "Loan application failed" });
   }
 
-  redirect("/loans/decision?status=submitted");
+  redirect(applicationId ? `/loans/decision?application=${applicationId}&status=submitted` : "/loans/decision?status=submitted");
+}
+
+export async function acceptDemoOfferAction(formData: FormData) {
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.acceptDemoOffer(Number(value(formData, "offer_id")), token);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/loans/offer", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/loans/offer", { error: "server", message: "Offer acceptance failed" });
+  }
+
+  redirect("/loans/account?status=accepted");
 }
 
 export async function updateLoanApplicationStatusAction(formData: FormData) {

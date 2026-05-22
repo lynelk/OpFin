@@ -1,4 +1,16 @@
-import type { ConsentState, Institution, LoanApplication, LoanProduct, ProductTerm, Profile, RepaymentScheduleRow } from "./types";
+import type {
+  ConsentState,
+  DemoConsent,
+  DemoDecision,
+  DemoOffer,
+  Institution,
+  InvestorDemoSnapshot,
+  LoanApplication,
+  LoanProduct,
+  ProductTerm,
+  Profile,
+  RepaymentScheduleRow
+} from "./types";
 
 export const mockProfile: Profile = {
   user: {
@@ -85,4 +97,63 @@ export const mockAuditEvents = [
 export const mockConsentState: ConsentState = {
   status: "not-configured",
   label: "Consent API contract pending"
+};
+
+export const mockDemoConsent: DemoConsent = {
+  id: 1,
+  purpose: "credit_processing",
+  status: "granted",
+  granted_at: "2026-05-21T09:00:00Z",
+  metadata: { mock_integration: true }
+};
+
+export const mockDemoDecision: DemoDecision = {
+  id: 1,
+  status: "approved",
+  requested_amount_minor: 250000,
+  approved_amount_minor: 250000,
+  monthly_income_minor: 1200000,
+  estimated_monthly_obligation_minor: 83333,
+  reason_codes: ["KYC_VERIFIED", "CONSENT_GRANTED", "MOCK_AFFORDABILITY_CHECK", "DEBT_SERVICE_WITHIN_LIMIT"],
+  decision_summary: "Approved by mock affordability rules for investor demo only.",
+  decided_at: "2026-05-21T09:05:00Z"
+};
+
+export const mockDemoOffer: DemoOffer = {
+  id: 1,
+  status: "pending_acceptance",
+  principal_amount_minor: 250000,
+  total_repayment_minor: 275000,
+  duration_days: 30,
+  interest_rate: "10.00",
+  interest_type: "Flat",
+  repayment_frequency: "Monthly",
+  expires_at: "2026-05-22T09:05:00Z",
+  accepted_at: null
+};
+
+export const mockInvestorSnapshot: InvestorDemoSnapshot = {
+  customers: [mockProfile.user],
+  applications: mockApplications,
+  decisions: [mockDemoDecision],
+  offers: [mockDemoOffer],
+  loans: [mockApplications[1].loan!],
+  ledger_entries: [
+    { id: 1, type: "Debit", amount: 250000, reference: "demo-disbursement-1", description: "Loan Disbursement" },
+    { id: 2, type: "Credit", amount: 250000, reference: "demo-disbursement-1", description: "Loan Disbursement" }
+  ],
+  repayment_schedules: mockSchedule,
+  mobile_money: [
+    {
+      id: 1,
+      provider: "mock",
+      status: "pending",
+      direction: "disbursement",
+      amount_minor: 250000,
+      reconciliation_status: "unreconciled"
+    }
+  ],
+  audit_trail: [
+    { id: 1, event: "demo.loan_offer.accepted", created_at: "2026-05-21T09:10:00Z", metadata: { mock_integration: true } }
+  ]
 };

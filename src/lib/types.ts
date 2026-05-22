@@ -64,6 +64,7 @@ export type LoanApplication = {
     status: string;
     outstanding_balance?: number;
     repayment_start_date?: string | null;
+    schedules?: RepaymentScheduleRow[];
   } | null;
 };
 
@@ -97,12 +98,97 @@ export type ConsentState = {
 };
 
 export type DemoDecision = {
-  status: string;
-  message: string;
-  source: "backend-application-status" | "sandbox";
+  id: number;
+  status: "approved" | "declined" | string;
+  requested_amount_minor: number;
+  approved_amount_minor: number;
+  monthly_income_minor: number;
+  estimated_monthly_obligation_minor: number;
+  reason_codes: string[];
+  decision_summary: string;
+  decided_at?: string;
 };
 
 export type DemoOffer = {
-  status: "sandbox-offer" | "not-available";
-  message: string;
+  id: number;
+  status: "pending_acceptance" | "accepted" | "expired" | "not-available" | string;
+  principal_amount_minor: number;
+  total_repayment_minor: number;
+  duration_days: number;
+  interest_rate: string | number;
+  interest_type: string;
+  repayment_frequency: string;
+  expires_at?: string;
+  accepted_at?: string | null;
+};
+
+export type DemoConsent = {
+  id?: number;
+  purpose: string;
+  status: "granted" | "revoked" | string;
+  granted_at?: string | null;
+  revoked_at?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export type DemoDashboard = {
+  mock_integrations: string[];
+  profile: Profile["user"];
+  kyc: {
+    status?: string | null;
+    national_id?: string | null;
+    date_of_birth?: string | null;
+    mock_integration: boolean;
+  };
+  consent?: DemoConsent | null;
+  latest_application?: (LoanApplication & {
+    demo_decision?: DemoDecision | null;
+    demo_offer?: DemoOffer | null;
+  }) | null;
+};
+
+export type DemoApplicationResult = {
+  application: LoanApplication;
+  decision: DemoDecision;
+  offer: DemoOffer | null;
+};
+
+export type DemoOfferAcceptance = {
+  offer: DemoOffer;
+  loan: NonNullable<LoanApplication["loan"]> & {
+    schedules?: RepaymentScheduleRow[];
+  };
+  mobile_money: {
+    id: number;
+    provider: string;
+    status: string;
+    direction: string;
+    amount_minor: number;
+    reconciliation_status: string;
+  };
+  ledger_entries: Array<{
+    id: number;
+    type: string;
+    amount: string | number;
+    reference: string;
+    description: string;
+  }>;
+  repayment_schedule: RepaymentScheduleRow[];
+};
+
+export type InvestorDemoSnapshot = {
+  customers: Profile["user"][];
+  applications: LoanApplication[];
+  decisions: DemoDecision[];
+  offers: DemoOffer[];
+  loans: NonNullable<LoanApplication["loan"]>[];
+  ledger_entries: DemoOfferAcceptance["ledger_entries"];
+  repayment_schedules: RepaymentScheduleRow[];
+  mobile_money: DemoOfferAcceptance["mobile_money"][];
+  audit_trail: Array<{
+    id: number;
+    event: string;
+    created_at: string;
+    metadata?: Record<string, unknown>;
+  }>;
 };

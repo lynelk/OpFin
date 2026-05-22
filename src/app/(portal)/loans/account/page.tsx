@@ -4,18 +4,19 @@ import { opfinApi } from "@/lib/api/client";
 import { getAccessToken } from "@/lib/auth/session";
 import { formatUgx } from "@/lib/format";
 
-export default async function LoanAccountPage() {
+export default async function LoanAccountPage({ searchParams }: { searchParams?: Promise<{ status?: string }> }) {
+  const params = await searchParams;
   const token = await getAccessToken();
 
   try {
-    const profile = await opfinApi.profile(token);
-    const applications = await opfinApi.loanApplications(profile.data.user.id, token);
-    const active = applications.data.find((application) => application.loan);
+    const dashboard = await opfinApi.demoDashboard(token);
+    const active = dashboard.data.latest_application;
 
     return (
       <Screen title="Loan account" description="Current loan account state from known application and loan fields.">
         <section className="panel">
           <h2>Active loan</h2>
+          {params?.status ? <StateNotice state="success" message="Offer accepted, loan account created, schedule generated, and mock disbursement recorded." /> : null}
           {active?.loan ? (
             <table className="table">
               <tbody>

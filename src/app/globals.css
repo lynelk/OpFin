@@ -252,6 +252,13 @@ form {
   color: var(--warning);
 }
 
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
 .button {
   display: inline-flex;
   align-items: center;

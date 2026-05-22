@@ -1,11 +1,28 @@
-import { mockApplications, mockConsentState, mockInstitutions, mockProducts, mockProfile, mockSchedule, mockTerms } from "../mock-data";
+import {
+  mockApplications,
+  mockConsentState,
+  mockDemoConsent,
+  mockDemoDecision,
+  mockDemoOffer,
+  mockInstitutions,
+  mockInvestorSnapshot,
+  mockProducts,
+  mockProfile,
+  mockSchedule,
+  mockTerms
+} from "../mock-data";
 import { classifyStatus, OpfinApiError } from "./errors";
 import type {
   ApiEnvelope,
   ConsentState,
+  DemoApplicationResult,
+  DemoConsent,
+  DemoDashboard,
   DemoDecision,
   DemoOffer,
+  DemoOfferAcceptance,
   Institution,
+  InvestorDemoSnapshot,
   LoanApplication,
   LoginResponse,
   LoanProduct,
@@ -83,6 +100,61 @@ function mockRequest<T>(path: string, init: RequestOptions = {}): Promise<ApiEnv
     } as T, "Sandbox login successful"));
   }
   if (path === "/profile") return Promise.resolve(envelope(mockProfile as T));
+  if (path === "/demo/dashboard") {
+    return Promise.resolve(envelope({
+      mock_integrations: ["affordability", "decisioning", "mobile_money_disbursement"],
+      profile: mockProfile.user,
+      kyc: {
+        status: mockProfile.user.nin_status,
+        national_id: mockProfile.user.national_id,
+        date_of_birth: mockProfile.user.date_of_birth,
+        mock_integration: false
+      },
+      consent: mockDemoConsent,
+      latest_application: {
+        ...mockApplications[0],
+        demo_decision: mockDemoDecision,
+        demo_offer: mockDemoOffer
+      }
+    } as T, "Sandbox investor demo dashboard"));
+  }
+  if (path === "/demo/consent" && init.method === "POST") return Promise.resolve(envelope({
+    mock_integration: true,
+    status: "granted",
+    consent: mockDemoConsent
+  } as T, "Sandbox investor-demo consent granted"));
+  if (path === "/demo/consent" && init.method === "DELETE") return Promise.resolve(envelope({
+    mock_integration: true,
+    status: "revoked",
+    consent: { ...mockDemoConsent, status: "revoked", revoked_at: new Date().toISOString() }
+  } as T, "Sandbox investor-demo consent revoked"));
+  if (path === "/demo/loan-applications" && init.method === "POST") {
+    return Promise.resolve(envelope({
+      application: {
+        ...mockApplications[0],
+        amount: typeof init.bodyJson === "object" && init.bodyJson && "amount" in init.bodyJson ? String(init.bodyJson.amount) : "250000",
+        status: "Approved"
+      },
+      decision: mockDemoDecision,
+      offer: mockDemoOffer
+    } as T, "Sandbox application decision completed"));
+  }
+  if (path.startsWith("/demo/loan-applications/") && path.endsWith("/decision")) {
+    return Promise.resolve(envelope({ mock_integration: true, decision: mockDemoDecision } as T, "Sandbox decision loaded"));
+  }
+  if (path.startsWith("/demo/loan-applications/") && path.endsWith("/offer")) {
+    return Promise.resolve(envelope({ mock_integration: true, offer: mockDemoOffer } as T, "Sandbox offer loaded"));
+  }
+  if (path.startsWith("/demo/loan-offers/") && path.endsWith("/accept")) {
+    return Promise.resolve(envelope({
+      offer: { ...mockDemoOffer, status: "accepted", accepted_at: new Date().toISOString() },
+      loan: mockApplications[1].loan,
+      mobile_money: mockInvestorSnapshot.mobile_money[0],
+      ledger_entries: mockInvestorSnapshot.ledger_entries,
+      repayment_schedule: mockSchedule
+    } as T, "Sandbox offer accepted"));
+  }
+  if (path === "/demo/admin/investor-snapshot") return Promise.resolve(envelope(mockInvestorSnapshot as T, "Sandbox admin snapshot loaded"));
   if (path === "/products") return Promise.resolve(envelope(mockProducts as T));
   if (path === "/institutions") return Promise.resolve(envelope(mockInstitutions as T));
   if (path.startsWith("/product-terms/")) return Promise.resolve(envelope(mockTerms as T));
@@ -130,6 +202,36 @@ export const opfinApi = {
   ) => request<LoanApplication>("/loan-applications", { method: "POST", bodyJson: payload, token }),
   repaymentSchedule: (): Promise<ApiEnvelope<RepaymentScheduleRow[]>> =>
     envelopeAsync(mockSchedule, "Sandbox repayment schedule; no documented backend schedule endpoint exists yet"),
+  demoDashboard: (token?: string) => request<DemoDashboard>("/demo/dashboard", { token }),
+  grantDemoConsent: (token?: string) =>
+    request<{ mock_integration: true; status: string; consent: DemoConsent }>("/demo/consent", {
+      method: "POST",
+      bodyJson: { purpose: "credit_processing" },
+      token
+    }),
+  revokeDemoConsent: (token?: string) =>
+    request<{ mock_integration: true; status: string; consent: DemoConsent }>("/demo/consent", {
+      method: "DELETE",
+      token
+    }),
+  submitDemoLoanApplication: (
+    payload: {
+      loan_product_id: number;
+      loan_product_term_id: number;
+      institution_id: number;
+      amount: number;
+      reason: string;
+    },
+    token?: string
+  ) => request<DemoApplicationResult>("/demo/loan-applications", { method: "POST", bodyJson: payload, token }),
+  demoDecision: (applicationId: number, token?: string) =>
+    request<{ mock_integration: true; decision: DemoDecision | null }>(`/demo/loan-applications/${applicationId}/decision`, { token }),
+  demoOffer: (applicationId: number, token?: string) =>
+    request<{ mock_integration: true; offer: DemoOffer | null }>(`/demo/loan-applications/${applicationId}/offer`, { token }),
+  acceptDemoOffer: (offerId: number, token?: string) =>
+    request<DemoOfferAcceptance>(`/demo/loan-offers/${offerId}/accept`, { method: "POST", token }),
+  investorDemoAdminSnapshot: (token?: string) =>
+    request<InvestorDemoSnapshot>("/demo/admin/investor-snapshot", { token }),
   updateLoanApplicationStatus: (applicationId: number, status: string, token?: string) =>
     request<LoanApplication>(`/loan-applications/${applicationId}/status`, {
       method: "POST",
@@ -137,20 +239,10 @@ export const opfinApi = {
       token
     }),
   consentState: (): Promise<ApiEnvelope<ConsentState>> => envelopeAsync(mockConsentState, "Sandbox consent state"),
-  loanDecision: async (userId: number, token?: string): Promise<ApiEnvelope<DemoDecision>> => {
-    const applications = await opfinApi.loanApplications(userId, token);
-    const latest = applications.data[0];
-
-    return envelopeAsync({
-      status: latest?.status ?? "No application",
-      message: latest ? `Latest backend application status: ${latest.status}` : "No application found.",
-      source: latest ? "backend-application-status" : "sandbox"
-    }, "Loan decision derived from documented application status");
-  },
-  loanOffer: (): Promise<ApiEnvelope<DemoOffer>> => envelopeAsync({
-    status: "not-available",
-    message: "Loan offer API is not documented yet; investor demo shows a sandbox placeholder."
-  }, "Sandbox loan offer state")
+  loanDecision: async (_userId: number, _token?: string): Promise<ApiEnvelope<DemoDecision>> =>
+    envelopeAsync(mockDemoDecision, "Sandbox decision retained for legacy screen compatibility"),
+  loanOffer: (): Promise<ApiEnvelope<DemoOffer>> =>
+    envelopeAsync(mockDemoOffer, "Sandbox offer retained for legacy screen compatibility")
 };
 
 function envelopeAsync<T>(data: T, message: string): Promise<ApiEnvelope<T>> {

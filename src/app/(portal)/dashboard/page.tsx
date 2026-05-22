@@ -9,12 +9,13 @@ export default async function DashboardPage() {
   const token = await getAccessToken();
 
   try {
-    const profile = await opfinApi.profile(token);
-    const userId = profile.data.user.id;
-    const [balance, applications] = await Promise.all([
-      opfinApi.loanBalance(userId, token),
-      opfinApi.loanApplications(userId, token)
+    const [demo, profile] = await Promise.all([
+      opfinApi.demoDashboard(token),
+      opfinApi.profile(token)
     ]);
+    const userId = profile.data.user.id;
+    const balance = await opfinApi.loanBalance(userId, token);
+    const latest = demo.data.latest_application;
 
     return (
       <Screen
@@ -25,16 +26,21 @@ export default async function DashboardPage() {
         <div className="grid grid-3">
           <section className="panel">
             <h2>KYC status</h2>
-            <span className="badge ok">{profile.data.user.nin_status ?? "Unknown"}</span>
+            <span className="badge ok">{demo.data.kyc.status ?? "Unknown"}</span>
             <p className="muted">Phone {profile.data.user.phone}</p>
+          </section>
+          <section className="panel">
+            <h2>Consent</h2>
+            <span className="badge warn">{demo.data.consent?.status ?? "not granted"}</span>
+            <p className="muted">Credit processing consent for demo decisioning.</p>
           </section>
           <section className="panel">
             <h2>Outstanding balance</h2>
             <div className="stat">{formatUgx(balance.data.outstandingAmount)}</div>
           </section>
           <section className="panel">
-            <h2>Applications</h2>
-            <div className="stat">{applications.data.length}</div>
+            <h2>Latest decision</h2>
+            <div className="stat">{latest?.demo_decision?.status ?? "None"}</div>
           </section>
         </div>
       </Screen>

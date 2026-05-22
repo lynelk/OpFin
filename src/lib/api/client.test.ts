@@ -38,4 +38,29 @@ describe("OpFin API client", () => {
     expect(response.message).toContain("Sandbox repayment schedule");
     expect(response.data.length).toBeGreaterThan(0);
   });
+
+  it("runs the mock investor demo flow through consent, application, offer, and admin snapshot contracts", async () => {
+    const consent = await opfinApi.grantDemoConsent();
+    expect(consent.data.status).toBe("granted");
+
+    const application = await opfinApi.submitDemoLoanApplication({
+      loan_product_id: 1,
+      loan_product_term_id: 1,
+      institution_id: 1,
+      amount: 250000,
+      reason: "Investor demo school fees"
+    });
+
+    expect(application.data.decision.status).toBe("approved");
+    expect(application.data.decision.reason_codes).toContain("MOCK_AFFORDABILITY_CHECK");
+    expect(application.data.offer?.status).toBe("pending_acceptance");
+
+    const acceptance = await opfinApi.acceptDemoOffer(application.data.offer!.id);
+    expect(acceptance.data.loan.status).toBe("Disbursed");
+    expect(acceptance.data.mobile_money.provider).toBe("mock");
+
+    const snapshot = await opfinApi.investorDemoAdminSnapshot();
+    expect(snapshot.data.audit_trail.length).toBeGreaterThan(0);
+    expect(snapshot.data.ledger_entries.length).toBeGreaterThan(0);
+  });
 });

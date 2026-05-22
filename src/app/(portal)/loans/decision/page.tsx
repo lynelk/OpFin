@@ -4,25 +4,37 @@ import { OpfinApiError } from "@/lib/api/errors";
 import { opfinApi } from "@/lib/api/client";
 import { getAccessToken } from "@/lib/auth/session";
 
-export default async function LoanDecisionPage({ searchParams }: { searchParams?: Promise<{ status?: string }> }) {
+export default async function LoanDecisionPage({ searchParams }: { searchParams?: Promise<{ application?: string; status?: string }> }) {
   const params = await searchParams;
   const token = await getAccessToken();
 
   try {
-    const profile = await opfinApi.profile(token);
-    const decision = await opfinApi.loanDecision(profile.data.user.id, token);
+    const applicationId = Number(params?.application);
+    const dashboard = await opfinApi.demoDashboard(token);
+    const latestApplication = dashboard.data.latest_application;
+    const decision = applicationId
+      ? await opfinApi.demoDecision(applicationId, token)
+      : { data: { decision: latestApplication?.demo_decision ?? null } };
 
     return (
       <Screen
         title="Loan decision result"
-        description="Decision display derived from documented application status while formal affordability contracts remain pending."
-        action={<Link className="button" href="/loans/offer">View offer</Link>}
+        description="Mock affordability and decisioning result for the investor demo."
+        action={<Link className="button" href={`/loans/offer${applicationId ? `?application=${applicationId}` : ""}`}>View offer</Link>}
       >
         <section className="panel">
-          <h2>{decision.data.status}</h2>
+          <h2>{decision.data.decision?.status ?? "No decision"}</h2>
           {params?.status ? <StateNotice state="success" message="Application submitted to the backend or sandbox API." /> : null}
-          <p className="muted">{decision.data.message}</p>
-          <span className="badge warn">{decision.data.source}</span>
+          {decision.data.decision ? (
+            <>
+              <p className="muted">{decision.data.decision.decision_summary}</p>
+              <div className="chip-row">
+                {decision.data.decision.reason_codes.map((code) => <span className="badge warn" key={code}>{code}</span>)}
+              </div>
+            </>
+          ) : (
+            <StateNotice state="empty" message="Submit an application to generate a mock decision." />
+          )}
         </section>
       </Screen>
     );
