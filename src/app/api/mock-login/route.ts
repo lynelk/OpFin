@@ -11,6 +11,10 @@ const roleNames: Record<UserRole, string> = {
 };
 
 export function GET(request: NextRequest) {
+  if (process.env.NODE_ENV === "production" || process.env.OPFIN_ENABLE_DEMO_SHORTCUTS !== "true") {
+    return NextResponse.json({ message: "Sandbox login shortcuts are disabled." }, { status: 404 });
+  }
+
   const role = request.nextUrl.searchParams.get("role") as UserRole | null;
   const safeRole = allowedRoles.includes(role ?? "customer") ? role ?? "customer" : "customer";
   const next = request.nextUrl.searchParams.get("next") ?? "/dashboard";

@@ -1,8 +1,18 @@
-import { describe, expect, it } from "vitest";
 import { classifyStatus, OpfinApiError } from "./errors";
-import { opfinApi } from "./client";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+async function loadMockApi() {
+  vi.resetModules();
+  vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API", "true");
+  vi.stubEnv("NEXT_PUBLIC_OPFIN_API_URL", "");
+  return import("./client");
+}
 
 describe("OpFin API client", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("classifies documented HTTP error states", () => {
     expect(classifyStatus(401)).toBe("unauthorized");
     expect(classifyStatus(403)).toBe("forbidden");
@@ -19,6 +29,7 @@ describe("OpFin API client", () => {
   });
 
   it("returns mock profile data when mock API mode is enabled", async () => {
+    const { opfinApi } = await loadMockApi();
     const profile = await opfinApi.profile();
 
     expect(profile.success).toBe(true);
@@ -26,6 +37,7 @@ describe("OpFin API client", () => {
   });
 
   it("returns sandbox admin review updates without colliding with loan application list mocks", async () => {
+    const { opfinApi } = await loadMockApi();
     const response = await opfinApi.updateLoanApplicationStatus(101, "Approved");
 
     expect(response.success).toBe(true);
@@ -33,6 +45,7 @@ describe("OpFin API client", () => {
   });
 
   it("keeps repayment schedules sandboxed until a backend route is documented", async () => {
+    const { opfinApi } = await loadMockApi();
     const response = await opfinApi.repaymentSchedule();
 
     expect(response.message).toContain("Sandbox repayment schedule");
@@ -40,6 +53,7 @@ describe("OpFin API client", () => {
   });
 
   it("runs the mock investor demo flow through consent, application, offer, and admin snapshot contracts", async () => {
+    const { opfinApi } = await loadMockApi();
     const consent = await opfinApi.grantDemoConsent();
     expect(consent.data.status).toBe("granted");
 
@@ -62,5 +76,17 @@ describe("OpFin API client", () => {
     const snapshot = await opfinApi.investorDemoAdminSnapshot();
     expect(snapshot.data.audit_trail.length).toBeGreaterThan(0);
     expect(snapshot.data.ledger_entries.length).toBeGreaterThan(0);
+  });
+
+  it("fails closed when API base URL is missing and mock mode is not explicitly enabled", async () => {
+    vi.resetModules();
+    vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API", "false");
+    vi.stubEnv("NEXT_PUBLIC_OPFIN_API_URL", "");
+    const { opfinApi } = await import("./client");
+
+    await expect(opfinApi.profile()).rejects.toMatchObject({
+      kind: "server",
+      message: expect.stringContaining("API base URL is not configured")
+    });
   });
 });

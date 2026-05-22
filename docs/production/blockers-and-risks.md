@@ -19,9 +19,9 @@ Date: 2026-05-22
 
 | Risk | Evidence | Required action |
 | --- | --- | --- |
-| Mock mode remains easy to enable | API client defaults to fixtures unless `NEXT_PUBLIC_USE_MOCK_API=false`. | Add production guard to fail builds/deploys when mock mode or mock route is enabled. |
-| Mock login route exists | `/api/mock-login` sets sandbox cookies. | Disable/remove from production builds. |
-| Route middleware trusts role cookie | Protected routes pass with token or role cookie. | Require access token and validate session shape. |
+| Mock mode must remain production-disabled | API client now requires `NEXT_PUBLIC_USE_MOCK_API=true` for fixtures, and Next production builds fail when that flag is enabled. | Keep deployment configuration locked to real API mode. |
+| Mock login route exists but is guarded | `/api/mock-login` now returns 404 in production and unless `OPFIN_ENABLE_DEMO_SHORTCUTS=true`; Next production builds fail when demo shortcuts are enabled. | Keep route disabled in production and remove entirely once demo workflows are retired. |
+| Route middleware only checks token presence | Protected routes now require `opfin_access_token`, but middleware does not validate the bearer token cryptographically. | Rely on backend authorization for data and consider server-side session validation for sensitive pages. |
 | Admin screens are demo/placeholder | Admin dashboard placeholder and snapshot-driven review. | Build real operations screens. |
 | Validation UX is limited | Forms rely on HTML required and redirect messages. | Add typed validation and field-level errors. |
 

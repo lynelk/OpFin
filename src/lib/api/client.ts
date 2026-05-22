@@ -32,7 +32,7 @@ import type {
 } from "../types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_OPFIN_API_URL;
-const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCK_API !== "false";
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCK_API === "true";
 
 type RequestOptions = RequestInit & {
   token?: string;
@@ -40,8 +40,15 @@ type RequestOptions = RequestInit & {
 };
 
 async function request<T>(path: string, init: RequestOptions = {}): Promise<ApiEnvelope<T>> {
-  if (!API_BASE_URL || USE_MOCKS) {
+  if (USE_MOCKS) {
     return mockRequest<T>(path, init);
+  }
+
+  if (!API_BASE_URL) {
+    throw new OpfinApiError(
+      "server",
+      "OpFin API base URL is not configured. Set NEXT_PUBLIC_OPFIN_API_URL or explicitly enable mock mode."
+    );
   }
 
   let response: Response;

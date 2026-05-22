@@ -5,8 +5,8 @@ Date: 2026-05-22
 | Capability | Frontend status | Risk | Replacement verdict |
 | --- | --- | --- | --- |
 | Login | Partial | High | Backend login wired; production recovery/session hardening pending. |
-| Admin login | Partial | High | Demo/admin shortcuts must not ship enabled. |
-| Route protection | Partial | High | Role-only cookie can pass middleware; token validity must be required. |
+| Admin login | Partial | High | Demo/admin shortcuts are guarded but production auth hardening remains. |
+| Route protection | Partial | High | Token cookie is required, but runtime token validity still depends on backend API checks. |
 | Role-aware navigation | Partial | Medium | Implemented, but backend authorization remains source of truth. |
 | Customer dashboard | Partial/demo | High | Demo-oriented; production loan/payment/account details incomplete. |
 | KYC status | Partial | Critical | Reads status only; no production KYC workflow. |
