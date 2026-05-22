@@ -52,6 +52,25 @@ describe("OpFin API client", () => {
     expect(response.data.length).toBeGreaterThan(0);
   });
 
+  it("uses production KYC and consent contracts in mock mode", async () => {
+    const { opfinApi } = await loadMockApi();
+
+    const kyc = await opfinApi.kycStatus();
+    expect(kyc.data.latest_case?.status).toBe("pending_review");
+
+    const submitted = await opfinApi.submitKycCase({ national_id: "CM1234567890" });
+    expect(submitted.data.kyc_case.national_id).toBe("CM1234567890");
+
+    const granted = await opfinApi.grantConsent({
+      purpose: "credit_processing",
+      policy_version: "credit-consent-v1"
+    });
+    expect(granted.data.consent.status).toBe("granted");
+
+    const revoked = await opfinApi.revokeConsent(granted.data.consent.id);
+    expect(revoked.data.consent.status).toBe("revoked");
+  });
+
   it("runs the mock investor demo flow through consent, application, offer, and admin snapshot contracts", async () => {
     const { opfinApi } = await loadMockApi();
     const consent = await opfinApi.grantDemoConsent();

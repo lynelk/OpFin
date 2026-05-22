@@ -1,10 +1,12 @@
 import type {
+  ConsentRecord,
   ConsentState,
   DemoConsent,
   DemoDecision,
   DemoOffer,
   Institution,
   InvestorDemoSnapshot,
+  KycCase,
   LoanApplication,
   LoanProduct,
   ProductTerm,
@@ -97,6 +99,26 @@ export const mockAuditEvents = [
 export const mockConsentState: ConsentState = {
   status: "not-configured",
   label: "Consent API contract pending"
+};
+
+export const mockKycCase: KycCase = {
+  id: 1,
+  national_id: "CM000000001",
+  provider: "manual",
+  provider_reference: "sandbox-kyc-001",
+  status: "pending_review",
+  evidence: { document_type: "national_id" },
+  submitted_at: "2026-05-21T09:00:00Z"
+};
+
+export const mockConsentRecord: ConsentRecord = {
+  id: 1,
+  purpose: "credit_processing",
+  policy_version: "credit-consent-v1",
+  status: "granted",
+  channel: "web",
+  granted_at: "2026-05-21T09:02:00Z",
+  metadata: { sandbox: true }
 };
 
 export const mockDemoConsent: DemoConsent = {

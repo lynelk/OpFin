@@ -97,6 +97,31 @@ export type ConsentState = {
   updatedAt?: string;
 };
 
+export type KycCase = {
+  id: number;
+  national_id: string;
+  provider: string;
+  provider_reference?: string | null;
+  status: "pending_review" | "verified" | "rejected" | "expired" | string;
+  evidence?: Record<string, unknown> | null;
+  risk_flags?: string[] | null;
+  review_notes?: string | null;
+  submitted_at?: string;
+  reviewed_at?: string | null;
+  expires_at?: string | null;
+};
+
+export type ConsentRecord = {
+  id: number;
+  purpose: string;
+  policy_version: string;
+  status: "granted" | "revoked" | string;
+  channel: string;
+  granted_at?: string | null;
+  revoked_at?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
 export type DemoDecision = {
   id: number;
   status: "approved" | "declined" | string;

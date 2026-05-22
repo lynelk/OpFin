@@ -68,8 +68,8 @@ The current Next.js frontend is not production-ready as a replacement system. It
 ## Missing for production replacement
 
 - Customer registration/account recovery if replacement scope requires it.
-- Production KYC submission/review/retry flow.
-- Production consent policy-version flow.
+- Full provider-backed KYC submission/review/retry flow beyond the new `/api/kyc/*` screen integration.
+- Full production consent policy-version UX beyond the new `/api/consents` screen integration.
 - Production loan application state tracking.
 - Manual review/referral screens.
 - Offer disclosure and acceptance evidence UX.

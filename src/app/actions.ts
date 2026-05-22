@@ -66,7 +66,11 @@ export async function createConsentAction() {
   const token = await getAccessToken();
 
   try {
-    await opfinApi.grantDemoConsent(token);
+    await opfinApi.grantConsent({
+      purpose: "credit_processing",
+      policy_version: "credit-consent-v1",
+      channel: "web"
+    }, token);
   } catch (error) {
     if (error instanceof OpfinApiError) {
       redirectWith("/consent", { error: error.kind, message: error.message });
@@ -75,14 +79,14 @@ export async function createConsentAction() {
     redirectWith("/consent", { error: "server", message: "Consent creation failed" });
   }
 
-  redirect("/consent?status=created");
+  redirect("/consent?status=granted");
 }
 
-export async function revokeConsentAction() {
+export async function revokeConsentAction(formData: FormData) {
   const token = await getAccessToken();
 
   try {
-    await opfinApi.revokeDemoConsent(token);
+    await opfinApi.revokeConsent(Number(value(formData, "consent_id")), token);
   } catch (error) {
     if (error instanceof OpfinApiError) {
       redirectWith("/consent", { error: error.kind, message: error.message });
@@ -92,6 +96,29 @@ export async function revokeConsentAction() {
   }
 
   redirect("/consent?status=revoked");
+}
+
+export async function submitKycCaseAction(formData: FormData) {
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.submitKycCase({
+      national_id: value(formData, "national_id"),
+      provider: "manual",
+      evidence: {
+        source: "customer_portal",
+        document_type: value(formData, "document_type") || "national_id"
+      }
+    }, token);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/kyc", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/kyc", { error: "server", message: "KYC submission failed" });
+  }
+
+  redirect("/kyc?status=submitted");
 }
 
 export async function submitLoanApplicationAction(formData: FormData) {

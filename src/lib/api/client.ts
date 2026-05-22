@@ -1,11 +1,13 @@
 import {
   mockApplications,
+  mockConsentRecord,
   mockConsentState,
   mockDemoConsent,
   mockDemoDecision,
   mockDemoOffer,
   mockInstitutions,
   mockInvestorSnapshot,
+  mockKycCase,
   mockProducts,
   mockProfile,
   mockSchedule,
@@ -14,6 +16,7 @@ import {
 import { classifyStatus, OpfinApiError } from "./errors";
 import type {
   ApiEnvelope,
+  ConsentRecord,
   ConsentState,
   DemoApplicationResult,
   DemoConsent,
@@ -23,6 +26,7 @@ import type {
   DemoOfferAcceptance,
   Institution,
   InvestorDemoSnapshot,
+  KycCase,
   LoanApplication,
   LoginResponse,
   LoanProduct,
@@ -107,6 +111,17 @@ function mockRequest<T>(path: string, init: RequestOptions = {}): Promise<ApiEnv
     } as T, "Sandbox login successful"));
   }
   if (path === "/profile") return Promise.resolve(envelope(mockProfile as T));
+  if (path === "/kyc/status") return Promise.resolve(envelope({ latest_case: mockKycCase } as T, "Production KYC sandbox state loaded"));
+  if (path === "/kyc/cases" && init.method === "POST") {
+    return Promise.resolve(envelope({ kyc_case: { ...mockKycCase, ...(init.bodyJson as object) } } as T, "Production KYC sandbox case submitted"));
+  }
+  if (path === "/consents" && init.method === "POST") {
+    return Promise.resolve(envelope({ consent: { ...mockConsentRecord, ...(init.bodyJson as object), status: "granted" } } as T, "Production consent sandbox granted"));
+  }
+  if (path === "/consents") return Promise.resolve(envelope({ consents: [mockConsentRecord] } as T, "Production consent sandbox records loaded"));
+  if (path.startsWith("/consents/") && init.method === "DELETE") {
+    return Promise.resolve(envelope({ consent: { ...mockConsentRecord, status: "revoked", revoked_at: new Date().toISOString() } } as T, "Production consent sandbox revoked"));
+  }
   if (path === "/demo/dashboard") {
     return Promise.resolve(envelope({
       mock_integrations: ["affordability", "decisioning", "mobile_money_disbursement"],
@@ -192,6 +207,14 @@ export const opfinApi = {
       bodyJson: { phone, password }
     }),
   profile: (token?: string) => request<Profile>("/profile", { token }),
+  kycStatus: (token?: string) => request<{ latest_case: KycCase | null }>("/kyc/status", { token }),
+  submitKycCase: (payload: { national_id: string; provider?: string; provider_reference?: string; evidence?: Record<string, unknown> }, token?: string) =>
+    request<{ kyc_case: KycCase }>("/kyc/cases", { method: "POST", bodyJson: payload, token }),
+  consents: (token?: string) => request<{ consents: ConsentRecord[] }>("/consents", { token }),
+  grantConsent: (payload: { purpose: string; policy_version: string; channel?: string; metadata?: Record<string, unknown> }, token?: string) =>
+    request<{ consent: ConsentRecord }>("/consents", { method: "POST", bodyJson: payload, token }),
+  revokeConsent: (consentId: number, token?: string) =>
+    request<{ consent: ConsentRecord }>(`/consents/${consentId}`, { method: "DELETE", token }),
   products: (token?: string) => request<LoanProduct[]>("/products", { token }),
   institutions: (token?: string) => request<Institution[]>("/institutions", { token }),
   productTerms: (productId: number, token?: string) => request<ProductTerm[]>(`/product-terms/${productId}`, { token }),

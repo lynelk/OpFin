@@ -64,8 +64,11 @@ For errors, it reads `message`, `errors`, and HTTP status.
 | POST | `/api/login` | Login action. |
 | GET | `/api/profile` | Dashboard profile context. |
 | GET | `/api/demo/dashboard` | Dashboard, KYC, consent, latest loan, account, schedule. |
-| POST | `/api/demo/consent` | Grant credit-processing consent. |
-| DELETE | `/api/demo/consent` | Revoke credit-processing consent. |
+| GET | `/api/kyc/status` | Production KYC case status. |
+| POST | `/api/kyc/cases` | Submit production KYC evidence for review. |
+| GET | `/api/consents` | Production consent records. |
+| POST | `/api/consents` | Grant versioned credit-processing consent. |
+| DELETE | `/api/consents/{consent}` | Revoke a customer-owned consent record. |
 | GET | `/api/products` | Loan application options. |
 | GET | `/api/institutions` | Loan application options. |
 | GET | `/api/product-terms/{product}` | Loan term options. |
@@ -79,4 +82,4 @@ For errors, it reads `message`, `errors`, and HTTP status.
 
 - No frontend contract for referred/manual review decisions yet.
 - No frontend contract for intentionally failed mock payment simulation yet.
-- Some legacy frontend API helpers remain for older endpoints, but the investor-demo path uses `/api/demo/*`.
+- Some legacy frontend API helpers remain for older endpoints. KYC and consent now use production-shaped `/api/kyc/*` and `/api/consents` contracts instead of the demo consent endpoint.

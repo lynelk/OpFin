@@ -9,8 +9,8 @@ Date: 2026-05-22
 | Route protection | Partial | High | Token cookie is required, but runtime token validity still depends on backend API checks. |
 | Role-aware navigation | Partial | Medium | Implemented, but backend authorization remains source of truth. |
 | Customer dashboard | Partial/demo | High | Demo-oriented; production loan/payment/account details incomplete. |
-| KYC status | Partial | Critical | Reads status only; no production KYC workflow. |
-| Consent management | Demo only | Critical | Demo consent is not production consent management. |
+| KYC status | Partial | Critical | Reads and submits production KYC cases; provider-backed evidence/retry workflow incomplete. |
+| Consent management | Partial | Critical | Uses versioned production consent records; policy governance/reporting UX incomplete. |
 | Loan application | Partial | Critical | Demo submit exists; production eligibility/state workflow incomplete. |
 | Decision result | Demo only | Critical | Mock decisioning; no production manual review/referral flow. |
 | Loan offer | Demo only/partial | Critical | Offer display exists; production disclosures and acceptance evidence incomplete. |

@@ -7,8 +7,8 @@ Date: 2026-05-22
 | Risk | Evidence | Required action |
 | --- | --- | --- |
 | Frontend checks cannot run | `npm` is unavailable. | Restore Node/npm, install dependencies, run typecheck/lint/tests/build. |
-| Production KYC flow missing | KYC screen reads backend status only. | Build provider-backed KYC submission/review/retry flow after backend contract. |
-| Production consent flow missing | Consent screen uses demo consent contract. | Build policy-versioned production consent UX. |
+| Production KYC flow incomplete | KYC screen now submits to `/api/kyc/cases` and reads `/api/kyc/status`, but provider-backed capture/retry UX is incomplete. | Build provider-backed KYC submission/review/retry flow after backend contract. |
+| Production consent flow incomplete | Consent screen now uses `/api/consents`, but policy publication and full consent history UX are incomplete. | Build policy-versioned production consent UX. |
 | Decisioning is demo/mock | Decision screen shows investor-demo results. | Build production decision/referral/manual review UX. |
 | Repayment flow missing | No repayment initiation/status workflow in Next app. | Build repayment collection and payment status flows. |
 | Support console missing | No customer-support case or lookup workflow. | Build support operations module before replacement. |
