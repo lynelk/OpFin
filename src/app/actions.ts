@@ -181,3 +181,64 @@ export async function updateLoanApplicationStatusAction(formData: FormData) {
 
   redirect("/admin/credit-review?status=updated");
 }
+
+export async function createReconciliationRunAction(formData: FormData) {
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.createReconciliationRun({
+      provider: value(formData, "provider"),
+      business_date: value(formData, "business_date")
+    }, token);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/admin/reconciliation", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/admin/reconciliation", { error: "server", message: "Reconciliation run creation failed" });
+  }
+
+  redirect("/admin/reconciliation?status=created");
+}
+
+export async function createSupportCaseAction(formData: FormData) {
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.createSupportCase({
+      customer_id: Number(value(formData, "customer_id")),
+      category: value(formData, "category"),
+      priority: value(formData, "priority") || "normal",
+      subject: value(formData, "subject"),
+      description: value(formData, "description")
+    }, token);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/admin/support", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/admin/support", { error: "server", message: "Support case creation failed" });
+  }
+
+  redirect("/admin/support?status=created");
+}
+
+export async function createComplianceReportAction(formData: FormData) {
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.createComplianceReport({
+      report_type: value(formData, "report_type"),
+      period_start: value(formData, "period_start"),
+      period_end: value(formData, "period_end")
+    }, token);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/admin/compliance", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/admin/compliance", { error: "server", message: "Compliance report creation failed" });
+  }
+
+  redirect("/admin/compliance?status=created");
+}

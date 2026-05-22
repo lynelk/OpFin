@@ -1,6 +1,7 @@
 import type {
   ConsentRecord,
   ConsentState,
+  ComplianceReport,
   DemoConsent,
   DemoDecision,
   DemoOffer,
@@ -11,7 +12,9 @@ import type {
   LoanProduct,
   ProductTerm,
   Profile,
-  RepaymentScheduleRow
+  ReconciliationRun,
+  RepaymentScheduleRow,
+  SupportCase
 } from "./types";
 
 export const mockProfile: Profile = {
@@ -179,3 +182,44 @@ export const mockInvestorSnapshot: InvestorDemoSnapshot = {
     { id: 1, event: "demo.loan_offer.accepted", created_at: "2026-05-21T09:10:00Z", metadata: { mock_integration: true } }
   ]
 };
+
+export const mockReconciliationRuns: ReconciliationRun[] = [
+  {
+    id: 1,
+    provider: "mtn",
+    business_date: "2026-05-22",
+    status: "open",
+    started_at: "2026-05-22T08:00:00Z",
+    summary: { source: "sandbox_unreconciled_transactions" }
+  }
+];
+
+export const mockSupportCases: SupportCase[] = [
+  {
+    id: 1,
+    case_number: "CASE-20260522-SANDBOX1",
+    customer_id: 1,
+    category: "payment",
+    status: "open",
+    priority: "normal",
+    subject: "Payment status check",
+    description: "Customer requested help reconciling a repayment."
+  }
+];
+
+export const mockComplianceReports: ComplianceReport[] = [
+  {
+    id: 1,
+    report_type: "monthly_credit_register",
+    period_start: "2026-05-01",
+    period_end: "2026-05-31",
+    status: "generated",
+    summary: {
+      kyc_cases: 1,
+      consents: 1,
+      credit_decisions: 1,
+      mobile_money_transactions: 1
+    },
+    generated_at: "2026-05-22T08:30:00Z"
+  }
+];

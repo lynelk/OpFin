@@ -21,6 +21,9 @@ export const navigationItems: NavItem[] = [
   { href: "/investments", label: "Investments", group: "wealth" },
   { href: "/admin/dashboard", label: "Admin dashboard", group: "admin", roles: ["platform_admin", "operations", "support"] },
   { href: "/admin/credit-review", label: "Credit review", group: "admin", roles: ["platform_admin", "operations"] },
+  { href: "/admin/reconciliation", label: "Reconciliation", group: "admin", roles: ["platform_admin", "operations"] },
+  { href: "/admin/support", label: "Support cases", group: "admin", roles: ["platform_admin", "operations", "support"] },
+  { href: "/admin/compliance", label: "Compliance reports", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/audit-trail", label: "Audit trail", group: "admin", roles: ["platform_admin", "operations", "support"] },
   { href: "/employer", label: "Employer portal", group: "employer", roles: ["platform_admin", "employer_admin"] }
 ];

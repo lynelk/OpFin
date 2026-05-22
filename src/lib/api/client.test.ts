@@ -71,6 +71,31 @@ describe("OpFin API client", () => {
     expect(revoked.data.consent.status).toBe("revoked");
   });
 
+  it("uses production admin operations contracts in mock mode", async () => {
+    const { opfinApi } = await loadMockApi();
+
+    const reconciliation = await opfinApi.createReconciliationRun({
+      provider: "mtn",
+      business_date: "2026-05-22"
+    });
+    expect(reconciliation.data.item_count).toBe(1);
+
+    const support = await opfinApi.createSupportCase({
+      customer_id: 1,
+      category: "payment",
+      subject: "Payment status check",
+      description: "Customer requested payment support."
+    });
+    expect(support.data.support_case.category).toBe("payment");
+
+    const compliance = await opfinApi.createComplianceReport({
+      report_type: "monthly_credit_register",
+      period_start: "2026-05-01",
+      period_end: "2026-05-31"
+    });
+    expect(compliance.data.report.report_type).toBe("monthly_credit_register");
+  });
+
   it("runs the mock investor demo flow through consent, application, offer, and admin snapshot contracts", async () => {
     const { opfinApi } = await loadMockApi();
     const consent = await opfinApi.grantDemoConsent();

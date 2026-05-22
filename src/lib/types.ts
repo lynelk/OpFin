@@ -217,3 +217,36 @@ export type InvestorDemoSnapshot = {
     metadata?: Record<string, unknown>;
   }>;
 };
+
+export type ReconciliationRun = {
+  id: number;
+  provider: string;
+  business_date: string;
+  status: string;
+  started_at?: string;
+  completed_at?: string | null;
+  summary?: Record<string, unknown> | null;
+};
+
+export type SupportCase = {
+  id: number;
+  case_number: string;
+  customer_id: number;
+  assigned_to?: number | null;
+  category: string;
+  status: string;
+  priority: string;
+  subject: string;
+  description: string;
+  resolved_at?: string | null;
+};
+
+export type ComplianceReport = {
+  id: number;
+  report_type: string;
+  period_start: string;
+  period_end: string;
+  status: string;
+  summary: Record<string, unknown>;
+  generated_at: string;
+};

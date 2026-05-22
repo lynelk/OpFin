@@ -11,9 +11,9 @@ Date: 2026-05-22
 | Production consent flow incomplete | Consent screen now uses `/api/consents`, but policy publication and full consent history UX are incomplete. | Build policy-versioned production consent UX. |
 | Decisioning is demo/mock | Decision screen shows investor-demo results. | Build production decision/referral/manual review UX. |
 | Repayment flow missing | No repayment initiation/status workflow in Next app. | Build repayment collection and payment status flows. |
-| Support console missing | No customer-support case or lookup workflow. | Build support operations module before replacement. |
-| Reconciliation UI missing | No payment exception/reconciliation console. | Build mobile-money operations UI. |
-| Compliance reporting missing | No reporting screens. | Build reports after backend contracts. |
+| Support console incomplete | Support case intake/list exists, but lookup, assignment, SLA, notes, and closure workflow are incomplete. | Complete support operations module before replacement. |
+| Reconciliation UI incomplete | Reconciliation run intake/list exists, but provider file matching and exception resolution are incomplete. | Complete mobile-money operations UI. |
+| Compliance reporting incomplete | Report record intake/list exists, but regulator-specific exports and approvals are incomplete. | Complete report exports after backend contracts. |
 
 ## High
 

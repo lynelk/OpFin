@@ -21,9 +21,9 @@ Date: 2026-05-22
 | Admin dashboard | Placeholder | High | Not replacement-grade. |
 | Admin credit review | Partial/demo | Critical | Uses investor snapshot; no real queue/maker-checker. |
 | Admin audit trail | Partial/demo | High | Uses demo snapshot; no search/export/filtering. |
-| Support console | Missing | Critical | Required for replacement operations. |
-| Reconciliation console | Missing | Critical | Required for live mobile money operations. |
-| Compliance reports | Missing | Critical | Required before regulated rollout. |
+| Support console | Partial | Critical | Support case intake/list exists; full case lifecycle and SLA workflow still needed. |
+| Reconciliation console | Partial | Critical | Reconciliation run intake/list exists; provider file matching and exception resolution still needed. |
+| Compliance reports | Partial | Critical | Report record creation/list exists; regulator-specific export files still needed. |
 | Savings | Placeholder | Low/Medium | Exclude unless live system requires it. |
 | Insurance | Placeholder | Low/Medium | Exclude unless live system requires it. |
 | Investments | Placeholder | Low/Medium | Exclude unless live system requires it. |

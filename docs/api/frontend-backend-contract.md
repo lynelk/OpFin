@@ -77,6 +77,12 @@ For errors, it reads `message`, `errors`, and HTTP status.
 | GET | `/api/demo/loan-applications/{application}/offer` | Offer screen. |
 | POST | `/api/demo/loan-offers/{offer}/accept` | Accept offer and create loan/schedule/disbursement records. |
 | GET | `/api/demo/admin/investor-snapshot` | Admin credit review and audit trail. |
+| GET | `/api/admin/reconciliation-runs` | Admin reconciliation run list. |
+| POST | `/api/admin/reconciliation-runs` | Create a reconciliation run. |
+| GET | `/api/admin/support-cases` | Admin support case list. |
+| POST | `/api/admin/support-cases` | Create a support case. |
+| GET | `/api/admin/compliance-reports` | Admin compliance report list. |
+| POST | `/api/admin/compliance-reports` | Create a compliance report record. |
 
 ## Known gaps
 
