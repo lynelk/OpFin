@@ -6,7 +6,7 @@ Scope: OpFin-FE after integration with OpFin-BE investor-demo endpoints.
 
 ## Frontend status
 
-The Next.js frontend is wired for the investor-demo backend contract. It uses `NEXT_PUBLIC_OPFIN_API_URL` for the API base URL and remains in local fixture mode unless `NEXT_PUBLIC_USE_MOCK_API=false` is set.
+The Next.js frontend is wired for the investor-demo backend contract. It uses `NEXT_PUBLIC_OPFIN_API_URL` for the API base URL. Local fixture mode is opt-in only with `NEXT_PUBLIC_USE_MOCK_API=true`, and production builds reject that setting.
 
 ## Integrated flows
 
@@ -37,7 +37,7 @@ Known limitations:
 
 ## What remains mocked
 
-- All API calls when `NEXT_PUBLIC_USE_MOCK_API` is unset or not equal to `false`.
+- All API calls when `NEXT_PUBLIC_USE_MOCK_API=true`.
 - Savings, insurance, investments, and employer portal content.
 - KYC provider verification, CRB, live mobile money, and production compliance reporting.
 - Admin login shortcut routes are demo-only helpers.

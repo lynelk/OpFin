@@ -6,9 +6,26 @@ import { OpfinApiError } from "@/lib/api/errors";
 import { opfinApi } from "@/lib/api/client";
 import { getAccessToken } from "@/lib/auth/session";
 
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8;
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: SESSION_MAX_AGE_SECONDS
+};
+
 function value(formData: FormData, key: string): string {
   const raw = formData.get(key);
   return typeof raw === "string" ? raw : "";
+}
+
+function safeInternalPath(path: string, fallback = "/dashboard"): string {
+  if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\") || path.includes("\n") || path.includes("\r")) {
+    return fallback;
+  }
+
+  return path;
 }
 
 function redirectWith(path: string, params: Record<string, string>) {
@@ -19,28 +36,16 @@ function redirectWith(path: string, params: Record<string, string>) {
 export async function loginAction(formData: FormData) {
   const phone = value(formData, "phone");
   const password = value(formData, "password");
-  const next = value(formData, "next") || "/dashboard";
+  const next = safeInternalPath(value(formData, "next") || "/dashboard");
 
   try {
     const response = await opfinApi.login(phone, password);
     const data = response.data;
     const cookieStore = await cookies();
 
-    cookieStore.set("opfin_access_token", data.access_token, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/"
-    });
-    cookieStore.set("opfin_role", data.user.role, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/"
-    });
-    cookieStore.set("opfin_name", encodeURIComponent(data.user.name), {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/"
-    });
+    cookieStore.set("opfin_access_token", data.access_token, SESSION_COOKIE_OPTIONS);
+    cookieStore.set("opfin_role", data.user.role, SESSION_COOKIE_OPTIONS);
+    cookieStore.set("opfin_name", encodeURIComponent(data.user.name), SESSION_COOKIE_OPTIONS);
   } catch (error) {
     if (error instanceof OpfinApiError) {
       redirectWith("/login", { error: error.kind, message: error.message, next });
@@ -53,6 +58,11 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function logoutAction() {
+  const token = await getAccessToken();
+  if (token) {
+    await opfinApi.logout(token).catch(() => undefined);
+  }
+
   const cookieStore = await cookies();
   cookieStore.delete("opfin_access_token");
   cookieStore.delete("opfin_role");

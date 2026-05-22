@@ -13,7 +13,7 @@ NEXT_PUBLIC_OPFIN_API_URL=http://localhost:8000/api
 NEXT_PUBLIC_USE_MOCK_API=false
 ```
 
-Fixture mode is still available for isolated UI review when `NEXT_PUBLIC_USE_MOCK_API` is omitted or set to anything other than `false`.
+Fixture mode is still available for isolated UI review only when `NEXT_PUBLIC_USE_MOCK_API=true`.
 
 ## Screens in the demo path
 

@@ -19,7 +19,7 @@ npm run dev
 
 ```env
 NEXT_PUBLIC_OPFIN_API_URL=http://localhost:8000/api
-NEXT_PUBLIC_USE_MOCK_API=true
+NEXT_PUBLIC_USE_MOCK_API=false
 ```
 
 Set `NEXT_PUBLIC_USE_MOCK_API=false` to call the Laravel backend for documented endpoints. Screens without backend contracts remain clearly sandbox-labelled.
@@ -61,7 +61,7 @@ npm run check
 ## Investor Demo Flow
 
 1. Start the Laravel backend and expose it at `NEXT_PUBLIC_OPFIN_API_URL`.
-2. Use `/login` for backend-backed phone/password authentication, or keep `NEXT_PUBLIC_USE_MOCK_API=true` and use the sandbox shortcuts.
+2. Use `/login` for backend-backed phone/password authentication. Use `NEXT_PUBLIC_USE_MOCK_API=true` only for isolated local fixture review; production builds reject it.
 3. Visit `/dashboard` and `/kyc` to verify profile-backed customer data.
 4. Visit `/consent` to grant or revoke investor-demo credit-processing consent.
 5. Submit `/loans/apply`; the backend runs mock affordability and decisioning and returns reason codes.

@@ -7,3 +7,15 @@ export function formatUgx(value: number | string | undefined): string {
     maximumFractionDigits: 0
   }).format(amount);
 }
+
+export function maskSensitiveId(value: string | null | undefined): string {
+  if (!value) {
+    return "Not available";
+  }
+
+  if (value.length <= 4) {
+    return "****";
+  }
+
+  return `${value.slice(0, 2)}${"*".repeat(Math.max(4, value.length - 4))}${value.slice(-2)}`;
+}

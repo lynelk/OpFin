@@ -242,6 +242,7 @@ export const opfinApi = {
       method: "POST",
       bodyJson: { phone, password }
     }),
+  logout: (token?: string) => request<Record<string, never>>("/logout", { method: "POST", token }),
   profile: (token?: string) => request<Profile>("/profile", { token }),
   kycStatus: (token?: string) => request<{ latest_case: KycCase | null }>("/kyc/status", { token }),
   submitKycCase: (payload: { national_id: string; provider?: string; provider_reference?: string; evidence?: Record<string, unknown> }, token?: string) =>

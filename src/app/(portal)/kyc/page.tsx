@@ -3,6 +3,7 @@ import { Screen, StateNotice } from "@/components/Screen";
 import { OpfinApiError } from "@/lib/api/errors";
 import { opfinApi } from "@/lib/api/client";
 import { getAccessToken } from "@/lib/auth/session";
+import { maskSensitiveId } from "@/lib/format";
 
 export default async function KycPage({ searchParams }: { searchParams?: Promise<{ error?: string; message?: string; status?: string }> }) {
   const params = await searchParams;
@@ -29,7 +30,7 @@ export default async function KycPage({ searchParams }: { searchParams?: Promise
                 <tr><th>Phone</th><td>{user.phone}</td></tr>
                 <tr><th>NIN status</th><td><span className="badge ok">{user.nin_status ?? "Not available"}</span></td></tr>
                 <tr><th>Latest case</th><td>{latestCase ? <span className="badge warn">{latestCase.status}</span> : "No KYC case submitted"}</td></tr>
-                <tr><th>National ID</th><td>{latestCase?.national_id ?? user.national_id ?? "Not available"}</td></tr>
+                <tr><th>National ID</th><td>{maskSensitiveId(latestCase?.national_id ?? user.national_id)}</td></tr>
                 <tr><th>Provider</th><td>{latestCase?.provider ?? "Not available"}</td></tr>
               </tbody>
             </table>
