@@ -62,6 +62,7 @@ Route::middleware(['auth:sanctum', 'role:platform_admin,operations,support'])->g
     Route::patch('/admin/kyc/cases/{case}', [ProductionKycController::class, 'review']);
     Route::post('/admin/crb-reports', [ProductionCreditController::class, 'storeCrbReport']);
     Route::post('/admin/loan-applications/{application}/decision', [ProductionCreditController::class, 'decide']);
+    Route::get('/admin/ledger-transactions', [ProductionOperationsController::class, 'ledgerTransactions']);
     Route::get('/admin/reconciliation-runs', [ProductionOperationsController::class, 'reconciliationRuns']);
     Route::post('/admin/reconciliation-runs', [ProductionOperationsController::class, 'createReconciliationRun']);
     Route::get('/admin/reconciliation-runs/{run}/items', [ProductionOperationsController::class, 'reconciliationItems']);

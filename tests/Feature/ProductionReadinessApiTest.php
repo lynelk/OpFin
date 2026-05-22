@@ -6,6 +6,9 @@ use App\Models\ConsentRecord;
 use App\Models\CrbReport;
 use App\Models\Institution;
 use App\Models\KycCase;
+use App\Models\LedgerAccount;
+use App\Models\LedgerEntry;
+use App\Models\LedgerTransaction;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
@@ -169,6 +172,54 @@ class ProductionReadinessApiTest extends TestCase
         ])
             ->assertCreated()
             ->assertJsonPath('data.export.format', 'csv');
+    }
+
+    public function test_operations_can_view_immutable_ledger_transactions(): void
+    {
+        $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
+        Sanctum::actingAs($operations);
+
+        $cash = LedgerAccount::create([
+            'code' => 'test.cash',
+            'name' => 'Test Cash',
+            'type' => 'asset',
+            'currency' => 'UGX',
+            'is_active' => true,
+        ]);
+        $receivable = LedgerAccount::create([
+            'code' => 'test.receivable',
+            'name' => 'Test Receivable',
+            'type' => 'asset',
+            'currency' => 'UGX',
+            'is_active' => true,
+        ]);
+        $ledgerTransaction = LedgerTransaction::create([
+            'reference' => 'ledger-list-test',
+            'event_type' => 'loan.disbursement',
+            'currency' => 'UGX',
+            'source_type' => MobileMoneyTransaction::class,
+            'source_id' => 1,
+            'posted_at' => now(),
+        ]);
+        $ledgerTransaction->entries()->createMany([
+            [
+                'ledger_account_id' => $receivable->id,
+                'direction' => LedgerEntry::DIRECTION_DEBIT,
+                'amount_minor' => 10000,
+                'currency' => 'UGX',
+            ],
+            [
+                'ledger_account_id' => $cash->id,
+                'direction' => LedgerEntry::DIRECTION_CREDIT,
+                'amount_minor' => 10000,
+                'currency' => 'UGX',
+            ],
+        ]);
+
+        $this->getJson('/api/admin/ledger-transactions')
+            ->assertOk()
+            ->assertJsonPath('data.ledger_transactions.0.reference', 'ledger-list-test')
+            ->assertJsonCount(2, 'data.ledger_transactions.0.entries');
     }
 
     private function createApplicationWithKycAndConsent(): array

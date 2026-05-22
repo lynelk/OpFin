@@ -82,6 +82,10 @@ Returns reconciliation items for a run.
 
 Resolves a reconciliation item as matched, exception, or written off and updates the linked mobile money reconciliation status when matched.
 
+### `GET /api/admin/ledger-transactions`
+
+Returns the latest immutable production ledger transactions with entries for operations and support review.
+
 ### `POST /api/admin/support-cases`
 
 Creates a support case linked to a customer.
@@ -108,7 +112,12 @@ Creates a compliance export manifest record for CSV or JSON export workflows.
 
 ### Production ledger service
 
-The production ledger service is not exposed directly as a public API. `App\Services\ProductionLedgerService` posts immutable `ledger_transactions` and `ledger_entries` in integer minor units only and rejects unbalanced postings.
+`App\Services\ProductionLedgerService` posts immutable `ledger_transactions` and `ledger_entries` in integer minor units only and rejects unbalanced postings. Legacy successful loan disbursement and repayment processing now also posts balanced production ledger transactions through `App\Services\ProductionLoanLedgerService` using deterministic references:
+
+- `loan.disbursement:{legacy_transaction_reference}`
+- `loan.repayment:{legacy_transaction_reference}`
+
+Duplicate callbacks or approvals do not create duplicate production ledger transactions when the same legacy reference has already been posted.
 
 ## Authenticated Customer Endpoints
 

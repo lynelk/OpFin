@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Institution;
+use App\Models\LedgerEntry;
+use App\Models\LedgerTransaction;
 use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
@@ -81,6 +83,11 @@ class BackendCheckpointTest extends TestCase
             'name' => 'Airtel Disbursement',
             'balance' => 200000,
         ]);
+        Account::create([
+            'name' => 'Checkpoint Loan Product Account',
+            'balance' => 0,
+            'loan_product_id' => $application->loan_product_id,
+        ]);
 
         $transaction = Transaction::create([
             'user_id' => $application->user_id,
@@ -100,6 +107,85 @@ class BackendCheckpointTest extends TestCase
 
         $this->assertDatabaseCount('loans', 1);
         $this->assertSame(Loan::firstOrFail()->id, $transaction->fresh()->loan_id);
+        $this->assertDatabaseHas('ledger_transactions', [
+            'reference' => 'loan.disbursement:disbursement-idempotency-key',
+            'event_type' => 'loan.disbursement',
+        ]);
+        $this->assertCount(2, LedgerTransaction::where('reference', 'loan.disbursement:disbursement-idempotency-key')->firstOrFail()->entries);
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'ledger.loan_disbursement.posted',
+            'subject_type' => LedgerTransaction::class,
+        ]);
+    }
+
+    public function test_successful_repayment_processing_posts_balanced_production_ledger_once(): void
+    {
+        $application = $this->createLoanApplication();
+        $loan = Loan::withoutEvents(fn () => Loan::create([
+            'user_id' => $application->user_id,
+            'loan_product_id' => $application->loan_product_id,
+            'loan_product_term_id' => $application->loan_product_term_id,
+            'institution_id' => $application->institution_id,
+            'loan_application_id' => $application->id,
+            'amount' => 100000,
+            'status' => 'Disbursed',
+            'reason' => 'Checkpoint repayment',
+            'disbursed_at' => now(),
+            'duration' => 30,
+            'repayment_amount' => 110000,
+            'repayment_start_date' => now()->addMonth(),
+        ]));
+
+        $loan->schedules()->create([
+            'user_id' => $loan->user_id,
+            'institution_id' => $loan->institution_id,
+            'principal' => 50000,
+            'interest' => 5000,
+            'principal_outstanding' => 50000,
+            'interest_outstanding' => 5000,
+            'total_outstanding' => 55000,
+            'due_date' => now()->addMonth(),
+        ]);
+
+        Account::create(['name' => 'Airtel Collection', 'balance' => 0]);
+        Account::create([
+            'name' => 'Checkpoint Loan Product Account',
+            'balance' => 100000,
+            'loan_product_id' => $loan->loan_product_id,
+        ]);
+        Account::create([
+            'name' => 'Interest Income',
+            'balance' => 0,
+            'loan_product_id' => $loan->loan_product_id,
+        ]);
+
+        $transaction = Transaction::create([
+            'user_id' => $loan->user_id,
+            'institution_id' => $loan->institution_id,
+            'loan_application_id' => $application->id,
+            'loan_id' => $loan->id,
+            'type' => 'Repayment',
+            'amount' => 55000,
+            'phone' => '256700000099',
+            'reference' => 'repayment-idempotency-key',
+            'status' => 'SUCCESSFUL',
+        ]);
+
+        $loanService = app(LoanService::class);
+        $loanService->processSuccessfulTransaction($transaction);
+        $loanService->processSuccessfulTransaction($transaction->fresh());
+
+        $ledgerTransaction = LedgerTransaction::where('reference', 'loan.repayment:repayment-idempotency-key')->firstOrFail();
+        $debits = $ledgerTransaction->entries()->where('direction', LedgerEntry::DIRECTION_DEBIT)->sum('amount_minor');
+        $credits = $ledgerTransaction->entries()->where('direction', LedgerEntry::DIRECTION_CREDIT)->sum('amount_minor');
+
+        $this->assertSame(55000, (int) $debits);
+        $this->assertSame(55000, (int) $credits);
+        $this->assertDatabaseCount('ledger_transactions', 1);
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'ledger.loan_repayment.posted',
+            'subject_type' => LedgerTransaction::class,
+        ]);
     }
 
     public function test_customer_cannot_submit_credit_application_without_verified_kyc(): void

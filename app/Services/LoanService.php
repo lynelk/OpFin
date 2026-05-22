@@ -17,8 +17,10 @@ class LoanService
 {
     protected $smsService;
 
-    public function __construct(SmsService $smsService)
-    {
+    public function __construct(
+        SmsService $smsService,
+        private readonly ProductionLoanLedgerService $productionLoanLedgerService
+    ) {
         $this->smsService = $smsService;
     }
 
@@ -161,6 +163,8 @@ class LoanService
                 'Loan Disbursement'
             );
 
+            $this->productionLoanLedgerService->postDisbursement($transaction, $loan);
+
             // Send disbursement notification
             $this->sendDisbursementNotification($loan);
         } catch (\Exception $e) {
@@ -227,6 +231,8 @@ class LoanService
                     'Principal Repayment'
                 );
             }
+
+            $this->productionLoanLedgerService->postRepayment($transaction, $interestPaid, $principalPaid);
 
             // Notify
             $this->sendCollectionNotification($transaction);

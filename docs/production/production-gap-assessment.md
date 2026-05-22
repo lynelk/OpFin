@@ -78,7 +78,7 @@ Based on code inspection, not runtime proof:
 - Decisioning: demo affordability/decisioning is mock logic; production credit policy, CRB integration, explainability, overrides, and manual review are incomplete.
 - Loan offers: demo offer table exists; production offer lifecycle, terms disclosure, acceptance evidence, and expiry handling need hardening.
 - Loan accounts and schedules: exist, but decimal/string money fields and model-event schedule generation are not acceptable for regulated production finance.
-- Ledger: journal entries exist, but double-entry enforcement, balancing invariants, reconciliation, reversals, and immutable posting controls are incomplete.
+- Ledger: journal entries still exist, and successful legacy disbursement/repayment processing now also posts immutable balanced minor-unit ledger transactions. Full replacement remains incomplete because legacy decimal money fields and old journal balance mutations still exist.
 - Mobile money: adapter layer exists, but MTN/Airtel adapters are placeholders for the new layer and legacy services still contain live-call logic.
 - Admin operations: legacy web admin and Next admin placeholders coexist; production operational workflows are incomplete.
 - API consistency: newer endpoints use an envelope, legacy endpoints are inconsistent.
@@ -107,7 +107,7 @@ Based on code inspection, not runtime proof:
 - Verified test/build/lint/static-analysis pipeline.
 - Unified production financial state machine.
 - Integer minor units across all financial tables.
-- Immutable ledger posting with enforced balanced entries.
+- Full migration of all financial state changes to immutable balanced ledger postings. Successful legacy loan disbursements and repayments now post into the production ledger, but legacy decimal journal/account writes remain in place during migration.
 - Production-grade mobile money disbursement, collection, webhook, reversal, reconciliation, retry, and support tooling.
 - Full live KYC provider integration beyond the new persisted KYC case/review foundation.
 - Full production consent lifecycle reporting beyond the new versioned consent records.
@@ -205,7 +205,7 @@ Based on code inspection, not runtime proof:
 | Loan offers | Demo/partial | Demo offers exist; production lifecycle and customer disclosure are incomplete. |
 | Loan accounts | Partial | Exists, but financial invariants and minor-unit storage are not production-safe. |
 | Repayment schedules | Partial | Exists, but generation is not sufficiently governed/tested for all production cases. |
-| Ledger | Partial/high risk | Journal entries exist, but balanced double-entry enforcement and immutability are incomplete. |
+| Ledger | Partial/high risk | Immutable balanced production ledger postings now exist for legacy loan disbursements and repayments, but legacy decimal account/journal writes still remain. |
 | Mobile money | Partial | Adapter layer is valuable; real provider adapters and operational reconciliation are not production-ready. |
 | Audit logging | Partial | Useful foundation; coverage is not universal and audit retention/export is incomplete. |
 | Admin operations | Partial | Legacy web admin exists; Next admin is mostly demo/snapshot focused. |
@@ -260,3 +260,4 @@ Do not cut over customers or financial operations to this implementation yet. Tr
 - `OPFIN_ENABLE_DEMO_ROUTES=false` is documented in `.env.example` as the default production posture.
 - Laravel now fails fast in production when `APP_DEBUG=true`, `MOBILE_MONEY_PROVIDER=mock`, or `OPFIN_ENABLE_DEMO_ROUTES=true`.
 - This does not make the production replacement ready; it only prevents demo endpoints from being exposed by default in production.
+- Successful legacy loan disbursement and repayment processing now creates deterministic, idempotent production ledger postings and audit records alongside the existing legacy journal entries.

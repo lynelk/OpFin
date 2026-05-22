@@ -8,6 +8,7 @@ use App\Models\ComplianceExport;
 use App\Models\ComplianceReport;
 use App\Models\CreditDecision;
 use App\Models\KycCase;
+use App\Models\LedgerTransaction;
 use App\Models\MobileMoneyTransaction;
 use App\Models\ReconciliationItem;
 use App\Models\ReconciliationRun;
@@ -24,6 +25,16 @@ use Illuminate\Validation\Rule;
 class ProductionOperationsController extends Controller
 {
     public function __construct(private readonly AuditLogger $auditLogger) {}
+
+    public function ledgerTransactions(): JsonResponse
+    {
+        return ApiResponse::success('Ledger transactions loaded.', [
+            'ledger_transactions' => LedgerTransaction::with('entries')
+                ->latest('posted_at')
+                ->limit(100)
+                ->get(),
+        ]);
+    }
 
     public function reconciliationRuns(): JsonResponse
     {

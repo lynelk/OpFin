@@ -27,7 +27,7 @@ Legend:
 | Loan offers | Demo only/partial | Partial | Critical | Offer lifecycle and disclosure acceptance evidence incomplete. |
 | Loan account creation | Partial | Partial | Critical | Needs atomic production invariants and ledger coupling. |
 | Repayment schedules | Partial | Partial | High | Exists, but edge cases and production recalculation rules incomplete. |
-| Ledger | Partial | Partial admin view | Critical | Decimal money, no complete immutable balanced-posting guarantee. |
+| Ledger | Partial | Partial admin view | Critical | Production ledger postings now cover successful legacy disbursement and repayment events, but legacy decimal account/journal paths remain. |
 | Mobile money disbursement | Sandbox/partial | Demo only | Critical | Mock adapter and placeholders cannot process live money safely. |
 | Mobile money collections | Partial legacy/sandbox | Missing | Critical | Production collections/reconciliation workflow incomplete. |
 | Webhooks/idempotency | Partial | N/A | High | Adapter layer exists; production provider behavior unverified. |
