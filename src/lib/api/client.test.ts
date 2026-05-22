@@ -80,6 +80,16 @@ describe("OpFin API client", () => {
     });
     expect(reconciliation.data.item_count).toBe(1);
 
+    const items = await opfinApi.reconciliationItems(reconciliation.data.run.id);
+    expect(items.data.items[0].status).toBe("requires_provider_match");
+
+    const resolved = await opfinApi.resolveReconciliationItem(items.data.items[0].id, {
+      status: "matched",
+      provider_amount_minor: 100000,
+      notes: "Matched in sandbox"
+    });
+    expect(resolved.data.item.status).toBe("matched");
+
     const support = await opfinApi.createSupportCase({
       customer_id: 1,
       category: "payment",
@@ -88,12 +98,21 @@ describe("OpFin API client", () => {
     });
     expect(support.data.support_case.category).toBe("payment");
 
+    const updatedSupport = await opfinApi.updateSupportCase(support.data.support_case.id, {
+      status: "resolved",
+      note: "Resolved in sandbox"
+    });
+    expect(updatedSupport.data.support_case.status).toBe("resolved");
+
     const compliance = await opfinApi.createComplianceReport({
       report_type: "monthly_credit_register",
       period_start: "2026-05-01",
       period_end: "2026-05-31"
     });
     expect(compliance.data.report.report_type).toBe("monthly_credit_register");
+
+    const exported = await opfinApi.createComplianceExport(compliance.data.report.id, { format: "csv" });
+    expect(exported.data.export.format).toBe("csv");
   });
 
   it("runs the mock investor demo flow through consent, application, offer, and admin snapshot contracts", async () => {

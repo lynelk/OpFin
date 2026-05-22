@@ -228,6 +228,18 @@ export type ReconciliationRun = {
   summary?: Record<string, unknown> | null;
 };
 
+export type ReconciliationItem = {
+  id: number;
+  reconciliation_run_id: number;
+  mobile_money_transaction_id?: number | null;
+  provider_reference?: string | null;
+  system_amount_minor: number;
+  provider_amount_minor?: number | null;
+  status: string;
+  notes?: string | null;
+  resolved_at?: string | null;
+};
+
 export type SupportCase = {
   id: number;
   case_number: string;
@@ -239,6 +251,12 @@ export type SupportCase = {
   subject: string;
   description: string;
   resolved_at?: string | null;
+  notes?: Array<{
+    id: number;
+    note: string;
+    is_internal: boolean;
+    created_at?: string;
+  }>;
 };
 
 export type ComplianceReport = {
@@ -248,5 +266,16 @@ export type ComplianceReport = {
   period_end: string;
   status: string;
   summary: Record<string, unknown>;
+  generated_at: string;
+  exports?: ComplianceExport[];
+};
+
+export type ComplianceExport = {
+  id: number;
+  compliance_report_id: number;
+  format: string;
+  status: string;
+  storage_path?: string | null;
+  manifest: Record<string, unknown>;
   generated_at: string;
 };

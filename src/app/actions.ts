@@ -242,3 +242,61 @@ export async function createComplianceReportAction(formData: FormData) {
 
   redirect("/admin/compliance?status=created");
 }
+
+export async function resolveReconciliationItemAction(formData: FormData) {
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.resolveReconciliationItem(Number(value(formData, "item_id")), {
+      status: value(formData, "status"),
+      provider_amount_minor: Number(value(formData, "provider_amount_minor")),
+      notes: value(formData, "notes")
+    }, token);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/admin/reconciliation", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/admin/reconciliation", { error: "server", message: "Reconciliation item resolution failed" });
+  }
+
+  redirect("/admin/reconciliation?status=resolved");
+}
+
+export async function updateSupportCaseAction(formData: FormData) {
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.updateSupportCase(Number(value(formData, "case_id")), {
+      status: value(formData, "status"),
+      priority: value(formData, "priority"),
+      note: value(formData, "note")
+    }, token);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/admin/support", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/admin/support", { error: "server", message: "Support case update failed" });
+  }
+
+  redirect("/admin/support?status=updated");
+}
+
+export async function createComplianceExportAction(formData: FormData) {
+  const token = await getAccessToken();
+
+  try {
+    await opfinApi.createComplianceExport(Number(value(formData, "report_id")), {
+      format: value(formData, "format") || "csv"
+    }, token);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/admin/compliance", { error: error.kind, message: error.message });
+    }
+
+    redirectWith("/admin/compliance", { error: "server", message: "Compliance export creation failed" });
+  }
+
+  redirect("/admin/compliance?status=exported");
+}

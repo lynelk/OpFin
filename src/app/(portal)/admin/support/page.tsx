@@ -1,4 +1,4 @@
-import { createSupportCaseAction } from "@/app/actions";
+import { createSupportCaseAction, updateSupportCaseAction } from "@/app/actions";
 import { DataTable } from "@/components/DataTable";
 import { Screen, StateNotice } from "@/components/Screen";
 import { OpfinApiError } from "@/lib/api/errors";
@@ -63,7 +63,19 @@ export default async function SupportPage({ searchParams }: { searchParams?: Pro
                   { label: "Case", render: (row) => row.case_number },
                   { label: "Category", render: (row) => row.category },
                   { label: "Status", render: (row) => <span className="badge warn">{row.status}</span> },
-                  { label: "Subject", render: (row) => row.subject }
+                  { label: "Subject", render: (row) => row.subject },
+                  {
+                    label: "Resolve",
+                    render: (row) => (
+                      <form action={updateSupportCaseAction} className="inline-form">
+                        <input type="hidden" name="case_id" value={row.id} />
+                        <input type="hidden" name="status" value="resolved" />
+                        <input type="hidden" name="priority" value={row.priority} />
+                        <input type="hidden" name="note" value="Resolved from operations console." />
+                        <button className="button secondary" type="submit">Resolve</button>
+                      </form>
+                    )
+                  }
                 ]}
               />
             )}

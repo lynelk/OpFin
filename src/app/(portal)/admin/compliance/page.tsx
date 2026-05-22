@@ -1,4 +1,4 @@
-import { createComplianceReportAction } from "@/app/actions";
+import { createComplianceExportAction, createComplianceReportAction } from "@/app/actions";
 import { DataTable } from "@/components/DataTable";
 import { Screen, StateNotice } from "@/components/Screen";
 import { OpfinApiError } from "@/lib/api/errors";
@@ -50,7 +50,17 @@ export default async function CompliancePage({ searchParams }: { searchParams?: 
                 columns={[
                   { label: "Type", render: (row) => row.report_type },
                   { label: "Period", render: (row) => `${row.period_start} to ${row.period_end}` },
-                  { label: "Status", render: (row) => <span className="badge warn">{row.status}</span> }
+                  { label: "Status", render: (row) => <span className="badge warn">{row.status}</span> },
+                  {
+                    label: "Export",
+                    render: (row) => (
+                      <form action={createComplianceExportAction} className="inline-form">
+                        <input type="hidden" name="report_id" value={row.id} />
+                        <input type="hidden" name="format" value="csv" />
+                        <button className="button secondary" type="submit">CSV</button>
+                      </form>
+                    )
+                  }
                 ]}
               />
             )}

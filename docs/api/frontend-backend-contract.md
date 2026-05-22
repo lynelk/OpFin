@@ -79,10 +79,14 @@ For errors, it reads `message`, `errors`, and HTTP status.
 | GET | `/api/demo/admin/investor-snapshot` | Admin credit review and audit trail. |
 | GET | `/api/admin/reconciliation-runs` | Admin reconciliation run list. |
 | POST | `/api/admin/reconciliation-runs` | Create a reconciliation run. |
+| GET | `/api/admin/reconciliation-runs/{run}/items` | Reconciliation item list. |
+| PATCH | `/api/admin/reconciliation-items/{item}` | Resolve or mark a reconciliation exception. |
 | GET | `/api/admin/support-cases` | Admin support case list. |
 | POST | `/api/admin/support-cases` | Create a support case. |
+| PATCH | `/api/admin/support-cases/{case}` | Update support case status, priority, assignment, and note. |
 | GET | `/api/admin/compliance-reports` | Admin compliance report list. |
 | POST | `/api/admin/compliance-reports` | Create a compliance report record. |
+| POST | `/api/admin/compliance-reports/{report}/exports` | Create a report export manifest. |
 
 ## Known gaps
 

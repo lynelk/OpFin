@@ -9,6 +9,7 @@ import {
   mockInvestorSnapshot,
   mockKycCase,
   mockComplianceReports,
+  mockReconciliationItems,
   mockProducts,
   mockReconciliationRuns,
   mockProfile,
@@ -20,6 +21,7 @@ import { classifyStatus, OpfinApiError } from "./errors";
 import type {
   ApiEnvelope,
   ComplianceReport,
+  ComplianceExport,
   ConsentRecord,
   ConsentState,
   DemoApplicationResult,
@@ -36,6 +38,7 @@ import type {
   LoanProduct,
   ProductTerm,
   ReconciliationRun,
+  ReconciliationItem,
   Profile,
   RepaymentScheduleRow,
   SupportCase
@@ -131,13 +134,25 @@ function mockRequest<T>(path: string, init: RequestOptions = {}): Promise<ApiEnv
   if (path === "/admin/reconciliation-runs" && init.method === "POST") {
     return Promise.resolve(envelope({ run: { ...mockReconciliationRuns[0], ...(init.bodyJson as object) }, item_count: 1 } as T, "Sandbox reconciliation run created"));
   }
+  if (path.startsWith("/admin/reconciliation-runs/") && path.endsWith("/items")) {
+    return Promise.resolve(envelope({ items: mockReconciliationItems } as T, "Sandbox reconciliation items loaded"));
+  }
+  if (path.startsWith("/admin/reconciliation-items/") && init.method === "PATCH") {
+    return Promise.resolve(envelope({ item: { ...mockReconciliationItems[0], status: "matched", ...(init.bodyJson as object), resolved_at: new Date().toISOString() } } as T, "Sandbox reconciliation item resolved"));
+  }
   if (path === "/admin/reconciliation-runs") return Promise.resolve(envelope({ runs: mockReconciliationRuns } as T, "Sandbox reconciliation runs loaded"));
   if (path === "/admin/support-cases" && init.method === "POST") {
     return Promise.resolve(envelope({ support_case: { ...mockSupportCases[0], ...(init.bodyJson as object) } } as T, "Sandbox support case created"));
   }
+  if (path.startsWith("/admin/support-cases/") && init.method === "PATCH") {
+    return Promise.resolve(envelope({ support_case: { ...mockSupportCases[0], status: "resolved", ...(init.bodyJson as object), notes: [{ id: 1, note: "Sandbox note", is_internal: true }] } } as T, "Sandbox support case updated"));
+  }
   if (path === "/admin/support-cases") return Promise.resolve(envelope({ support_cases: mockSupportCases } as T, "Sandbox support cases loaded"));
   if (path === "/admin/compliance-reports" && init.method === "POST") {
     return Promise.resolve(envelope({ report: { ...mockComplianceReports[0], ...(init.bodyJson as object) } } as T, "Sandbox compliance report created"));
+  }
+  if (path.startsWith("/admin/compliance-reports/") && path.endsWith("/exports")) {
+    return Promise.resolve(envelope({ export: { id: 1, compliance_report_id: mockComplianceReports[0].id, format: "csv", status: "generated", manifest: {}, generated_at: new Date().toISOString() } } as T, "Sandbox compliance export created"));
   }
   if (path === "/admin/compliance-reports") return Promise.resolve(envelope({ reports: mockComplianceReports } as T, "Sandbox compliance reports loaded"));
   if (path === "/demo/dashboard") {
@@ -236,14 +251,22 @@ export const opfinApi = {
   reconciliationRuns: (token?: string) => request<{ runs: ReconciliationRun[] }>("/admin/reconciliation-runs", { token }),
   createReconciliationRun: (payload: { provider: string; business_date: string }, token?: string) =>
     request<{ run: ReconciliationRun; item_count: number }>("/admin/reconciliation-runs", { method: "POST", bodyJson: payload, token }),
+  reconciliationItems: (runId: number, token?: string) =>
+    request<{ items: ReconciliationItem[] }>(`/admin/reconciliation-runs/${runId}/items`, { token }),
+  resolveReconciliationItem: (itemId: number, payload: { status: string; provider_amount_minor?: number; notes: string }, token?: string) =>
+    request<{ item: ReconciliationItem }>(`/admin/reconciliation-items/${itemId}`, { method: "PATCH", bodyJson: payload, token }),
   supportCases: (token?: string) => request<{ support_cases: SupportCase[] }>("/admin/support-cases", { token }),
   createSupportCase: (
     payload: { customer_id: number; category: string; priority?: string; subject: string; description: string; assigned_to?: number },
     token?: string
   ) => request<{ support_case: SupportCase }>("/admin/support-cases", { method: "POST", bodyJson: payload, token }),
+  updateSupportCase: (caseId: number, payload: { status: string; assigned_to?: number; priority?: string; note?: string }, token?: string) =>
+    request<{ support_case: SupportCase }>(`/admin/support-cases/${caseId}`, { method: "PATCH", bodyJson: payload, token }),
   complianceReports: (token?: string) => request<{ reports: ComplianceReport[] }>("/admin/compliance-reports", { token }),
   createComplianceReport: (payload: { report_type: string; period_start: string; period_end: string; parameters?: Record<string, unknown> }, token?: string) =>
     request<{ report: ComplianceReport }>("/admin/compliance-reports", { method: "POST", bodyJson: payload, token }),
+  createComplianceExport: (reportId: number, payload: { format: string }, token?: string) =>
+    request<{ export: ComplianceExport }>(`/admin/compliance-reports/${reportId}/exports`, { method: "POST", bodyJson: payload, token }),
   products: (token?: string) => request<LoanProduct[]>("/products", { token }),
   institutions: (token?: string) => request<Institution[]>("/institutions", { token }),
   productTerms: (productId: number, token?: string) => request<ProductTerm[]>(`/product-terms/${productId}`, { token }),

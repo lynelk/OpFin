@@ -1,4 +1,4 @@
-import { createReconciliationRunAction } from "@/app/actions";
+import { createReconciliationRunAction, resolveReconciliationItemAction } from "@/app/actions";
 import { DataTable } from "@/components/DataTable";
 import { Screen, StateNotice } from "@/components/Screen";
 import { OpfinApiError } from "@/lib/api/errors";
@@ -12,6 +12,8 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
   try {
     const response = await opfinApi.reconciliationRuns(token);
     const runs = response.data.runs;
+    const latestRun = runs[0];
+    const items = latestRun ? (await opfinApi.reconciliationItems(latestRun.id, token)).data.items : [];
 
     return (
       <Screen title="Reconciliation" description="Mobile money reconciliation runs and exception intake.">
@@ -34,6 +36,32 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
               </div>
               <button className="button" type="submit">Create run</button>
             </form>
+          </section>
+          <section className="panel">
+            <h2>Latest run items</h2>
+            {items.length === 0 ? <StateNotice state="empty" message="No reconciliation items are available." /> : (
+              <DataTable
+                rows={items}
+                getKey={(row) => row.id}
+                columns={[
+                  { label: "Reference", render: (row) => row.provider_reference ?? "Not available" },
+                  { label: "System", render: (row) => row.system_amount_minor },
+                  { label: "Status", render: (row) => <span className="badge warn">{row.status}</span> },
+                  {
+                    label: "Resolve",
+                    render: (row) => (
+                      <form action={resolveReconciliationItemAction} className="inline-form">
+                        <input type="hidden" name="item_id" value={row.id} />
+                        <input type="hidden" name="status" value="matched" />
+                        <input type="hidden" name="provider_amount_minor" value={row.system_amount_minor} />
+                        <input type="hidden" name="notes" value="Matched from operations console." />
+                        <button className="button secondary" type="submit">Match</button>
+                      </form>
+                    )
+                  }
+                ]}
+              />
+            )}
           </section>
           <section className="panel">
             <h2>Recent runs</h2>

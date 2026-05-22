@@ -13,6 +13,7 @@ import type {
   ProductTerm,
   Profile,
   ReconciliationRun,
+  ReconciliationItem,
   RepaymentScheduleRow,
   SupportCase
 } from "./types";
@@ -194,6 +195,18 @@ export const mockReconciliationRuns: ReconciliationRun[] = [
   }
 ];
 
+export const mockReconciliationItems: ReconciliationItem[] = [
+  {
+    id: 1,
+    reconciliation_run_id: 1,
+    provider_reference: "mock-mm-001",
+    system_amount_minor: 100000,
+    provider_amount_minor: null,
+    status: "requires_provider_match",
+    notes: null
+  }
+];
+
 export const mockSupportCases: SupportCase[] = [
   {
     id: 1,
@@ -203,7 +216,8 @@ export const mockSupportCases: SupportCase[] = [
     status: "open",
     priority: "normal",
     subject: "Payment status check",
-    description: "Customer requested help reconciling a repayment."
+    description: "Customer requested help reconciling a repayment.",
+    notes: []
   }
 ];
 
@@ -220,6 +234,7 @@ export const mockComplianceReports: ComplianceReport[] = [
       credit_decisions: 1,
       mobile_money_transactions: 1
     },
-    generated_at: "2026-05-22T08:30:00Z"
+    generated_at: "2026-05-22T08:30:00Z",
+    exports: []
   }
 ];
