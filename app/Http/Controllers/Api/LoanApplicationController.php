@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Services\AirtelDisbursementService;
 use App\Services\AirtelService;
 use App\Services\MtnMomoService;
+use App\Support\ApiResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
@@ -26,15 +27,10 @@ class LoanApplicationController extends Controller
     public function getLoanBalance(User $user)
     {
         if ($user->id !== Auth::id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized.'
-            ], 403);
+            return ApiResponse::error('Unauthorized.', 403);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Loan balance retrieved successfully',
+        return ApiResponse::success('Loan balance retrieved successfully.', [
             'outstandingAmount' => $user->outstandingAmount(),
         ]);
     }
@@ -42,21 +38,23 @@ class LoanApplicationController extends Controller
     public function index($id)
     {
         if ((int) $id !== Auth::id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized.'
-            ], 403);
+            return ApiResponse::error('Unauthorized.', 403);
         }
 
         try {
-            $applications = LoanApplication::where('user_id', $id)->with(['user', 'loanProduct', 'loanProductTerm', 'institution', 'loan'])->latest()->get()->each(function ($application) {
-                if ($application->loan) {
-                    $application->loan->append('outstanding_balance');
-                }
-            });
-            return response()->json(['data' => $applications], 200);
+            $applications = LoanApplication::where('user_id', $id)
+                ->with(['user', 'loanProduct', 'loanProductTerm', 'institution', 'loan'])
+                ->latest()
+                ->get()
+                ->each(function ($application) {
+                    if ($application->loan) {
+                        $application->loan->append('outstanding_balance');
+                    }
+                });
+
+            return ApiResponse::success('Loan applications retrieved successfully.', $applications->toArray());
         } catch (Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return ApiResponse::error($e->getMessage(), 500);
         }
     }
 
@@ -72,47 +70,32 @@ class LoanApplicationController extends Controller
 
         if ($validator->fails()) {
             Log::error('Validation failed for loan application', ['errors' => $validator->errors()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $validator->errors()
-            ], 422);
+            return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
         $user = Auth::user();
         $ninStatus = $user->nin_status;
         if ($ninStatus !== 'VALID') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your NIN is not verified. Please head to the profile page to validate your NIN'
-            ], 400);
+            return ApiResponse::error('Your NIN is not verified. Please head to the profile page to validate your NIN', 400);
         }
 
         try {
             $userId = $user->id;
 
-            // Check if the user has any uncleared loans
             $unclearedLoan = Loan::where('user_id', $userId)
                 ->whereNotIn('status', ['Cleared'])
                 ->first();
 
             if ($unclearedLoan) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You have an uncleared loan, please clear that first to be able to qualify for another loan.'
-                ], 400);
+                return ApiResponse::error('You have an uncleared loan, please clear that first to be able to qualify for another loan.', 400);
             }
 
-            // Check if the user has any pending applications
             $pendingApplication = LoanApplication::where('user_id', $userId)
                 ->where('status', 'Pending')
                 ->first();
 
             if ($pendingApplication) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You already have a pending application, please wait for it to get processed.'
-                ], 400);
+                return ApiResponse::error('You already have a pending application, please wait for it to get processed.', 400);
             }
 
             $loanApplication = LoanApplication::create([
@@ -126,35 +109,17 @@ class LoanApplicationController extends Controller
             ]);
             $this->createTransaction($loanApplication);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Application submitted successfully.',
-                'data' => $loanApplication
-            ], 201);
+            return ApiResponse::success('Application submitted successfully.', $loanApplication->toArray(), 201);
         } catch (\Exception $e) {
             Log::error('Error creating loan application: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error creating loan application. ' . $e->getMessage(),
-                'error' => $e->getMessage()
-            ], 500);
+            return ApiResponse::error('Error creating loan application. ' . $e->getMessage(), 500);
         }
     }
 
-    /**
-     * Update the status of a loan application.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function updateStatus(Request $request, $id)
     {
         if (!$this->canManageLoans($request)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized.'
-            ], 403);
+            return ApiResponse::error('Unauthorized.', 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -162,7 +127,7 @@ class LoanApplicationController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()->first()], 422);
+            return ApiResponse::error($validator->errors()->first(), 422, $validator->errors()->toArray());
         }
 
         DB::beginTransaction();
@@ -171,7 +136,8 @@ class LoanApplicationController extends Controller
             $loanApplication = LoanApplication::findOrFail($id);
 
             if ($loanApplication->status !== 'Pending') {
-                return response()->json(['error' => 'Loan application is not in a pending state.'], 400);
+                DB::rollBack();
+                return ApiResponse::error('Loan application is not in a pending state.', 400);
             }
 
             $loanApplication->status = $request->status;
@@ -188,11 +154,12 @@ class LoanApplicationController extends Controller
 
             $loanApplication->save();
             DB::commit();
-            return response()->json(['data' => $loanApplication], 200);
+
+            return ApiResponse::success('Loan application status updated successfully.', $loanApplication->toArray());
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error updating loan application status: ' . $e->getMessage());
-            return response()->json(['error' => 'An error occurred while updating the loan application status.'], 500);
+            return ApiResponse::error('An error occurred while updating the loan application status.', 500);
         }
     }
 
@@ -215,20 +182,19 @@ class LoanApplicationController extends Controller
                     ->orWhere('institution_id', null);
             })->get();
 
-            return response()->json(['data' => $products], 200);
+            return ApiResponse::success('Products retrieved successfully.', $products->toArray());
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return ApiResponse::error($e->getMessage(), 500);
         }
     }
-
 
     public function getProductTerms($id)
     {
         try {
             $terms = LoanProductTerm::with('product.institution')->where('loan_product_id', $id)->get();
-            return response()->json(['data' => $terms], 200);
+            return ApiResponse::success('Product terms retrieved successfully.', $terms->toArray());
         } catch (Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return ApiResponse::error($e->getMessage(), 500);
         }
     }
 
@@ -236,16 +202,15 @@ class LoanApplicationController extends Controller
     {
         try {
             $institutions = Institution::all();
-            return response()->json(['data' => $institutions], 200);
+            return ApiResponse::success('Institutions retrieved successfully.', $institutions->toArray());
         } catch (Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return ApiResponse::error($e->getMessage(), 500);
         }
     }
 
     public function createTransaction(LoanApplication $loanApplication)
     {
-
-        $transaction =  Transaction::create([
+        $transaction = Transaction::create([
             'user_id' => $loanApplication->user_id,
             'institution_id' => $loanApplication->institution_id,
             'loan_application_id' => $loanApplication->id,
@@ -262,7 +227,6 @@ class LoanApplicationController extends Controller
     public function disburseLoan(LoanApplication $loanApplication, Transaction $transaction)
     {
         try {
-            // Mark transaction as processing
             $transaction->update([
                 'status' => 'Processing',
                 'processing_at' => now()
@@ -281,7 +245,6 @@ class LoanApplicationController extends Controller
                 throw new \Exception($paymentResponse['message'] ?? 'Payment processing failed');
             }
 
-            // Update transaction on success
             $updateData = [
                 'status' => $paymentResponse['status'],
                 'external_reference' => $paymentResponse['transaction_id'],
@@ -290,24 +253,21 @@ class LoanApplicationController extends Controller
 
             $transaction->update($updateData);
         } catch (\Exception $e) {
-            // Log detailed error
             Log::error('Loan Disbursement failed', [
                 'error' => $e->getMessage(),
                 'loan_id' => $loanApplication->id,
                 'transaction_id' => $transaction->id,
             ]);
 
-            // Update transaction with failure status
             $transaction->update([
                 'status' => 'FAILED',
             ]);
 
-            $transaction->loanApplication->update([
+            $loanApplication->update([
                 'status' => 'Rejected',
                 'rejected_at' => now(),
             ]);
 
-            // Return detailed error response
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
