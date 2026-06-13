@@ -50,6 +50,7 @@ class AuthController extends Controller
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
+
     //to be implemented
     protected function beforeUserDelete($user)
     {
@@ -61,17 +62,11 @@ class AuthController extends Controller
             'last_name' => 'User',
             'deleted_at' => now(),
         ]);
-
-        // Optional: Cancel pending transactions
-        // $user->loans()->update(['status' => 'cancelled']);
-
-        // Add any other data cleanup needed for your financial app
     }
 
     public function register(Request $request)
     {
         try {
-            // Validate input
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'phone' => 'required|string|unique:users,phone',
@@ -82,7 +77,6 @@ class AuthController extends Controller
                 return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
             }
 
-            // Create the user
             $user = User::create([
                 'name' => $request->name,
                 'phone' => $request->phone,
@@ -90,10 +84,8 @@ class AuthController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
-            // Generate an access token
             $token = $this->createAccessToken($user);
 
-            // Return successful response — same shape as login
             return ApiResponse::success('Registration successful', [
                 'access_token' => $token,
                 'token_type' => 'Bearer',
@@ -109,7 +101,6 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        // Validate the request data
         $validator = Validator::make($request->all(), [
             'phone' => 'required|string',
             'password' => 'required|string',
@@ -119,14 +110,12 @@ class AuthController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
-        // Find user by phone
         $user = User::where('phone', $request->phone)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return ApiResponse::error('Invalid credentials', 401);
         }
 
-        // Generate a token for the user
         $token = $this->createAccessToken($user);
 
         return ApiResponse::success('Login successful', [
@@ -137,10 +126,8 @@ class AuthController extends Controller
         ]);
     }
 
-    // Reset Password
     public function resetPassword(Request $request)
     {
-        // Validate input
         $validator = Validator::make($request->all(), [
             'phone' => 'required|string',
             'otp' => 'required|string',
@@ -149,7 +136,7 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
-        // Find user by phone
+
         $user = User::where('phone', $request->phone)->first();
 
         if (!$user) {
@@ -193,17 +180,14 @@ class AuthController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
-        // Generate OTP
         $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $expiresAt = Carbon::now()->addMinutes(5);
 
-        // Store OTP in the database
         Otp::updateOrCreate(
             ['phone' => $request->phone],
             ['otp' => $otp, 'expires_at' => $expiresAt]
         );
 
-        // Simulate sending the OTP (you can integrate an SMS gateway here)
         $this->smsService->queueSms($request->phone, 'OpFin: Your otp code is ' . $otp);
 
         return ApiResponse::success('OTP generated successfully');
@@ -220,7 +204,6 @@ class AuthController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
-        // Retrieve the OTP record
         $otpRecord = Otp::where('phone', $request->phone)->first();
 
         if (!$otpRecord) {
@@ -235,7 +218,6 @@ class AuthController extends Controller
             return ApiResponse::error('Invalid or expired OTP', 400);
         }
 
-        // OTP is valid, you can perform additional actions (e.g., user login)
         return ApiResponse::success('OTP verified successfully');
     }
 
@@ -261,6 +243,8 @@ class AuthController extends Controller
             'phone' => $user->phone,
             'role' => $user->role,
             'nin_status' => $user->nin_status,
+            'national_id' => $user->national_id,
+            'date_of_birth' => $user->date_of_birth,
         ];
     }
 }

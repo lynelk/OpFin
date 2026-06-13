@@ -21,6 +21,9 @@ class ProfileController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'institution_id' => $user->institution_id,
+                'national_id' => $user->national_id,
+                'date_of_birth' => $user->date_of_birth,
+                'nin_status' => $user->nin_status,
             ],
             'permissions' => $user->permissions(),
         ]);
