@@ -136,11 +136,11 @@ export async function submitLoanApplicationAction(formData: FormData) {
   let applicationId: number | undefined;
 
   try {
-    const response = await opfinApi.submitDemoLoanApplication({
+    const response = await opfinApi.submitCreditApplication({
       loan_product_id: Number(value(formData, "loan_product_id")),
       loan_product_term_id: Number(value(formData, "loan_product_term_id")),
       institution_id: Number(value(formData, "institution_id")),
-      amount: Number(value(formData, "amount")),
+      amount_minor: Number(value(formData, "amount")),
       reason: value(formData, "reason")
     }, token);
 
@@ -150,10 +150,34 @@ export async function submitLoanApplicationAction(formData: FormData) {
       redirectWith("/loans/apply", { error: error.kind, message: error.message });
     }
 
-    redirectWith("/loans/apply", { error: "server", message: "Loan application failed" });
+    redirectWith("/loans/apply", { error: "server", message: "Credit application failed" });
   }
 
   redirect(applicationId ? `/loans/decision?application=${applicationId}&status=submitted` : "/loans/decision?status=submitted");
+}
+
+export async function acceptCreditOfferAction(formData: FormData) {
+  const token = await getAccessToken();
+  const offerId = Number(value(formData, "offer_id"));
+
+  try {
+    const response = await opfinApi.acceptCreditOffer(
+      offerId,
+      value(formData, "disclosure_hash"),
+      token
+    );
+
+    const next = response.data.next_state === "active_loan"
+      ? "/loans/account?status=active"
+      : `/loans/offer?offer=${offerId}&status=disbursement_pending`;
+    redirect(next);
+  } catch (error) {
+    if (error instanceof OpfinApiError) {
+      redirectWith("/loans/offer", { error: error.kind, message: error.message, offer: String(offerId) });
+    }
+
+    redirectWith("/loans/offer", { error: "server", message: "Offer acceptance failed", offer: String(offerId) });
+  }
 }
 
 export async function acceptDemoOfferAction(formData: FormData) {
@@ -166,7 +190,7 @@ export async function acceptDemoOfferAction(formData: FormData) {
       redirectWith("/loans/offer", { error: error.kind, message: error.message });
     }
 
-    redirectWith("/loans/offer", { error: "server", message: "Offer acceptance failed" });
+    redirectWith("/loans/offer", { error: "server", message: "Demo offer acceptance failed" });
   }
 
   redirect("/loans/account?status=accepted");
