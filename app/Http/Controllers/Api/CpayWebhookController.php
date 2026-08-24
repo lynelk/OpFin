@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\MobileMoney\MobileMoneyService;
+use App\Services\ProductionCreditOfferService;
 use App\Support\ApiResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -13,8 +14,11 @@ use JsonException;
 
 class CpayWebhookController extends Controller
 {
-    public function __invoke(Request $request, MobileMoneyService $mobileMoney): JsonResponse
-    {
+    public function __invoke(
+        Request $request,
+        MobileMoneyService $mobileMoney,
+        ProductionCreditOfferService $creditOffers,
+    ): JsonResponse {
         $rawBody = $request->getContent();
 
         try {
@@ -34,6 +38,7 @@ class CpayWebhookController extends Controller
                 headers: $request->headers->all(),
                 rawBody: $rawBody,
             );
+            $loan = $creditOffers->syncDisbursementState($transaction);
         } catch (InvalidArgumentException $exception) {
             $status = $exception->getMessage() === 'Invalid mobile money webhook signature.' ? 401 : 409;
 
@@ -45,6 +50,7 @@ class CpayWebhookController extends Controller
         return ApiResponse::success('CPay callback accepted.', [
             'reference' => $transaction->internal_reference,
             'status' => $transaction->status,
+            'loan_id' => $loan?->id,
         ]);
     }
 }
