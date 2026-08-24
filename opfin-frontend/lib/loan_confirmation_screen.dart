@@ -27,7 +27,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
-          "Confirm Application",
+          'Confirm Application',
           style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
@@ -41,9 +41,8 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             const Text(
-              "Review your loan details",
+              'Review your loan details',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
@@ -52,16 +51,13 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              "Please confirm the information below before submitting your application.",
+              'Please confirm the information below before submitting your application.',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.black.withOpacity(0.6),
+                color: Colors.black.withValues(alpha: 0.6),
               ),
             ),
-
             const SizedBox(height: 24),
-
-            // Summary Card
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -70,7 +66,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                 border: Border.all(color: Colors.black12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 6,
                     offset: const Offset(0, 3),
                   ),
@@ -79,22 +75,20 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
               child: Column(
                 children: [
                   _infoRow(
-                    "Loan Amount",
+                    'Loan Amount',
                     widget.application.amount.toStringAsFixed(2),
                     isEmphasis: true,
                   ),
                   _divider(),
-                  _infoRow("Reason", widget.application.reason),
-                  _infoRow("Interest Rate", '10%'),
-                  _infoRow("Interest", 'UGX 700'),
-                  _infoRow("Pay Back", 'UGX 7,700'),
+                  _infoRow('Reason', widget.application.reason),
+                  _infoRow('Interest Rate', '10%'),
+                  _infoRow('Interest', 'UGX 700'),
+                  _infoRow('Pay Back', 'UGX 7,700'),
                   _infoRow('Pay Before', '20th Dec, 2024'),
                 ],
               ),
             ),
-            // Terms Checkbox
             const Spacer(),
-
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -107,7 +101,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                 ),
                 const Expanded(
                   child: Text(
-                    "I agree to the Terms and Conditions of the loan application.",
+                    'I agree to the Terms and Conditions of the loan application.',
                     style: TextStyle(
                       color: Colors.black87,
                       fontSize: 14,
@@ -117,8 +111,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                 ),
               ],
             ),
-            SizedBox(height: 20),
-            // Action Buttons
+            const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
@@ -132,7 +125,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                       ),
                     ),
                     child: const Text(
-                      "Edit",
+                      'Edit',
                       style: TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.bold,
@@ -157,7 +150,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                         ),
                       ),
                       child: const Text(
-                        "Confirm & Submit",
+                        'Confirm & Submit',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -169,7 +162,6 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 10),
           ],
         ),
@@ -177,7 +169,6 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
     );
   }
 
-  // ------------------------------------------------------------
   Widget _infoRow(String label, String value, {bool isEmphasis = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -188,7 +179,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
             label,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.black.withOpacity(0.6),
+              color: Colors.black.withValues(alpha: 0.6),
             ),
           ),
           Text(
