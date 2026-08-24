@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import type { Session, UserRole } from "../types";
+import type { NavGroup } from "../navigation";
 
 const roleNames: Record<UserRole, string> = {
   customer: "Demo Customer",
@@ -25,7 +26,7 @@ export async function getAccessToken(): Promise<string | undefined> {
   return cookieStore.get("opfin_access_token")?.value;
 }
 
-export function canSeeGroup(role: UserRole, group: "customer" | "admin" | "employer" | "wealth"): boolean {
+export function canSeeGroup(role: UserRole, group: NavGroup): boolean {
   if (group === "admin") return ["platform_admin", "operations", "support"].includes(role);
   if (group === "employer") return role === "employer_admin" || role === "platform_admin";
   return true;
