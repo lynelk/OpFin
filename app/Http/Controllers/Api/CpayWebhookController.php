@@ -23,7 +23,7 @@ class CpayWebhookController extends Controller
             return ApiResponse::error('Invalid CPay callback payload.', 400);
         }
 
-        if (!is_array($payload)) {
+        if (! is_array($payload)) {
             return ApiResponse::error('Invalid CPay callback payload.', 400);
         }
 
