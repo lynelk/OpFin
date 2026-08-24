@@ -6,16 +6,16 @@ use App\Http\Controllers\Api\CpayWebhookController;
 use App\Http\Controllers\Api\CustomerSupportController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LoanApplicationController;
+use App\Http\Controllers\Api\LoanRepaymentController;
+use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProductionConsentController;
 use App\Http\Controllers\Api\ProductionCreditController;
 use App\Http\Controllers\Api\ProductionKycController;
 use App\Http\Controllers\Api\ProductionOperationsController;
 use App\Http\Controllers\Api\TransactionController;
-use App\Http\Controllers\Api\LoanRepaymentController;
-use App\Http\Controllers\Api\InvestorDemoController;
-use App\Http\Controllers\Api\NinValidationController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
