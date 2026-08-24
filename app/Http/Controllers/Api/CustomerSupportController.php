@@ -13,7 +13,9 @@ use Illuminate\Support\Str;
 
 class CustomerSupportController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(private readonly AuditLogger $auditLogger)
+    {
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -46,7 +48,7 @@ class CustomerSupportController extends Controller
         $case = SupportCase::create([
             'customer_id' => $request->user()->id,
             'created_by' => $request->user()->id,
-            'case_number' => 'CASE-' . now()->format('Ymd') . '-' . Str::upper(Str::random(8)),
+            'case_number' => 'CASE-'.now()->format('Ymd').'-'.Str::upper(Str::random(8)),
             'category' => $request->input('category'),
             'status' => SupportCase::STATUS_OPEN,
             'priority' => 'normal',
