@@ -93,7 +93,8 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         MobileMoneyTransaction $transaction,
         string $path,
         string $partyKey,
-    ): MobileMoneyProviderResponse {
+    ): MobileMoneyProviderResponse
+    {
         $this->assertConfigured();
 
         $payload = [
@@ -132,7 +133,8 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         array $query,
         ?array $payload,
         ?string $idempotencyKey,
-    ): Response {
+    ): Response
+    {
         $body = $payload === null
             ? ''
             : json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
@@ -170,9 +172,9 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
                 throw: false,
             );
 
-        $url = rtrim((string) config('services.cpay.base_url'), '/') . $path;
+        $url = rtrim((string) config('services.cpay.base_url'), '/').$path;
         if ($canonicalQuery !== '') {
-            $url .= '?' . $canonicalQuery;
+            $url .= '?'.$canonicalQuery;
         }
 
         return $request->withBody($body, 'application/json')->send(strtoupper($method), $url);
@@ -265,7 +267,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         $major = intdiv($amountMinor, $divisor);
         $fraction = $amountMinor % $divisor;
 
-        return sprintf('%d.%0' . $exponent . 'd', $major, $fraction);
+        return sprintf('%d.%0'.$exponent.'d', $major, $fraction);
     }
 
     private function merchantNumber(): string
