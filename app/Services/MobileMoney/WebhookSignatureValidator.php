@@ -31,8 +31,7 @@ class WebhookSignatureValidator
         ?string $secret,
         int $replayWindowSeconds = 300,
         ?string $expectedMerchantId = null,
-    ): bool
-    {
+    ): bool {
         if (! $secret || $rawBody === '') {
             return false;
         }
