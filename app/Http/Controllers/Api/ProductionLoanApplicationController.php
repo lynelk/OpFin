@@ -53,7 +53,8 @@ class ProductionLoanApplicationController extends Controller
             'loan_product_id' => 'required|integer|exists:loan_products,id',
             'loan_product_term_id' => 'required|integer|exists:loan_product_terms,id',
             'institution_id' => 'required|integer|exists:institutions,id',
-            'amount_minor' => 'required|integer|min:1',
+            'amount_minor' => 'nullable|required_without:amount|integer|min:1',
+            'amount' => 'nullable|required_without:amount_minor|integer|min:1',
             'reason' => 'required|string|max:255',
         ]);
 
@@ -63,6 +64,7 @@ class ProductionLoanApplicationController extends Controller
 
         $user = $request->user();
         $validated = $validator->validated();
+        $amountMinor = (int) ($validated['amount_minor'] ?? $validated['amount']);
 
         $kyc = KycCase::query()
             ->where('user_id', $user->id)
@@ -141,13 +143,13 @@ class ProductionLoanApplicationController extends Controller
             );
         }
 
-        $application = DB::transaction(function () use ($user, $validated) {
+        $application = DB::transaction(function () use ($user, $validated, $amountMinor) {
             return LoanApplication::create([
                 'user_id' => $user->id,
                 'loan_product_id' => $validated['loan_product_id'],
                 'loan_product_term_id' => $validated['loan_product_term_id'],
                 'institution_id' => $validated['institution_id'],
-                'amount' => $validated['amount_minor'],
+                'amount' => $amountMinor,
                 'status' => 'Pending',
                 'reason' => $validated['reason'],
             ]);
@@ -158,7 +160,7 @@ class ProductionLoanApplicationController extends Controller
             $user,
             $application,
             [
-                'amount_minor' => (int) $validated['amount_minor'],
+                'amount_minor' => $amountMinor,
                 'currency' => config('services.mobile_money.currency', 'UGX'),
                 'kyc_case_id' => $kyc->id,
                 'consent_id' => $consent->id,
