@@ -2,13 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Account;
+use App\Models\JournalEntry;
 use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\Transaction;
-use App\Models\Account;
-use App\Models\JournalEntry;
-use App\Services\SmsService;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -25,7 +23,7 @@ class LoanService
     }
 
     /**
-     * Create a new loan from an approved application
+     * Create a new loan from an approved application.
      */
     public function createLoanFromApplication(LoanApplication $loanApplication): ?Loan
     {
@@ -74,7 +72,8 @@ class LoanService
                 return $loan;
             });
         } catch (\Exception $e) {
-            Log::error('Loan creation failed: ' . $e->getMessage());
+            Log::error('Loan creation failed: '.$e->getMessage());
+
             return null;
         }
     }
@@ -87,7 +86,7 @@ class LoanService
         DB::transaction(function () use ($transaction) {
             $transaction->refresh();
 
-            if ($transaction->type == 'Disbursement') {
+            if ($transaction->type === 'Disbursement') {
                 if ($transaction->loan_id || Loan::where('loan_application_id', $transaction->loan_application_id)->exists()) {
                     return;
                 }
@@ -101,7 +100,7 @@ class LoanService
                 return;
             }
 
-            if ($transaction->type == 'Repayment') {
+            if ($transaction->type === 'Repayment') {
                 if (JournalEntry::where('reference', $transaction->reference)->exists()) {
                     return;
                 }
@@ -112,39 +111,43 @@ class LoanService
                 $remainingPayment = $transaction->amount;
 
                 foreach ($schedules as $schedule) {
-                    if ($remainingPayment <= 0) break;
+                    if ($remainingPayment <= 0) {
+                        break;
+                    }
 
                     $paymentBreakdown = $schedule->applyPayment($remainingPayment);
                     $interestPaidTotal += $paymentBreakdown['interestPaid'];
                     $principalPaidTotal += $paymentBreakdown['principalPaid'];
                     $remainingPayment -= ($paymentBreakdown['interestPaid'] + $paymentBreakdown['principalPaid']);
                 }
+
                 $this->processCollection($transaction, $interestPaidTotal, $principalPaidTotal);
             }
         });
     }
 
     /**
-     * Process all disbursement activities
+     * Process all disbursement activities.
      */
     public function processDisbursement(Transaction $transaction, Loan $loan): void
     {
         try {
-            // Update Disbursement Account
-            if ($transaction->network == 'AIRTEL') {
+            if ($transaction->network === 'AIRTEL') {
                 $disbursementAccountName = 'Airtel Disbursement';
-            } elseif ($transaction->network == 'MTN') {
+            } elseif ($transaction->network === 'MTN') {
                 $disbursementAccountName = 'MTN Disbursement';
             } else {
-                throw new Exception('Unsupported network: ' . $transaction->network);
+                throw new Exception('Unsupported network: '.$transaction->network);
             }
+
             $disbursementAccount = Account::where('name', $disbursementAccountName)->first();
-            if (!$disbursementAccount) {
+            if (! $disbursementAccount) {
                 throw new Exception('Disbursement account not found');
             }
             if ($disbursementAccount->balance < $transaction->amount) {
                 throw new Exception('Insufficient funds in disbursement account');
             }
+
             $this->updateAccountBalance(
                 $disbursementAccount,
                 $transaction->amount,
@@ -153,8 +156,7 @@ class LoanService
                 'Loan Disbursement'
             );
 
-            // Update Loan Product Account
-            $loanProductAccount = Account::where('loan_product_id', $loan->loan_product_id)->first();
+            $loanProductAccount = $this->loanProductPrincipalAccount($loan->loan_product_id);
             $this->updateAccountBalance(
                 $loanProductAccount,
                 $transaction->amount,
@@ -164,33 +166,32 @@ class LoanService
             );
 
             $this->productionLoanLedgerService->postDisbursement($transaction, $loan);
-
-            // Send disbursement notification
             $this->sendDisbursementNotification($loan);
         } catch (\Exception $e) {
-            Log::error('Disbursement processing failed: ' . $e->getMessage());
+            Log::error('Disbursement processing failed: '.$e->getMessage());
             throw $e;
         }
     }
 
     /**
-     * Process all collection (repayment) activities
+     * Process all collection (repayment) activities.
      */
     public function processCollection(Transaction $transaction, float $interestPaid, float $principalPaid): void
     {
         try {
-            // 1. Update Collection Account (all repayment money comes in)
-            if ($transaction->network == 'AIRTEL') {
+            if ($transaction->network === 'AIRTEL') {
                 $collectionAccountName = 'Airtel Collection';
-            } elseif ($transaction->network == 'MTN') {
+            } elseif ($transaction->network === 'MTN') {
                 $collectionAccountName = 'MTN Collection';
             } else {
-                throw new Exception('Unsupported network: ' . $transaction->network);
+                throw new Exception('Unsupported network: '.$transaction->network);
             }
+
             $collectionAccount = Account::where('name', $collectionAccountName)->first();
             if (! $collectionAccount) {
                 throw new Exception('Collection account not found');
             }
+
             $this->updateAccountBalance(
                 $collectionAccount,
                 $transaction->amount,
@@ -199,12 +200,14 @@ class LoanService
                 'Loan Repayment'
             );
 
-            // 2. Interest portion → Interest Income Account (Credit)
             if ($interestPaid > 0) {
-                $interestAccount = Account::where('name', 'Interest Income')->where('loan_product_id', $transaction->loan->loan_product_id)->first();
+                $interestAccount = Account::where('name', 'Interest Income')
+                    ->where('loan_product_id', $transaction->loan->loan_product_id)
+                    ->first();
                 if (! $interestAccount) {
-                    throw new Exception('Interest Income account not found for loan product ID: ' . $transaction->loan->loan_product_id);
+                    throw new Exception('Interest Income account not found for loan product ID: '.$transaction->loan->loan_product_id);
                 }
+
                 $this->updateAccountBalance(
                     $interestAccount,
                     $interestPaid,
@@ -214,15 +217,12 @@ class LoanService
                 );
             }
 
-            // 3. Principal portion → Loan Product Account (Debit)
             if ($principalPaid > 0) {
-                $loanProductAccount = Account::where('loan_product_id', $transaction->loan->loan_product_id)->first();
-                if (! $loanProductAccount) {
-                    throw new Exception('Loan Product account not found for loan product ID: ' . $transaction->loan->loan_product_id);
-                }
+                $loanProductAccount = $this->loanProductPrincipalAccount($transaction->loan->loan_product_id);
                 if ($loanProductAccount->balance < $principalPaid) {
-                    throw new Exception('Insufficient funds in Loan Product account for loan product ID: ' . $transaction->loan->loan_product_id);
+                    throw new Exception('Insufficient funds in Loan Product account for loan product ID: '.$transaction->loan->loan_product_id);
                 }
+
                 $this->updateAccountBalance(
                     $loanProductAccount,
                     $principalPaid,
@@ -233,19 +233,36 @@ class LoanService
             }
 
             $this->productionLoanLedgerService->postRepayment($transaction, $interestPaid, $principalPaid);
-
-            // Notify
             $this->sendCollectionNotification($transaction);
         } catch (\Exception $e) {
-            Log::error('Collection processing failed: ' . $e->getMessage());
+            Log::error('Collection processing failed: '.$e->getMessage());
             throw $e;
         }
     }
 
+    /**
+     * Resolve the principal balance account for a loan product.
+     *
+     * The legacy accounts table has no explicit account-role column yet, so
+     * interest income must be excluded to avoid non-deterministic `first()`
+     * selection when multiple accounts share the same loan_product_id.
+     */
+    private function loanProductPrincipalAccount(int $loanProductId): Account
+    {
+        $account = Account::where('loan_product_id', $loanProductId)
+            ->where('name', '!=', 'Interest Income')
+            ->orderBy('id')
+            ->first();
 
+        if (! $account) {
+            throw new Exception('Loan Product account not found for loan product ID: '.$loanProductId);
+        }
+
+        return $account;
+    }
 
     /**
-     * Update account balance and create journal entry
+     * Update account balance and create journal entry.
      */
     protected function updateAccountBalance(
         Account $account,
@@ -274,7 +291,7 @@ class LoanService
     }
 
     /**
-     * Prepare and send disbursement notification
+     * Prepare and send disbursement notification.
      */
     protected function sendDisbursementNotification(Loan $loan): void
     {
@@ -283,12 +300,12 @@ class LoanService
     }
 
     /**
-     * Prepare disbursement SMS message
+     * Prepare disbursement SMS message.
      */
     protected function prepareDisbursementMessage(Loan $loan): string
     {
         return sprintf(
-            "Hello %s, your loan of %s has been disbursed. Repayment amount: %s due on %s. Thank you for choosing us!",
+            'Hello %s, your loan of %s has been disbursed. Repayment amount: %s due on %s. Thank you for choosing us!',
             $loan->user->name,
             number_format($loan->amount),
             number_format($loan->repayment_amount),
@@ -297,7 +314,7 @@ class LoanService
     }
 
     /**
-     * Prepare and send disbursement notification
+     * Prepare and send collection notification.
      */
     protected function sendCollectionNotification(Transaction $transaction): void
     {
@@ -306,7 +323,7 @@ class LoanService
     }
 
     /**
-     * Prepare Collection SMS message
+     * Prepare collection SMS message.
      */
     protected function prepareCollectionMessage(Transaction $transaction): string
     {
@@ -314,22 +331,21 @@ class LoanService
         $hasOutstandingBalance = $outstandingBalance > 0;
 
         $message = sprintf(
-            "Hello %s, thank you for your loan repayment of %s.",
+            'Hello %s, thank you for your loan repayment of %s.',
             $transaction->loan->user->name,
             number_format($transaction->amount)
         );
 
         if ($hasOutstandingBalance) {
             $message .= sprintf(
-                " Your outstanding balance is %s.",
+                ' Your outstanding balance is %s.',
                 number_format($outstandingBalance),
             );
         } else {
-            $message .= " Your loan has been fully settled. We appreciate your business!";
+            $message .= ' Your loan has been fully settled. We appreciate your business!';
             $transaction->loan->update(['status' => 'Cleared']);
         }
 
         return $message;
     }
-
 }
