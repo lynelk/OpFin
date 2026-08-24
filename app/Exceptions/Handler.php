@@ -1,8 +1,11 @@
 <?php
 
-use Illuminate\Auth\AuthenticationException;
+namespace App\Exceptions;
 
-class Handler
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+
+class Handler extends ExceptionHandler
 {
     protected function unauthenticated($request, AuthenticationException $exception)
     {
