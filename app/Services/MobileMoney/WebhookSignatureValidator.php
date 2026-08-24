@@ -8,7 +8,7 @@ class WebhookSignatureValidator
 {
     public function isValid(array $payload, array $headers, ?string $secret): bool
     {
-        if (!$secret) {
+        if (! $secret) {
             return false;
         }
 
@@ -16,7 +16,7 @@ class WebhookSignatureValidator
             ?? $this->header($headers, 'X-Momo-Signature')
             ?? $this->header($headers, 'X-Airtel-Signature');
 
-        if (!is_string($signature)) {
+        if (! is_string($signature)) {
             return false;
         }
 
@@ -31,8 +31,9 @@ class WebhookSignatureValidator
         ?string $secret,
         int $replayWindowSeconds = 300,
         ?string $expectedMerchantId = null,
-    ): bool {
-        if (!$secret || $rawBody === '') {
+    ): bool
+    {
+        if (! $secret || $rawBody === '') {
             return false;
         }
 
@@ -45,20 +46,20 @@ class WebhookSignatureValidator
         $reference = $this->header($headers, 'X-CPay-Reference');
 
         if ($version !== 'callback-v1'
-            || !$signature
-            || !$timestamp
-            || !$nonce
-            || !$taskId
-            || !$merchantId
+            || ! $signature
+            || ! $timestamp
+            || ! $nonce
+            || ! $taskId
+            || ! $merchantId
             || $reference === null) {
             return false;
         }
 
-        if ($expectedMerchantId !== null && !hash_equals($expectedMerchantId, $merchantId)) {
+        if ($expectedMerchantId !== null && ! hash_equals($expectedMerchantId, $merchantId)) {
             return false;
         }
 
-        if (!ctype_digit($timestamp)) {
+        if (! ctype_digit($timestamp)) {
             return false;
         }
 
