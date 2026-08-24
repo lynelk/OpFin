@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CapabilityController;
 use App\Http\Controllers\Api\CpayWebhookController;
+use App\Http\Controllers\Api\CustomerSupportController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\LoanApplicationController;
@@ -34,6 +35,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
     Route::get('/capabilities', [CapabilityController::class, 'index']);
+    Route::get('/support-cases', [CustomerSupportController::class, 'index']);
+    Route::post('/support-cases', [CustomerSupportController::class, 'store']);
     Route::post('/validate-nin', [NinValidationController::class, 'validateNin']);
     Route::post('/credit-scores', [NinValidationController::class, 'creditScores']);
     Route::post('/loan-applications', [LoanApplicationController::class, 'store']);
