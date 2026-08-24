@@ -57,18 +57,18 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
             };
         }
 
+        $normalizedStatus = $this->normalizeStatus($status);
+
         return new MobileMoneyProviderResponse(
             provider: 'cpay',
-            successful: $status === 'SUCCESSFUL',
-            status: $this->normalizeStatus($status),
+            successful: $normalizedStatus !== MobileMoneyTransaction::STATUS_FAILED,
+            status: $normalizedStatus,
             providerReference: $data['transaction_id'] ?? $data['merchant_reference'] ?? null,
             message: 'CPay webhook event normalized.',
             retryable: in_array($status, ['PENDING', 'UNDETERMINED'], true),
-            reconciliationStatus: $status === 'SUCCESSFUL'
-                ? MobileMoneyTransaction::RECONCILIATION_PENDING
-                : ($status === 'FAILED'
-                    ? MobileMoneyTransaction::RECONCILIATION_EXCEPTION
-                    : MobileMoneyTransaction::RECONCILIATION_PENDING),
+            reconciliationStatus: $status === 'FAILED'
+                ? MobileMoneyTransaction::RECONCILIATION_EXCEPTION
+                : MobileMoneyTransaction::RECONCILIATION_PENDING,
             webhookEventId: $payload['event_id'] ?? null,
             raw: $payload,
         );
@@ -184,14 +184,16 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         $status = strtoupper((string) ($payload['status'] ?? ''));
 
         if ($response->successful()) {
+            $normalizedStatus = $this->normalizeStatus($status ?: 'PENDING');
+
             return new MobileMoneyProviderResponse(
                 provider: 'cpay',
-                successful: $status === 'SUCCESSFUL' || $response->status() === 202,
-                status: $this->normalizeStatus($status ?: 'PENDING'),
+                successful: $normalizedStatus !== MobileMoneyTransaction::STATUS_FAILED,
+                status: $normalizedStatus,
                 providerReference: $payload['transactionId'] ?? $payload['reference'] ?? $fallbackReference,
                 message: $payload['message'] ?? 'CPay request accepted.',
                 retryable: in_array($status, ['', 'PENDING', 'UNDETERMINED'], true),
-                reconciliationStatus: $status === 'FAILED'
+                reconciliationStatus: $normalizedStatus === MobileMoneyTransaction::STATUS_FAILED
                     ? MobileMoneyTransaction::RECONCILIATION_EXCEPTION
                     : MobileMoneyTransaction::RECONCILIATION_PENDING,
                 raw: $this->safePayload($payload, $response->status()),
