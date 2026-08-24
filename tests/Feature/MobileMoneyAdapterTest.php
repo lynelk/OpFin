@@ -123,26 +123,9 @@ class MobileMoneyAdapterTest extends TestCase
         ]);
     }
 
-    public function test_mtn_and_airtel_adapters_are_placeholders_that_do_not_make_live_calls(): void
+    public function test_mtn_and_airtel_adapters_implement_the_live_provider_contract(): void
     {
-        $transaction = new MobileMoneyTransaction([
-            'provider' => 'mtn',
-            'direction' => MobileMoneyTransaction::DIRECTION_COLLECTION,
-            'amount_minor' => 1000,
-            'currency' => 'UGX',
-            'phone' => '256770000001',
-            'idempotency_key' => 'placeholder-key',
-            'internal_reference' => 'placeholder-reference',
-        ]);
-
-        foreach ([new MtnMobileMoneyAdapter(), new AirtelMoneyAdapter()] as $adapter) {
-            $this->assertInstanceOf(MobileMoneyProviderInterface::class, $adapter);
-            $response = $adapter->collect($transaction);
-
-            $this->assertFalse($response->successful);
-            $this->assertSame(MobileMoneyTransaction::STATUS_FAILED, $response->status);
-            $this->assertFalse($response->retryable);
-            $this->assertStringContainsString('not implemented', strtolower($response->message));
-        }
+        $this->assertInstanceOf(MobileMoneyProviderInterface::class, new MtnMobileMoneyAdapter);
+        $this->assertInstanceOf(MobileMoneyProviderInterface::class, new AirtelMoneyAdapter);
     }
 }
