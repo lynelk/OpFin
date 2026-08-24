@@ -7,18 +7,27 @@ use Illuminate\Database\Eloquent\Model;
 class MobileMoneyTransaction extends Model
 {
     public const DIRECTION_DISBURSEMENT = 'disbursement';
+
     public const DIRECTION_COLLECTION = 'collection';
+
     public const DIRECTION_REVERSAL = 'reversal';
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_SUCCESSFUL = 'successful';
+
     public const STATUS_FAILED = 'failed';
+
     public const STATUS_REVERSED = 'reversed';
 
     public const RECONCILIATION_UNRECONCILED = 'unreconciled';
+
     public const RECONCILIATION_PENDING = 'pending';
+
     public const RECONCILIATION_MATCHED = 'matched';
+
     public const RECONCILIATION_EXCEPTION = 'exception';
 
     protected $fillable = [
