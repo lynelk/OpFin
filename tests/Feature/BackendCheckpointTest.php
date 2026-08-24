@@ -214,8 +214,9 @@ class BackendCheckpointTest extends TestCase
             'amount' => 100000,
             'reason' => 'KYC gate test',
         ])
-            ->assertStatus(400)
-            ->assertJsonPath('success', false);
+            ->assertStatus(409)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('errors.code.0', 'KYC_VERIFICATION_REQUIRED');
 
         $this->assertDatabaseMissing('loan_applications', [
             'user_id' => $user->id,
