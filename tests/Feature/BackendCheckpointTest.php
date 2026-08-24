@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Account;
 use App\Models\Institution;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
@@ -9,7 +10,6 @@ use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
-use App\Models\Account;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\LoanService;
@@ -83,11 +83,6 @@ class BackendCheckpointTest extends TestCase
             'name' => 'Airtel Disbursement',
             'balance' => 200000,
         ]);
-        Account::create([
-            'name' => 'Checkpoint Loan Product Account',
-            'balance' => 0,
-            'loan_product_id' => $application->loan_product_id,
-        ]);
 
         $transaction = Transaction::create([
             'user_id' => $application->user_id,
@@ -148,16 +143,9 @@ class BackendCheckpointTest extends TestCase
         ]);
 
         Account::create(['name' => 'Airtel Collection', 'balance' => 0]);
-        Account::create([
-            'name' => 'Checkpoint Loan Product Account',
-            'balance' => 100000,
-            'loan_product_id' => $loan->loan_product_id,
-        ]);
-        Account::create([
-            'name' => 'Interest Income',
-            'balance' => 0,
-            'loan_product_id' => $loan->loan_product_id,
-        ]);
+        Account::where('loan_product_id', $loan->loan_product_id)
+            ->where('name', 'Checkpoint Loan')
+            ->update(['balance' => 100000]);
 
         $transaction = Transaction::create([
             'user_id' => $loan->user_id,
