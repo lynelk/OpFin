@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\LoanRepaymentController;
 use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\ProductionConsentController;
 use App\Http\Controllers\Api\ProductionCreditController;
+use App\Http\Controllers\Api\ProductionCreditOfferController;
 use App\Http\Controllers\Api\ProductionKycController;
 use App\Http\Controllers\Api\ProductionLoanApplicationController;
 use App\Http\Controllers\Api\ProductionOperationsController;
@@ -42,6 +43,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/credit/applications', [ProductionLoanApplicationController::class, 'index']);
     Route::post('/credit/applications', [ProductionLoanApplicationController::class, 'store']);
     Route::get('/credit/applications/{application}', [ProductionLoanApplicationController::class, 'show']);
+    Route::get('/credit/offers', [ProductionCreditOfferController::class, 'index']);
+    Route::get('/credit/offers/{offer}', [ProductionCreditOfferController::class, 'show']);
+    Route::post('/credit/offers/{offer}/accept', [ProductionCreditOfferController::class, 'accept']);
 
     // Safe compatibility alias. Legacy clients may submit here, but application intake never disburses funds.
     Route::post('/loan-applications', [ProductionLoanApplicationController::class, 'store']);
@@ -70,6 +74,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/demo/loan-offers/{offer}/accept', [InvestorDemoController::class, 'acceptOffer']);
         Route::get('/demo/admin/investor-snapshot', [InvestorDemoController::class, 'adminSnapshot']);
     }
+});
+
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::post('/admin/credit-decisions/{decision}/approve', [ProductionCreditController::class, 'approve']);
+    Route::post('/admin/credit/applications/{application}/offer', [ProductionCreditOfferController::class, 'store']);
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations,support'])->group(function () {
