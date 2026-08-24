@@ -45,9 +45,12 @@ return [
         // v2/Cito contract. Keep legacy aliases below until old call sites are retired.
         'base_url' => env('CPAY_BASE_URL', env('MOBILE_MONEY_API')),
         'merchant_number' => env('CPAY_MERCHANT_NUMBER', env('MOBILE_MONEY_MERCHANT_ID')),
+        // Internal CPay merchant id is optional, but when configured is checked on callbacks.
+        'merchant_id' => env('CPAY_MERCHANT_ID'),
         'private_key' => env('CPAY_PRIVATE_KEY', env('MOBILE_MONEY_PRIVATE_KEY')),
         'callback_url' => env('CPAY_CALLBACK_URL'),
         'callback_secret' => env('CPAY_CALLBACK_SECRET'),
+        'callback_replay_window_seconds' => (int) env('CPAY_CALLBACK_REPLAY_WINDOW_SECONDS', 300),
         'country' => env('CPAY_COUNTRY', 'UG'),
         'currency' => env('CPAY_CURRENCY', 'UGX'),
         'channel' => env('CPAY_CHANNEL'),
