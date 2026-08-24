@@ -7,11 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 class CreditOffer extends Model
 {
     public const STATUS_OFFERED = 'offered';
+
     public const STATUS_ACCEPTED = 'accepted';
+
     public const STATUS_EXPIRED = 'expired';
+
     public const STATUS_WITHDRAWN = 'withdrawn';
+
     public const STATUS_DISBURSEMENT_PENDING = 'disbursement_pending';
+
     public const STATUS_DISBURSED = 'disbursed';
+
     public const STATUS_DISBURSEMENT_FAILED = 'disbursement_failed';
 
     protected $fillable = [
