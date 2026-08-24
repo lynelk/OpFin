@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProductionConsentController;
 use App\Http\Controllers\Api\ProductionCreditController;
 use App\Http\Controllers\Api\ProductionKycController;
+use App\Http\Controllers\Api\ProductionLoanApplicationController;
 use App\Http\Controllers\Api\ProductionOperationsController;
 use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/support-cases', [CustomerSupportController::class, 'store']);
     Route::post('/validate-nin', [NinValidationController::class, 'validateNin']);
     Route::post('/credit-scores', [NinValidationController::class, 'creditScores']);
+
+    Route::get('/credit/applications', [ProductionLoanApplicationController::class, 'index']);
+    Route::post('/credit/applications', [ProductionLoanApplicationController::class, 'store']);
+    Route::get('/credit/applications/{application}', [ProductionLoanApplicationController::class, 'show']);
+
+    // Legacy loan routes remain temporarily for backward compatibility while clients cut over.
     Route::post('/loan-applications', [LoanApplicationController::class, 'store']);
     Route::get('/loan-applications/{user}', [LoanApplicationController::class, 'index']);
     Route::get('/loan-balance/{user}', [LoanApplicationController::class, 'getLoanBalance']);
