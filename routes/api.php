@@ -10,16 +10,15 @@ use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
 use App\Http\Controllers\Api\NinValidationController;
-use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProductionConsentController;
 use App\Http\Controllers\Api\ProductionCreditController;
 use App\Http\Controllers\Api\ProductionKycController;
 use App\Http\Controllers\Api\ProductionLoanApplicationController;
 use App\Http\Controllers\Api\ProductionOperationsController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
 
-// Public routes
 Route::get('/health', [HealthController::class, 'show']);
 Route::middleware('throttle:auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -31,7 +30,6 @@ Route::middleware('throttle:auth')->group(function () {
 Route::post('/handleCallback', [TransactionController::class, 'handleCallback'])->middleware('throttle:webhooks')->name('handleCallback');
 Route::post('/webhooks/cpay', CpayWebhookController::class)->middleware('throttle:webhooks')->name('webhooks.cpay');
 
-// Protected routes
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
@@ -45,8 +43,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/credit/applications', [ProductionLoanApplicationController::class, 'store']);
     Route::get('/credit/applications/{application}', [ProductionLoanApplicationController::class, 'show']);
 
-    // Legacy loan routes remain temporarily for backward compatibility while clients cut over.
-    Route::post('/loan-applications', [LoanApplicationController::class, 'store']);
+    // Safe compatibility alias. Legacy clients may submit here, but application intake never disburses funds.
+    Route::post('/loan-applications', [ProductionLoanApplicationController::class, 'store']);
     Route::get('/loan-applications/{user}', [LoanApplicationController::class, 'index']);
     Route::get('/loan-balance/{user}', [LoanApplicationController::class, 'getLoanBalance']);
     Route::post('/loan-applications/{id}/status', [LoanApplicationController::class, 'updateStatus'])->middleware('audit.sensitive:loan_application.status_updated');
@@ -73,6 +71,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::get('/demo/admin/investor-snapshot', [InvestorDemoController::class, 'adminSnapshot']);
     }
 });
+
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations,support'])->group(function () {
     Route::get('/admin/foundation-check', [FoundationAdminController::class, 'check']);
     Route::patch('/admin/kyc/cases/{case}', [ProductionKycController::class, 'review']);
@@ -90,5 +89,6 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/compliance-reports', [ProductionOperationsController::class, 'createComplianceReport']);
     Route::post('/admin/compliance-reports/{report}/exports', [ProductionOperationsController::class, 'createComplianceExport']);
 });
+
 Route::post('/airtel-callback', [TransactionController::class, 'airtelCallback'])->middleware('throttle:webhooks');
 Route::post('/mtn-callback', [TransactionController::class, 'mtnCallback'])->middleware('throttle:webhooks');
