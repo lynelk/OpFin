@@ -93,8 +93,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         MobileMoneyTransaction $transaction,
         string $path,
         string $partyKey,
-    ): MobileMoneyProviderResponse
-    {
+    ): MobileMoneyProviderResponse {
         $this->assertConfigured();
 
         $payload = [
@@ -133,8 +132,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         array $query,
         ?array $payload,
         ?string $idempotencyKey,
-    ): Response
-    {
+    ): Response {
         $body = $payload === null
             ? ''
             : json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
