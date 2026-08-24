@@ -159,6 +159,16 @@ export async function submitLoanApplicationAction(formData: FormData) {
 export async function acceptCreditOfferAction(formData: FormData) {
   const token = await getAccessToken();
   const offerId = Number(value(formData, "offer_id"));
+  const accepted = value(formData, "accept_disclosures");
+  let next = `/loans/offer?offer=${offerId}&status=disbursement_pending`;
+
+  if (!accepted) {
+    redirectWith("/loans/offer", {
+      error: "validation",
+      message: "Review the offer and explicitly accept the disclosed terms before continuing.",
+      offer: String(offerId)
+    });
+  }
 
   try {
     const response = await opfinApi.acceptCreditOffer(
@@ -167,10 +177,9 @@ export async function acceptCreditOfferAction(formData: FormData) {
       token
     );
 
-    const next = response.data.next_state === "active_loan"
-      ? "/loans/account?status=active"
-      : `/loans/offer?offer=${offerId}&status=disbursement_pending`;
-    redirect(next);
+    if (response.data.next_state === "active_loan") {
+      next = "/loans/account?status=active";
+    }
   } catch (error) {
     if (error instanceof OpfinApiError) {
       redirectWith("/loans/offer", { error: error.kind, message: error.message, offer: String(offerId) });
@@ -178,6 +187,8 @@ export async function acceptCreditOfferAction(formData: FormData) {
 
     redirectWith("/loans/offer", { error: "server", message: "Offer acceptance failed", offer: String(offerId) });
   }
+
+  redirect(next);
 }
 
 export async function acceptDemoOfferAction(formData: FormData) {
