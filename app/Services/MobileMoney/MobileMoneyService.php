@@ -149,6 +149,8 @@ class MobileMoneyService
 
             $transaction = MobileMoneyTransaction::create([
                 'transaction_id' => Arr::get($attributes, 'transaction_id'),
+                'credit_offer_id' => Arr::get($attributes, 'credit_offer_id'),
+                'loan_id' => Arr::get($attributes, 'loan_id'),
                 'user_id' => Arr::get($attributes, 'user_id'),
                 'institution_id' => Arr::get($attributes, 'institution_id'),
                 'provider' => $providerName,
@@ -162,6 +164,8 @@ class MobileMoneyService
                 'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_UNRECONCILED,
                 'metadata' => Arr::except($attributes, [
                     'transaction_id',
+                    'credit_offer_id',
+                    'loan_id',
                     'user_id',
                     'institution_id',
                     'provider',
