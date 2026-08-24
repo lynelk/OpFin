@@ -18,6 +18,7 @@ import {
   mockSupportCases,
   mockTerms
 } from "../mock-data";
+import type { CapabilityRegistry } from "../capabilities";
 import { classifyStatus, OpfinApiError } from "./errors";
 import type {
   ApiEnvelope,
@@ -113,6 +114,33 @@ function sandboxSessionId(): string {
   return `sandbox-${globalThis.crypto.randomUUID()}`;
 }
 
+function mockCapabilityRegistry(): CapabilityRegistry {
+  return {
+    country: "UG",
+    country_policy: {
+      name: "Uganda",
+      status: "PILOT",
+      currency: "UGX",
+      languages: ["en"],
+      payment_platform: "cpay",
+      payment_status: "SANDBOX"
+    },
+    capabilities: {
+      home: { status: "AVAILABLE", owner: "opfin" },
+      identity: { status: "AVAILABLE", owner: "opfin" },
+      kyc: { status: "PILOT", owner: "opfin" },
+      consent: { status: "AVAILABLE", owner: "opfin" },
+      financial_passport: { status: "PILOT", owner: "opfin" },
+      support: { status: "PILOT", owner: "opfin" },
+      borrow: { status: "PILOT", owner: "opfin" },
+      save: { status: "PLANNED", owner: "opfin" },
+      insurance: { status: "PLANNED", owner: "opfin" },
+      investments: { status: "PLANNED", owner: "opfin" },
+      payments: { status: "SANDBOX", owner: "cpay" }
+    }
+  };
+}
+
 function mockRequest<T>(path: string, init: RequestOptions = {}): Promise<ApiEnvelope<T>> {
   if (path === "/login") {
     return Promise.resolve(envelope({
@@ -122,6 +150,7 @@ function mockRequest<T>(path: string, init: RequestOptions = {}): Promise<ApiEnv
     } as T, "Sandbox login successful"));
   }
   if (path === "/profile") return Promise.resolve(envelope(mockProfile as T));
+  if (path.startsWith("/capabilities")) return Promise.resolve(envelope(mockCapabilityRegistry() as T, "Sandbox capability registry loaded"));
   if (path === "/kyc/status") return Promise.resolve(envelope({ latest_case: mockKycCase } as T, "Production KYC sandbox state loaded"));
   if (path === "/kyc/cases" && init.method === "POST") {
     return Promise.resolve(envelope({ kyc_case: { ...mockKycCase, ...(init.bodyJson as object) } } as T, "Production KYC sandbox case submitted"));
@@ -132,6 +161,12 @@ function mockRequest<T>(path: string, init: RequestOptions = {}): Promise<ApiEnv
   if (path === "/consents") return Promise.resolve(envelope({ consents: [mockConsentRecord] } as T, "Production consent sandbox records loaded"));
   if (path.startsWith("/consents/") && init.method === "DELETE") {
     return Promise.resolve(envelope({ consent: { ...mockConsentRecord, status: "revoked", revoked_at: new Date().toISOString() } } as T, "Production consent sandbox revoked"));
+  }
+  if (path === "/support-cases" && init.method === "POST") {
+    return Promise.resolve(envelope({ support_case: { ...mockSupportCases[0], ...(init.bodyJson as object), customer_id: mockProfile.user.id } } as T, "Sandbox customer support case created"));
+  }
+  if (path === "/support-cases") {
+    return Promise.resolve(envelope({ support_cases: mockSupportCases.filter((supportCase) => supportCase.customer_id === mockProfile.user.id) } as T, "Sandbox customer support cases loaded"));
   }
   if (path === "/admin/reconciliation-runs" && init.method === "POST") {
     return Promise.resolve(envelope({ run: { ...mockReconciliationRuns[0], ...(init.bodyJson as object) }, item_count: 1 } as T, "Sandbox reconciliation run created"));
@@ -244,6 +279,8 @@ export const opfinApi = {
     }),
   logout: (token?: string) => request<Record<string, never>>("/logout", { method: "POST", token }),
   profile: (token?: string) => request<Profile>("/profile", { token }),
+  capabilities: (country = "UG", token?: string) =>
+    request<CapabilityRegistry>(`/capabilities?country=${encodeURIComponent(country)}`, { token }),
   kycStatus: (token?: string) => request<{ latest_case: KycCase | null }>("/kyc/status", { token }),
   submitKycCase: (payload: { national_id: string; provider?: string; provider_reference?: string; evidence?: Record<string, unknown> }, token?: string) =>
     request<{ kyc_case: KycCase }>("/kyc/cases", { method: "POST", bodyJson: payload, token }),
@@ -252,6 +289,11 @@ export const opfinApi = {
     request<{ consent: ConsentRecord }>("/consents", { method: "POST", bodyJson: payload, token }),
   revokeConsent: (consentId: number, token?: string) =>
     request<{ consent: ConsentRecord }>(`/consents/${consentId}`, { method: "DELETE", token }),
+  customerSupportCases: (token?: string) => request<{ support_cases: SupportCase[] }>("/support-cases", { token }),
+  createCustomerSupportCase: (
+    payload: { category: string; subject: string; description: string; related_reference?: string; related_type?: string },
+    token?: string
+  ) => request<{ support_case: SupportCase }>("/support-cases", { method: "POST", bodyJson: payload, token }),
   reconciliationRuns: (token?: string) => request<{ runs: ReconciliationRun[] }>("/admin/reconciliation-runs", { token }),
   createReconciliationRun: (payload: { provider: string; business_date: string }, token?: string) =>
     request<{ run: ReconciliationRun; item_count: number }>("/admin/reconciliation-runs", { method: "POST", bodyJson: payload, token }),
