@@ -24,7 +24,7 @@ class ProductionLoanApplicationController extends Controller
     {
         $applications = LoanApplication::query()
             ->where('user_id', $request->user()->id)
-            ->with(['loanProduct', 'loanProductTerm', 'institution'])
+            ->with(['loanProduct', 'loanProductTerm', 'institution', 'creditDecision', 'creditOffers'])
             ->latest()
             ->limit(50)
             ->get();
@@ -41,7 +41,14 @@ class ProductionLoanApplicationController extends Controller
         }
 
         return ApiResponse::success('Credit application loaded.', [
-            'application' => $application->load(['loanProduct', 'loanProductTerm', 'institution']),
+            'application' => $application->load([
+                'loanProduct',
+                'loanProductTerm',
+                'institution',
+                'creditDecision',
+                'creditOffers',
+                'loan',
+            ]),
         ]);
     }
 
