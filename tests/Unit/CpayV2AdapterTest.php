@@ -21,7 +21,7 @@ class CpayV2AdapterTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('CPay base_url is not configured.');
 
-        (new CpayV2Adapter())->collect($this->transaction());
+        (new CpayV2Adapter)->collect($this->transaction());
     }
 
     public function test_collection_uses_cpay_v2_rsa_signature_and_idempotency_contract(): void
@@ -46,7 +46,7 @@ class CpayV2AdapterTest extends TestCase
             ], 202),
         ]);
 
-        $response = (new CpayV2Adapter())->collect($this->transaction());
+        $response = (new CpayV2Adapter)->collect($this->transaction());
 
         $this->assertTrue($response->successful);
         $this->assertSame(MobileMoneyTransaction::STATUS_PENDING, $response->status);
@@ -104,7 +104,7 @@ class CpayV2AdapterTest extends TestCase
             ], 200),
         ]);
 
-        $response = (new CpayV2Adapter())->lookupStatus($this->transaction());
+        $response = (new CpayV2Adapter)->lookupStatus($this->transaction());
 
         $this->assertTrue($response->successful);
         $this->assertSame(MobileMoneyTransaction::STATUS_SUCCESSFUL, $response->status);
