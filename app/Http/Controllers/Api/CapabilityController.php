@@ -14,7 +14,7 @@ class CapabilityController extends Controller
         $country = strtoupper((string) $request->query('country', config('opfin.default_country', 'UG')));
         $countries = config('opfin.countries', []);
 
-        if (!array_key_exists($country, $countries)) {
+        if (! array_key_exists($country, $countries)) {
             return ApiResponse::error('Unsupported country policy.', 404);
         }
 
