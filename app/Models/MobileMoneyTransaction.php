@@ -23,6 +23,8 @@ class MobileMoneyTransaction extends Model
 
     protected $fillable = [
         'transaction_id',
+        'credit_offer_id',
+        'loan_id',
         'user_id',
         'institution_id',
         'provider',
@@ -63,6 +65,16 @@ class MobileMoneyTransaction extends Model
     public function transaction()
     {
         return $this->belongsTo(Transaction::class);
+    }
+
+    public function creditOffer()
+    {
+        return $this->belongsTo(CreditOffer::class);
+    }
+
+    public function loan()
+    {
+        return $this->belongsTo(Loan::class);
     }
 
     public function user()
