@@ -15,36 +15,46 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<_OnboardModel> pages = [
     _OnboardModel(
-      title: "Fast & Easy Loans",
-      description: "Apply for loans instantly with a seamless process.",
-      icon: Icons.speed,
+      title: 'Understand your money',
+      description: 'See what needs attention and what you can do next.',
+      icon: Icons.explore_outlined,
     ),
     _OnboardModel(
-      title: "Track Everything",
-      description: "Monitor repayments, interest, and deadlines easily.",
-      icon: Icons.track_changes,
+      title: 'Build financial resilience',
+      description: 'Save toward goals and keep important money commitments visible.',
+      icon: Icons.savings_outlined,
     ),
     _OnboardModel(
-      title: "Secure & Reliable",
-      description: "Your financial data is protected at all times.",
-      icon: Icons.security,
+      title: 'Access finance responsibly',
+      description: 'Understand affordability, costs, repayments, and your options before you borrow.',
+      icon: Icons.account_balance_wallet_outlined,
     ),
   ];
 
-  void _next() async {
+  Future<void> _next() async {
     if (_currentIndex < pages.length - 1) {
-      _controller.nextPage(
+      await _controller.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
-    } else {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setBool("seenOnboarding", true);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const RegisterScreen()),
-      );
+      return;
     }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('seenOnboarding', true);
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -59,16 +69,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 itemCount: pages.length,
                 onPageChanged: (i) => setState(() => _currentIndex = i),
                 itemBuilder: (_, i) {
-                  final p = pages[i];
+                  final page = pages[i];
                   return Padding(
-                    padding: const EdgeInsets.all(24.0),
+                    padding: const EdgeInsets.all(24),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(p.icon, size: 120, color: Colors.black),
+                        Icon(page.icon, size: 120, color: Colors.black),
                         const SizedBox(height: 40),
                         Text(
-                          p.title,
+                          page.title,
+                          textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -76,7 +87,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          p.description,
+                          page.description,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 18,
@@ -89,8 +100,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
             ),
-
-            // Dot Indicators
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
@@ -107,10 +116,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 30),
-
-            // Next / Get Started Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: SizedBox(
@@ -122,13 +128,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     backgroundColor: Colors.black,
                   ),
                   child: Text(
-                    _currentIndex == pages.length - 1 ? "Get Started" : "Next",
+                    _currentIndex == pages.length - 1 ? 'Get Started' : 'Next',
                     style: const TextStyle(fontSize: 18),
                   ),
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
           ],
         ),
@@ -142,6 +147,9 @@ class _OnboardModel {
   final String description;
   final IconData icon;
 
-  _OnboardModel(
-      {required this.title, required this.description, required this.icon});
+  const _OnboardModel({
+    required this.title,
+    required this.description,
+    required this.icon,
+  });
 }
