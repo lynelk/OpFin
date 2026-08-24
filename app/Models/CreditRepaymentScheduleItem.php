@@ -7,8 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class CreditRepaymentScheduleItem extends Model
 {
     public const STATUS_DUE = 'due';
+
     public const STATUS_PARTIALLY_PAID = 'partially_paid';
+
     public const STATUS_PAID = 'paid';
+
     public const STATUS_OVERDUE = 'overdue';
 
     protected $fillable = [
