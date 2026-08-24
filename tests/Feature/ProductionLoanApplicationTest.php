@@ -49,6 +49,28 @@ class ProductionLoanApplicationTest extends TestCase
         ]);
     }
 
+    public function test_legacy_application_post_is_a_safe_compatibility_alias_without_disbursement(): void
+    {
+        [$user, $institution, $product, $term] = $this->eligibleCustomer();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/loan-applications', [
+            'loan_product_id' => $product->id,
+            'loan_product_term_id' => $term->id,
+            'institution_id' => $institution->id,
+            'amount' => 125000,
+            'reason' => 'Legacy client migration',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.application.amount', 125000)
+            ->assertJsonPath('data.next_state', 'assessment');
+
+        $this->assertDatabaseCount('loan_applications', 1);
+        $this->assertDatabaseCount('transactions', 0);
+        $this->assertDatabaseCount('mobile_money_transactions', 0);
+        $this->assertDatabaseCount('loans', 0);
+    }
+
     public function test_customer_cannot_submit_without_verified_current_kyc(): void
     {
         [$user, $institution, $product, $term] = $this->customerAndProduct();
