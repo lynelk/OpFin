@@ -15,7 +15,8 @@ class MobileMoneyService
         private readonly MobileMoneyProviderManager $providers,
         private readonly WebhookSignatureValidator $signatureValidator,
         private readonly AuditLogger $auditLogger,
-    ) {
+    )
+    {
     }
 
     public function disburse(array $attributes, ?string $providerName = null): MobileMoneyTransaction
@@ -72,7 +73,8 @@ class MobileMoneyService
         array $payload,
         array $headers = [],
         ?string $rawBody = null,
-    ): MobileMoneyTransaction {
+    ): MobileMoneyTransaction
+    {
         $secret = config("services.mobile_money.providers.{$providerName}.webhook_secret");
         $validSignature = $providerName === 'cpay'
             ? $this->signatureValidator->isValidCpay(
@@ -197,7 +199,8 @@ class MobileMoneyService
         string $providerName,
         array $payload,
         ?string $providerReference,
-    ): MobileMoneyTransaction {
+    ): MobileMoneyTransaction
+    {
         $query = MobileMoneyTransaction::where('provider', $providerName);
 
         if ($providerName === 'cpay') {
@@ -244,7 +247,8 @@ class MobileMoneyService
         MobileMoneyTransaction $transaction,
         MobileMoneyProviderResponse $response,
         array $extra = [],
-    ): void {
+    ): void
+    {
         $transaction->update(array_merge([
             'provider_reference' => $response->providerReference ?? $transaction->provider_reference,
             'status' => $response->status,
