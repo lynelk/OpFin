@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class CreditDecision extends Model
 {
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_DECLINED = 'declined';
+
     public const STATUS_REFERRED = 'referred';
 
     protected $fillable = [
