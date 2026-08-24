@@ -15,7 +15,8 @@ class MobileMoneyService
         private readonly MobileMoneyProviderManager $providers,
         private readonly WebhookSignatureValidator $signatureValidator,
         private readonly AuditLogger $auditLogger,
-    ) {}
+    ) {
+    }
 
     public function disburse(array $attributes, ?string $providerName = null): MobileMoneyTransaction
     {
@@ -83,7 +84,7 @@ class MobileMoneyService
             )
             : $this->signatureValidator->isValid($payload, $headers, $secret);
 
-        if (!$validSignature) {
+        if (! $validSignature) {
             throw new InvalidArgumentException('Invalid mobile money webhook signature.');
         }
 
@@ -123,12 +124,12 @@ class MobileMoneyService
         $providerName ??= config('services.mobile_money.default_provider', 'mock');
         $idempotencyKey = Arr::get($attributes, 'idempotency_key');
 
-        if (!$idempotencyKey) {
+        if (! $idempotencyKey) {
             throw new InvalidArgumentException('A mobile money idempotency key is required.');
         }
 
         $amountMinor = Arr::get($attributes, 'amount_minor');
-        if (!is_int($amountMinor) || $amountMinor <= 0) {
+        if (! is_int($amountMinor) || $amountMinor <= 0) {
             throw new InvalidArgumentException('Mobile money amount_minor must be a positive integer.');
         }
 
