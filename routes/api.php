@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\ProductionReconciliationController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProtectionController;
 use App\Http\Controllers\Api\SaveProtectionOperationsController;
+use App\Http\Controllers\Api\SaveProtectionWorkQueueController;
 use App\Http\Controllers\Api\SavingsController;
 use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -107,6 +108,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/reconciliation-runs/{run}/provider-records', [ProductionReconciliationController::class, 'ingest']);
     Route::post('/admin/reconciliation-runs/{run}/complete', [ProductionReconciliationController::class, 'complete']);
 
+    Route::get('/admin/save-protection/work-queue', SaveProtectionWorkQueueController::class);
     Route::get('/admin/savings-products', [SaveProtectionOperationsController::class, 'savingsProducts']);
     Route::post('/admin/savings-products', [SaveProtectionOperationsController::class, 'createSavingsProduct']);
     Route::patch('/admin/savings-products/{product}', [SaveProtectionOperationsController::class, 'updateSavingsProduct']);
