@@ -8,7 +8,6 @@ use App\Models\ProtectionClaim;
 use App\Models\ProtectionPolicy;
 use App\Models\ProtectionPremiumPayment;
 use App\Models\ProtectionProduct;
-use App\Models\SavingsGoal;
 use App\Models\SavingsMovement;
 use App\Models\SavingsProduct;
 use App\Models\User;
@@ -383,7 +382,7 @@ class SaveProtectionLifecycleTest extends TestCase
             'institution_id' => $institution->id,
         ]);
 
-        if (! $includeSecondCustomer) {
+        if (!$includeSecondCustomer) {
             return [$customer, $maker, $checker];
         }
 
