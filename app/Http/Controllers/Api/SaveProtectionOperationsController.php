@@ -9,6 +9,7 @@ use App\Models\ProtectionPremiumPayment;
 use App\Models\ProtectionProduct;
 use App\Models\SavingsMovement;
 use App\Models\SavingsProduct;
+use App\Services\AuditLogger;
 use App\Services\ProtectionService;
 use App\Services\SavingsService;
 use App\Support\ApiResponse;
@@ -23,6 +24,7 @@ class SaveProtectionOperationsController extends Controller
     public function __construct(
         private readonly SavingsService $savings,
         private readonly ProtectionService $protection,
+        private readonly AuditLogger $auditLogger,
     ) {}
 
     public function savingsProducts(): JsonResponse
@@ -39,14 +41,17 @@ class SaveProtectionOperationsController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
-        $data = $validator->validated();
-        if ($error = $this->savingsActivationError($data)) {
-            return ApiResponse::error($error, 409);
-        }
+        $product = SavingsProduct::create([
+            ...$validator->validated(),
+            'status' => SavingsProduct::STATUS_DRAFT,
+            'created_by' => $request->user()->id,
+        ]);
+        $this->auditLogger->record('savings.product.created', $request->user(), $product, [
+            'status' => SavingsProduct::STATUS_DRAFT,
+            'requires_independent_approval' => true,
+        ], $request);
 
-        $product = SavingsProduct::create($data);
-
-        return ApiResponse::success('Savings product created.', ['product' => $product], 201);
+        return ApiResponse::success('Savings product created in draft status.', ['product' => $product], 201);
     }
 
     public function updateSavingsProduct(SavingsProduct $product, Request $request): JsonResponse
@@ -56,14 +61,58 @@ class SaveProtectionOperationsController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
-        $data = array_merge($product->toArray(), $validator->validated());
-        if ($error = $this->savingsActivationError($data)) {
+        $changes = $validator->validated();
+        $materialFields = array_values(array_diff(array_keys($changes), ['status']));
+        if ($product->status === SavingsProduct::STATUS_ACTIVE && $materialFields !== []) {
+            return ApiResponse::error('Pause the active savings product before changing controlled terms or disclosures.', 409);
+        }
+
+        if ($materialFields !== []) {
+            $changes = array_merge($changes, [
+                'status' => SavingsProduct::STATUS_DRAFT,
+                'approved_by' => null,
+                'approved_at' => null,
+                'approval_evidence' => null,
+            ]);
+        }
+
+        $product->update($changes);
+        $this->auditLogger->record('savings.product.updated', $request->user(), $product, [
+            'changed_fields' => array_keys($validator->validated()),
+            'approval_reset' => $materialFields !== [],
+        ], $request);
+
+        return ApiResponse::success('Savings product updated.', ['product' => $product->fresh()]);
+    }
+
+    public function activateSavingsProduct(SavingsProduct $product, Request $request): JsonResponse
+    {
+        $validator = $this->approvalValidator($request);
+        if ($validator->fails()) {
+            return ApiResponse::error('Independent product approval evidence is required.', 422, $validator->errors()->toArray());
+        }
+        if ($product->created_by && $product->created_by === $request->user()->id) {
+            return ApiResponse::error('Maker-checker control prevents the product author from approving activation.', 409);
+        }
+
+        $candidate = array_merge($product->toArray(), ['status' => SavingsProduct::STATUS_ACTIVE]);
+        if ($error = $this->savingsActivationError($candidate)) {
             return ApiResponse::error($error, 409);
         }
 
-        $product->update($validator->validated());
+        $product->update([
+            'status' => SavingsProduct::STATUS_ACTIVE,
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
+            'approval_evidence' => $this->approvalEvidence($request),
+        ]);
+        $this->auditLogger->record('savings.product.activated', $request->user(), $product, [
+            'created_by' => $product->created_by,
+            'approval_reference' => $request->input('approval_reference'),
+            'approval_evidence_hash' => strtolower((string) $request->input('approval_evidence_hash')),
+        ], $request);
 
-        return ApiResponse::success('Savings product updated.', ['product' => $product->fresh()]);
+        return ApiResponse::success('Savings product independently approved and activated.', ['product' => $product->fresh()]);
     }
 
     public function confirmSavingsContribution(SavingsMovement $movement, Request $request): JsonResponse
@@ -136,14 +185,17 @@ class SaveProtectionOperationsController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
-        $data = $validator->validated();
-        if ($error = $this->protectionActivationError($data)) {
-            return ApiResponse::error($error, 409);
-        }
+        $product = ProtectionProduct::create([
+            ...$validator->validated(),
+            'status' => ProtectionProduct::STATUS_DRAFT,
+            'created_by' => $request->user()->id,
+        ]);
+        $this->auditLogger->record('protection.product.created', $request->user(), $product, [
+            'status' => ProtectionProduct::STATUS_DRAFT,
+            'requires_independent_approval' => true,
+        ], $request);
 
-        $product = ProtectionProduct::create($data);
-
-        return ApiResponse::success('Protection product created.', [
+        return ApiResponse::success('Protection product created in draft status.', [
             'product' => $product,
             'disclosure_hash' => $product->disclosureHash(),
         ], 201);
@@ -156,14 +208,61 @@ class SaveProtectionOperationsController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
-        $data = array_merge($product->toArray(), $validator->validated());
-        if ($error = $this->protectionActivationError($data)) {
+        $changes = $validator->validated();
+        $materialFields = array_values(array_diff(array_keys($changes), ['status']));
+        if ($product->status === ProtectionProduct::STATUS_ACTIVE && $materialFields !== []) {
+            return ApiResponse::error('Pause the active protection product before changing controlled terms or disclosures.', 409);
+        }
+
+        if ($materialFields !== []) {
+            $changes = array_merge($changes, [
+                'status' => ProtectionProduct::STATUS_DRAFT,
+                'approved_by' => null,
+                'approved_at' => null,
+                'approval_evidence' => null,
+            ]);
+        }
+
+        $product->update($changes);
+        $this->auditLogger->record('protection.product.updated', $request->user(), $product, [
+            'changed_fields' => array_keys($validator->validated()),
+            'approval_reset' => $materialFields !== [],
+        ], $request);
+
+        return ApiResponse::success('Protection product updated.', [
+            'product' => $product->fresh(),
+            'disclosure_hash' => $product->fresh()->disclosureHash(),
+        ]);
+    }
+
+    public function activateProtectionProduct(ProtectionProduct $product, Request $request): JsonResponse
+    {
+        $validator = $this->approvalValidator($request);
+        if ($validator->fails()) {
+            return ApiResponse::error('Independent product approval evidence is required.', 422, $validator->errors()->toArray());
+        }
+        if ($product->created_by && $product->created_by === $request->user()->id) {
+            return ApiResponse::error('Maker-checker control prevents the product author from approving activation.', 409);
+        }
+
+        $candidate = array_merge($product->toArray(), ['status' => ProtectionProduct::STATUS_ACTIVE]);
+        if ($error = $this->protectionActivationError($candidate)) {
             return ApiResponse::error($error, 409);
         }
 
-        $product->update($validator->validated());
+        $product->update([
+            'status' => ProtectionProduct::STATUS_ACTIVE,
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
+            'approval_evidence' => $this->approvalEvidence($request),
+        ]);
+        $this->auditLogger->record('protection.product.activated', $request->user(), $product, [
+            'created_by' => $product->created_by,
+            'approval_reference' => $request->input('approval_reference'),
+            'approval_evidence_hash' => strtolower((string) $request->input('approval_evidence_hash')),
+        ], $request);
 
-        return ApiResponse::success('Protection product updated.', [
+        return ApiResponse::success('Protection product independently approved and activated.', [
             'product' => $product->fresh(),
             'disclosure_hash' => $product->fresh()->disclosureHash(),
         ]);
@@ -260,6 +359,25 @@ class SaveProtectionOperationsController extends Controller
         ]);
     }
 
+    private function approvalValidator(Request $request): mixed
+    {
+        return Validator::make($request->all(), [
+            'approval_reference' => 'required|string|max:160',
+            'approval_evidence_hash' => 'required|string|size:64|regex:/^[a-fA-F0-9]{64}$/',
+            'approval_note' => 'required|string|min:10|max:2000',
+        ]);
+    }
+
+    private function approvalEvidence(Request $request): array
+    {
+        return [
+            'approval_reference' => (string) $request->input('approval_reference'),
+            'approval_evidence_hash' => strtolower((string) $request->input('approval_evidence_hash')),
+            'approval_note' => trim((string) $request->input('approval_note')),
+            'approved_at' => now()->toISOString(),
+        ];
+    }
+
     private function savingsProductValidator(Request $request, bool $partial = false, ?SavingsProduct $product = null): mixed
     {
         $prefix = $partial ? 'sometimes|' : 'required|';
@@ -272,7 +390,7 @@ class SaveProtectionOperationsController extends Controller
             'country_code' => $prefix.'string|size:2',
             'currency' => $prefix.'string|size:3',
             'product_type' => [$partial ? 'sometimes' : 'required', Rule::in(['goal', 'emergency', 'notice', 'group', 'sacco', 'employer'])],
-            'status' => [$partial ? 'sometimes' : 'required', Rule::in([SavingsProduct::STATUS_DRAFT, SavingsProduct::STATUS_ACTIVE, SavingsProduct::STATUS_PAUSED, SavingsProduct::STATUS_RETIRED])],
+            'status' => ['sometimes', Rule::in([SavingsProduct::STATUS_DRAFT, SavingsProduct::STATUS_PAUSED, SavingsProduct::STATUS_RETIRED])],
             'custody_model' => [$partial ? 'sometimes' : 'required', Rule::in(['partner_held'])],
             'minimum_contribution_minor' => 'sometimes|integer|min:0',
             'maximum_contribution_minor' => 'nullable|integer|min:1',
@@ -300,7 +418,7 @@ class SaveProtectionOperationsController extends Controller
             'country_code' => $prefix.'string|size:2',
             'currency' => $prefix.'string|size:3',
             'product_type' => [$partial ? 'sometimes' : 'required', Rule::in(['micro', 'loan', 'health', 'event', 'device', 'asset'])],
-            'status' => [$partial ? 'sometimes' : 'required', Rule::in([ProtectionProduct::STATUS_DRAFT, ProtectionProduct::STATUS_ACTIVE, ProtectionProduct::STATUS_PAUSED, ProtectionProduct::STATUS_RETIRED])],
+            'status' => ['sometimes', Rule::in([ProtectionProduct::STATUS_DRAFT, ProtectionProduct::STATUS_PAUSED, ProtectionProduct::STATUS_RETIRED])],
             'premium_amount_minor' => $prefix.'integer|min:1',
             'premium_frequency' => [$partial ? 'sometimes' : 'required', Rule::in(['weekly', 'monthly', 'quarterly', 'annual', 'yearly', 'one_off', 'single'])],
             'coverage_limit_minor' => 'nullable|integer|min:0',
@@ -316,9 +434,6 @@ class SaveProtectionOperationsController extends Controller
 
     private function savingsActivationError(array $data): ?string
     {
-        if (($data['status'] ?? null) !== SavingsProduct::STATUS_ACTIVE) {
-            return null;
-        }
         if (($data['custody_model'] ?? null) !== 'partner_held') {
             return 'Active savings products must use partner-held custody.';
         }
@@ -331,9 +446,6 @@ class SaveProtectionOperationsController extends Controller
 
     private function protectionActivationError(array $data): ?string
     {
-        if (($data['status'] ?? null) !== ProtectionProduct::STATUS_ACTIVE) {
-            return null;
-        }
         if (empty($data['partner_product_reference']) || empty($data['insurer_name']) || empty($data['benefits']) || ! array_key_exists('exclusions', $data) || empty($data['disclosure_payload']) || empty($data['terms_url'])) {
             return 'Active protection products require insurer ownership, partner reference, benefits, exclusions, disclosure payload and controlled terms URL.';
         }
