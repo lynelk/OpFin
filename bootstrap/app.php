@@ -1,12 +1,15 @@
 <?php
 
+use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\RecordSensitiveAction;
+use App\Support\ApiResponse;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
-use Throwable;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,18 +20,18 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->use([
-            \Illuminate\Http\Middleware\HandleCors::class,
+            HandleCors::class,
         ]);
 
         $middleware->alias([
-            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
-            'audit.sensitive' => \App\Http\Middleware\RecordSensitiveAction::class,
+            'role' => EnsureUserHasRole::class,
+            'audit.sensitive' => RecordSensitiveAction::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (AuthenticationException $exception, $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
-                return \App\Support\ApiResponse::error('Unauthenticated.', 401);
+                return ApiResponse::error('Unauthenticated.', 401);
             }
 
             return null;
@@ -36,7 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (ValidationException $exception, $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
-                return \App\Support\ApiResponse::error('Validation failed.', 422, $exception->errors());
+                return ApiResponse::error('Validation failed.', 422, $exception->errors());
             }
 
             return null;
@@ -50,7 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($exception instanceof HttpExceptionInterface) {
                 $status = $exception->getStatusCode();
 
-                return \App\Support\ApiResponse::error(
+                return ApiResponse::error(
                     $status >= 500 ? 'Server error.' : ($exception->getMessage() ?: 'Request failed.'),
                     $status
                 );
@@ -58,6 +61,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
             report($exception);
 
-            return \App\Support\ApiResponse::error('Server error.', 500);
+            return ApiResponse::error('Server error.', 500);
         });
     })->create();

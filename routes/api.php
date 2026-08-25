@@ -1,21 +1,25 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CapabilityController;
+use App\Http\Controllers\Api\CpayWebhookController;
+use App\Http\Controllers\Api\CustomerSupportController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LoanApplicationController;
-use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\LoanRepaymentController;
+use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\ProductionConsentController;
 use App\Http\Controllers\Api\ProductionCreditController;
+use App\Http\Controllers\Api\ProductionCreditOfferController;
 use App\Http\Controllers\Api\ProductionKycController;
+use App\Http\Controllers\Api\ProductionLoanApplicationController;
 use App\Http\Controllers\Api\ProductionOperationsController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TransactionController;
-use App\Http\Controllers\Api\LoanRepaymentController;
-use App\Http\Controllers\Api\InvestorDemoController;
-use App\Http\Controllers\Api\NinValidationController;
 use Illuminate\Support\Facades\Route;
 
-// Public routes
 Route::get('/health', [HealthController::class, 'show']);
 Route::middleware('throttle:auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -25,14 +29,26 @@ Route::middleware('throttle:auth')->group(function () {
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
 });
 Route::post('/handleCallback', [TransactionController::class, 'handleCallback'])->middleware('throttle:webhooks')->name('handleCallback');
+Route::post('/webhooks/cpay', CpayWebhookController::class)->middleware('throttle:webhooks')->name('webhooks.cpay');
 
-// Protected routes
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
+    Route::get('/capabilities', [CapabilityController::class, 'index']);
+    Route::get('/support-cases', [CustomerSupportController::class, 'index']);
+    Route::post('/support-cases', [CustomerSupportController::class, 'store']);
     Route::post('/validate-nin', [NinValidationController::class, 'validateNin']);
     Route::post('/credit-scores', [NinValidationController::class, 'creditScores']);
-    Route::post('/loan-applications', [LoanApplicationController::class, 'store']);
+
+    Route::get('/credit/applications', [ProductionLoanApplicationController::class, 'index']);
+    Route::post('/credit/applications', [ProductionLoanApplicationController::class, 'store']);
+    Route::get('/credit/applications/{application}', [ProductionLoanApplicationController::class, 'show']);
+    Route::get('/credit/offers', [ProductionCreditOfferController::class, 'index']);
+    Route::get('/credit/offers/{offer}', [ProductionCreditOfferController::class, 'show']);
+    Route::post('/credit/offers/{offer}/accept', [ProductionCreditOfferController::class, 'accept']);
+
+    // Safe compatibility alias. Legacy clients may submit here, but application intake never disburses funds.
+    Route::post('/loan-applications', [ProductionLoanApplicationController::class, 'store']);
     Route::get('/loan-applications/{user}', [LoanApplicationController::class, 'index']);
     Route::get('/loan-balance/{user}', [LoanApplicationController::class, 'getLoanBalance']);
     Route::post('/loan-applications/{id}/status', [LoanApplicationController::class, 'updateStatus'])->middleware('audit.sensitive:loan_application.status_updated');
@@ -59,6 +75,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::get('/demo/admin/investor-snapshot', [InvestorDemoController::class, 'adminSnapshot']);
     }
 });
+
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::post('/admin/credit-decisions/{decision}/approve', [ProductionCreditController::class, 'approve']);
+    Route::post('/admin/credit/applications/{application}/offer', [ProductionCreditOfferController::class, 'store']);
+});
+
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations,support'])->group(function () {
     Route::get('/admin/foundation-check', [FoundationAdminController::class, 'check']);
     Route::patch('/admin/kyc/cases/{case}', [ProductionKycController::class, 'review']);
@@ -76,5 +98,6 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/compliance-reports', [ProductionOperationsController::class, 'createComplianceReport']);
     Route::post('/admin/compliance-reports/{report}/exports', [ProductionOperationsController::class, 'createComplianceExport']);
 });
+
 Route::post('/airtel-callback', [TransactionController::class, 'airtelCallback'])->middleware('throttle:webhooks');
 Route::post('/mtn-callback', [TransactionController::class, 'mtnCallback'])->middleware('throttle:webhooks');

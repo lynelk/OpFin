@@ -66,10 +66,24 @@ class MobileMoneyService
         return $transaction->fresh();
     }
 
-    public function processWebhook(string $providerName, array $payload, array $headers = []): MobileMoneyTransaction
-    {
+    public function processWebhook(
+        string $providerName,
+        array $payload,
+        array $headers = [],
+        ?string $rawBody = null,
+    ): MobileMoneyTransaction {
         $secret = config("services.mobile_money.providers.{$providerName}.webhook_secret");
-        if (!$this->signatureValidator->isValid($payload, $headers, $secret)) {
+        $validSignature = $providerName === 'cpay'
+            ? $this->signatureValidator->isValidCpay(
+                rawBody: (string) $rawBody,
+                headers: $headers,
+                secret: $secret,
+                replayWindowSeconds: (int) config('services.cpay.callback_replay_window_seconds', 300),
+                expectedMerchantId: config('services.cpay.merchant_id'),
+            )
+            : $this->signatureValidator->isValid($payload, $headers, $secret);
+
+        if (! $validSignature) {
             throw new InvalidArgumentException('Invalid mobile money webhook signature.');
         }
 
@@ -88,9 +102,8 @@ class MobileMoneyService
             }
         }
 
-        $transaction = MobileMoneyTransaction::where('provider', $providerName)
-            ->where('provider_reference', $response->providerReference)
-            ->firstOrFail();
+        $transaction = $this->findWebhookTransaction($providerName, $payload, $response->providerReference);
+        $this->assertWebhookTransition($transaction, $response->status);
 
         $this->applyProviderResponse($transaction, $response, [
             'webhook_event_id' => $response->webhookEventId,
@@ -110,12 +123,12 @@ class MobileMoneyService
         $providerName ??= config('services.mobile_money.default_provider', 'mock');
         $idempotencyKey = Arr::get($attributes, 'idempotency_key');
 
-        if (!$idempotencyKey) {
+        if (! $idempotencyKey) {
             throw new InvalidArgumentException('A mobile money idempotency key is required.');
         }
 
         $amountMinor = Arr::get($attributes, 'amount_minor');
-        if (!is_int($amountMinor) || $amountMinor <= 0) {
+        if (! is_int($amountMinor) || $amountMinor <= 0) {
             throw new InvalidArgumentException('Mobile money amount_minor must be a positive integer.');
         }
 
@@ -136,6 +149,8 @@ class MobileMoneyService
 
             $transaction = MobileMoneyTransaction::create([
                 'transaction_id' => Arr::get($attributes, 'transaction_id'),
+                'credit_offer_id' => Arr::get($attributes, 'credit_offer_id'),
+                'loan_id' => Arr::get($attributes, 'loan_id'),
                 'user_id' => Arr::get($attributes, 'user_id'),
                 'institution_id' => Arr::get($attributes, 'institution_id'),
                 'provider' => $providerName,
@@ -149,6 +164,8 @@ class MobileMoneyService
                 'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_UNRECONCILED,
                 'metadata' => Arr::except($attributes, [
                     'transaction_id',
+                    'credit_offer_id',
+                    'loan_id',
                     'user_id',
                     'institution_id',
                     'provider',
@@ -177,6 +194,53 @@ class MobileMoneyService
 
             return $transaction->fresh();
         });
+    }
+
+    private function findWebhookTransaction(
+        string $providerName,
+        array $payload,
+        ?string $providerReference,
+    ): MobileMoneyTransaction {
+        $query = MobileMoneyTransaction::where('provider', $providerName);
+
+        if ($providerName === 'cpay') {
+            $merchantReference = data_get($payload, 'data.merchant_reference');
+            $query->where(function ($inner) use ($providerReference, $merchantReference) {
+                if ($providerReference) {
+                    $inner->where('provider_reference', $providerReference);
+                }
+                if ($merchantReference) {
+                    if ($providerReference) {
+                        $inner->orWhere('internal_reference', $merchantReference);
+                    } else {
+                        $inner->where('internal_reference', $merchantReference);
+                    }
+                }
+            });
+
+            return $query->firstOrFail();
+        }
+
+        return $query->where('provider_reference', $providerReference)->firstOrFail();
+    }
+
+    private function assertWebhookTransition(MobileMoneyTransaction $transaction, string $nextStatus): void
+    {
+        if ($transaction->provider !== 'cpay') {
+            return;
+        }
+
+        $terminal = [
+            MobileMoneyTransaction::STATUS_SUCCESSFUL,
+            MobileMoneyTransaction::STATUS_FAILED,
+            MobileMoneyTransaction::STATUS_REVERSED,
+        ];
+
+        if (in_array($transaction->status, $terminal, true) && $transaction->status !== $nextStatus) {
+            throw new InvalidArgumentException(
+                "CPay webhook cannot regress terminal status {$transaction->status} to {$nextStatus}.",
+            );
+        }
     }
 
     private function applyProviderResponse(
