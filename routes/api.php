@@ -110,6 +110,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::get('/admin/savings-products', [SaveProtectionOperationsController::class, 'savingsProducts']);
     Route::post('/admin/savings-products', [SaveProtectionOperationsController::class, 'createSavingsProduct']);
     Route::patch('/admin/savings-products/{product}', [SaveProtectionOperationsController::class, 'updateSavingsProduct']);
+    Route::post('/admin/savings-products/{product}/activate', [SaveProtectionOperationsController::class, 'activateSavingsProduct']);
     Route::post('/admin/savings-movements/{movement}/confirm-contribution', [SaveProtectionOperationsController::class, 'confirmSavingsContribution']);
     Route::post('/admin/savings-movements/{movement}/release-withdrawal', [SaveProtectionOperationsController::class, 'releaseSavingsWithdrawal']);
     Route::post('/admin/savings-movements/{movement}/retry-payout', [SaveProtectionOperationsController::class, 'retrySavingsWithdrawalPayout']);
@@ -117,6 +118,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::get('/admin/protection-products', [SaveProtectionOperationsController::class, 'protectionProducts']);
     Route::post('/admin/protection-products', [SaveProtectionOperationsController::class, 'createProtectionProduct']);
     Route::patch('/admin/protection-products/{product}', [SaveProtectionOperationsController::class, 'updateProtectionProduct']);
+    Route::post('/admin/protection-products/{product}/activate', [SaveProtectionOperationsController::class, 'activateProtectionProduct']);
     Route::post('/admin/protection-premiums/{payment}/confirm', [SaveProtectionOperationsController::class, 'confirmPremium']);
     Route::post('/admin/protection-policies/{policy}/issue', [SaveProtectionOperationsController::class, 'issuePolicy']);
     Route::patch('/admin/protection-claims/{claim}', [SaveProtectionOperationsController::class, 'updateClaim']);
