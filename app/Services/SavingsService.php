@@ -25,6 +25,8 @@ class SavingsService
         return SavingsProduct::query()
             ->where('country_code', strtoupper($countryCode))
             ->where('status', SavingsProduct::STATUS_ACTIVE)
+            ->whereNotNull('approved_by')
+            ->whereNotNull('approved_at')
             ->where(function ($query) {
                 $query->whereNull('effective_at')->orWhere('effective_at', '<=', now());
             })
@@ -460,6 +462,9 @@ class SavingsService
     {
         if ($product->status !== SavingsProduct::STATUS_ACTIVE) {
             throw new InvalidArgumentException('This savings product is not currently available.');
+        }
+        if (! $product->approved_by || ! $product->approved_at) {
+            throw new InvalidArgumentException('This savings product has not completed independent product approval.');
         }
         if ($product->custody_model !== 'partner_held') {
             throw new InvalidArgumentException('Savings products must use an explicitly approved partner-held custody model.');
