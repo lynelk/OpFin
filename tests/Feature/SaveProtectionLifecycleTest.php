@@ -382,7 +382,7 @@ class SaveProtectionLifecycleTest extends TestCase
             'institution_id' => $institution->id,
         ]);
 
-        if (!$includeSecondCustomer) {
+        if (! $includeSecondCustomer) {
             return [$customer, $maker, $checker];
         }
 
