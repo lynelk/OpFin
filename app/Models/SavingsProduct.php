@@ -32,6 +32,10 @@ class SavingsProduct extends Model
         'terms_version',
         'terms_url',
         'disclosures',
+        'created_by',
+        'approved_by',
+        'approved_at',
+        'approval_evidence',
         'effective_at',
         'expires_at',
     ];
@@ -45,6 +49,8 @@ class SavingsProduct extends Model
             'notice_days' => 'integer',
             'lock_days' => 'integer',
             'disclosures' => 'array',
+            'approved_at' => 'datetime',
+            'approval_evidence' => 'array',
             'effective_at' => 'datetime',
             'expires_at' => 'datetime',
         ];
