@@ -71,7 +71,7 @@ class LoanService
 
                 return $loan;
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Loan creation failed: '.$e->getMessage());
 
             return null;
@@ -167,7 +167,7 @@ class LoanService
 
             $this->productionLoanLedgerService->postDisbursement($transaction, $loan);
             $this->sendDisbursementNotification($loan);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Disbursement processing failed: '.$e->getMessage());
             throw $e;
         }
@@ -234,7 +234,7 @@ class LoanService
 
             $this->productionLoanLedgerService->postRepayment($transaction, $interestPaid, $principalPaid);
             $this->sendCollectionNotification($transaction);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Collection processing failed: '.$e->getMessage());
             throw $e;
         }
