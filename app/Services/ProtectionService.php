@@ -27,6 +27,8 @@ class ProtectionService
         return ProtectionProduct::query()
             ->where('country_code', strtoupper($countryCode))
             ->where('status', ProtectionProduct::STATUS_ACTIVE)
+            ->whereNotNull('approved_by')
+            ->whereNotNull('approved_at')
             ->where(function ($query) {
                 $query->whereNull('effective_at')->orWhere('effective_at', '<=', now());
             })
@@ -491,6 +493,9 @@ class ProtectionService
             if (! $allowRetiredForExistingPolicy || ! in_array($product->status, [ProtectionProduct::STATUS_PAUSED, ProtectionProduct::STATUS_RETIRED], true)) {
                 throw new InvalidArgumentException('This protection product is not currently available.');
             }
+        }
+        if (! $product->approved_by || ! $product->approved_at) {
+            throw new InvalidArgumentException('This protection product has not completed independent product approval.');
         }
         if ($product->effective_at && $product->effective_at->isFuture()) {
             throw new InvalidArgumentException('This protection product is not effective yet.');
