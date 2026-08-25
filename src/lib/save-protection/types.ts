@@ -82,6 +82,10 @@ export type ProtectionProduct = {
   disclosure_version: string;
   disclosure_payload: Record<string, unknown>;
   terms_url?: string | null;
+  disclosure_hash?: string;
+};
+
+export type ProtectionCatalogueProduct = ProtectionProduct & {
   disclosure_hash: string;
 };
 
@@ -163,7 +167,7 @@ export type SavingsMovementPayload = {
 };
 
 export type ProtectionProductsPayload = {
-  products: ProtectionProduct[];
+  products: ProtectionCatalogueProduct[];
   risk_notice: string;
 };
 
