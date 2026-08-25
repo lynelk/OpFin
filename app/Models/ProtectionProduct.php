@@ -32,6 +32,10 @@ class ProtectionProduct extends Model
         'exclusions',
         'disclosure_payload',
         'terms_url',
+        'created_by',
+        'approved_by',
+        'approved_at',
+        'approval_evidence',
         'effective_at',
         'expires_at',
     ];
@@ -44,6 +48,8 @@ class ProtectionProduct extends Model
             'benefits' => 'array',
             'exclusions' => 'array',
             'disclosure_payload' => 'array',
+            'approved_at' => 'datetime',
+            'approval_evidence' => 'array',
             'effective_at' => 'datetime',
             'expires_at' => 'datetime',
         ];
