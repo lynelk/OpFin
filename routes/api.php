@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\ProductionCreditOfferController;
 use App\Http\Controllers\Api\ProductionKycController;
 use App\Http\Controllers\Api\ProductionLoanApplicationController;
 use App\Http\Controllers\Api\ProductionOperationsController;
+use App\Http\Controllers\Api\ProductionPaymentOperationsController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -79,6 +80,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
     Route::post('/admin/credit-decisions/{decision}/approve', [ProductionCreditController::class, 'approve']);
     Route::post('/admin/credit/applications/{application}/offer', [ProductionCreditOfferController::class, 'store']);
+    Route::post('/admin/mobile-money-transactions/{transaction}/refresh-status', [ProductionPaymentOperationsController::class, 'refreshStatus']);
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations,support'])->group(function () {
