@@ -6,6 +6,7 @@ use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\Loan;
+use App\Models\MobileMoneyTransaction;
 use App\Models\Transaction;
 
 class ProductionLoanLedgerService
@@ -24,9 +25,10 @@ class ProductionLoanLedgerService
         }
 
         $amountMinor = $this->toMinorUnits($transaction->amount);
+        $provider = $this->paymentProvider($transaction);
         $providerCashAccount = $this->account(
-            'cash.' . strtolower($transaction->network ?: 'unknown') . '.disbursement',
-            trim(($transaction->network ?: 'Unknown') . ' disbursement cash'),
+            'cash.'.strtolower($provider).'.disbursement',
+            $provider.' disbursement cash',
             'asset'
         );
         $loanReceivableAccount = $this->loanReceivableAccount($loan);
@@ -46,7 +48,7 @@ class ProductionLoanLedgerService
                     'account_id' => $providerCashAccount->id,
                     'direction' => LedgerEntry::DIRECTION_CREDIT,
                     'amount_minor' => $amountMinor,
-                    'memo' => 'Cash disbursed through mobile money provider',
+                    'memo' => 'Cash disbursed through payment provider',
                 ],
             ],
             null,
@@ -55,6 +57,7 @@ class ProductionLoanLedgerService
                 'loan_id' => $loan->id,
                 'legacy_transaction_id' => $transaction->id,
                 'loan_application_id' => $transaction->loan_application_id,
+                'payment_provider' => strtolower($provider),
             ]
         );
 
@@ -62,6 +65,7 @@ class ProductionLoanLedgerService
             'loan_id' => $loan->id,
             'transaction_id' => $transaction->id,
             'amount_minor' => $amountMinor,
+            'payment_provider' => strtolower($provider),
         ]);
 
         return $posted;
@@ -70,7 +74,8 @@ class ProductionLoanLedgerService
     public function postRepayment(
         Transaction $transaction,
         int|float $interestPaid,
-        int|float $principalPaid
+        int|float $principalPaid,
+        int|float $feesPaid = 0,
     ): ?LedgerTransaction {
         $reference = $this->ledgerReference('loan.repayment', $transaction);
 
@@ -81,18 +86,24 @@ class ProductionLoanLedgerService
         $amountMinor = $this->toMinorUnits($transaction->amount);
         $interestMinor = $this->toMinorUnits($interestPaid);
         $principalMinor = $this->toMinorUnits($principalPaid);
-        $suspenseMinor = $amountMinor - $interestMinor - $principalMinor;
+        $feesMinor = $this->toMinorUnits($feesPaid);
+        $suspenseMinor = $amountMinor - $interestMinor - $principalMinor - $feesMinor;
 
+        if ($suspenseMinor < 0) {
+            throw new \InvalidArgumentException('Repayment ledger components exceed the collected amount.');
+        }
+
+        $provider = $this->paymentProvider($transaction);
         $entries = [
             [
                 'account_id' => $this->account(
-                    'cash.' . strtolower($transaction->network ?: 'unknown') . '.collection',
-                    trim(($transaction->network ?: 'Unknown') . ' collection cash'),
+                    'cash.'.strtolower($provider).'.collection',
+                    $provider.' collection cash',
                     'asset'
                 )->id,
                 'direction' => LedgerEntry::DIRECTION_DEBIT,
                 'amount_minor' => $amountMinor,
-                'memo' => 'Cash collected through mobile money provider',
+                'memo' => 'Cash collected through payment provider',
             ],
         ];
 
@@ -111,6 +122,15 @@ class ProductionLoanLedgerService
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $interestMinor,
                 'memo' => 'Interest income recognized on repayment',
+            ];
+        }
+
+        if ($feesMinor > 0) {
+            $entries[] = [
+                'account_id' => $this->creditFeeClearingAccount($transaction->loan)->id,
+                'direction' => LedgerEntry::DIRECTION_CREDIT,
+                'amount_minor' => $feesMinor,
+                'memo' => 'Cash allocated to disclosed credit fees pending accounting-policy recognition',
             ];
         }
 
@@ -133,9 +153,11 @@ class ProductionLoanLedgerService
             [
                 'loan_id' => $transaction->loan_id,
                 'legacy_transaction_id' => $transaction->id,
+                'payment_provider' => strtolower($provider),
                 'principal_minor' => $principalMinor,
                 'interest_minor' => $interestMinor,
-                'suspense_minor' => max(0, $suspenseMinor),
+                'fees_minor' => $feesMinor,
+                'suspense_minor' => $suspenseMinor,
             ]
         );
 
@@ -143,6 +165,7 @@ class ProductionLoanLedgerService
             'loan_id' => $transaction->loan_id,
             'transaction_id' => $transaction->id,
             'amount_minor' => $amountMinor,
+            'payment_provider' => strtolower($provider),
         ]);
 
         return $posted;
@@ -150,14 +173,14 @@ class ProductionLoanLedgerService
 
     private function ledgerReference(string $eventType, Transaction $transaction): string
     {
-        return $eventType . ':' . $transaction->reference;
+        return $eventType.':'.$transaction->reference;
     }
 
     private function loanReceivableAccount(Loan $loan): LedgerAccount
     {
         return $this->account(
-            'asset.loan_receivable.product_' . $loan->loan_product_id,
-            'Loan receivable product ' . $loan->loan_product_id,
+            'asset.loan_receivable.product_'.$loan->loan_product_id,
+            'Loan receivable product '.$loan->loan_product_id,
             'asset'
         );
     }
@@ -165,10 +188,29 @@ class ProductionLoanLedgerService
     private function interestIncomeAccount(Loan $loan): LedgerAccount
     {
         return $this->account(
-            'income.interest.product_' . $loan->loan_product_id,
-            'Interest income product ' . $loan->loan_product_id,
+            'income.interest.product_'.$loan->loan_product_id,
+            'Interest income product '.$loan->loan_product_id,
             'income'
         );
+    }
+
+    private function creditFeeClearingAccount(Loan $loan): LedgerAccount
+    {
+        return $this->account(
+            'liability.credit_fee_clearing.product_'.$loan->loan_product_id,
+            'Credit fee clearing product '.$loan->loan_product_id,
+            'liability'
+        );
+    }
+
+    private function paymentProvider(Transaction $transaction): string
+    {
+        $provider = MobileMoneyTransaction::query()
+            ->where('transaction_id', $transaction->id)
+            ->latest('id')
+            ->value('provider');
+
+        return ucfirst(strtolower((string) ($provider ?: $transaction->network ?: 'unknown')));
     }
 
     private function account(string $code, string $name, string $type): LedgerAccount
