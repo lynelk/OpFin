@@ -27,6 +27,10 @@ return new class extends Migration
             $table->string('terms_version')->default('v1');
             $table->string('terms_url')->nullable();
             $table->json('disclosures')->nullable();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable();
+            $table->json('approval_evidence')->nullable();
             $table->timestamp('effective_at')->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
@@ -95,6 +99,10 @@ return new class extends Migration
             $table->json('exclusions')->nullable();
             $table->json('disclosure_payload');
             $table->string('terms_url')->nullable();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable();
+            $table->json('approval_evidence')->nullable();
             $table->timestamp('effective_at')->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
