@@ -82,11 +82,11 @@ export type ProtectionProduct = {
   disclosure_version: string;
   disclosure_payload: Record<string, unknown>;
   terms_url?: string | null;
-  disclosure_hash?: string;
+  disclosure_hash: string;
 };
 
-export type ProtectionCatalogueProduct = ProtectionProduct & {
-  disclosure_hash: string;
+export type ProtectionPolicyProduct = Omit<ProtectionProduct, "disclosure_hash"> & {
+  disclosure_hash?: string;
 };
 
 export type ProtectionPremiumPayment = {
@@ -141,7 +141,7 @@ export type ProtectionPolicy = {
   enrolled_at: string;
   issued_at?: string | null;
   cancelled_at?: string | null;
-  product: ProtectionProduct;
+  product: ProtectionPolicyProduct;
   premium_payments?: ProtectionPremiumPayment[];
   claims?: ProtectionClaim[];
 };
@@ -167,7 +167,7 @@ export type SavingsMovementPayload = {
 };
 
 export type ProtectionProductsPayload = {
-  products: ProtectionCatalogueProduct[];
+  products: ProtectionProduct[];
   risk_notice: string;
 };
 
