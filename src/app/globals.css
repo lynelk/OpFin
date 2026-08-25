@@ -211,6 +211,11 @@ form {
   margin-top: 10px;
 }
 
+.stat-text {
+  font-size: 20px;
+  text-transform: capitalize;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -240,6 +245,7 @@ form {
   font-size: 12px;
   font-weight: 700;
   padding: 4px 8px;
+  text-transform: capitalize;
 }
 
 .badge.ok {
@@ -345,6 +351,75 @@ form {
 .state-network,
 .state-server {
   border-color: #fecaca;
+}
+
+.eyebrow {
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.compass-next-action {
+  border-color: #99f6e4;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+
+.compass-next-action h2 {
+  font-size: 24px;
+}
+
+.compass-action {
+  margin-top: 16px;
+}
+
+.compass-grid {
+  margin-bottom: 16px;
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.journey-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 210px;
+}
+
+.journey-card-head,
+.case-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.journey-card-action {
+  align-self: flex-start;
+  margin-top: auto;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.case-list {
+  display: grid;
+  gap: 12px;
+}
+
+.case-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.case-card p + p {
+  margin-top: 10px;
 }
 
 @media (max-width: 900px) {

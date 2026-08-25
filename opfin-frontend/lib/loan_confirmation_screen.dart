@@ -16,7 +16,7 @@ class LoanConfirmationScreen extends StatefulWidget {
 }
 
 class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
-  bool _termsAccepted = false;
+  bool _detailsConfirmed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
-          "Confirm Application",
+          'Review Application',
           style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
@@ -36,167 +36,192 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
         ),
         foregroundColor: Colors.black,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            const Text(
-              "Review your loan details",
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Colors.black,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Check your application details',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Please confirm the information below before submitting your application.",
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.black.withOpacity(0.6),
+              const SizedBox(height: 8),
+              Text(
+                'This is your request for assessment. It is not a loan offer yet.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black.withValues(alpha: 0.6),
+                ),
               ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Summary Card
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.black12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.black12),
+                ),
+                child: Column(
+                  children: [
+                    _infoRow(
+                      'Requested amount',
+                      'UGX ${widget.application.amount.toStringAsFixed(0)}',
+                      isEmphasis: true,
+                    ),
+                    _divider(),
+                    _infoRow('Reason', widget.application.reason),
+                  ],
+                ),
               ),
-              child: Column(
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Pricing comes after assessment',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'If you are eligible, OpFin will show you a formal offer with the interest rate and basis, all fees, the total amount to repay, repayment dates, and the repayment schedule before you can accept it.',
+                      style: TextStyle(height: 1.45, color: Colors.black87),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _infoRow(
-                    "Loan Amount",
-                    widget.application.amount.toStringAsFixed(2),
-                    isEmphasis: true,
+                  Checkbox(
+                    value: _detailsConfirmed,
+                    activeColor: Colors.black,
+                    onChanged: (value) {
+                      setState(() => _detailsConfirmed = value ?? false);
+                    },
                   ),
-                  _divider(),
-                  _infoRow("Reason", widget.application.reason),
-                  _infoRow("Interest Rate", '10%'),
-                  _infoRow("Interest", 'UGX 700'),
-                  _infoRow("Pay Back", 'UGX 7,700'),
-                  _infoRow('Pay Before', '20th Dec, 2024'),
+                  const Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: Text(
+                        'I confirm that the information above is correct and I want to submit this application for assessment.',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 14,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
-            // Terms Checkbox
-            const Spacer(),
-
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Checkbox(
-                  value: _termsAccepted,
-                  activeColor: Colors.black,
-                  onChanged: (value) {
-                    setState(() => _termsAccepted = value ?? false);
-                  },
-                ),
-                const Expanded(
-                  child: Text(
-                    "I agree to the Terms and Conditions of the loan application.",
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Colors.black),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Colors.black),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      "Edit",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
+                      child: const Text(
+                        'Edit',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Visibility(
-                    visible: _termsAccepted,
+                  const SizedBox(width: 14),
+                  Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        widget.onConfirm();
-                      },
+                      onPressed: _detailsConfirmed
+                          ? () {
+                              Navigator.pop(context);
+                              widget.onConfirm();
+                            }
+                          : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.black12,
+                        disabledForegroundColor: Colors.black38,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: const Text(
-                        "Confirm & Submit",
+                        'Submit for assessment',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-          ],
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ------------------------------------------------------------
   Widget _infoRow(String label, String value, {bool isEmphasis = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black.withOpacity(0.6),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.black.withValues(alpha: 0.6),
+              ),
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isEmphasis ? 18 : 15,
-              fontWeight: isEmphasis ? FontWeight.w800 : FontWeight.w600,
-              color: Colors.black,
+          const SizedBox(width: 16),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: isEmphasis ? 18 : 15,
+                fontWeight: isEmphasis ? FontWeight.w800 : FontWeight.w600,
+                color: Colors.black,
+              ),
             ),
           ),
         ],

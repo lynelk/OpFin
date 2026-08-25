@@ -12,16 +12,15 @@ export async function AppShell({ children }: Readonly<{ children: ReactNode }>) 
   });
 
   const groups = [
-    ["customer", "Customer"],
-    ["wealth", "Future modules"],
+    ["customer", "Your money"],
     ["admin", "Operations"],
-    ["employer", "Employer"]
+    ["employer", "Institutional"]
   ] as const;
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <Link className="brand" href="/dashboard">
+        <Link className="brand" href="/dashboard" aria-label="OpFin home">
           <span className="brand-mark">OF</span>
           <span>OpFin</span>
         </Link>
@@ -45,7 +44,7 @@ export async function AppShell({ children }: Readonly<{ children: ReactNode }>) 
         <header className="topbar">
           <div>
             <strong>{session.name}</strong>
-            <p className="muted">Role: {session.role}</p>
+            <p className="muted">{session.role === "customer" ? "Your OpFin account" : `Role: ${session.role}`}</p>
           </div>
           <form action={logoutAction}>
             <button className="button secondary" type="submit">Switch role</button>

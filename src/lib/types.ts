@@ -52,6 +52,73 @@ export type ProductTerm = {
   status: string;
 };
 
+export type ProductionCreditDecision = {
+  id: number;
+  loan_application_id: number;
+  status: "approved" | "declined" | "referred" | string;
+  requested_amount_minor: number;
+  approved_amount_minor: number;
+  monthly_income_minor?: number | null;
+  estimated_obligation_minor?: number | null;
+  policy_version?: string | null;
+  reason_codes: string[];
+  decision_summary: string;
+  decided_at?: string | null;
+};
+
+export type CreditOffer = {
+  id: number;
+  loan_application_id: number;
+  credit_decision_id: number;
+  offer_reference: string;
+  version: number;
+  status: "offered" | "accepted" | "expired" | "withdrawn" | "disbursement_pending" | "disbursed" | "disbursement_failed" | string;
+  currency: string;
+  principal_amount_minor: number;
+  interest_amount_minor: number;
+  fees_minor: number;
+  net_disbursement_minor: number;
+  total_repayment_minor: number;
+  duration_days: number;
+  interest_rate_percent: string | number;
+  interest_cycle: string;
+  interest_type: string;
+  repayment_frequency: string;
+  fee_treatment: "financed" | "deducted" | string;
+  policy_version: string;
+  pricing_snapshot: Record<string, unknown>;
+  disclosure_snapshot: Record<string, unknown>;
+  offered_at: string;
+  expires_at: string;
+  accepted_at?: string | null;
+};
+
+export type CreditOfferView = {
+  offer: CreditOffer;
+  disclosure_hash: string;
+};
+
+export type CreditOfferAcceptance = {
+  offer: CreditOffer;
+  mobile_money: {
+    id: number;
+    provider: string;
+    status: string;
+    direction: string;
+    amount_minor: number;
+    currency: string;
+    provider_reference?: string | null;
+    reconciliation_status: string;
+  };
+  loan?: {
+    id: number;
+    status: string;
+    amount: number;
+    repayment_amount: number;
+  } | null;
+  next_state: "active_loan" | "disbursement_pending" | string;
+};
+
 export type LoanApplication = {
   id: number;
   amount: string | number;
@@ -59,6 +126,8 @@ export type LoanApplication = {
   reason?: string | null;
   loan_product?: LoanProduct;
   loan_product_term?: ProductTerm;
+  credit_decision?: ProductionCreditDecision | null;
+  credit_offers?: CreditOffer[];
   loan?: {
     id: number;
     status: string;
