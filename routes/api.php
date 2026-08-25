@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\ProductionKycController;
 use App\Http\Controllers\Api\ProductionLoanApplicationController;
 use App\Http\Controllers\Api\ProductionOperationsController;
 use App\Http\Controllers\Api\ProductionPaymentOperationsController;
+use App\Http\Controllers\Api\ProductionReconciliationController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -81,6 +82,9 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/credit-decisions/{decision}/approve', [ProductionCreditController::class, 'approve']);
     Route::post('/admin/credit/applications/{application}/offer', [ProductionCreditOfferController::class, 'store']);
     Route::post('/admin/mobile-money-transactions/{transaction}/refresh-status', [ProductionPaymentOperationsController::class, 'refreshStatus']);
+    Route::post('/admin/reconciliation-runs', [ProductionReconciliationController::class, 'store']);
+    Route::post('/admin/reconciliation-runs/{run}/provider-records', [ProductionReconciliationController::class, 'ingest']);
+    Route::post('/admin/reconciliation-runs/{run}/complete', [ProductionReconciliationController::class, 'complete']);
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations,support'])->group(function () {
@@ -90,7 +94,6 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/loan-applications/{application}/decision', [ProductionCreditController::class, 'decide']);
     Route::get('/admin/ledger-transactions', [ProductionOperationsController::class, 'ledgerTransactions']);
     Route::get('/admin/reconciliation-runs', [ProductionOperationsController::class, 'reconciliationRuns']);
-    Route::post('/admin/reconciliation-runs', [ProductionOperationsController::class, 'createReconciliationRun']);
     Route::get('/admin/reconciliation-runs/{run}/items', [ProductionOperationsController::class, 'reconciliationItems']);
     Route::patch('/admin/reconciliation-items/{item}', [ProductionOperationsController::class, 'resolveReconciliationItem']);
     Route::get('/admin/support-cases', [ProductionOperationsController::class, 'supportCases']);
