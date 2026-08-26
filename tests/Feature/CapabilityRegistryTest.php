@@ -23,7 +23,7 @@ class CapabilityRegistryTest extends TestCase
             ->assertJsonPath('data.capabilities.home.status', 'AVAILABLE')
             ->assertJsonPath('data.capabilities.borrow.status', 'PILOT')
             ->assertJsonPath('data.capabilities.payments.owner', 'cpay')
-            ->assertJsonPath('data.capabilities.payments.status', 'SANDBOX');
+            ->assertJsonPath('data.capabilities.payments.status', 'AVAILABLE');
     }
 
     public function test_capabilities_require_authentication(): void
