@@ -4,10 +4,11 @@ namespace Tests\Feature;
 
 use App\Contracts\MobileMoneyProviderInterface;
 use App\Models\MobileMoneyTransaction;
-use App\Services\MobileMoney\Adapters\AirtelMoneyAdapter;
-use App\Services\MobileMoney\Adapters\MtnMobileMoneyAdapter;
+use App\Services\MobileMoney\Adapters\CpayV2Adapter;
+use App\Services\MobileMoney\MobileMoneyProviderManager;
 use App\Services\MobileMoney\MobileMoneyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use InvalidArgumentException;
 use Tests\TestCase;
 
 class MobileMoneyAdapterTest extends TestCase
@@ -88,7 +89,7 @@ class MobileMoneyAdapterTest extends TestCase
     {
         config()->set('services.mobile_money.providers.mock.webhook_secret', 'test-secret');
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         app(MobileMoneyService::class)->processWebhook('mock', [
             'event_id' => 'bad-webhook',
@@ -101,7 +102,7 @@ class MobileMoneyAdapterTest extends TestCase
 
     public function test_mobile_money_requires_positive_integer_minor_units(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         app(MobileMoneyService::class)->collect([
             'idempotency_key' => 'invalid-amount-key',
@@ -113,7 +114,7 @@ class MobileMoneyAdapterTest extends TestCase
 
     public function test_mobile_money_requires_phone_number(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         app(MobileMoneyService::class)->disburse([
             'idempotency_key' => 'missing-phone-key',
@@ -123,9 +124,18 @@ class MobileMoneyAdapterTest extends TestCase
         ]);
     }
 
-    public function test_mtn_and_airtel_adapters_implement_the_live_provider_contract(): void
+    public function test_cpay_is_the_only_live_money_movement_adapter(): void
     {
-        $this->assertInstanceOf(MobileMoneyProviderInterface::class, new MtnMobileMoneyAdapter);
-        $this->assertInstanceOf(MobileMoneyProviderInterface::class, new AirtelMoneyAdapter);
+        $this->assertInstanceOf(MobileMoneyProviderInterface::class, app(CpayV2Adapter::class));
+
+        $manager = app(MobileMoneyProviderManager::class);
+        foreach (['mtn', 'airtel'] as $provider) {
+            try {
+                $manager->provider($provider);
+                $this->fail("Direct {$provider} provider must not be available.");
+            } catch (InvalidArgumentException $exception) {
+                $this->assertStringContainsString('Route all money movement through CPay', $exception->getMessage());
+            }
+        }
     }
 }
