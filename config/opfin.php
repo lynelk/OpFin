@@ -9,17 +9,17 @@ return [
         'identity' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'kyc' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'consent' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
-        'financial_passport' => ['status' => 'PILOT', 'owner' => 'opfin'],
+        'financial_passport' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'support' => ['status' => 'PILOT', 'owner' => 'opfin'],
-        'security_centre' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'security_centre' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
 
         // Customer financial journeys
         'borrow' => ['status' => 'PILOT', 'owner' => 'opfin'],
-        'budgeting' => ['status' => 'PLANNED', 'owner' => 'opfin'],
-        'financial_calendar' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'budgeting' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
+        'financial_calendar' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'money_autopilot' => ['status' => 'PLANNED', 'owner' => 'opfin'],
-        'credit_builder' => ['status' => 'PLANNED', 'owner' => 'opfin'],
-        'financial_shock_centre' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'credit_builder' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
+        'financial_shock_centre' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'save' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'savings_partner_products' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'savings_contributions' => ['status' => 'PILOT', 'owner' => 'opfin'],
@@ -38,11 +38,11 @@ return [
         'capital' => ['status' => 'PLANNED', 'owner' => 'opfin'],
 
         // Shared platform capabilities
-        'payments' => ['status' => 'SANDBOX', 'owner' => 'cpay'],
-        'payment_reconciliation' => ['status' => 'PILOT', 'owner' => 'cpay'],
-        'product_factory' => ['status' => 'PLANNED', 'owner' => 'opfin'],
-        'workflow_engine' => ['status' => 'PLANNED', 'owner' => 'opfin'],
-        'rules_engine' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'payments' => ['status' => 'AVAILABLE', 'owner' => 'cpay'],
+        'payment_reconciliation' => ['status' => 'AVAILABLE', 'owner' => 'cpay'],
+        'product_factory' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
+        'workflow_engine' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
+        'rules_engine' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
     ],
 
     'countries' => [
@@ -52,7 +52,7 @@ return [
             'currency' => 'UGX',
             'languages' => ['en'],
             'payment_platform' => 'cpay',
-            'payment_status' => 'SANDBOX',
+            'payment_status' => 'PRODUCTION',
         ],
     ],
 ];

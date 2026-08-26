@@ -96,11 +96,11 @@ class ApiSecurityTest extends TestCase
             ->assertJsonPath('success', false);
     }
 
-    public function test_payment_callback_requires_shared_secret(): void
+    public function test_direct_provider_callback_route_is_not_exposed(): void
     {
         $this->postJson('/api/mtn-callback', [
             'externalId' => 'test-reference',
             'status' => 'SUCCESSFUL',
-        ])->assertStatus(401);
+        ])->assertNotFound();
     }
 }
