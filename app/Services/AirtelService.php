@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class AirtelService
 {
@@ -21,8 +20,8 @@ class AirtelService
     public function getAccessToken()
     {
         $response = Http::asJson()->post("{$this->baseUrl}/auth/oauth2/token", [
-            'grant_type'    => 'client_credentials',
-            'client_id'     => $this->clientId,
+            'grant_type' => 'client_credentials',
+            'client_id' => $this->clientId,
             'client_secret' => $this->clientSecret,
         ]);
 
@@ -32,28 +31,24 @@ class AirtelService
             return $data['access_token'];
         }
 
-        throw new \Exception("Failed to obtain Airtel access token: " . json_encode($data));
+        throw new \Exception('Failed to obtain Airtel access token: '.json_encode($data));
     }
 
     /**
-     * KYC Lookup - Fetch user details by MSISDN
+     * KYC lookup only. Airtel money movement is intentionally not implemented in OpFin.
      */
     public function getKycInfo(string $msisdn)
     {
         $token = $this->getAccessToken();
-
-        // Ensure msisdn is without country code prefix like 256
         $cleanMsisdn = str($msisdn)->after('256')->toString();
-
         $url = "{$this->baseUrl}/standard/v1/users/{$cleanMsisdn}";
 
         $response = Http::withHeaders([
-            'Accept'      => '*/*',
+            'Accept' => '*/*',
             'Authorization' => "Bearer {$token}",
-            'X-Country'   => config('services.airtel.country', 'UG'),
-            'X-Currency'  => config('services.airtel.currency', 'UGX'),
-        ])
-            ->get($url);
+            'X-Country' => config('services.airtel.country', 'UG'),
+            'X-Currency' => config('services.airtel.currency', 'UGX'),
+        ])->get($url);
 
         if ($response->failed()) {
             return [
@@ -61,28 +56,6 @@ class AirtelService
                 'message' => 'Request failed',
                 'response' => $response->body(),
             ];
-        }
-
-        return $response->json();
-    }
-
-    public function getBalance(): array
-    {
-        $baseUrl = config('services.airtel.base_url');
-        $token = $this->getAccessToken();
-
-        $response = Http::withHeaders([
-            'Accept'        => 'application/json',
-            'Authorization' => "Bearer {$token}",
-            'X-Country'     => config('services.airtel.country', 'UG'),
-            'X-Currency'    => config('services.airtel.currency', 'UGX'),
-            'type'          => 'COLL',
-        ])->get("{$baseUrl}/standard/v1/users/balance");
-
-        if (!$response->successful()) {
-            throw new \Exception(
-                'Failed to fetch Airtel balance: ' . $response->body()
-            );
         }
 
         return $response->json();
