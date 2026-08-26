@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CapabilityController;
 use App\Http\Controllers\Api\CpayWebhookController;
 use App\Http\Controllers\Api\CustomerSupportController;
+use App\Http\Controllers\Api\FinancialWellbeingController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\InvestorDemoController;
@@ -41,6 +42,25 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
     Route::get('/capabilities', [CapabilityController::class, 'index']);
+
+    Route::get('/financial-compass', [FinancialWellbeingController::class, 'compass']);
+    Route::get('/financial-categories', [FinancialWellbeingController::class, 'categories']);
+    Route::get('/financial-accounts', [FinancialWellbeingController::class, 'accounts']);
+    Route::post('/financial-accounts', [FinancialWellbeingController::class, 'storeAccount']);
+    Route::patch('/financial-accounts/{account}', [FinancialWellbeingController::class, 'updateAccount']);
+    Route::delete('/financial-accounts/{account}', [FinancialWellbeingController::class, 'destroyAccount']);
+    Route::get('/budgets', [FinancialWellbeingController::class, 'budgets']);
+    Route::post('/budgets', [FinancialWellbeingController::class, 'storeBudget']);
+    Route::patch('/budgets/{budget}', [FinancialWellbeingController::class, 'updateBudget']);
+    Route::delete('/budgets/{budget}', [FinancialWellbeingController::class, 'destroyBudget']);
+    Route::get('/cash-flow', [FinancialWellbeingController::class, 'cashFlow']);
+    Route::post('/cash-flow/entries', [FinancialWellbeingController::class, 'storeEntry']);
+    Route::patch('/cash-flow/entries/{entry}', [FinancialWellbeingController::class, 'updateEntry']);
+    Route::get('/financial-calendar', [FinancialWellbeingController::class, 'calendar']);
+    Route::post('/financial-calendar/events', [FinancialWellbeingController::class, 'storeCalendarEvent']);
+    Route::patch('/financial-calendar/events/{event}', [FinancialWellbeingController::class, 'updateCalendarEvent']);
+    Route::delete('/financial-calendar/events/{event}', [FinancialWellbeingController::class, 'destroyCalendarEvent']);
+
     Route::get('/support-cases', [CustomerSupportController::class, 'index']);
     Route::post('/support-cases', [CustomerSupportController::class, 'store']);
     Route::post('/validate-nin', [NinValidationController::class, 'validateNin']);
