@@ -5,9 +5,23 @@ export default function MorePage() {
   return (
     <Screen
       title="More"
-      description="Manage verification, permissions, protection and help without crowding the main financial journeys."
+      description="Manage your money plan, calendar, verification, permissions, protection and help without crowding the five main journeys."
     >
       <div className="grid grid-3">
+        <JourneyCard
+          title="Money plan & budgets"
+          description="Record current balances, review safe-to-spend, set category budgets and correct cash-flow categories."
+          href="/money"
+          action="Open money plan"
+          status="available"
+        />
+        <JourneyCard
+          title="Financial calendar"
+          description="See confirmed, scheduled and estimated future cash events, including OpFin loan obligations."
+          href="/calendar"
+          action="Open calendar"
+          status="available"
+        />
         <JourneyCard
           title="Identity & KYC"
           description="Review your verification status and continue an incomplete identity check."
@@ -24,10 +38,10 @@ export default function MorePage() {
         />
         <JourneyCard
           title="Protection"
-          description="Insurance discovery, policies and claims will remain clearly separate from borrowing and will never be silently preselected."
+          description="Review insurance products, policies and claims separately from borrowing. Optional cover is never silently preselected."
           href="/insurance"
           action="Open protection"
-          status="planned"
+          status="pilot"
         />
         <JourneyCard
           title="Support"
