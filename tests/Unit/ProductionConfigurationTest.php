@@ -31,10 +31,10 @@ class ProductionConfigurationTest extends TestCase
         ]);
     }
 
-    public function test_blocks_mock_mobile_money_provider_in_production(): void
+    public function test_blocks_non_cpay_money_movement_provider_in_production(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('MOBILE_MONEY_PROVIDER=mock is not allowed in production.');
+        $this->expectExceptionMessage('Production money movement must use CPay. Set MOBILE_MONEY_PROVIDER=cpay; direct MTN/Airtel/mock routing is not allowed in OpFin.');
 
         ProductionConfiguration::assertSafe(true, [
             'app_debug' => false,
@@ -50,7 +50,7 @@ class ProductionConfigurationTest extends TestCase
 
         ProductionConfiguration::assertSafe(true, [
             'app_debug' => false,
-            'mobile_money_provider' => 'mtn',
+            'mobile_money_provider' => 'cpay',
             'enable_demo_routes' => true,
         ]);
     }

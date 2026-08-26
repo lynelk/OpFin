@@ -19,8 +19,11 @@ class ProductionConfiguration
             throw new RuntimeException('APP_DEBUG must be false in production.');
         }
 
-        if (($config['mobile_money_provider'] ?? null) === 'mock') {
-            throw new RuntimeException('MOBILE_MONEY_PROVIDER=mock is not allowed in production.');
+        $provider = strtolower(trim((string) ($config['mobile_money_provider'] ?? '')));
+        if ($provider !== 'cpay') {
+            throw new RuntimeException(
+                'Production money movement must use CPay. Set MOBILE_MONEY_PROVIDER=cpay; direct MTN/Airtel/mock routing is not allowed in OpFin.'
+            );
         }
 
         if (($config['enable_demo_routes'] ?? false) === true) {

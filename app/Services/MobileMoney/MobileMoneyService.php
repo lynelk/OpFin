@@ -120,7 +120,7 @@ class MobileMoneyService
 
     private function startTransaction(string $direction, array $attributes, ?string $providerName): MobileMoneyTransaction
     {
-        $providerName ??= config('services.mobile_money.default_provider', 'mock');
+        $providerName ??= config('services.mobile_money.default_provider', 'cpay');
         $idempotencyKey = Arr::get($attributes, 'idempotency_key');
 
         if (! $idempotencyKey) {
@@ -204,13 +204,24 @@ class MobileMoneyService
         $query = MobileMoneyTransaction::where('provider', $providerName);
 
         if ($providerName === 'cpay') {
-            $merchantReference = data_get($payload, 'data.merchant_reference');
-            $query->where(function ($inner) use ($providerReference, $merchantReference) {
-                if ($providerReference) {
-                    $inner->where('provider_reference', $providerReference);
+            $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+            $merchantReference = $payload['reference']
+                ?? $payload['merchantReference']
+                ?? $payload['merchant_reference']
+                ?? $data['merchantReference']
+                ?? $data['merchant_reference']
+                ?? null;
+            $transactionId = $payload['transactionId']
+                ?? $payload['transaction_id']
+                ?? $data['transactionId']
+                ?? $data['transaction_id']
+                ?? $providerReference;
+            $query->where(function ($inner) use ($transactionId, $merchantReference) {
+                if ($transactionId) {
+                    $inner->where('provider_reference', $transactionId);
                 }
                 if ($merchantReference) {
-                    if ($providerReference) {
+                    if ($transactionId) {
                         $inner->orWhere('internal_reference', $merchantReference);
                     } else {
                         $inner->where('internal_reference', $merchantReference);
