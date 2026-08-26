@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\SaveProtectionOperationsController;
 use App\Http\Controllers\Api\SaveProtectionWorkQueueController;
 use App\Http\Controllers\Api\SavingsController;
 use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\V5P0PlatformController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'show']);
@@ -35,13 +36,21 @@ Route::middleware('throttle:auth')->group(function () {
     Route::post('/generate-otp', [AuthController::class, 'generateOtp']);
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
 });
-Route::post('/handleCallback', [TransactionController::class, 'handleCallback'])->middleware('throttle:webhooks')->name('handleCallback');
 Route::post('/webhooks/cpay', CpayWebhookController::class)->middleware('throttle:webhooks')->name('webhooks.cpay');
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
     Route::get('/capabilities', [CapabilityController::class, 'index']);
+
+    Route::get('/security-centre', [V5P0PlatformController::class, 'security']);
+    Route::patch('/security-centre', [V5P0PlatformController::class, 'updateSecurity']);
+    Route::get('/credit-builder', [V5P0PlatformController::class, 'creditBuilder']);
+    Route::put('/credit-builder', [V5P0PlatformController::class, 'saveCreditBuilder']);
+    Route::get('/hardship', [V5P0PlatformController::class, 'hardship']);
+    Route::post('/hardship', [V5P0PlatformController::class, 'openHardship']);
+    Route::get('/financial-passport', [V5P0PlatformController::class, 'passport']);
+    Route::get('/reconciliation/summary', [V5P0PlatformController::class, 'reconciliation']);
 
     Route::get('/financial-compass', [FinancialWellbeingController::class, 'compass']);
     Route::get('/financial-categories', [FinancialWellbeingController::class, 'categories']);
@@ -91,7 +100,6 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/protection/policies/{policy}/claims', [ProtectionController::class, 'submitClaim']);
     Route::post('/protection/claims/{claim}/dispute', [ProtectionController::class, 'disputeClaim']);
 
-    // Safe compatibility alias. Legacy clients may submit here, but application intake never disburses funds.
     Route::post('/loan-applications', [ProductionLoanApplicationController::class, 'store']);
     Route::get('/loan-applications/{user}', [LoanApplicationController::class, 'index']);
     Route::get('/loan-balance/{user}', [LoanApplicationController::class, 'getLoanBalance']);
@@ -121,6 +129,17 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::post('/admin/hardship/{case}/approve', [V5P0PlatformController::class, 'approveHardship']);
+    Route::post('/admin/product-factory/products', [V5P0PlatformController::class, 'createProduct']);
+    Route::post('/admin/product-factory/products/{product}/transition', [V5P0PlatformController::class, 'transitionProduct']);
+    Route::post('/admin/rules', [V5P0PlatformController::class, 'createRule']);
+    Route::post('/admin/rules/{rule}/approve', [V5P0PlatformController::class, 'approveRule']);
+    Route::post('/admin/rules/evaluate', [V5P0PlatformController::class, 'evaluateRules']);
+    Route::post('/admin/workflows', [V5P0PlatformController::class, 'createWorkflow']);
+    Route::post('/admin/workflows/{workflow}/approve', [V5P0PlatformController::class, 'approveWorkflow']);
+    Route::post('/admin/workflows/{workflow}/runs', [V5P0PlatformController::class, 'startWorkflow']);
+    Route::post('/admin/workflow-runs/{run}/transition', [V5P0PlatformController::class, 'transitionWorkflow']);
+
     Route::post('/admin/credit-decisions/{decision}/approve', [ProductionCreditController::class, 'approve']);
     Route::post('/admin/credit/applications/{application}/offer', [ProductionCreditOfferController::class, 'store']);
     Route::post('/admin/mobile-money-transactions/{transaction}/refresh-status', [ProductionPaymentOperationsController::class, 'refreshStatus']);
@@ -162,6 +181,3 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/compliance-reports', [ProductionOperationsController::class, 'createComplianceReport']);
     Route::post('/admin/compliance-reports/{report}/exports', [ProductionOperationsController::class, 'createComplianceExport']);
 });
-
-Route::post('/airtel-callback', [TransactionController::class, 'airtelCallback'])->middleware('throttle:webhooks');
-Route::post('/mtn-callback', [TransactionController::class, 'mtnCallback'])->middleware('throttle:webhooks');
