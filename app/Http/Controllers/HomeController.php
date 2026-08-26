@@ -8,12 +8,7 @@ use App\Models\LoanApplication;
 use App\Models\LoanProduct;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Services\AirtelService;
-use App\Services\MtnMomoService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 
 class HomeController extends Controller
 {
@@ -34,23 +29,6 @@ class HomeController extends Controller
      */
     public function index()
     {
-        $airtel = new AirtelService();
-        try {
-            $airtelResponse = $airtel->getBalance();
-            $airtelBalance =  $airtelResponse['data']['balance'] ?? null;
-        } catch (\Throwable $e) {
-            Log::error('Error fetching Airtel balance: ' . $e->getMessage());
-            $airtelBalance = 0;
-        }
-
-        $mtn = new MtnMomoService();
-        try {
-            $mtnResponse = $mtn->getBalance('collection');
-            $mtnBalance = $mtnResponse['balance'] ?? null;
-        } catch (\Throwable $e) {
-            Log::error('Error fetching MTN MoMo balance: ' . $e->getMessage());
-            $mtnBalance = 0;
-        }
         return view('home', [
             'institutionCount' => Institution::count(),
             'loansCount' => Loan::count(),
@@ -58,11 +36,9 @@ class HomeController extends Controller
             'adminCount' => User::where('role', 'Admin')->count(),
             'loanProductCount' => LoanProduct::count(),
             'activeLoanProducts' => LoanProduct::where('status', 'Active')->count(),
-            // Add more statistics as needed
             'recentApplications' => LoanApplication::latest()->take(5)->get(),
             'recentTransactions' => Transaction::latest()->take(5)->get(),
-            'airtelBalance' => $airtelBalance,
-            'mtnBalance' => $mtnBalance,
+            'paymentBoundary' => 'CPay',
         ]);
     }
 
@@ -71,7 +47,6 @@ class HomeController extends Controller
         $months = [];
         $userCounts = [];
 
-        // Last 6 months data
         for ($i = 5; $i >= 0; $i--) {
             $date = Carbon::now()->subMonths($i);
             $monthYear = $date->format('M Y');
@@ -84,7 +59,7 @@ class HomeController extends Controller
 
         return response()->json([
             'labels' => $months,
-            'data' => $userCounts
+            'data' => $userCounts,
         ]);
     }
 
@@ -94,7 +69,6 @@ class HomeController extends Controller
         $loanCounts = [];
         $amounts = [];
 
-        // Last 6 months data
         for ($i = 5; $i >= 0; $i--) {
             $date = Carbon::now()->subMonths($i);
             $monthYear = $date->format('M Y');
@@ -111,7 +85,7 @@ class HomeController extends Controller
         return response()->json([
             'labels' => $months,
             'counts' => $loanCounts,
-            'amounts' => $amounts
+            'amounts' => $amounts,
         ]);
     }
 }
