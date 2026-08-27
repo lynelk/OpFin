@@ -3,6 +3,8 @@
 namespace App\Services\MobileMoney;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 
 class WebhookSignatureValidator
 {
@@ -77,7 +79,47 @@ class WebhookSignatureValidator
         ]);
         $expected = base64_encode(hash_hmac('sha256', $canonical, $secret, true));
 
-        return hash_equals($expected, $signature);
+        if (! hash_equals($expected, $signature)) {
+            return false;
+        }
+
+        return $this->consumeCpayNonce(
+            merchantId: $merchantId,
+            taskId: $taskId,
+            nonce: $nonce,
+            replayWindowSeconds: $replayWindowSeconds,
+        );
+    }
+
+    private function consumeCpayNonce(
+        string $merchantId,
+        string $taskId,
+        string $nonce,
+        int $replayWindowSeconds,
+    ): bool {
+        $now = CarbonImmutable::now('UTC');
+
+        // CPay signs every delivery attempt with a fresh nonce. Persisting consumed nonces makes
+        // an intercepted, otherwise-valid callback unusable for replay inside the timestamp window.
+        // Duplicate CPay events remain safe because a legitimate retry is newly signed and is then
+        // deduplicated by webhook_event_id in MobileMoneyService.
+        try {
+            DB::table('cpay_webhook_nonces')
+                ->where('expires_at', '<', $now)
+                ->delete();
+
+            DB::table('cpay_webhook_nonces')->insert([
+                'merchant_id' => $merchantId,
+                'callback_task_id' => $taskId,
+                'nonce' => $nonce,
+                'expires_at' => $now->addSeconds(max(1, $replayWindowSeconds)),
+                'created_at' => $now,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            return false;
+        }
+
+        return true;
     }
 
     private function header(array $headers, string $name): ?string
