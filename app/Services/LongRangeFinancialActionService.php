@@ -17,11 +17,38 @@ class LongRangeFinancialActionService
         private readonly AuditLogger $auditLogger,
     ) {}
 
+    public function createForSource(User $user, string $sourceType, int $sourceId, int $amountMinor, string $idempotencyKey): object
+    {
+        if ($sourceType === 'participatory_commitment') {
+            $source = DB::table('participatory_finance_commitments')->where('id', $sourceId)->where('investor_user_id', $user->id)->first();
+            if (! $source || $source->status !== 'awaiting_step_up') {
+                throw ValidationException::withMessages(['source_id' => ['Participatory commitment is not eligible for payment.']]);
+            }
+            if ((int) $source->amount_minor !== $amountMinor) {
+                throw ValidationException::withMessages(['amount_minor' => ['Amount must match the approved commitment exactly.']]);
+            }
+            return $this->createIntent($user, 'participatory_fund', $sourceType, $sourceId, $amountMinor, $idempotencyKey);
+        }
+
+        if ($sourceType === 'asset_finance_deposit') {
+            $source = DB::table('asset_finance_requests')->where('id', $sourceId)->where('user_id', $user->id)->first();
+            if (! $source || $source->status !== 'approved') {
+                throw ValidationException::withMessages(['source_id' => ['Asset-finance request is not approved for deposit collection.']]);
+            }
+            if ((int) $source->deposit_minor <= 0 || (int) $source->deposit_minor !== $amountMinor) {
+                throw ValidationException::withMessages(['amount_minor' => ['Amount must match the approved asset-finance deposit.']]);
+            }
+            return $this->createIntent($user, 'asset_finance_deposit', $sourceType, $sourceId, $amountMinor, $idempotencyKey);
+        }
+
+        throw ValidationException::withMessages(['source_type' => ['Unsupported long-range financial source.']]);
+    }
+
     public function createIntent(User $user, string $actionType, string $sourceType, int $sourceId, int $amountMinor, string $idempotencyKey): object
     {
         $existing = DB::table('financial_action_intents')->where('idempotency_key', $idempotencyKey)->first();
         if ($existing) {
-            if ($existing->user_id !== $user->id || $existing->amount_minor !== $amountMinor || $existing->source_type !== $sourceType || $existing->source_id !== $sourceId) {
+            if ((int) $existing->user_id !== (int) $user->id || (int) $existing->amount_minor !== $amountMinor || $existing->source_type !== $sourceType || (int) $existing->source_id !== $sourceId) {
                 throw ValidationException::withMessages(['idempotency_key' => ['Idempotency key was already used for a different financial instruction.']]);
             }
             return $existing;
@@ -93,7 +120,7 @@ class LongRangeFinancialActionService
         ]);
 
         if ($status === 'settled') {
-            $this->applySettlement($intent);
+            DB::transaction(fn () => $this->applySettlement($intent));
         }
 
         $this->auditLogger->record('long_range.financial_intent.confirmed', $user, null, ['reference' => $reference, 'provider_status' => $transaction->status]);
@@ -151,8 +178,16 @@ class LongRangeFinancialActionService
             if (! $commitment || $commitment->status === 'settled') {
                 return;
             }
+            $listing = DB::table('participatory_finance_listings')->where('id', $commitment->listing_id)->lockForUpdate()->first();
+            if (! $listing || ((int) $listing->funded_amount_minor + (int) $commitment->amount_minor) > (int) $listing->target_amount_minor) {
+                throw ValidationException::withMessages(['listing' => ['Settlement would overfund the listing and requires operations review.']]);
+            }
             DB::table('participatory_finance_commitments')->where('id', $commitment->id)->update(['status' => 'settled', 'payment_reference' => $intent->reference, 'settled_at' => now(), 'updated_at' => now()]);
-            DB::table('participatory_finance_listings')->where('id', $commitment->listing_id)->increment('funded_amount_minor', $commitment->amount_minor, ['updated_at' => now()]);
+            DB::table('participatory_finance_listings')->where('id', $commitment->listing_id)->update([
+                'funded_amount_minor' => (int) $listing->funded_amount_minor + (int) $commitment->amount_minor,
+                'status' => ((int) $listing->funded_amount_minor + (int) $commitment->amount_minor) === (int) $listing->target_amount_minor ? 'funded' : 'funding',
+                'updated_at' => now(),
+            ]);
         }
 
         if ($intent->source_type === 'asset_finance_deposit') {
