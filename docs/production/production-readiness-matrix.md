@@ -2,61 +2,47 @@
 
 Date: 2026-08-31
 
-This matrix replaces the stale May 2026 snapshot. Statuses are intentionally conservative: **Available** means the product surface and backend control exist; **Pilot** means the journey is built but still depends on provider, regulatory, certification or limited-release controls; **Planned** means it must not be represented as live.
+**Available** means the OpFin software journey, persistent control model, authorization boundary and operational evidence path exist. Where a licensed provider, regulator, telco, employer, custodian or production credential is required, the capability remains externally gated even though the software implementation is available. This distinction prevents code completion from being misrepresented as regulatory or commercial authorization.
 
-| Capability | Frontend status | Backend/control status | Production verdict |
-| --- | --- | --- | --- |
-| Phone-first registration and OTP proof | Available | Available | Production foundation present; OTP proof is required before registration. |
-| Progressive activation | Available | Available | Account-scoped activation progress and primary goal are implemented. |
-| Route protection and RBAC | Available | Available | Frontend route guards plus backend authorization; backend remains source of truth. |
-| Customer navigation | Available | N/A | Five permanent customer areas only: Home, Borrow, Save, Grow, More. |
-| Financial Compass / Home | Available | Available | Next-best-action, financial position, safe-to-spend, commitments, goals and calendar are implemented. |
-| Budgeting / money plan | Available | Available | Budgeting and recorded cash-flow journeys are implemented; linked-account auto-ingestion remains planned. |
-| Financial calendar | Available | Available | Confirmed/scheduled/estimated event distinctions are implemented. |
-| KYC | Pilot | Pilot | Central KYC journey exists; live provider evidence/certification remains provider-dependent. |
-| Consent management | Available | Available | Purpose-specific grant/revoke and auditability are implemented. |
-| Security Centre | Available | Available | Security controls and account-security activity are implemented. |
-| Financial Passport | Available | Available | Provenance-labelled consolidated snapshot is implemented. |
-| Responsible borrowing | Pilot | Pilot | Eligibility, affordability, decision/offer, repayment schedule, repayment servicing and hardship foundations exist; live product approvals/certification remain launch gates. |
-| Repayments | Pilot | Pilot | Production repayment service and customer repayment/account views exist; provider finality remains CPay-controlled. |
-| Credit Builder | Available | Available | Improvement-plan logic uses confirmed behaviour and avoids fabricated bureau scores. |
-| Financial Shock / hardship | Available | Available | Guided hardship intake and maker-checker approval are implemented. |
-| Savings | Pilot | Pilot | Products, contributions, withdrawals and operating controls exist; partner funds-flow certification is still required. |
-| Insurance / protection | Pilot | Pilot | Product, enrolment, premiums and claims journeys exist; insurer activation remains external. |
-| Investments | Pilot | Pilot | Suitability and approved-product order flow exist; live custody/settlement partner remains external. |
-| Employer services | Pilot | Pilot | Employer membership and benefit-programme workflows exist; live payroll/employer integrations remain external. |
-| Money Autopilot | Pilot | Pilot | User-authorised rules and execution logs exist; financial actions remain provider/finality governed. |
-| WhatsApp | Pilot | Pilot | Secure session, dedicated OTP, signed/replay-protected webhook model and audited journeys exist; Meta credentials are required for live delivery. |
-| Support | Pilot | Pilot | Case creation/reference/status foundation exists; continue expanding SLA automation and knowledge routing. |
-| Platform Autopilot | Available | Pilot | Exception-first control centre exists; expand autonomous actions only after evidence and policy approval. |
-| Regulatory reporting | Available | Available | Auto-generated regulator evidence packs, validation, hashing and maker-checker approval exist. |
-| Financial integrity / self-audit | Available | Available | Continuous ledger/reconciliation integrity checks and persistent high-impact exceptions exist. |
-| Reconciliation | Available | Available / CPay-owned movement | OpFin monitors evidence and exceptions; CPay remains canonical payment execution/reconciliation owner. |
-| Product Factory | Available | Available | Versioned product lifecycle and maker-checker governance exist. |
-| Rules Engine | Available | Available | Versioned decision rules and independent approval exist. |
-| Workflow Engine | Available | Available | Versioned workflow definitions and approval exist. |
-| SACCO/community finance | Planned | Planned | Do not market as live. |
-| P2P/participatory finance | Planned | Planned | Do not market as live until lender-of-record, custody, settlement, disclosures and complaints model are approved. |
-| Capital/private loan books | Planned | Planned | Do not market as live. |
-| USSD | Planned | Planned | Do not market as live until telco/aggregator channel and secure session adapter are certified. |
-| Linked accounts | Planned | Planned | Do not treat external balances as confirmed until provider integrations and freshness/provenance rules exist. |
-| Rewards/referrals | Planned | Planned | Do not market as live until abuse controls and ledger-backed reward accounting exist. |
-| Asset/device finance | Planned | Planned | Do not market as live until product, privacy, geolocation and servicing controls are approved. |
-| Offline-aware mode | Planned | Planned | Financial state remains server-authoritative; safe offline boundaries still need implementation. |
-| Household finance | Planned | Planned | Separate financial context and policy model still required. |
-| Microbusiness finance | Planned | Planned | Separate categorisation, risk and product policy still required. |
-| Accessibility | Partial / improving | N/A | Responsive semantic structure exists; formal WCAG audit remains a release-quality improvement. |
-| Mobile responsiveness | Available / tested in CI build | N/A | Web responsive shell and Flutter Android release build are part of CI; broader real-device UAT remains recommended. |
-| Tests/build | Available | Available | Frontend and backend CI pipelines are required release gates. |
+| Capability | Software status | External activation gate / production rule |
+| --- | --- | --- |
+| Phone-first registration, OTP, security, RBAC | Available | Production security policy remains mandatory. |
+| Progressive activation / Financial Compass / budgeting / calendar | Available | None beyond normal production operations. |
+| KYC | Available | Identity-provider production credentials and certification. |
+| Consent / Passport / Credit Builder / hardship | Available | Product/legal policy versions must remain current. |
+| Responsible borrowing and repayments | Available | Licensed product/funding configuration; CPay provider finality. |
+| Savings | Available | Licensed savings partner products and certified CPay/provider funds flow. |
+| Insurance / protection | Available | Licensed insurer/underwriter product activation and issuance. |
+| Investments | Available | Licensed investment provider, custody and settlement. |
+| Employer services | Available | Employer/payroll integration for live payroll deductions or verification. |
+| Money Autopilot | Available | Certified mandates for any automatic money movement. |
+| WhatsApp | Available | Meta production credentials. High-impact actions still require step-up. |
+| USSD | Available | Telco/aggregator shortcode and callback configuration; sensitive actions redirect to secure authentication. |
+| Linked bank/mobile-money/other accounts | Available | Provider API or authorised data connection before provider-confirmed status. |
+| Offline-aware mode | Available | Server remains authoritative; replay is hashed/idempotent and conflicts require review. |
+| Household finance | Available | None beyond applicable product policy. |
+| Microbusiness finance | Available | None beyond applicable product policy. |
+| SACCO / VSLA / community finance | Available | Institution integration and independent membership verification. |
+| Asset/device finance | Available | Asset supplier and licensed finance product activation. Deposit movement requires approval, step-up and CPay. |
+| P2P / participatory finance | Available | Lender-of-record, custody, settlement and regulatory approval. Compliance approval requires loss, fee and custody disclosures. |
+| Capital / private loan books | Available | Capital provider and regulatory activation; mandate requires independent approval and investment policy. |
+| Partner distribution | Available | Partner due diligence, contract and production credentials; allowed products are explicitly scoped. |
+| Rewards / referrals | Available | Reward only after identity/eligibility and anti-abuse review; posting is controlled and ledger-backed. |
+| Product Factory / Rules / Workflow | Available | Maker-checker/version controls remain mandatory. |
+| Platform Autopilot | Available | High-impact work remains human-controlled unless separately approved. |
+| Regulatory reporting | Available | Filing/submission still requires the responsible regulated officer where applicable. |
+| Reconciliation / financial integrity self-audit | Available | Continuous exceptions remain persistent; never auto-balance evidence away. |
+| Customer support | Available | SLA and operating team capacity remain operational obligations. |
+| Accessibility | Improving | Formal WCAG audit and assistive-technology UAT remain release-quality controls. |
+| Web / Flutter Android build | Available | Real-device and store-distribution certification remain delivery controls. |
+| Backup / recovery | Infrastructure gate | Production backup, PITR and restore-drill evidence remain a separate infrastructure release requirement. |
 
-## Production release rule
+## Long-range operating rules
 
-A capability is not considered production-ready merely because a route exists. Regulated or money-changing capabilities require the relevant legal/regulatory approval, provider credentials, product version approval, KYC/consent controls, financial calculation testing, CPay certification, reconciliation evidence, support readiness, monitoring, backup/restore evidence, disclosures, maker-checker controls, audit retention and go/no-go approval.
-
-## Customer simplicity rule
-
-- One primary next action on Home.
-- Four clear financial choices: Borrow, Save, Grow, Protect.
-- Setup, security, automation and support live under More.
-- KYC and consent are contextual controls, not permanent primary destinations.
-- Planned capabilities must not appear as live journeys.
+1. Customer navigation stays **Home, Borrow, Save, Grow, More**. Long-range capabilities live in one **Connected financial life** workspace rather than expanding primary navigation.
+2. OpFin owns identity, consent, eligibility, product, workflow and financial relationship state. CPay/Cito remains the canonical money-movement and payment-finality boundary.
+3. No provider balance, membership, payment or settlement is labelled confirmed without provider evidence.
+4. High-impact financial actions use idempotency, fresh step-up authentication, explicit CPay execution and asynchronous provider finality.
+5. Maker-checker applies to asset finance, linked-account verification, community membership, participatory finance, capital, partner activation and reward authorization.
+6. Offline capture cannot overwrite server truth. Reused batch identifiers with changed payloads are rejected and unresolved conflicts enter operations review.
+7. External activation gates are first-class capability metadata, not footnotes hidden in documentation.
