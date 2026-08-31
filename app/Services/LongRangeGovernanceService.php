@@ -13,6 +13,15 @@ class LongRangeGovernanceService
 
     public function dashboard(): array
     {
+        $linked = DB::table('linked_financial_accounts')->where('status', 'pending_verification')->latest('id')->limit(50)->get();
+        $assets = DB::table('asset_finance_requests')->where('status', 'submitted')->latest('id')->limit(50)->get();
+        $community = DB::table('community_finance_memberships')->where('status', 'pending_verification')->latest('id')->limit(50)->get();
+        $participatory = DB::table('participatory_finance_listings')->where('status', 'awaiting_compliance_review')->latest('id')->limit(50)->get();
+        $capital = DB::table('capital_mandates')->where('status', 'awaiting_compliance_review')->latest('id')->limit(50)->get();
+        $partners = DB::table('partner_distribution_accounts')->where('status', 'pending_due_diligence')->latest('id')->limit(50)->get();
+        $referrals = DB::table('referral_events')->where('status', 'pending')->latest('id')->limit(50)->get();
+        $offline = DB::table('offline_sync_batches')->where('status', 'needs_review')->latest('id')->limit(50)->get();
+
         return [
             'linked_accounts_pending' => DB::table('linked_financial_accounts')->where('status', 'pending_verification')->count(),
             'asset_finance_pending' => DB::table('asset_finance_requests')->where('status', 'submitted')->count(),
@@ -24,7 +33,20 @@ class LongRangeGovernanceService
             'financial_intents_awaiting_step_up' => DB::table('financial_action_intents')->where('status', 'awaiting_step_up')->count(),
             'financial_intents_processing' => DB::table('financial_action_intents')->where('status', 'provider_processing')->count(),
             'offline_conflicts' => DB::table('offline_sync_batches')->where('status', 'needs_review')->count(),
-            'external_activation_gates' => collect(config('opfin.capabilities'))->filter(fn ($capability) => isset($capability['external_gate']))->map(fn ($capability) => $capability['external_gate'])->values(),
+            'queues' => [
+                'linked_accounts' => $linked,
+                'asset_finance' => $assets,
+                'community_memberships' => $community,
+                'participatory_listings' => $participatory,
+                'capital_mandates' => $capital,
+                'partners' => $partners,
+                'referrals' => $referrals,
+                'offline_conflicts' => $offline,
+            ],
+            'external_activation_gates' => collect(config('opfin.capabilities'))
+                ->filter(fn ($capability) => isset($capability['external_gate']))
+                ->map(fn ($capability, $code) => ['capability' => $code, 'gate' => $capability['external_gate']])
+                ->values(),
         ];
     }
 
@@ -32,7 +54,7 @@ class LongRangeGovernanceService
     {
         $record = DB::table('linked_financial_accounts')->find($id);
         $this->assertRecord($record, 'Linked account');
-        if ($record->user_id === $actor->id) {
+        if ((int) $record->user_id === (int) $actor->id) {
             throw ValidationException::withMessages(['id' => ['Maker-checker requires a different verifier.']]);
         }
         DB::table('linked_financial_accounts')->where('id', $id)->update([
@@ -51,7 +73,7 @@ class LongRangeGovernanceService
     {
         $record = DB::table('asset_finance_requests')->find($id);
         $this->assertRecord($record, 'Asset finance request');
-        if ($record->user_id === $actor->id) {
+        if ((int) $record->user_id === (int) $actor->id) {
             throw ValidationException::withMessages(['id' => ['Requester cannot approve their own asset-finance request.']]);
         }
         if (! in_array($record->status, ['submitted', 'under_review'], true)) {
@@ -78,7 +100,7 @@ class LongRangeGovernanceService
     {
         $record = DB::table('community_finance_memberships')->find($id);
         $this->assertRecord($record, 'Community membership');
-        if ($record->user_id === $actor->id) {
+        if ((int) $record->user_id === (int) $actor->id) {
             throw ValidationException::withMessages(['id' => ['Member cannot verify their own membership.']]);
         }
         DB::table('community_finance_memberships')->where('id', $id)->update([
@@ -96,7 +118,7 @@ class LongRangeGovernanceService
     {
         $record = DB::table('participatory_finance_listings')->find($id);
         $this->assertRecord($record, 'Participatory listing');
-        if ($record->borrower_user_id === $actor->id) {
+        if ((int) $record->borrower_user_id === (int) $actor->id) {
             throw ValidationException::withMessages(['id' => ['Borrower cannot approve their own listing.']]);
         }
         if ($data['status'] === 'approved' && empty($record->lender_of_record)) {
@@ -120,7 +142,7 @@ class LongRangeGovernanceService
     {
         $record = DB::table('capital_mandates')->find($id);
         $this->assertRecord($record, 'Capital mandate');
-        if ($record->owner_user_id === $actor->id) {
+        if ((int) $record->owner_user_id === (int) $actor->id) {
             throw ValidationException::withMessages(['id' => ['Mandate owner cannot approve their own mandate.']]);
         }
         if ($data['status'] === 'approved' && empty((array) json_decode($record->investment_policy ?? '[]', true))) {
@@ -140,7 +162,7 @@ class LongRangeGovernanceService
     {
         $record = DB::table('partner_distribution_accounts')->find($id);
         $this->assertRecord($record, 'Partner');
-        if ($record->created_by === $actor->id) {
+        if ((int) $record->created_by === (int) $actor->id) {
             throw ValidationException::withMessages(['id' => ['Partner maker cannot approve the same partner record.']]);
         }
         if ($data['status'] === 'approved' && empty((array) json_decode($record->allowed_products ?? '[]', true))) {
@@ -161,7 +183,7 @@ class LongRangeGovernanceService
         return DB::transaction(function () use ($actor, $id, $rewardMinor) {
             $record = DB::table('referral_events')->where('id', $id)->lockForUpdate()->first();
             $this->assertRecord($record, 'Referral event');
-            if ($record->referrer_user_id === $actor->id) {
+            if ((int) $record->referrer_user_id === (int) $actor->id) {
                 throw ValidationException::withMessages(['id' => ['Referrer cannot approve their own reward.']]);
             }
             if (! $record->referred_user_id || $record->event_type !== 'eligible') {
