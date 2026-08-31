@@ -45,6 +45,8 @@ return [
         'private_key' => env('CPAY_PRIVATE_KEY'),
         'callback_url' => env('CPAY_CALLBACK_URL'),
         'callback_secret' => env('CPAY_CALLBACK_SECRET'),
+        // Messaging is a separate CPay contract. No endpoint is guessed in production.
+        'sms_path' => env('CPAY_SMS_PATH'),
         'callback_replay_window_seconds' => (int) env('CPAY_CALLBACK_REPLAY_WINDOW_SECONDS', 300),
         'environment' => env('CPAY_ENVIRONMENT', 'sandbox'),
         'country' => env('CPAY_COUNTRY', 'UG'),
