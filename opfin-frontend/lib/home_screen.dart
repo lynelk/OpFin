@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:opfin/connected_financial_life_screen.dart';
 import 'package:opfin/faq_screen.dart';
 import 'package:opfin/loan_applications_screen.dart';
 import 'package:opfin/products_screen.dart';
@@ -23,6 +24,7 @@ class HomeScreenState extends State<HomeScreen> {
   static final List<Widget> _pages = <Widget>[
     const HomeWidget(),
     const LoanApplicationsScreen(),
+    const ConnectedFinancialLifeScreen(),
     const ProfileScreen(),
     const FaqsScreen(),
   ];
@@ -56,15 +58,10 @@ class HomeScreenState extends State<HomeScreen> {
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment),
-            label: 'Applications',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Borrow'),
+          BottomNavigationBarItem(icon: Icon(Icons.hub_outlined), label: 'Connected'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.help_outline),
-            label: 'FAQs',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.help_outline), label: 'Help'),
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -104,6 +101,7 @@ class _HomeWidgetState extends State<HomeWidget> {
     final prefs = await SharedPreferences.getInstance();
     final phone = await UserSession.getPhone();
     final ninStatus = await UserSession.getNinStatus();
+    if (!mounted) return;
     setState(() {
       _userName = prefs.getString('name') ?? "Guest User";
       _isVerified = ninStatus == 'VALID';
@@ -128,9 +126,11 @@ class _HomeWidgetState extends State<HomeWidget> {
       int rejected = data.where((a) => a['status'] == 'Rejected').length;
       int pending = data.where((a) => a['status'] == 'Pending').length;
       final recent = data.take(5).cast<Map<String, dynamic>>().toList();
-      setState(() {
-        _recentApplications = recent;
-      });
+      if (mounted) {
+        setState(() {
+          _recentApplications = recent;
+        });
+      }
       return {
         'total': total,
         'disbursed': disbursed,
@@ -154,6 +154,7 @@ class _HomeWidgetState extends State<HomeWidget> {
     );
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
+      if (!mounted) return;
       setState(() {
         _balance = data['outstandingAmount'];
       });
@@ -170,7 +171,6 @@ class _HomeWidgetState extends State<HomeWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 Greeting section
             Row(
               children: [
                 const CircleAvatar(
@@ -215,7 +215,6 @@ class _HomeWidgetState extends State<HomeWidget> {
 
             const SizedBox(height: 32),
 
-            // 🔹 Outstanding Balance Card
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -258,258 +257,113 @@ class _HomeWidgetState extends State<HomeWidget> {
               ),
             ),
 
-            // 🔹 Loan Stats
             const Text(
-              'Loan Applications',
+              "Loan Applications",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 18,
+                fontSize: 20,
                 color: Colors.black,
               ),
             ),
             const SizedBox(height: 16),
-
             FutureBuilder<Map<String, int>>(
               future: _statsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40),
-                    child: Center(
-                      child: CircularProgressIndicator(color: Colors.black),
-                    ),
-                  );
+                  return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40),
-                    child: Text(
-                      "Failed to load stats.",
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  return Text("Error: ${snapshot.error}");
+                } else if (snapshot.hasData) {
+                  final stats = snapshot.data!;
+                  return Row(
+                    children: [
+                      _buildStatCard("Total", stats['total'] ?? 0, Colors.blue),
+                      const SizedBox(width: 8),
+                      _buildStatCard("Pending", stats['pending'] ?? 0, Colors.orange),
+                      const SizedBox(width: 8),
+                      _buildStatCard("Disbursed", stats['disbursed'] ?? 0, Colors.green),
+                      const SizedBox(width: 8),
+                      _buildStatCard("Rejected", stats['rejected'] ?? 0, Colors.red),
+                    ],
                   );
-                } else if (!snapshot.hasData) {
-                  return const SizedBox();
                 }
-
-                final stats = snapshot.data!;
-
-                return GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 2.2,
-                  children: [
-                    _QuickInfoCard(
-                      label: "Total",
-                      value: "${stats['total'] ?? 0}",
-                      icon: Icons.list_alt,
-                      color: const Color(0xFF0D47A1), // Bold Royal Blue
-                    ),
-                    _QuickInfoCard(
-                      label: "Pending",
-                      value: "${stats['pending'] ?? 0}",
-                      icon: Icons.hourglass_empty,
-                      color: const Color(0xFFF9A825), // Bold Gold
-                    ),
-                    _QuickInfoCard(
-                      label: "Disbursed",
-                      value: "${stats['disbursed'] ?? 0}",
-                      icon: Icons.check_circle,
-                      color: const Color(0xFF2E7D32), // Bold Green
-                    ),
-                    _QuickInfoCard(
-                      label: "Rejected",
-                      value: "${stats['rejected'] ?? 0}",
-                      icon: Icons.cancel,
-                      color: const Color(0xFFC62828), // Bold Red
-                    ),
-                  ],
-                );
+                return const SizedBox();
               },
             ),
 
             const SizedBox(height: 32),
-
-            // 🔹 Recent Applications
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Recent Applications",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Colors.black,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: const Icon(Icons.monetization_on_outlined,
-                      color: Colors.white),
-                  label: const Text(
-                    'Apply',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ProductsScreen(),
-                      ),
-                    );
-                  },
-                )
-              ],
+            const Text(
+              "Recent Applications",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
             const SizedBox(height: 12),
-
             if (_recentApplications.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 10),
-                child: Text(
-                  "You haven't made any loan applications yet.",
-                  style: TextStyle(color: Colors.grey),
+              const Text("No recent applications.")
+            else
+              ..._recentApplications.map(
+                (app) => Card(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  child: ListTile(
+                    leading: const Icon(Icons.description_outlined),
+                    title: Text("Application #${app['id'] ?? ''}"),
+                    subtitle: Text("Status: ${app['status'] ?? 'Unknown'}"),
+                  ),
                 ),
               ),
 
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _recentApplications.length,
-              itemBuilder: (context, index) {
-                final app = _recentApplications[index];
-                return Container(
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ProductsScreen()),
+                  );
+                },
+                icon: const Icon(Icons.add),
+                label: const Text("Apply for a Loan"),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.assignment,
-                          color: Colors.black, size: 28),
-                      const SizedBox(width: 12),
-
-                      // Title + status
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Application #${app['id']}",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              "${app['status']}",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: app['status'] == 'Rejected'
-                                    ? Colors.red
-                                    : app['status'] == 'Pending'
-                                        ? Colors.orange
-                                        : app['status'] == 'Disbursed'
-                                            ? Colors.blue
-                                            : Colors.green,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Amount
-                      Text(
-                        app['amount'] != null
-                            ? "${formatter.format(int.parse(app['amount']))}/="
-                            : "",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                ),
+              ),
             ),
           ],
         ),
       ),
     );
   }
-}
 
-class _QuickInfoCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _QuickInfoCard({
-    required this.label,
-    this.value = '0',
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: .3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: color,
-                  ),
-                ),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
+  Widget _buildStatCard(String label, int count, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: .2)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              "$count",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+          ],
+        ),
       ),
     );
   }

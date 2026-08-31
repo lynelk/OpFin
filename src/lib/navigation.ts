@@ -10,8 +10,8 @@ export type NavItem = {
 };
 
 export const navigationItems: NavItem[] = [
-  // Customer navigation is intentionally journey-based. KYC, consent, decision, offer and
-  // repayment details remain reachable contextually but are not permanent top-level destinations.
+  // Customer navigation remains journey-based. Extended capabilities stay under More so the
+  // core five destinations do not expand every time the platform gains another rail or product.
   { href: "/dashboard", label: "Home", group: "customer" },
   { href: "/borrow", label: "Borrow", group: "customer" },
   { href: "/save", label: "Save", group: "customer" },
@@ -20,6 +20,7 @@ export const navigationItems: NavItem[] = [
 
   { href: "/admin/dashboard", label: "Operations overview", group: "admin", roles: ["platform_admin", "operations", "support"] },
   { href: "/admin/autopilot", label: "Platform Autopilot", group: "admin", roles: ["platform_admin", "operations"] },
+  { href: "/admin/long-range", label: "Extended finance", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/credit-review", label: "Credit review", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/save-protection", label: "Save & Protection", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/reconciliation", label: "Reconciliation", group: "admin", roles: ["platform_admin", "operations"] },
