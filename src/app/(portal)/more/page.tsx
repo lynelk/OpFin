@@ -21,8 +21,9 @@ export default function MorePage() {
       <section className="panel">
         <h2>Connected financial life</h2>
         <p className="muted">Bring household, business, community and provider context into one financial identity without adding clutter to Home, Borrow, Save or Grow.</p>
-        <div className="grid grid-3">
-          <JourneyCard title="Connected accounts & ecosystem" description="Link bank or mobile-money accounts, record household and microbusiness context, connect SACCO/VSLA membership, request asset finance and manage referrals from one workspace." href="/ecosystem" action="Open connected financial life" status="available" />
+        <div className="grid grid-2">
+          <JourneyCard title="Connected accounts & ecosystem" description="Link bank or mobile-money accounts, record household and microbusiness context, connect SACCO/VSLA membership and manage referrals from one workspace." href="/ecosystem" action="Open connected financial life" status="available" />
+          <JourneyCard title="Asset finance" description="Track requests and complete only independently approved deposits using fresh OTP step-up and governed CPay settlement." href="/asset-finance" action="Open asset finance" status="available" />
           <JourneyCard title="Participatory finance" description="Request financing or discover independently approved listings. Commitments require fresh step-up and CPay finality before funds are treated as settled." href="/participatory-finance" action="Open marketplace" status="available" />
           <JourneyCard title="OpFin on WhatsApp" description="Use verified WhatsApp for status, KYC, consent and support. Money and binding actions still require step-up." href="/whatsapp" action="Review WhatsApp access" status="available" />
         </div>
