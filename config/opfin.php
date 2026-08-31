@@ -32,11 +32,21 @@ return [
         'investments' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'household_finance' => ['status' => 'PLANNED', 'owner' => 'opfin'],
         'microbusiness' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'asset_finance' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'p2p_participatory_finance' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'rewards_referrals' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'linked_accounts' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+
+        // Inclusive and assisted channels
+        'whatsapp' => ['status' => 'PILOT', 'owner' => 'opfin'],
+        'ussd' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'offline_aware_mode' => ['status' => 'PLANNED', 'owner' => 'opfin'],
 
         // Institutional journeys
         'employer' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'sacco' => ['status' => 'PLANNED', 'owner' => 'opfin'],
         'capital' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'partner_distribution' => ['status' => 'PLANNED', 'owner' => 'opfin'],
 
         // Shared platform capabilities
         'payments' => ['status' => 'AVAILABLE', 'owner' => 'cpay'],
@@ -45,6 +55,8 @@ return [
         'workflow_engine' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'rules_engine' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'platform_autopilot' => ['status' => 'PILOT', 'owner' => 'opfin'],
+        'regulatory_reporting' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
+        'financial_integrity_audit' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
     ],
 
     'countries' => [
