@@ -138,23 +138,59 @@ class FinancialIntegrityService
                 ? DB::table('financial_integrity_alerts')->where('status', 'open')->where('severity', 'high')->count()
                 : 0,
             'platform_balanced' => $latest?->status === 'balanced',
-            'funds_integrity_rule' => 'Any imbalance, duplicate provider reference, or unreconciled successful payment is an exception and cannot be silently written off.',
+            'funds_integrity_rule' => 'Any imbalance, duplicate provider reference, or unreconciled successful payment is an exception and cannot be silently written off or auto-balanced away.',
         ];
     }
 
     private function alert(int $runId, string $severity, string $type, ?string $reference, string $description, array $evidence): array
     {
-        DB::table('financial_integrity_alerts')->insert([
-            'run_id' => $runId,
-            'severity' => $severity,
-            'type' => $type,
-            'reference' => $reference,
-            'description' => $description,
-            'status' => 'open',
-            'evidence' => json_encode($evidence),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $query = DB::table('financial_integrity_alerts')->where('status', 'open')->where('type', $type);
+        $reference === null ? $query->whereNull('reference') : $query->where('reference', $reference);
+        $existing = $query->first();
+
+        if ($existing) {
+            DB::table('financial_integrity_alerts')->where('id', $existing->id)->update([
+                'run_id' => $runId,
+                'severity' => $severity,
+                'description' => $description,
+                'evidence' => json_encode($evidence),
+                'updated_at' => now(),
+            ]);
+        } else {
+            DB::table('financial_integrity_alerts')->insert([
+                'run_id' => $runId,
+                'severity' => $severity,
+                'type' => $type,
+                'reference' => $reference,
+                'description' => $description,
+                'status' => 'open',
+                'evidence' => json_encode($evidence),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        if (Schema::hasTable('autopilot_work_items')) {
+            DB::table('autopilot_work_items')->updateOrInsert([
+                'domain' => 'financial_integrity',
+                'type' => $type,
+                'subject_type' => 'financial_integrity_alert',
+                'subject_reference' => $reference ?? $type,
+                'status' => 'open',
+            ], [
+                'severity' => $severity,
+                'title' => 'Financial integrity exception',
+                'description' => $description,
+                'recommended_action' => 'Investigate source records and provider evidence. Use append-only corrections; never create a balancing entry solely to make the exception disappear.',
+                'confidence' => 1,
+                'automation_tier' => 'A5',
+                'requires_human' => true,
+                'context' => json_encode($evidence),
+                'due_at' => now()->addHour(),
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]);
+        }
 
         return compact('severity', 'type', 'reference', 'description', 'evidence');
     }
