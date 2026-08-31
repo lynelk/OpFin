@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\LongRangeFinancialActionService;
 use App\Services\LongRangePlatformService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -10,7 +11,10 @@ use Illuminate\Http\Request;
 
 class LongRangePlatformController extends Controller
 {
-    public function __construct(private readonly LongRangePlatformService $service) {}
+    public function __construct(
+        private readonly LongRangePlatformService $service,
+        private readonly LongRangeFinancialActionService $financialActions,
+    ) {}
 
     public function overview(Request $request): JsonResponse
     {
@@ -127,6 +131,27 @@ class LongRangePlatformController extends Controller
             'events.*.payload' => 'nullable|array',
         ]);
         return ApiResponse::success('Offline batch processed idempotently.', ['batch' => $this->service->syncOffline($request->user(), $data)]);
+    }
+
+    public function financialIntent(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'source_type' => 'required|in:participatory_commitment,asset_finance_deposit',
+            'source_id' => 'required|integer|min:1',
+            'amount_minor' => 'required|integer|min:1',
+            'idempotency_key' => 'required|string|min:12|max:160',
+        ]);
+        return ApiResponse::success('Financial instruction prepared. Fresh OTP step-up is required before CPay is called.', [
+            'financial_intent' => $this->financialActions->createForSource($request->user(), $data['source_type'], $data['source_id'], $data['amount_minor'], $data['idempotency_key']),
+        ], 201);
+    }
+
+    public function confirmFinancialIntent(Request $request, string $reference): JsonResponse
+    {
+        $data = $request->validate(['verification_token' => 'required|string|size:64']);
+        return ApiResponse::success('Financial instruction confirmed and submitted to the governed CPay rail.', [
+            'financial_intent' => $this->financialActions->confirm($request->user(), $reference, $data['verification_token']),
+        ]);
     }
 
     public function capital(Request $request): JsonResponse
