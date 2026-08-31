@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Screen, StateNotice } from "@/components/Screen";
 import { opfinApi } from "@/lib/api/client";
+import { experienceApi } from "@/lib/api/experience";
 import { financialWellbeingApi } from "@/lib/api/financial-wellbeing";
 import { OpfinApiError } from "@/lib/api/errors";
 import { getAccessToken } from "@/lib/auth/session";
@@ -15,9 +16,10 @@ export default async function DashboardPage() {
   const token = await getAccessToken();
 
   try {
-    const [profileResponse, compassResponse] = await Promise.all([
+    const [profileResponse, compassResponse, activation] = await Promise.all([
       opfinApi.profile(token),
-      financialWellbeingApi.compass(token)
+      financialWellbeingApi.compass(token),
+      experienceApi.activation(token)
     ]);
     const user = profileResponse.data.user;
     const compass = compassResponse.data;
@@ -34,11 +36,18 @@ export default async function DashboardPage() {
     const capabilities = capabilityResult.status === "fulfilled" ? capabilityResult.value.data.capabilities : {};
     const paymentCapability = capabilities.payments;
 
-    const nextAction = !kyc || kyc.status !== "verified"
-      ? { title: "Complete verification", text: "Verify your identity so OpFin can safely unlock regulated financial products.", href: "/kyc", action: "Continue verification" }
-      : !activeCreditConsent
-        ? { title: "Review your permissions", text: "Grant only the permissions needed before OpFin uses your information for credit assessment.", href: "/consent", action: "Review permissions" }
-        : compass.next_best_action;
+    const nextAction = !activation.activation_complete
+      ? {
+          title: "Finish your OpFin setup",
+          text: `${activation.essential_complete} of ${activation.essential_total} essential setup steps are complete. Finish the essentials once, then OpFin will ask for additional information only when a journey needs it.`,
+          href: "/setup",
+          action: "Continue setup"
+        }
+      : !kyc || kyc.status !== "verified"
+        ? { title: "Complete verification", text: "Verify your identity so OpFin can safely unlock regulated financial products.", href: "/kyc", action: "Continue verification" }
+        : !activeCreditConsent
+          ? { title: "Review your permissions", text: "Grant only the permissions needed before OpFin uses your information for credit assessment.", href: "/consent", action: "Review permissions" }
+          : compass.next_best_action;
 
     return (
       <Screen
@@ -51,6 +60,19 @@ export default async function DashboardPage() {
           <p className="muted">{nextAction.text}</p>
           <Link className="button compass-action" href={nextAction.href}>{nextAction.action}</Link>
         </section>
+
+        {!activation.activation_complete ? (
+          <section className="panel" style={{ marginBottom: 16 }}>
+            <div className="case-card-head">
+              <div>
+                <h2>Your OpFin setup</h2>
+                <p className="muted">Progress is stored with your account and resumes across sessions.</p>
+              </div>
+              <span className="badge ok">{activation.activation_percent}%</span>
+            </div>
+            <div className="setup-progress"><span style={{ width: `${activation.activation_percent}%` }} /></div>
+          </section>
+        ) : null}
 
         <div className="grid grid-3 compass-grid">
           <section className="panel">
@@ -94,6 +116,8 @@ export default async function DashboardPage() {
             <Link className="button" href="/money">Add Money</Link>
             <Link className="button secondary" href="/borrow">Borrow</Link>
             <Link className="button secondary" href="/save">Save</Link>
+            <Link className="button secondary" href="/grow">Grow</Link>
+            <Link className="button secondary" href="/money-autopilot">Autopilot</Link>
             <Link className="button secondary" href="/calendar">Calendar</Link>
             <Link className="button secondary" href="/support">Get help</Link>
           </div>
