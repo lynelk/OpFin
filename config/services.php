@@ -29,6 +29,14 @@ return [
         'password' => env('YO_SMS_PASSWORD'),
     ],
 
+    'whatsapp' => [
+        'base_url' => env('WHATSAPP_BASE_URL', 'https://graph.facebook.com/v23.0'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+        'app_secret' => env('WHATSAPP_APP_SECRET'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+    ],
+
     'cpay' => [
         // CPay v2 is the canonical and only production OpFin money-movement boundary.
         'base_url' => env('CPAY_BASE_URL'),
