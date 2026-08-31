@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\Otp;
+use App\Models\SmsMessage;
 use App\Models\User;
 use App\Services\FinancialIntegrityService;
 use App\Services\RegulatoryReportingService;
 use App\Services\WhatsAppJourneyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class GovernancePlatformTest extends TestCase
@@ -55,13 +55,20 @@ class GovernancePlatformTest extends TestCase
         $this->assertStringContainsString('external_submission_requires_human_authorization', $report->validation_results);
     }
 
-    public function test_whatsapp_requires_otp_then_allows_auditable_support_but_blocks_money_action(): void
+    public function test_whatsapp_uses_channel_specific_challenge_then_allows_support_but_blocks_money_action(): void
     {
+        Queue::fake();
         User::factory()->create(['phone' => '256700111222', 'phone_verified_at' => now()]);
-        Otp::create(['phone' => '256700111222', 'otp' => Hash::make('123456'), 'attempts' => 0, 'expires_at' => now()->addMinutes(5)]);
         $service = app(WhatsAppJourneyService::class);
 
-        $service->handle('256700111222', 'VERIFY 123456', 'wamid.verify');
+        $start = $service->handle('256700111222', 'START', 'wamid.start');
+        $this->assertSame('challenge_sent', $start['state']);
+
+        $sms = SmsMessage::latest('id')->firstOrFail();
+        preg_match('/(\d{6})/', $sms->message, $matches);
+        $this->assertArrayHasKey(1, $matches);
+
+        $service->handle('256700111222', 'VERIFY '.$matches[1], 'wamid.verify');
         $support = $service->handle('256700111222', 'SUPPORT I need help understanding my repayment date', 'wamid.support');
         $money = $service->handle('256700111222', 'PAY 50000', 'wamid.pay');
 
