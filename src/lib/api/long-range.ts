@@ -72,6 +72,7 @@ const put = <T>(path: string, payload: Record<string, unknown>, token?: string) 
 
 export const longRangeApi = {
   overview: (token?: string) => request<LongRangeOverview>("/long-range/overview", token),
+  marketplace: (token?: string) => request<{ listings: LongRangeRecord[] }>("/long-range/participatory/marketplace", token),
   linkAccount: (payload: Record<string, unknown>, token?: string) => post<{ linked_account: LongRangeRecord }>("/long-range/linked-accounts", payload, token),
   saveHousehold: (payload: Record<string, unknown>, token?: string) => put<{ household: LongRangeRecord }>("/long-range/household", payload, token),
   saveMicrobusiness: (payload: Record<string, unknown>, token?: string) => put<{ microbusiness: LongRangeRecord }>("/long-range/microbusiness", payload, token),
@@ -82,6 +83,8 @@ export const longRangeApi = {
   createReferral: (payload: Record<string, unknown>, token?: string) => post<{ referral: LongRangeRecord }>("/long-range/referrals", payload, token),
   createFinancialIntent: (payload: Record<string, unknown>, token?: string) => post<{ financial_intent: LongRangeRecord }>("/long-range/financial-intents", payload, token),
   confirmFinancialIntent: (reference: string, verificationToken: string, token?: string) => post<{ financial_intent: LongRangeRecord }>(`/long-range/financial-intents/${reference}/confirm`, { verification_token: verificationToken }, token),
+  createCapitalMandate: (payload: Record<string, unknown>, token?: string) => post<{ capital_mandate: LongRangeRecord }>("/long-range/capital-mandates", payload, token),
+  createPartner: (payload: Record<string, unknown>, token?: string) => post<{ partner: LongRangeRecord }>("/long-range/partners", payload, token),
   governance: (token?: string) => request<LongRangeGovernance>("/admin/long-range/dashboard", token),
   reviewLinkedAccount: (id: number, payload: Record<string, unknown>, token?: string) => post(`/admin/long-range/linked-accounts/${id}/review`, payload, token),
   decideAssetFinance: (id: number, payload: Record<string, unknown>, token?: string) => post(`/admin/long-range/asset-finance/${id}/decision`, payload, token),
