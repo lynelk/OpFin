@@ -10,6 +10,7 @@ export default function MorePage() {
       <div className="grid grid-3">
         <JourneyCard title="Your OpFin setup" description="Review activation progress, choose your current financial priority and control useful progress reminders." href="/setup" action="Review setup" status="available" />
         <JourneyCard title="Money Autopilot" description="Create capped, user-authorised rules for routine financial progress while provider settlement remains governed separately." href="/money-autopilot" action="Manage automation" status="pilot" />
+        <JourneyCard title="OpFin on WhatsApp" description="Use secure, OTP-bound WhatsApp journeys for status, KYC, consent and support, with step-up protection for money actions." href="/whatsapp" action="Review WhatsApp access" status="pilot" />
         <JourneyCard title="Money plan & budgets" description="Record current balances, review safe-to-spend, set category budgets and correct cash-flow categories." href="/money" action="Open money plan" status="available" />
         <JourneyCard title="Financial calendar" description="See confirmed, scheduled and estimated future cash events, including OpFin loan obligations." href="/calendar" action="Open calendar" status="available" />
         <JourneyCard title="Security Centre" description="Freeze transactions, manage login and payment alerts, and review recent account-security activity." href="/security" action="Manage security" status="available" />
