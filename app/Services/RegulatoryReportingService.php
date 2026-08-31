@@ -24,7 +24,7 @@ class RegulatoryReportingService
 
     public function generate(string $reportType, Carbon $start, Carbon $end): object
     {
-        if (! array_key_exists($reportType, self::PROFILES)) {
+        if (! isset(self::PROFILES[$reportType])) {
             throw new \InvalidArgumentException('Unsupported regulatory report type.');
         }
 
@@ -40,12 +40,9 @@ class RegulatoryReportingService
 
         $validation = $this->validate($reportType, $payload, $start, $end);
         $canonical = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+        $key = ['report_type' => $reportType, 'period_start' => $start->toDateString(), 'period_end' => $end->toDateString()];
 
-        return DB::table('regulatory_report_runs')->updateOrInsert([
-            'report_type' => $reportType,
-            'period_start' => $start->toDateString(),
-            'period_end' => $end->toDateString(),
-        ], [
+        DB::table('regulatory_report_runs')->updateOrInsert($key, [
             'regulator' => self::PROFILES[$reportType],
             'status' => $validation['valid'] ? 'validated' : 'validation_failed',
             'payload' => $canonical,
@@ -55,13 +52,9 @@ class RegulatoryReportingService
             'validated_at' => now(),
             'updated_at' => now(),
             'created_at' => now(),
-        ])
-            ? DB::table('regulatory_report_runs')
-                ->where('report_type', $reportType)
-                ->whereDate('period_start', $start)
-                ->whereDate('period_end', $end)
-                ->first()
-            : throw new \RuntimeException('Unable to persist regulatory report.');
+        ]);
+
+        return DB::table('regulatory_report_runs')->where($key)->first();
     }
 
     public function generateScheduledSet(?Carbon $asOf = null): array
@@ -91,66 +84,45 @@ class RegulatoryReportingService
             'payment_transactions' => MobileMoneyTransaction::whereBetween('created_at', [$start, $end])->count(),
             'suspicious_activity_candidates' => count($this->suspiciousActivityRegister($start, $end)['candidates']),
             'large_cash_transaction_candidates' => count($this->largeCashTransactions($start, $end)['transactions']),
-            'control_evidence' => [
-                'kyc_monitoring' => true,
-                'transaction_monitoring' => true,
-                'immutable_ledger' => true,
-                'reconciliation' => true,
-                'audit_logging' => true,
-            ],
+            'control_evidence' => ['kyc_monitoring' => true, 'transaction_monitoring' => true, 'immutable_ledger' => true, 'reconciliation' => true, 'audit_logging' => true],
             'submission_control' => 'MLCO approval required before external submission.',
         ];
     }
 
     private function largeCashTransactions(Carbon $start, Carbon $end): array
     {
+        $exponent = max(0, (int) config('services.cpay.minor_unit_exponent', 0));
+        $thresholdMinor = 20000000 * (10 ** $exponent);
         $transactions = MobileMoneyTransaction::query()
-            ->whereBetween('created_at', [$start, $end])
-            ->where('currency', 'UGX')
-            ->where('amount_minor', '>=', 2000000000)
+            ->whereBetween('created_at', [$start, $end])->where('currency', 'UGX')->where('amount_minor', '>=', $thresholdMinor)
             ->get(['id', 'transaction_id', 'user_id', 'direction', 'amount_minor', 'currency', 'provider', 'provider_reference', 'created_at']);
 
         return [
             'threshold_ugx' => 20000000,
+            'threshold_minor' => $thresholdMinor,
             'transactions' => $transactions->map(fn ($item) => [
-                'id' => $item->id,
-                'transaction_id' => $item->transaction_id,
-                'user_id' => $item->user_id,
-                'direction' => $item->direction,
-                'amount_minor' => $item->amount_minor,
-                'currency' => $item->currency,
-                'provider' => $item->provider,
-                'provider_reference' => $item->provider_reference,
-                'occurred_at' => $item->created_at,
+                'id' => $item->id, 'transaction_id' => $item->transaction_id, 'user_id' => $item->user_id,
+                'direction' => $item->direction, 'amount_minor' => $item->amount_minor, 'currency' => $item->currency,
+                'provider' => $item->provider, 'provider_reference' => $item->provider_reference, 'occurred_at' => $item->created_at,
             ])->all(),
-            'submission_control' => 'Generated as a candidate register. Regulatory submission remains an accountable-person/MLCO action.',
+            'submission_control' => 'Candidate register only; MLCO/accountable-person authorization is required before submission.',
         ];
     }
 
     private function suspiciousActivityRegister(Carbon $start, Carbon $end): array
     {
-        $candidates = MobileMoneyTransaction::query()
-            ->whereBetween('created_at', [$start, $end])
-            ->where(function ($query) {
-                $query->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_EXCEPTION)
-                    ->orWhere('retry_count', '>=', 3)
-                    ->orWhereNotNull('failure_reason');
-            })
+        $candidates = MobileMoneyTransaction::query()->whereBetween('created_at', [$start, $end])
+            ->where(fn ($query) => $query->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_EXCEPTION)->orWhere('retry_count', '>=', 3)->orWhereNotNull('failure_reason'))
             ->get(['id', 'transaction_id', 'user_id', 'amount_minor', 'currency', 'status', 'reconciliation_status', 'retry_count', 'failure_reason', 'created_at']);
 
         return [
             'candidates' => $candidates->map(fn ($item) => [
-                'id' => $item->id,
-                'transaction_id' => $item->transaction_id,
-                'user_id' => $item->user_id,
-                'amount_minor' => $item->amount_minor,
-                'currency' => $item->currency,
-                'status' => $item->status,
-                'reconciliation_status' => $item->reconciliation_status,
-                'reason' => $item->failure_reason ?: 'Payment/reconciliation anomaly',
+                'id' => $item->id, 'transaction_id' => $item->transaction_id, 'user_id' => $item->user_id,
+                'amount_minor' => $item->amount_minor, 'currency' => $item->currency, 'status' => $item->status,
+                'reconciliation_status' => $item->reconciliation_status, 'reason' => $item->failure_reason ?: 'Payment/reconciliation anomaly',
                 'occurred_at' => $item->created_at,
             ])->all(),
-            'submission_control' => 'System detection is advisory. MLCO review is mandatory before an STR/SAR is submitted; customers must never be tipped off.',
+            'submission_control' => 'System detection is advisory. MLCO review is mandatory before STR/SAR submission; no customer tip-off is permitted.',
         ];
     }
 
@@ -158,14 +130,11 @@ class RegulatoryReportingService
     {
         return [
             'consents_created' => ConsentRecord::whereBetween('created_at', [$start, $end])->count(),
-            'support_or_privacy_complaints' => SupportCase::whereBetween('created_at', [$start, $end])->whereIn('category', ['privacy', 'data_protection', 'consent', 'complaint'])->count(),
+            'privacy_related_complaints' => SupportCase::whereBetween('created_at', [$start, $end])->whereIn('category', ['privacy', 'data_protection', 'consent', 'complaint'])->count(),
             'open_privacy_complaints' => SupportCase::whereIn('category', ['privacy', 'data_protection', 'consent'])->whereNotIn('status', ['resolved', 'closed'])->count(),
-            'data_breach_register_available' => DB::getSchemaBuilder()->hasTable('audit_logs'),
-            'processing_evidence' => [
-                'purpose_bound_consent_records' => true,
-                'revocation_records' => true,
-                'sensitive_access_audit' => true,
-            ],
+            'security_audit_log_available' => DB::getSchemaBuilder()->hasTable('audit_logs'),
+            'processing_evidence' => ['purpose_bound_consent_records' => true, 'revocation_records' => true, 'sensitive_access_audit' => true],
+            'submission_control' => 'Generated evidence pack must be reviewed against PDPO portal questions before filing.',
         ];
     }
 
@@ -175,18 +144,13 @@ class RegulatoryReportingService
 
         return [
             'credit_decisions' => (clone $decisions)->count(),
-            'approved' => (clone $decisions)->where('decision', 'approved')->count(),
-            'referred' => (clone $decisions)->where('decision', 'referred')->count(),
-            'declined' => (clone $decisions)->where('decision', 'declined')->count(),
+            'approved' => (clone $decisions)->where('status', CreditDecision::STATUS_APPROVED)->count(),
+            'referred' => (clone $decisions)->where('status', CreditDecision::STATUS_REFERRED)->count(),
+            'declined' => (clone $decisions)->where('status', CreditDecision::STATUS_DECLINED)->count(),
             'kyc_cases' => KycCase::whereBetween('created_at', [$start, $end])->count(),
-            'credit_consent_records' => ConsentRecord::whereBetween('created_at', [$start, $end])->whereIn('purpose', ['crb_pull', 'credit', 'credit_assessment'])->count(),
+            'credit_consent_records' => ConsentRecord::whereBetween('created_at', [$start, $end])->whereIn('purpose', [ConsentRecord::PURPOSE_CREDIT_PROCESSING, 'crb_pull', 'credit_assessment'])->count(),
             'consumer_complaints' => SupportCase::whereBetween('created_at', [$start, $end])->whereIn('category', ['complaint', 'collections', 'credit'])->count(),
-            'control_evidence' => [
-                'kyc_gate' => true,
-                'consent_gate' => true,
-                'offer_disclosure_acceptance' => true,
-                'collections_auditability' => true,
-            ],
+            'control_evidence' => ['kyc_gate' => true, 'consent_gate' => true, 'offer_disclosure_acceptance' => true, 'collections_auditability' => true],
         ];
     }
 
@@ -213,7 +177,7 @@ class RegulatoryReportingService
             'failed' => (clone $transactions)->where('status', MobileMoneyTransaction::STATUS_FAILED)->count(),
             'unreconciled' => (clone $transactions)->where('reconciliation_status', '!=', MobileMoneyTransaction::RECONCILIATION_MATCHED)->count(),
             'reconciliation_exceptions' => (clone $transactions)->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_EXCEPTION)->count(),
-            'duplicate_provider_references' => (clone $transactions)->whereNotNull('provider_reference')->select('provider_reference', DB::raw('count(*) total'))->groupBy('provider_reference')->havingRaw('count(*) > 1')->count(),
+            'duplicate_provider_references' => (clone $transactions)->whereNotNull('provider_reference')->select('provider_reference')->groupBy('provider_reference')->havingRaw('count(*) > 1')->count(),
         ];
     }
 
@@ -225,9 +189,6 @@ class RegulatoryReportingService
         }
         if ($payload === []) {
             $errors[] = 'report payload must not be empty';
-        }
-        if (! isset(self::PROFILES[$reportType])) {
-            $errors[] = 'regulator profile is missing';
         }
 
         return [
