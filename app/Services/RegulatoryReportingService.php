@@ -84,7 +84,13 @@ class RegulatoryReportingService
             'payment_transactions' => MobileMoneyTransaction::whereBetween('created_at', [$start, $end])->count(),
             'suspicious_activity_candidates' => count($this->suspiciousActivityRegister($start, $end)['candidates']),
             'large_cash_transaction_candidates' => count($this->largeCashTransactions($start, $end)['transactions']),
-            'control_evidence' => ['kyc_monitoring' => true, 'transaction_monitoring' => true, 'immutable_ledger' => true, 'reconciliation' => true, 'audit_logging' => true],
+            'control_evidence' => [
+                'kyc_monitoring' => true,
+                'transaction_monitoring' => true,
+                'immutable_ledger' => true,
+                'reconciliation' => true,
+                'audit_logging' => true,
+            ],
             'submission_control' => 'MLCO approval required before external submission.',
         ];
     }
@@ -94,16 +100,24 @@ class RegulatoryReportingService
         $exponent = max(0, (int) config('services.cpay.minor_unit_exponent', 0));
         $thresholdMinor = 20000000 * (10 ** $exponent);
         $transactions = MobileMoneyTransaction::query()
-            ->whereBetween('created_at', [$start, $end])->where('currency', 'UGX')->where('amount_minor', '>=', $thresholdMinor)
+            ->whereBetween('created_at', [$start, $end])
+            ->where('currency', 'UGX')
+            ->where('amount_minor', '>=', $thresholdMinor)
             ->get(['id', 'transaction_id', 'user_id', 'direction', 'amount_minor', 'currency', 'provider', 'provider_reference', 'created_at']);
 
         return [
             'threshold_ugx' => 20000000,
             'threshold_minor' => $thresholdMinor,
             'transactions' => $transactions->map(fn ($item) => [
-                'id' => $item->id, 'transaction_id' => $item->transaction_id, 'user_id' => $item->user_id,
-                'direction' => $item->direction, 'amount_minor' => $item->amount_minor, 'currency' => $item->currency,
-                'provider' => $item->provider, 'provider_reference' => $item->provider_reference, 'occurred_at' => $item->created_at,
+                'id' => $item->id,
+                'transaction_id' => $item->transaction_id,
+                'user_id' => $item->user_id,
+                'direction' => $item->direction,
+                'amount_minor' => $item->amount_minor,
+                'currency' => $item->currency,
+                'provider' => $item->provider,
+                'provider_reference' => $item->provider_reference,
+                'occurred_at' => $item->created_at,
             ])->all(),
             'submission_control' => 'Candidate register only; MLCO/accountable-person authorization is required before submission.',
         ];
@@ -111,15 +125,24 @@ class RegulatoryReportingService
 
     private function suspiciousActivityRegister(Carbon $start, Carbon $end): array
     {
-        $candidates = MobileMoneyTransaction::query()->whereBetween('created_at', [$start, $end])
-            ->where(fn ($query) => $query->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_EXCEPTION)->orWhere('retry_count', '>=', 3)->orWhereNotNull('failure_reason'))
+        $candidates = MobileMoneyTransaction::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->where(fn ($query) => $query
+                ->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_EXCEPTION)
+                ->orWhere('retry_count', '>=', 3)
+                ->orWhereNotNull('failure_reason'))
             ->get(['id', 'transaction_id', 'user_id', 'amount_minor', 'currency', 'status', 'reconciliation_status', 'retry_count', 'failure_reason', 'created_at']);
 
         return [
             'candidates' => $candidates->map(fn ($item) => [
-                'id' => $item->id, 'transaction_id' => $item->transaction_id, 'user_id' => $item->user_id,
-                'amount_minor' => $item->amount_minor, 'currency' => $item->currency, 'status' => $item->status,
-                'reconciliation_status' => $item->reconciliation_status, 'reason' => $item->failure_reason ?: 'Payment/reconciliation anomaly',
+                'id' => $item->id,
+                'transaction_id' => $item->transaction_id,
+                'user_id' => $item->user_id,
+                'amount_minor' => $item->amount_minor,
+                'currency' => $item->currency,
+                'status' => $item->status,
+                'reconciliation_status' => $item->reconciliation_status,
+                'reason' => $item->failure_reason ?: 'Payment/reconciliation anomaly',
                 'occurred_at' => $item->created_at,
             ])->all(),
             'submission_control' => 'System detection is advisory. MLCO review is mandatory before STR/SAR submission; no customer tip-off is permitted.',
@@ -128,12 +151,29 @@ class RegulatoryReportingService
 
     private function privacyCompliance(Carbon $start, Carbon $end): array
     {
+        $breaches = DB::table('data_breach_incidents')->whereBetween('detected_at', [$start, $end]);
+
         return [
             'consents_created' => ConsentRecord::whereBetween('created_at', [$start, $end])->count(),
-            'privacy_related_complaints' => SupportCase::whereBetween('created_at', [$start, $end])->whereIn('category', ['privacy', 'data_protection', 'consent', 'complaint'])->count(),
-            'open_privacy_complaints' => SupportCase::whereIn('category', ['privacy', 'data_protection', 'consent'])->whereNotIn('status', ['resolved', 'closed'])->count(),
+            'privacy_related_complaints' => SupportCase::whereBetween('created_at', [$start, $end])
+                ->whereIn('category', ['privacy', 'data_protection', 'consent', 'complaint'])->count(),
+            'open_privacy_complaints' => SupportCase::whereIn('category', ['privacy', 'data_protection', 'consent'])
+                ->whereNotIn('status', ['resolved', 'closed'])->count(),
+            'data_breach_incidents' => (clone $breaches)->count(),
+            'affected_data_subjects' => (int) (clone $breaches)->sum('affected_subjects'),
+            'contained_breach_incidents' => (clone $breaches)->whereNotNull('contained_at')->count(),
+            'pdpo_notified_breach_incidents' => (clone $breaches)->whereNotNull('notified_pdpo_at')->count(),
+            'unnotified_breach_incidents' => (clone $breaches)->whereNull('notified_pdpo_at')->count(),
+            'open_breach_incidents' => (clone $breaches)->whereNotIn('status', ['resolved', 'closed'])->count(),
             'security_audit_log_available' => DB::getSchemaBuilder()->hasTable('audit_logs'),
-            'processing_evidence' => ['purpose_bound_consent_records' => true, 'revocation_records' => true, 'sensitive_access_audit' => true],
+            'processing_evidence' => [
+                'purpose_bound_consent_records' => true,
+                'revocation_records' => true,
+                'sensitive_access_audit' => true,
+                'data_breach_register' => true,
+                'containment_and_remediation_fields' => true,
+                'pdpo_notification_tracking' => true,
+            ],
             'submission_control' => 'Generated evidence pack must be reviewed against PDPO portal questions before filing.',
         ];
     }
@@ -148,9 +188,16 @@ class RegulatoryReportingService
             'referred' => (clone $decisions)->where('status', CreditDecision::STATUS_REFERRED)->count(),
             'declined' => (clone $decisions)->where('status', CreditDecision::STATUS_DECLINED)->count(),
             'kyc_cases' => KycCase::whereBetween('created_at', [$start, $end])->count(),
-            'credit_consent_records' => ConsentRecord::whereBetween('created_at', [$start, $end])->whereIn('purpose', [ConsentRecord::PURPOSE_CREDIT_PROCESSING, 'crb_pull', 'credit_assessment'])->count(),
-            'consumer_complaints' => SupportCase::whereBetween('created_at', [$start, $end])->whereIn('category', ['complaint', 'collections', 'credit'])->count(),
-            'control_evidence' => ['kyc_gate' => true, 'consent_gate' => true, 'offer_disclosure_acceptance' => true, 'collections_auditability' => true],
+            'credit_consent_records' => ConsentRecord::whereBetween('created_at', [$start, $end])
+                ->whereIn('purpose', [ConsentRecord::PURPOSE_CREDIT_PROCESSING, 'crb_pull', 'credit_assessment'])->count(),
+            'consumer_complaints' => SupportCase::whereBetween('created_at', [$start, $end])
+                ->whereIn('category', ['complaint', 'collections', 'credit'])->count(),
+            'control_evidence' => [
+                'kyc_gate' => true,
+                'consent_gate' => true,
+                'offer_disclosure_acceptance' => true,
+                'collections_auditability' => true,
+            ],
         ];
     }
 
@@ -177,7 +224,12 @@ class RegulatoryReportingService
             'failed' => (clone $transactions)->where('status', MobileMoneyTransaction::STATUS_FAILED)->count(),
             'unreconciled' => (clone $transactions)->where('reconciliation_status', '!=', MobileMoneyTransaction::RECONCILIATION_MATCHED)->count(),
             'reconciliation_exceptions' => (clone $transactions)->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_EXCEPTION)->count(),
-            'duplicate_provider_references' => (clone $transactions)->whereNotNull('provider_reference')->select('provider_reference')->groupBy('provider_reference')->havingRaw('count(*) > 1')->count(),
+            'duplicate_provider_references' => (clone $transactions)
+                ->whereNotNull('provider_reference')
+                ->select('provider_reference')
+                ->groupBy('provider_reference')
+                ->havingRaw('count(*) > 1')
+                ->count(),
         ];
     }
 
@@ -191,6 +243,21 @@ class RegulatoryReportingService
             $errors[] = 'report payload must not be empty';
         }
 
+        $requiredKeys = match ($reportType) {
+            'fia_large_cash_transactions' => ['threshold_ugx', 'transactions', 'submission_control'],
+            'fia_suspicious_activity_register' => ['candidates', 'submission_control'],
+            'pdpo_annual_compliance' => ['consents_created', 'privacy_related_complaints', 'data_breach_incidents', 'affected_data_subjects', 'processing_evidence'],
+            'umra_digital_credit_supervision' => ['credit_decisions', 'approved', 'referred', 'declined', 'kyc_cases', 'credit_consent_records'],
+            'consumer_protection_complaints' => ['received', 'resolved', 'open', 'categories'],
+            'payment_integrity_oversight' => ['transactions', 'successful', 'failed', 'unreconciled', 'reconciliation_exceptions'],
+            default => ['kyc_cases', 'payment_transactions', 'control_evidence', 'submission_control'],
+        };
+
+        $missingKeys = array_values(array_filter($requiredKeys, fn (string $key) => ! array_key_exists($key, $payload)));
+        if ($missingKeys !== []) {
+            $errors[] = 'required report fields are missing: '.implode(', ', $missingKeys);
+        }
+
         return [
             'valid' => $errors === [],
             'errors' => $errors,
@@ -198,6 +265,8 @@ class RegulatoryReportingService
                 'period_valid' => $start->lte($end),
                 'payload_present' => $payload !== [],
                 'regulator_profile_present' => isset(self::PROFILES[$reportType]),
+                'required_fields_present' => $missingKeys === [],
+                'required_fields' => $requiredKeys,
                 'hash_algorithm' => 'sha256',
                 'external_submission_requires_human_authorization' => true,
             ],
