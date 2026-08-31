@@ -8,6 +8,7 @@ Route::post('/channels/ussd', [LongRangePlatformController::class, 'ussd'])->mid
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('long-range')->group(function () {
     Route::get('/overview', [LongRangePlatformController::class, 'overview']);
+    Route::get('/participatory/marketplace', [LongRangePlatformController::class, 'marketplace']);
     Route::post('/linked-accounts', [LongRangePlatformController::class, 'linkAccount'])->middleware('audit.sensitive:linked_account.created');
     Route::put('/household', [LongRangePlatformController::class, 'household'])->middleware('audit.sensitive:household.updated');
     Route::put('/microbusiness', [LongRangePlatformController::class, 'microbusiness'])->middleware('audit.sensitive:microbusiness.updated');
