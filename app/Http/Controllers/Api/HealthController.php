@@ -10,7 +10,15 @@ use Throwable;
 
 class HealthController extends Controller
 {
-    public function show(): JsonResponse
+    public function live(): JsonResponse
+    {
+        return ApiResponse::success('Service is alive.', [
+            'status' => 'ok',
+            'service' => 'opfin-backend',
+        ]);
+    }
+
+    public function ready(): JsonResponse
     {
         try {
             DB::select('select 1');
@@ -24,11 +32,16 @@ class HealthController extends Controller
             ]);
         }
 
-        return ApiResponse::success('Service is healthy.', [
+        return ApiResponse::success('Service is ready.', [
             'status' => 'ok',
             'service' => 'opfin-backend',
             'database' => 'ready',
             'queue' => (string) config('queue.default'),
         ]);
+    }
+
+    public function show(): JsonResponse
+    {
+        return $this->ready();
     }
 }
