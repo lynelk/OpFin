@@ -6,6 +6,7 @@ return [
     'capabilities' => [
         // Customer shell and foundation
         'home' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
+        'activation' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'identity' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'kyc' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'consent' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
@@ -17,7 +18,7 @@ return [
         'borrow' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'budgeting' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'financial_calendar' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
-        'money_autopilot' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'money_autopilot' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'credit_builder' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'financial_shock_centre' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'save' => ['status' => 'PILOT', 'owner' => 'opfin'],
@@ -28,7 +29,7 @@ return [
         'protection_enrollment' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'protection_premiums' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'protection_claims' => ['status' => 'PILOT', 'owner' => 'opfin'],
-        'investments' => ['status' => 'PLANNED', 'owner' => 'opfin'],
+        'investments' => ['status' => 'PILOT', 'owner' => 'opfin'],
         'household_finance' => ['status' => 'PLANNED', 'owner' => 'opfin'],
         'microbusiness' => ['status' => 'PLANNED', 'owner' => 'opfin'],
 
@@ -43,6 +44,7 @@ return [
         'product_factory' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'workflow_engine' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'rules_engine' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
+        'platform_autopilot' => ['status' => 'PILOT', 'owner' => 'opfin'],
     ],
 
     'countries' => [
