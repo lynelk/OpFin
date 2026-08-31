@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\LongRangeGovernanceController;
 use App\Http\Controllers\Api\LongRangePlatformController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/channels/ussd', [LongRangePlatformController::class, 'ussd'])->middleware('throttle:webhooks');
+Route::get('/health/integrations', [HealthController::class, 'integrations'])->middleware('throttle:api');
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('long-range')->group(function () {
     Route::get('/overview', [LongRangePlatformController::class, 'overview']);
