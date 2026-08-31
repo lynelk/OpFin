@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Schema;
 
 class FinancialIntegrityService
 {
+    public function __construct(private readonly LongRangeIntegrityService $longRangeIntegrity) {}
+
     public function run(string $scope = 'platform'): object
     {
         $runId = DB::table('financial_integrity_runs')->insertGetId([
@@ -101,6 +103,17 @@ class FinancialIntegrityService
             }
         }
 
+        foreach ($this->longRangeIntegrity->scan() as $finding) {
+            $findings[] = $this->alert(
+                $runId,
+                $finding['severity'],
+                $finding['type'],
+                $finding['reference'],
+                $finding['description'],
+                $finding['evidence'],
+            );
+        }
+
         $canonical = json_encode($findings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $status = collect($findings)->contains(fn ($finding) => ($finding['severity'] ?? null) === 'critical')
             ? 'critical'
@@ -138,7 +151,7 @@ class FinancialIntegrityService
                 ? DB::table('financial_integrity_alerts')->where('status', 'open')->where('severity', 'high')->count()
                 : 0,
             'platform_balanced' => $latest?->status === 'balanced',
-            'funds_integrity_rule' => 'Any imbalance, duplicate provider reference, or unreconciled successful payment is an exception and cannot be silently written off or auto-balanced away.',
+            'funds_integrity_rule' => 'Any imbalance, false settlement, funding mismatch, reward-ledger mismatch, duplicate provider reference, or unreconciled successful payment is an exception and cannot be silently written off or auto-balanced away.',
         ];
     }
 
