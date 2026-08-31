@@ -10,14 +10,14 @@ export default function WhatsAppPage() {
         <section className="panel">
           <p className="eyebrow">Secure session</p>
           <h2>Verify before personal information is shown</h2>
-          <p className="muted">Request an OpFin OTP using your registered phone number, then send <strong>VERIFY 123456</strong> in WhatsApp. The verified session lasts 15 minutes and can be ended immediately with <strong>LOGOUT</strong>.</p>
-          <div className="chip-row"><span className="badge ok">OTP-bound</span><span className="badge ok">15-minute expiry</span><span className="badge ok">Signed webhook</span><span className="badge ok">Replay protection</span></div>
+          <p className="muted">Send <strong>START</strong> in WhatsApp. OpFin sends a channel-specific 6-digit verification code to your registered phone. Then send <strong>VERIFY 123456</strong> in WhatsApp. The code expires after 5 minutes, the verified session lasts 15 minutes, and you can end it immediately with <strong>LOGOUT</strong>.</p>
+          <div className="chip-row"><span className="badge ok">Channel-specific code</span><span className="badge ok">15-minute session</span><span className="badge ok">Signed webhook</span><span className="badge ok">Replay protection</span></div>
         </section>
         <section className="panel">
           <p className="eyebrow">Audit trail</p>
           <h2>Every interaction is evidence</h2>
-          <p className="muted">Inbound and outbound messages are timestamped, provider-message IDs are deduplicated and each message receives an integrity hash. Consent changes and support cases retain WhatsApp as the originating channel.</p>
-          <div className="chip-row"><span className="badge ok">Message hashes</span><span className="badge ok">Channel attribution</span><span className="badge ok">Duplicate protection</span></div>
+          <p className="muted">Inbound and outbound messages are timestamped, provider-message IDs are deduplicated, message content is encrypted at rest and each interaction receives an integrity hash. Consent changes and support cases retain WhatsApp as the originating channel.</p>
+          <div className="chip-row"><span className="badge ok">Encrypted message records</span><span className="badge ok">Message hashes</span><span className="badge ok">Channel attribution</span><span className="badge ok">Duplicate protection</span></div>
         </section>
       </div>
 
