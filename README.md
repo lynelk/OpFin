@@ -24,6 +24,10 @@ NEXT_PUBLIC_USE_MOCK_API=false
 
 Set `NEXT_PUBLIC_USE_MOCK_API=false` to call the Laravel backend for documented endpoints. Screens without backend contracts remain clearly sandbox-labelled.
 
+## Railway Production Boundary
+
+The canonical Railway production frontend is the `opfin-web` service built from the repository root. Production must set `NODE_ENV=production` and `NEXT_PUBLIC_USE_MOCK_API=false`. Only browser-safe values may use the `NEXT_PUBLIC_` prefix; provider credentials and other secrets belong exclusively in backend services. The web service is stateless and should not mount persistent storage.
+
 ## Build, Lint, Test
 
 ```bash
