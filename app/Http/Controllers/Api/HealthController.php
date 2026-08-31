@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\ProductionIntegrationReadinessService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +11,8 @@ use Throwable;
 
 class HealthController extends Controller
 {
+    public function __construct(private readonly ProductionIntegrationReadinessService $integrations) {}
+
     public function live(): JsonResponse
     {
         return ApiResponse::success('Service is alive.', [
@@ -37,7 +40,18 @@ class HealthController extends Controller
             'service' => 'opfin-backend',
             'database' => 'ready',
             'queue' => (string) config('queue.default'),
+            'integration_readiness' => $this->integrations->report()['required_integrations_ready'] ? 'ready' : 'blocked',
         ]);
+    }
+
+    public function integrations(): JsonResponse
+    {
+        $report = $this->integrations->report();
+
+        return ApiResponse::success(
+            $report['production_ready'] ? 'Required production integrations are configured.' : 'One or more required production integrations still need configuration.',
+            $report,
+        );
     }
 
     public function show(): JsonResponse

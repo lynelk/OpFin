@@ -19,24 +19,14 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            Route::middleware('api')
-                ->prefix('api')
-                ->group(base_path('routes/autopilot.php'));
-
-            Route::middleware('api')
-                ->prefix('api')
-                ->group(base_path('routes/experience.php'));
-
-            Route::middleware('api')
-                ->prefix('api')
-                ->group(base_path('routes/governance.php'));
+            Route::middleware('api')->prefix('api')->group(base_path('routes/autopilot.php'));
+            Route::middleware('api')->prefix('api')->group(base_path('routes/experience.php'));
+            Route::middleware('api')->prefix('api')->group(base_path('routes/governance.php'));
+            Route::middleware('api')->prefix('api')->group(base_path('routes/long_range.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->use([
-            HandleCors::class,
-        ]);
-
+        $middleware->use([HandleCors::class]);
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'audit.sensitive' => RecordSensitiveAction::class,
@@ -63,16 +53,11 @@ return Application::configure(basePath: dirname(__DIR__))
             if (! $request->expectsJson() && ! $request->is('api/*')) {
                 return null;
             }
-
             if ($exception instanceof HttpExceptionInterface) {
                 $status = $exception->getStatusCode();
 
-                return ApiResponse::error(
-                    $status >= 500 ? 'Server error.' : ($exception->getMessage() ?: 'Request failed.'),
-                    $status
-                );
+                return ApiResponse::error($status >= 500 ? 'Server error.' : ($exception->getMessage() ?: 'Request failed.'), $status);
             }
-
             report($exception);
 
             return ApiResponse::error('Server error.', 500);
