@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/input_decoration.dart';
 import 'package:opfin/login_screen.dart';
-import 'package:http/http.dart' as http;
 
 class OtpScreen extends StatefulWidget {
   final String phone;
@@ -13,12 +13,13 @@ class OtpScreen extends StatefulWidget {
   final String password;
   final String passwordConfirmation;
 
-  const OtpScreen(
-      {super.key,
-      required this.phone,
-      this.name,
-      required this.password,
-      required this.passwordConfirmation});
+  const OtpScreen({
+    super.key,
+    required this.phone,
+    this.name,
+    required this.password,
+    required this.passwordConfirmation,
+  });
 
   @override
   OtpScreenState createState() => OtpScreenState();
@@ -38,173 +39,115 @@ class OtpScreenState extends State<OtpScreen> {
     _startCountdown();
   }
 
+  @override
+  void dispose() {
+    _otpController.dispose();
+    super.dispose();
+  }
+
   void _startCountdown() {
     Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
       if (_countdown > 0) {
-        setState(() {
-          _countdown--;
-        });
+        setState(() => _countdown--);
         _startCountdown();
       } else {
-        setState(() {
-          _isResendEnabled = true;
-        });
+        setState(() => _isResendEnabled = true);
       }
     });
   }
 
   Future<void> _verifyOtp() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
     try {
       final otp = _otpController.text.trim();
       final response = await http.post(
         Uri.parse('$apiUrl/verify-otp'),
-        body: {
-          'phone': widget.phone,
-          'otp': otp,
-        },
+        body: {'phone': widget.phone, 'otp': otp},
       );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success']) {
-          // Do NOT set _isLoading = false here, let navigation happen with loader showing
-          if (widget.name != null) {
-            await _register();
-          } else {
-            await _resetPassword();
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        if (widget.name != null) {
+          final verificationToken = data['data']?['verification_token'] as String?;
+          if (verificationToken == null || verificationToken.isEmpty) {
+            _showMessage('Phone verification could not be completed. Request a new code.');
+            return;
           }
-          return; // Exit so finally does not run
+          await _register(verificationToken);
         } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(data['message'] ?? 'OTP verification failed')),
-          );
+          await _resetPassword();
         }
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An error occurred. Try again later.')),
-        );
+        return;
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A network error occurred. Please try again.')),
-      );
+
+      _showMessage(data['message'] ?? 'OTP verification failed');
+    } catch (_) {
+      _showMessage('A network error occurred. Please try again.');
     } finally {
-      if (mounted && !_isLoading) {
-        // Only set _isLoading to false if not navigating away
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _regenerateOTP() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _regenerateOtp() async {
+    setState(() => _isLoading = true);
     try {
       final response = await http.post(
         Uri.parse('$apiUrl/generate-otp'),
         body: {'phone': widget.phone},
       );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'])),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An error occurred. Try again later.')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A network error occurred. Please try again.')),
-      );
+      final data = json.decode(response.body);
+      _showMessage(data['message'] ?? (response.statusCode == 200 ? 'A new code was sent.' : 'Unable to send a new code.'));
+    } catch (_) {
+      _showMessage('A network error occurred. Please try again.');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _resendOtp() {
-    if (_isResendEnabled) {
-      // Trigger logic to resend OTP (e.g., call your API to send a new OTP)
-      _regenerateOTP();
-      setState(() {
-        _isResendEnabled = false;
-        _countdown = 300;
-      });
-      _startCountdown();
-    }
+    if (!_isResendEnabled) return;
+    _regenerateOtp();
+    setState(() {
+      _isResendEnabled = false;
+      _countdown = 300;
+      _otpController.clear();
+    });
+    _startCountdown();
   }
 
-  Future<void> _register() async {
-    // Navigate to OTP Screen
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _register(String verificationToken) async {
     try {
       final response = await http.post(
         Uri.parse('$apiUrl/register'),
         body: {
           'name': widget.name,
           'phone': widget.phone,
+          'verification_token': verificationToken,
           'password': widget.password,
-          'password_confirmation': widget.passwordConfirmation
+          'password_confirmation': widget.passwordConfirmation,
         },
       );
+      final data = json.decode(response.body);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success']) {
-          if (!mounted) return;
-          // Show success message and navigate to login
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Registration successful')),
-          );
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data['message'] ?? 'Registration failed')),
-          );
-        }
-      } else {
+      if ((response.statusCode == 200 || response.statusCode == 201) && data['success'] == true) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An error occurred. Try again later.')),
+          const SnackBar(content: Text('Account created. Sign in to continue your OpFin setup.')),
         );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+        return;
       }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A network error occurred. Please try again.')),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+
+      _showMessage(data['message'] ?? 'Registration failed');
+    } catch (_) {
+      _showMessage('A network error occurred. Please try again.');
     }
   }
 
   Future<void> _resetPassword() async {
-    setState(() {
-      _isLoading = true;
-    });
     try {
       final response = await http.post(
         Uri.parse('$apiUrl/reset-password'),
@@ -212,43 +155,31 @@ class OtpScreenState extends State<OtpScreen> {
           'phone': widget.phone,
           'otp': _otpController.text.trim(),
           'password': widget.password,
-          'password_confirmation': widget.passwordConfirmation
+          'password_confirmation': widget.passwordConfirmation,
         },
       );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success']) {
-          // Show success message and navigate to login
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Password reset successfully.')),
-          );
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data['message'] ?? 'Password reset failed')),
-          );
-        }
-      } else {
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An error occurred. Try again later.')),
+          const SnackBar(content: Text('Password reset successfully.')),
         );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+        return;
       }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A network error occurred. Please try again.')),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+
+      _showMessage(data['message'] ?? 'Password reset failed');
+    } catch (_) {
+      _showMessage('A network error occurred. Please try again.');
     }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -265,125 +196,76 @@ class OtpScreenState extends State<OtpScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 50),
-
-                  // OTP Animation
                   SizedBox(
                     height: 160,
-                    child: Lottie.asset(
-                      'assets/lottie/otp.json',
-                      fit: BoxFit.contain,
-                    ),
+                    child: Lottie.asset('assets/lottie/otp.json', fit: BoxFit.contain),
                   ),
-
                   const SizedBox(height: 25),
-
-                  // Title
                   const Text(
-                    "Enter OTP",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black,
-                    ),
+                    'Verify your phone',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.black),
                     textAlign: TextAlign.center,
                   ),
-
                   const SizedBox(height: 12),
-
-                  // Subtitle / instructions
                   Text(
-                    "We sent a One-Time Password to\n${widget.phone}. Enter it below to verify your account.",
+                    'We sent a 6-digit code to\n${widget.phone}. Enter it below to continue securely.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.black54,
-                    ),
+                    style: const TextStyle(fontSize: 16, color: Colors.black54),
                   ),
-
                   const SizedBox(height: 40),
-
-                  // OTP Field
                   TextFormField(
                     controller: _otpController,
                     keyboardType: TextInputType.number,
+                    maxLength: 6,
                     decoration: InputDecorations().inputStyle(
-                      label: "Enter OTP",
-                      hint: "Enter the code sent to your phone",
+                      label: 'Verification code',
+                      hint: '6 digits',
                       icon: Icons.lock_rounded,
                     ),
                     style: const TextStyle(color: Colors.black),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the OTP';
-                      }
-                      if (value.length < 4 || value.length > 6) {
-                        return 'OTP should be 4-6 digits';
-                      }
-                      if (!RegExp(r'^\d+$').hasMatch(value)) {
-                        return 'OTP must be numbers only';
+                      final code = value?.trim() ?? '';
+                      if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+                        return 'Enter the 6-digit code';
                       }
                       return null;
                     },
                   ),
-
-                  const SizedBox(height: 25),
-
-                  // Countdown
+                  const SizedBox(height: 18),
                   Text(
-                    "OTP expires in $_countdown seconds",
-                    style: const TextStyle(
+                    _countdown > 0 ? 'Code expires in $_countdown seconds' : 'This code has expired',
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Colors.red,
+                      color: _countdown > 0 ? Colors.black54 : Colors.red,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-
-                  const SizedBox(height: 35),
-
-                  // Verify Button
+                  const SizedBox(height: 30),
                   _isLoading
                       ? const CircularProgressIndicator(color: Colors.black)
                       : SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                _verifyOtp();
-                              }
-                            },
+                            onPressed: _countdown > 0
+                                ? () {
+                                    if (_formKey.currentState!.validate()) _verifyOtp();
+                                  }
+                                : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.black,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              textStyle: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text("Verify OTP"),
+                            child: const Text('Verify and continue'),
                           ),
                         ),
-
-                  const SizedBox(height: 25),
-
-                  // Resend OTP
+                  const SizedBox(height: 24),
                   if (_isResendEnabled)
-                    GestureDetector(
-                      onTap: _resendOtp,
-                      child: const Text(
-                        "Resend OTP",
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
+                    TextButton(
+                      onPressed: _resendOtp,
+                      child: const Text('Send a new code'),
                     ),
-
                   const SizedBox(height: 40),
                 ],
               ),
