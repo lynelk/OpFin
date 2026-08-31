@@ -8,6 +8,14 @@ import { createParticipatoryCommitmentAction } from "@/app/long-range-actions";
 
 function text(value: unknown): string { return typeof value === "string" ? value : String(value ?? ""); }
 function amount(value: unknown): number { return typeof value === "number" ? value : Number(value ?? 0); }
+function disclosures(value: unknown): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(text(value) || "{}");
+    return typeof parsed === "object" && parsed !== null ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+}
 
 export default async function ParticipatoryFinancePage({ searchParams }: Readonly<{ searchParams?: Promise<{ status?: string; error?: string; message?: string }> }>) {
   const token = await getAccessToken();
@@ -30,13 +38,12 @@ export default async function ParticipatoryFinancePage({ searchParams }: Readonl
             const target = amount(listing.target_amount_minor);
             const funded = amount(listing.funded_amount_minor);
             const remaining = Math.max(0, target - funded);
-            let disclosures: Record<string, unknown> = {};
-            try { disclosures = JSON.parse(text(listing.disclosures) || "{}"); } catch { disclosures = {}; }
+            const disclosure = disclosures(listing.disclosures);
             return <article className="case-card" key={listing.id}>
               <div className="case-card-head"><div><strong>{text(listing.purpose)}</strong><p className="muted">{text(listing.lender_of_record)} · {amount(listing.term_days)} days</p></div><span className="badge ok">Open</span></div>
               <div className="grid grid-3"><div><strong>Target</strong><p>{formatUgx(target)}</p></div><div><strong>Funded</strong><p>{formatUgx(funded)}</p></div><div><strong>Remaining</strong><p>{formatUgx(remaining)}</p></div></div>
-              <details><summary>Review disclosures</summary><div className="grid grid-3"><div><strong>Fees</strong><p className="muted">{text(disclosures.fees) || "See formal agreement before funding."}</p></div><div><strong>Custody</strong><p className="muted">{text(disclosures.custody) || "See formal agreement before funding."}</p></div><div><strong>Loss allocation</strong><p className="muted">{text(disclosures.loss_allocation) || "See formal agreement before funding."}</p></div></div></details>
-              <form action={createParticipatoryCommitmentAction} className="form-grid"><input type="hidden" name="listing_id" value={listing.id} /><div className="field"><label htmlFor={`commit-${listing.id}`}>Amount to commit (UGX)</label><input id={`commit-${listing.id}`} name="amount_minor" type="number" min="1000" max={remaining} required /></div><button className="button" type="submit">Create commitment</button></form>
+              <details><summary>Review disclosures</summary><div className="grid grid-3"><div><strong>Fees</strong><p className="muted">{text(disclosure.fees) || "See formal agreement before funding."}</p></div><div><strong>Custody</strong><p className="muted">{text(disclosure.custody) || "See formal agreement before funding."}</p></div><div><strong>Loss allocation</strong><p className="muted">{text(disclosure.loss_allocation) || "See formal agreement before funding."}</p></div></div></details>
+              <form action={createParticipatoryCommitmentAction} className="form-grid"><input type="hidden" name="listing_id" value={listing.id} /><div className="field"><label htmlFor={`commit-${listing.id}`}>Amount to commit (UGX)</label><input id={`commit-${listing.id}`} name="amount_minor" type="number" min="1000" max={remaining} required /></div><button className="button" type="submit">Commit and verify</button></form>
             </article>;
           })}</div>}
         </section>
