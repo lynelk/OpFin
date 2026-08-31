@@ -1,4 +1,4 @@
-import { JourneyCard } from "@/components/JourneyCard";
+import Link from "next/link";
 import { Screen, StateNotice } from "@/components/Screen";
 import { saveProtectionApi } from "@/lib/api/save-protection";
 import { OpfinApiError } from "@/lib/api/errors";
@@ -9,59 +9,70 @@ export default async function SavePage() {
   const token = await getAccessToken();
 
   try {
-    const [goalsResult, policiesResult] = await Promise.allSettled([
-      saveProtectionApi.savingsGoals(token),
-      saveProtectionApi.protectionPolicies(token)
-    ]);
-    const goals = goalsResult.status === "fulfilled" ? goalsResult.value.data.goals : [];
-    const policies = policiesResult.status === "fulfilled" ? policiesResult.value.data.policies : [];
+    const goalsResponse = await saveProtectionApi.savingsGoals(token);
+    const goals = goalsResponse.data.goals;
     const confirmed = goals.reduce((sum, goal) => sum + goal.confirmed_balance_minor, 0);
     const available = goals.reduce((sum, goal) => sum + goal.available_balance_minor, 0);
-    const activePolicies = policies.filter((policy) => policy.status === "active").length;
+    const firstGoal = goals[0];
 
     return (
       <Screen
-        title="Save & Protect"
-        description="Build a resilience buffer with partner-held savings, then add clearly disclosed protection issued by the named insurer or underwriter."
+        title="Save"
+        description="Build financial resilience through clear savings goals and confirmed partner-held positions. Protection remains a separate journey so saving never feels bundled with insurance."
       >
+        <section className="panel compass-next-action">
+          <p className="eyebrow">BUILD RESILIENCE FIRST</p>
+          <h2>{firstGoal ? "Keep moving your savings goal forward" : "Start with one goal that matters"}</h2>
+          <p className="muted">
+            {firstGoal
+              ? `${firstGoal.name}: ${formatUgx(firstGoal.confirmed_balance_minor)} confirmed toward your target. Pending collections are deliberately excluded.`
+              : "Create a goal using an approved partner-held savings product. OpFin will show confirmed and pending money separately."}
+          </p>
+          <Link className="button compass-action" href="/savings">{firstGoal ? "Manage savings" : "Create savings goal"}</Link>
+        </section>
+
         <div className="grid grid-3">
-          <JourneyCard
-            title="Savings goals"
-            description={goals.length ? `${goals.length} goal${goals.length === 1 ? "" : "s"}. Confirmed partner position: ${formatUgx(confirmed)}.` : "Create a goal using an approved partner-held savings product."}
-            href="/savings"
-            action={goals.length ? "Manage savings" : "Create savings goal"}
-            status="pilot"
-          />
-          <JourneyCard
-            title="Available savings"
-            description={`Confirmed position currently available for an eligible withdrawal: ${formatUgx(available)}. Pending collections are deliberately excluded.`}
-            href="/savings"
-            action="Review positions"
-            status="pilot"
-          />
-          <JourneyCard
-            title="Protection"
-            description={policies.length ? `${policies.length} policy record${policies.length === 1 ? "" : "s"}, with ${activePolicies} active cover${activePolicies === 1 ? "" : "s"}.` : "Compare approved protection products and review the insurer before enrolling."}
-            href="/insurance"
-            action={policies.length ? "Manage protection" : "Explore protection"}
-            status="pilot"
-          />
+          <section className="panel">
+            <h2>Confirmed savings</h2>
+            <div className="stat">{formatUgx(confirmed)}</div>
+            <p className="muted">Partner-confirmed savings positions only.</p>
+          </section>
+          <section className="panel">
+            <h2>Available to withdraw</h2>
+            <div className="stat">{formatUgx(available)}</div>
+            <p className="muted">Subject to the rules of the underlying savings product.</p>
+          </section>
+          <section className="panel">
+            <h2>Active goals</h2>
+            <div className="stat">{goals.length}</div>
+            <p className="muted">Keep the number of prominent goals small enough to stay actionable.</p>
+          </section>
         </div>
 
-        <section className="panel" style={{ marginTop: 16 }}>
-          <h2>Money and risk boundaries</h2>
+        <section className="panel">
+          <div className="case-card-head">
+            <div>
+              <h2>Automate only when you choose</h2>
+              <p className="muted">Money Autopilot can support routine saving, but provider execution, mandates and settlement remain separate from the rule you create.</p>
+            </div>
+            <Link href="/money-autopilot">Manage Autopilot</Link>
+          </div>
+        </section>
+
+        <section className="panel">
+          <h2>Money boundary</h2>
           <p className="muted">
-            OpFin manages the journey and product records. CPay executes collections and payouts. Savings become part of your confirmed position only after partner evidence is recorded, and protection becomes active only after the insurer or underwriter issues cover. Automatic savings debits remain disabled until a certified mandate contract is available.
+            OpFin manages goals and instructions. CPay executes collections and payouts. Savings become part of your confirmed position only after partner evidence is recorded, and automatic debits remain disabled until the required certified mandate exists.
           </p>
         </section>
       </Screen>
     );
   } catch (error) {
     const state = error instanceof OpfinApiError ? error.kind : "server";
-    const message = error instanceof Error ? error.message : "Unable to load Save & Protect.";
+    const message = error instanceof Error ? error.message : "Unable to load Save.";
 
     return (
-      <Screen title="Save & Protect" description="Build resilience with partner-held savings and clearly issued protection.">
+      <Screen title="Save" description="Build resilience with partner-held savings and clear confirmation states.">
         <StateNotice state={state} message={message} />
       </Screen>
     );

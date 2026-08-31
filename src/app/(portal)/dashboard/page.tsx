@@ -111,15 +111,17 @@ export default async function DashboardPage() {
         </div>
 
         <section className="panel">
-          <h2>Quick actions</h2>
-          <div className="quick-actions" aria-label="Financial actions">
-            <Link className="button" href="/money">Add Money</Link>
-            <Link className="button secondary" href="/borrow">Borrow</Link>
+          <div className="case-card-head">
+            <div>
+              <h2>What would you like to do?</h2>
+              <p className="muted">Four clear financial journeys. Setup, security, automation and support stay in More so Home remains focused.</p>
+            </div>
+          </div>
+          <div className="quick-actions" aria-label="Primary financial journeys">
+            <Link className="button" href="/borrow">Borrow</Link>
             <Link className="button secondary" href="/save">Save</Link>
             <Link className="button secondary" href="/grow">Grow</Link>
-            <Link className="button secondary" href="/money-autopilot">Autopilot</Link>
-            <Link className="button secondary" href="/calendar">Calendar</Link>
-            <Link className="button secondary" href="/support">Get help</Link>
+            <Link className="button secondary" href="/insurance">Protect</Link>
           </div>
         </section>
 
@@ -162,7 +164,7 @@ export default async function DashboardPage() {
           <section className="panel">
             <h2>Goals</h2>
             <div className="grid grid-3">
-              {compass.goals.map((goal) => (
+              {compass.goals.slice(0, 3).map((goal) => (
                 <article className="case-card" key={goal.reference}>
                   <strong>{goal.name}</strong>
                   <div className="stat">{formatUgx(goal.balance_minor)}</div>
@@ -174,7 +176,10 @@ export default async function DashboardPage() {
         ) : null}
 
         <section className="panel">
-          <h2>Identity & permissions</h2>
+          <div className="case-card-head">
+            <h2>Trust & account controls</h2>
+            <Link href="/more">Open More</Link>
+          </div>
           <div className="grid grid-2">
             <div><strong>Identity</strong><p className="muted">{kyc?.status ?? user.nin_status ?? "Not verified"}</p></div>
             <div><strong>Credit data permission</strong><p className="muted">{activeCreditConsent ? "Active" : "Review needed"}</p></div>
