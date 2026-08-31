@@ -8,6 +8,7 @@ use App\Services\LongRangePlatformService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LongRangePlatformController extends Controller
 {
@@ -19,6 +20,19 @@ class LongRangePlatformController extends Controller
     public function overview(Request $request): JsonResponse
     {
         return ApiResponse::success('Long-range platform loaded.', $this->service->overview($request->user()));
+    }
+
+    public function marketplace(Request $request): JsonResponse
+    {
+        $listings = DB::table('participatory_finance_listings')
+            ->where('status', 'funding')
+            ->where('borrower_user_id', '!=', $request->user()->id)
+            ->whereColumn('funded_amount_minor', '<', 'target_amount_minor')
+            ->latest('approved_at')
+            ->limit(100)
+            ->get(['id', 'reference', 'purpose', 'target_amount_minor', 'funded_amount_minor', 'term_days', 'lender_of_record', 'disclosures', 'approved_at']);
+
+        return ApiResponse::success('Participatory-finance marketplace loaded.', ['listings' => $listings]);
     }
 
     public function linkAccount(Request $request): JsonResponse
