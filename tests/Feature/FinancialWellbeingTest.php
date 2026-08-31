@@ -47,7 +47,7 @@ class FinancialWellbeingTest extends TestCase
             'direction' => 'expense',
             'amount_minor' => 25000,
             'description' => 'Supermarket groceries',
-            'occurred_at' => now()->toIso8601String(),
+            'occurred_at' => now()->format('Y-m-d H:i:s'),
         ])->assertCreated();
         $entry->assertJsonPath('data.category', 'Food');
 
@@ -56,7 +56,7 @@ class FinancialWellbeingTest extends TestCase
             'event_type' => 'bill',
             'direction' => 'expense',
             'amount_minor' => 120000,
-            'scheduled_for' => now()->addDays(5)->toIso8601String(),
+            'scheduled_for' => now()->addDays(5)->format('Y-m-d H:i:s'),
             'certainty' => 'scheduled',
             'category' => 'Utilities',
         ])->assertCreated();
@@ -81,7 +81,7 @@ class FinancialWellbeingTest extends TestCase
             'direction' => 'expense',
             'amount_minor' => 15000,
             'description' => 'Restaurant lunch',
-            'occurred_at' => now()->toIso8601String(),
+            'occurred_at' => now()->format('Y-m-d H:i:s'),
         ])->assertCreated();
 
         $entryId = (int) $entry->json('data.id');
@@ -96,7 +96,7 @@ class FinancialWellbeingTest extends TestCase
             'event_type' => 'bill',
             'direction' => 'expense',
             'amount_minor' => 300000,
-            'scheduled_for' => now()->startOfDay()->toIso8601String(),
+            'scheduled_for' => now()->startOfDay()->format('Y-m-d H:i:s'),
             'certainty' => 'scheduled',
             'recurrence' => 'monthly',
             'category' => 'Rent',
