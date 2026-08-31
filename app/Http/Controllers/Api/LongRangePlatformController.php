@@ -7,7 +7,6 @@ use App\Services\LongRangePlatformService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class LongRangePlatformController extends Controller
 {
@@ -20,7 +19,7 @@ class LongRangePlatformController extends Controller
 
     public function linkAccount(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'account_type' => 'required|in:bank,mobile_money,sacco,investment,savings,other',
             'provider' => 'required|string|max:80',
             'identifier' => 'required|string|max:160',
@@ -32,7 +31,7 @@ class LongRangePlatformController extends Controller
 
     public function household(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'household_size' => 'required|integer|min:1|max:50',
             'monthly_income_minor' => 'nullable|integer|min:0',
             'monthly_fixed_costs_minor' => 'nullable|integer|min:0',
@@ -45,7 +44,7 @@ class LongRangePlatformController extends Controller
 
     public function microbusiness(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'business_name' => 'required|string|max:160',
             'business_type' => 'required|string|max:80',
             'registration_reference' => 'nullable|string|max:160',
@@ -58,7 +57,7 @@ class LongRangePlatformController extends Controller
 
     public function assetFinance(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'asset_category' => 'required|string|max:80',
             'asset_description' => 'required|string|max:255',
             'asset_price_minor' => 'required|integer|min:1',
@@ -71,7 +70,7 @@ class LongRangePlatformController extends Controller
 
     public function community(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'institution_type' => 'required|in:sacco,vsla,cooperative,association,employer_group',
             'institution_name' => 'required|string|max:160',
             'member_reference' => 'nullable|string|max:160',
@@ -82,7 +81,7 @@ class LongRangePlatformController extends Controller
 
     public function participatoryListing(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'purpose' => 'required|string|max:160',
             'target_amount_minor' => 'required|integer|min:1000',
             'term_days' => 'required|integer|min:1|max:730',
@@ -97,7 +96,7 @@ class LongRangePlatformController extends Controller
 
     public function participatoryCommitment(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'listing_id' => 'required|integer|min:1',
             'amount_minor' => 'required|integer|min:1000',
         ]);
@@ -106,7 +105,7 @@ class LongRangePlatformController extends Controller
 
     public function referral(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'referred_user_id' => 'nullable|integer|exists:users,id',
             'event_type' => 'nullable|in:invited,registered,verified,eligible',
         ]);
@@ -118,7 +117,7 @@ class LongRangePlatformController extends Controller
 
     public function offlineSync(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'batch_reference' => 'required|uuid',
             'device_reference' => 'required|string|max:160',
             'events' => 'required|array|max:250',
@@ -132,7 +131,7 @@ class LongRangePlatformController extends Controller
 
     public function capital(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'mandate_type' => 'required|in:private_loan_book,managed_capital,co_lending,warehouse_line',
             'name' => 'required|string|max:160',
             'committed_capital_minor' => 'nullable|integer|min:0',
@@ -143,7 +142,7 @@ class LongRangePlatformController extends Controller
 
     public function partner(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'partner_name' => 'required|string|max:160',
             'partner_type' => 'required|in:employer,sacco,merchant,lender,insurer,investment_provider,agent,aggregator',
             'allowed_products' => 'nullable|array|max:100',
@@ -154,20 +153,11 @@ class LongRangePlatformController extends Controller
 
     public function ussd(Request $request): JsonResponse
     {
-        $data = $this->validated($request, [
+        $data = $request->validate([
             'session_id' => 'required|string|max:160',
             'phone' => 'required|string|max:32',
             'text' => 'nullable|string|max:500',
         ]);
         return ApiResponse::success('USSD response generated.', $this->service->ussd($data['session_id'], $data['phone'], $data['text'] ?? ''));
-    }
-
-    private function validated(Request $request, array $rules): array
-    {
-        $validator = Validator::make($request->all(), $rules);
-        if ($validator->fails()) {
-            abort(response()->json(ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray())->getData(true), 422));
-        }
-        return $validator->validated();
     }
 }
