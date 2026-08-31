@@ -44,15 +44,17 @@ export type MoneyAutopilotWorkspace = {
   guardrail: string;
 };
 
+export type InvestmentSuitability = {
+  risk_tolerance: string;
+  investment_horizon: string;
+  liquidity_need: string;
+  experience_level: string;
+  status: string;
+  assessed_at: string;
+};
+
 export type InvestmentWorkspace = {
-  suitability: null | {
-    risk_tolerance: string;
-    investment_horizon: string;
-    liquidity_need: string;
-    experience_level: string;
-    status: string;
-    assessed_at: string;
-  };
+  suitability: null | InvestmentSuitability;
   products: Array<{
     id: number;
     product_code: string;
@@ -77,6 +79,15 @@ export type InvestmentWorkspace = {
   settlement_status: string;
 };
 
+export type EmployerProgram = {
+  id: number;
+  name: string;
+  benefit_type: string;
+  status: string;
+  eligibility_rules: Record<string, unknown> | unknown[];
+  configuration: Record<string, unknown> | unknown[];
+};
+
 export type EmployerWorkspace = {
   employer: null | { id: number; name: string; status: string; country: string };
   membership: null | {
@@ -87,14 +98,7 @@ export type EmployerWorkspace = {
     verified_monthly_income_minor: number | null;
     verified_at: string | null;
   };
-  programs: Array<{
-    id: number;
-    name: string;
-    benefit_type: string;
-    status: string;
-    eligibility_rules: Record<string, unknown> | unknown[];
-    configuration: Record<string, unknown> | unknown[];
-  }>;
+  programs: EmployerProgram[];
   employees: Array<{
     id: number;
     name: string;
@@ -139,8 +143,22 @@ async function request<T>(path: string, token?: string, init: RequestInit = {}):
 
 export const experienceApi = {
   activation: (token?: string) => request<ActivationState>("/activation", token),
-  saveActivation: (payload: Record<string, unknown>, token?: string) => request<ActivationState>("/activation", token, { method: "PATCH", body: JSON.stringify(payload) }),
+  saveActivation: (payload: Record<string, unknown>, token?: string) =>
+    request<ActivationState>("/activation", token, { method: "PATCH", body: JSON.stringify(payload) }),
+
   moneyAutopilot: (token?: string) => request<MoneyAutopilotWorkspace>("/money-autopilot", token),
+  createMoneyAutopilotRule: (payload: Record<string, unknown>, token?: string) =>
+    request<{ rule: MoneyAutopilotRule }>("/money-autopilot/rules", token, { method: "POST", body: JSON.stringify(payload) }),
+  setMoneyAutopilotRuleStatus: (ruleId: number, status: "active" | "paused" | "retired", token?: string) =>
+    request<{ rule: MoneyAutopilotRule }>(`/money-autopilot/rules/${ruleId}`, token, { method: "PATCH", body: JSON.stringify({ status }) }),
+
   investments: (token?: string) => request<InvestmentWorkspace>("/investments/workspace", token),
-  employer: (token?: string) => request<EmployerWorkspace>("/employer/workspace", token)
+  saveSuitability: (payload: Record<string, unknown>, token?: string) =>
+    request<{ suitability: InvestmentSuitability }>("/investments/suitability", token, { method: "PUT", body: JSON.stringify(payload) }),
+  createInvestmentOrder: (productId: number, payload: Record<string, unknown>, token?: string) =>
+    request<{ order: InvestmentWorkspace["orders"][number] }>(`/investments/products/${productId}/orders`, token, { method: "POST", body: JSON.stringify(payload) }),
+
+  employer: (token?: string) => request<EmployerWorkspace>("/employer/workspace", token),
+  createEmployerProgram: (payload: Record<string, unknown>, token?: string) =>
+    request<{ program: EmployerProgram }>("/employer/programs", token, { method: "POST", body: JSON.stringify(payload) })
 };
