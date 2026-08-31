@@ -60,6 +60,8 @@ return new class extends Migration
             $table->string('status', 40)->default('submitted');
             $table->boolean('geolocation_consent')->default(false);
             $table->json('decision_evidence')->nullable();
+            $table->foreignId('decided_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('decided_at')->nullable();
             $table->timestamps();
             $table->index(['user_id', 'status']);
         });
@@ -73,6 +75,8 @@ return new class extends Migration
             $table->string('member_reference', 160)->nullable();
             $table->string('status', 40)->default('pending_verification');
             $table->json('permissions')->nullable();
+            $table->foreignId('verified_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('verified_at')->nullable();
             $table->timestamps();
             $table->index(['user_id', 'institution_type']);
         });
@@ -88,6 +92,8 @@ return new class extends Migration
             $table->string('status', 40)->default('draft');
             $table->string('lender_of_record', 160)->nullable();
             $table->json('disclosures')->nullable();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable();
             $table->timestamps();
         });
 
@@ -101,7 +107,7 @@ return new class extends Migration
             $table->string('payment_reference', 160)->nullable();
             $table->timestamp('settled_at')->nullable();
             $table->timestamps();
-            $table->unique(['listing_id', 'investor_user_id', 'reference']);
+            $table->index(['listing_id', 'status']);
         });
 
         Schema::create('referral_events', function (Blueprint $table) {
@@ -116,6 +122,20 @@ return new class extends Migration
             $table->json('abuse_checks')->nullable();
             $table->timestamps();
             $table->index(['referrer_user_id', 'status']);
+        });
+
+        Schema::create('reward_ledger_entries', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('reference')->unique();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('referral_event_id')->nullable()->constrained('referral_events')->nullOnDelete();
+            $table->string('direction', 10);
+            $table->bigInteger('amount_minor');
+            $table->string('reason', 160);
+            $table->string('status', 40)->default('posted');
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+            $table->index(['user_id', 'status']);
         });
 
         Schema::create('ussd_sessions', function (Blueprint $table) {
@@ -155,6 +175,8 @@ return new class extends Migration
             $table->bigInteger('deployed_capital_minor')->default(0);
             $table->string('status', 40)->default('draft');
             $table->json('investment_policy')->nullable();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable();
             $table->timestamps();
         });
 
@@ -167,6 +189,8 @@ return new class extends Migration
             $table->string('status', 40)->default('pending_due_diligence');
             $table->json('allowed_products')->nullable();
             $table->json('commercial_terms')->nullable();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable();
             $table->timestamps();
         });
 
@@ -181,15 +205,36 @@ return new class extends Migration
             $table->json('payload')->nullable();
             $table->timestamps();
         });
+
+        Schema::create('financial_action_intents', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('reference')->unique();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('action_type', 80);
+            $table->string('source_type', 80);
+            $table->unsignedBigInteger('source_id')->nullable();
+            $table->bigInteger('amount_minor')->nullable();
+            $table->string('currency', 3)->default('UGX');
+            $table->string('status', 40)->default('awaiting_step_up');
+            $table->string('idempotency_key', 160)->unique();
+            $table->string('cpay_reference', 160)->nullable();
+            $table->json('evidence')->nullable();
+            $table->timestamp('confirmed_at')->nullable();
+            $table->timestamp('settled_at')->nullable();
+            $table->timestamps();
+            $table->index(['user_id', 'status']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('financial_action_intents');
         Schema::dropIfExists('partner_distribution_events');
         Schema::dropIfExists('partner_distribution_accounts');
         Schema::dropIfExists('capital_mandates');
         Schema::dropIfExists('offline_sync_batches');
         Schema::dropIfExists('ussd_sessions');
+        Schema::dropIfExists('reward_ledger_entries');
         Schema::dropIfExists('referral_events');
         Schema::dropIfExists('participatory_finance_commitments');
         Schema::dropIfExists('participatory_finance_listings');
