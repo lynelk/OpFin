@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:opfin/constants.dart';
+import 'package:opfin/services/offline_sync_service.dart';
 import 'package:opfin/services/user_session.dart';
 
 class ConnectedFinancialLifeScreen extends StatefulWidget {
@@ -13,11 +14,19 @@ class ConnectedFinancialLifeScreen extends StatefulWidget {
 
 class _ConnectedFinancialLifeScreenState extends State<ConnectedFinancialLifeScreen> {
   late Future<Map<String, dynamic>> _workspace;
+  int _pendingOffline = 0;
+  bool _syncing = false;
 
   @override
   void initState() {
     super.initState();
     _workspace = _load();
+    _refreshPending();
+  }
+
+  Future<void> _refreshPending() async {
+    final pending = await OfflineSyncService.pendingEvents();
+    if (mounted) setState(() => _pendingOffline = pending.length);
   }
 
   Future<Map<String, dynamic>> _load() async {
@@ -30,6 +39,23 @@ class _ConnectedFinancialLifeScreenState extends State<ConnectedFinancialLifeScr
     if (response.statusCode != 200) throw Exception('Unable to load connected financial life.');
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     return (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+  }
+
+  Future<void> _syncOffline() async {
+    if (_syncing || _pendingOffline == 0) return;
+    setState(() => _syncing = true);
+    try {
+      final batch = await OfflineSyncService.sync();
+      await _refreshPending();
+      if (!mounted) return;
+      final status = batch?['status']?.toString() ?? 'nothing to sync';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Offline sync: $status')));
+      setState(() => _workspace = _load());
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
   }
 
   int _count(Map<String, dynamic> data, String key) {
@@ -63,7 +89,11 @@ class _ConnectedFinancialLifeScreenState extends State<ConnectedFinancialLifeScr
         final household = data['household'];
         final business = data['microbusiness'];
         return RefreshIndicator(
-          onRefresh: () async => setState(() => _workspace = _load()),
+          onRefresh: () async {
+            setState(() => _workspace = _load());
+            await _workspace;
+            await _refreshPending();
+          },
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
@@ -71,6 +101,14 @@ class _ConnectedFinancialLifeScreenState extends State<ConnectedFinancialLifeScr
               const SizedBox(height: 8),
               const Text('One identity for your accounts, household, business and community context. Provider evidence remains separate from information you enter yourself.'),
               const SizedBox(height: 20),
+              Card(
+                child: ListTile(
+                  leading: Icon(_pendingOffline == 0 ? Icons.cloud_done_outlined : Icons.cloud_upload_outlined),
+                  title: Text(_pendingOffline == 0 ? 'Offline changes are synchronized' : '$_pendingOffline offline change(s) waiting'),
+                  subtitle: const Text('Server truth is never overwritten silently. Replayed batches are idempotent and conflicts stay visible for review.'),
+                  trailing: _pendingOffline == 0 ? null : FilledButton(onPressed: _syncing ? null : _syncOffline, child: Text(_syncing ? 'Syncing…' : 'Sync')),
+                ),
+              ),
               _section('Connected accounts', '${_count(data, 'linked_accounts')} account(s)', Icons.account_balance_wallet_outlined),
               _section('Household', household == null ? 'Not added yet' : 'Household context available', Icons.home_outlined),
               _section('Microbusiness', business == null ? 'Not added yet' : 'Business context available', Icons.storefront_outlined),
