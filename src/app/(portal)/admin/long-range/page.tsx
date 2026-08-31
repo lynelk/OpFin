@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Screen, StateNotice } from "@/components/Screen";
 import { longRangeApi, type LongRangeRecord } from "@/lib/api/long-range";
 import { getAccessToken } from "@/lib/auth/session";
@@ -34,8 +35,9 @@ export default async function LongRangeAdminPage({ searchParams }: Readonly<{ se
     const data = await longRangeApi.governance(token);
     return (
       <Screen title="Long-range operations" description="Operate OpFin's connected-account, community, asset, participatory, capital and distribution extensions through explicit queues, maker-checker review and externally visible activation gates.">
-        {params.status ? <StateNotice state="success" message="Review completed and audit evidence recorded." /> : null}
+        {params.status ? <StateNotice state="success" message={`Completed: ${params.status.replaceAll("-", " ")}. Audit evidence has been retained.`} /> : null}
         {params.error ? <StateNotice state={params.error as "validation" | "unauthorized" | "forbidden" | "server" | "network"} message={params.message ?? "Review failed."} /> : null}
+        <section className="panel compass-next-action"><p className="eyebrow">CONTROLLED EXPANSION</p><h2>Create capital and distribution structures without bypassing approval.</h2><p className="muted">New mandates and partners start in review states and require an independent operator before activation.</p><Link className="button" href="/admin/long-range/setup">Create mandate or partner</Link></section>
         <div className="grid grid-3">
           <section className="panel"><h2>Verification</h2><div className="stat">{data.linked_accounts_pending + data.community_memberships_pending}</div><p className="muted">Linked accounts and community memberships awaiting independent evidence.</p></section>
           <section className="panel"><h2>Finance review</h2><div className="stat">{data.asset_finance_pending + data.participatory_listings_pending + data.capital_mandates_pending}</div><p className="muted">Asset, participatory and capital decisions awaiting governance.</p></section>
