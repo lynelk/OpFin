@@ -1,7 +1,10 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { longRangeApi } from "@/lib/api/long-range";
+import { opfinApi } from "@/lib/api/client";
+import { stepUpApi } from "@/lib/api/step-up";
 import { OpfinApiError } from "@/lib/api/errors";
 import { getAccessToken } from "@/lib/auth/session";
 
@@ -24,7 +27,15 @@ function jsonValue(formData: FormData, key: string, fallback: unknown = []): unk
 function fail(error: unknown, destination = "/ecosystem"): never {
   const kind = error instanceof OpfinApiError ? error.kind : "server";
   const message = error instanceof Error ? error.message : "Action failed";
-  redirect(`${destination}?error=${encodeURIComponent(kind)}&message=${encodeURIComponent(message)}`);
+  const separator = destination.includes("?") ? "&" : "?";
+  redirect(`${destination}${separator}error=${encodeURIComponent(kind)}&message=${encodeURIComponent(message)}`);
+}
+
+async function sendStepUpOtp(token: string | undefined): Promise<void> {
+  const profile = await opfinApi.profile(token);
+  const phone = profile.data.user.phone;
+  if (!phone) throw new Error("Your registered phone number is missing. Update your identity profile before confirming a financial instruction.");
+  await stepUpApi.generateOtp(phone);
 }
 
 export async function linkFinancialAccountAction(formData: FormData) {
@@ -74,6 +85,25 @@ export async function requestAssetFinanceAction(formData: FormData) {
   redirect("/ecosystem?status=asset-finance-submitted");
 }
 
+export async function startAssetDepositAction(formData: FormData) {
+  const token = await getAccessToken();
+  const sourceId = number(formData, "source_id");
+  const amountMinor = number(formData, "amount_minor");
+  let intentReference = "";
+  try {
+    const result = await longRangeApi.createFinancialIntent({
+      source_type: "asset_finance_deposit",
+      source_id: sourceId,
+      amount_minor: amountMinor,
+      idempotency_key: `asset-${sourceId}-${randomUUID()}`
+    }, token);
+    intentReference = String(result.financial_intent.reference ?? "");
+    if (!intentReference) throw new Error("Financial instruction reference was not returned.");
+    await sendStepUpOtp(token);
+  } catch (error) { fail(error); }
+  redirect(`/ecosystem/confirm?intent=${encodeURIComponent(intentReference)}&purpose=asset-deposit&amount=${amountMinor}`);
+}
+
 export async function joinCommunityAction(formData: FormData) {
   const token = await getAccessToken();
   try {
@@ -99,12 +129,54 @@ export async function createParticipatoryListingAction(formData: FormData) {
 
 export async function createParticipatoryCommitmentAction(formData: FormData) {
   const token = await getAccessToken();
+  const listingId = number(formData, "listing_id");
+  const amountMinor = number(formData, "amount_minor");
+  let intentReference = "";
   try {
-    await longRangeApi.createParticipatoryCommitment({
-      listing_id: number(formData, "listing_id"), amount_minor: number(formData, "amount_minor")
+    const commitmentResult = await longRangeApi.createParticipatoryCommitment({ listing_id: listingId, amount_minor: amountMinor }, token);
+    const commitmentId = Number(commitmentResult.commitment.id);
+    const intentResult = await longRangeApi.createFinancialIntent({
+      source_type: "participatory_commitment",
+      source_id: commitmentId,
+      amount_minor: amountMinor,
+      idempotency_key: `p2p-${commitmentId}-${randomUUID()}`
     }, token);
+    intentReference = String(intentResult.financial_intent.reference ?? "");
+    if (!intentReference) throw new Error("Financial instruction reference was not returned.");
+    await sendStepUpOtp(token);
   } catch (error) { fail(error); }
-  redirect("/ecosystem?status=commitment-created-step-up-required");
+  redirect(`/ecosystem/confirm?intent=${encodeURIComponent(intentReference)}&purpose=participatory&amount=${amountMinor}`);
+}
+
+export async function resendLongRangeOtpAction(formData: FormData) {
+  const token = await getAccessToken();
+  const intentReference = value(formData, "intent");
+  const purpose = value(formData, "purpose") || "financial-action";
+  const amountMinor = number(formData, "amount");
+  const destination = `/ecosystem/confirm?intent=${encodeURIComponent(intentReference)}&purpose=${encodeURIComponent(purpose)}&amount=${amountMinor}`;
+  try {
+    await sendStepUpOtp(token);
+  } catch (error) { fail(error, destination); }
+  redirect(`${destination}&status=otp-resent`);
+}
+
+export async function confirmLongRangeFinancialAction(formData: FormData) {
+  const token = await getAccessToken();
+  const intentReference = value(formData, "intent");
+  const purpose = value(formData, "purpose") || "financial-action";
+  const amountMinor = number(formData, "amount");
+  const otp = value(formData, "otp");
+  const destination = `/ecosystem/confirm?intent=${encodeURIComponent(intentReference)}&purpose=${encodeURIComponent(purpose)}&amount=${amountMinor}`;
+  let status = "provider-processing";
+  try {
+    const profile = await opfinApi.profile(token);
+    const phone = profile.data.user.phone;
+    if (!phone) throw new Error("Your registered phone number is missing.");
+    const verification = await stepUpApi.verifyOtp(phone, otp);
+    const confirmed = await longRangeApi.confirmFinancialIntent(intentReference, verification.verification_token, token);
+    status = String(confirmed.financial_intent.status ?? "provider_processing").replaceAll("_", "-");
+  } catch (error) { fail(error, destination); }
+  redirect(`/ecosystem?status=financial-instruction-${encodeURIComponent(status)}`);
 }
 
 export async function createReferralAction(formData: FormData) {
