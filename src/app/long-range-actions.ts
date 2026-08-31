@@ -97,12 +97,44 @@ export async function createParticipatoryListingAction(formData: FormData) {
   redirect("/ecosystem?status=participatory-listing-submitted");
 }
 
+export async function createParticipatoryCommitmentAction(formData: FormData) {
+  const token = await getAccessToken();
+  try {
+    await longRangeApi.createParticipatoryCommitment({
+      listing_id: number(formData, "listing_id"), amount_minor: number(formData, "amount_minor")
+    }, token);
+  } catch (error) { fail(error); }
+  redirect("/ecosystem?status=commitment-created-step-up-required");
+}
+
 export async function createReferralAction(formData: FormData) {
   const token = await getAccessToken();
   try {
     await longRangeApi.createReferral({ referred_user_id: number(formData, "referred_user_id") || undefined, event_type: "invited" }, token);
   } catch (error) { fail(error); }
   redirect("/ecosystem?status=referral-recorded");
+}
+
+export async function createCapitalMandateAction(formData: FormData) {
+  const token = await getAccessToken();
+  try {
+    await longRangeApi.createCapitalMandate({
+      mandate_type: value(formData, "mandate_type"), name: value(formData, "name"),
+      committed_capital_minor: number(formData, "committed_capital_minor"), investment_policy: jsonValue(formData, "investment_policy", {})
+    }, token);
+  } catch (error) { fail(error, "/admin/long-range"); }
+  redirect("/admin/long-range?status=capital-mandate-created");
+}
+
+export async function createDistributionPartnerAction(formData: FormData) {
+  const token = await getAccessToken();
+  try {
+    await longRangeApi.createPartner({
+      partner_name: value(formData, "partner_name"), partner_type: value(formData, "partner_type"),
+      allowed_products: jsonValue(formData, "allowed_products", []), commercial_terms: jsonValue(formData, "commercial_terms", {})
+    }, token);
+  } catch (error) { fail(error, "/admin/long-range"); }
+  redirect("/admin/long-range?status=partner-created");
 }
 
 export async function reviewLongRangeAction(formData: FormData) {
