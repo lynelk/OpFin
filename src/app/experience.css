@@ -1,0 +1,111 @@
+.setup-progress {
+  background: #dbe7e4;
+  border-radius: 999px;
+  height: 10px;
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.setup-progress span {
+  background: var(--accent);
+  display: block;
+  height: 100%;
+  transition: width .25s ease;
+}
+
+.goal-choice-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 22px;
+}
+
+.goal-choice-grid form { margin: 0; }
+
+.goal-choice {
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 112px;
+  padding: 16px;
+  text-align: left;
+  width: 100%;
+}
+
+.goal-choice:hover,
+.goal-choice:focus-visible {
+  border-color: var(--accent);
+  outline: 3px solid rgba(15, 118, 110, .12);
+}
+
+.goal-choice.selected {
+  background: #ecfdf8;
+  border-color: var(--accent);
+}
+
+.goal-choice span { font-weight: 800; }
+.goal-choice small { color: var(--muted); line-height: 1.4; }
+
+.autopilot-rule-grid,
+.experience-card-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.experience-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.experience-card h3 { margin: 8px 0; }
+.experience-card p { line-height: 1.55; }
+
+.experience-form-row {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.experience-form-row .button { min-height: 42px; }
+
+.experience-disclosure {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 12px 0;
+  padding: 12px;
+}
+
+.experience-status-bar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+@media (max-width: 1000px) {
+  .goal-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .goal-choice-grid,
+  .autopilot-rule-grid,
+  .experience-card-grid,
+  .experience-form-row { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .setup-progress span { transition: none; }
+}

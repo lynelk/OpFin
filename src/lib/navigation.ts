@@ -19,6 +19,7 @@ export const navigationItems: NavItem[] = [
   { href: "/more", label: "More", group: "customer" },
 
   { href: "/admin/dashboard", label: "Operations overview", group: "admin", roles: ["platform_admin", "operations", "support"] },
+  { href: "/admin/autopilot", label: "Platform Autopilot", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/credit-review", label: "Credit review", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/save-protection", label: "Save & Protection", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/reconciliation", label: "Reconciliation", group: "admin", roles: ["platform_admin", "operations"] },
