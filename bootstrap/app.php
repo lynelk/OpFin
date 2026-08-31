@@ -37,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->expectsJson() || $request->is('api/*')) {
                 return ApiResponse::error('Unauthenticated.', 401);
             }
+
             return null;
         });
 
@@ -44,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->expectsJson() || $request->is('api/*')) {
                 return ApiResponse::error('Validation failed.', 422, $exception->errors());
             }
+
             return null;
         });
 
@@ -53,9 +55,11 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             if ($exception instanceof HttpExceptionInterface) {
                 $status = $exception->getStatusCode();
+
                 return ApiResponse::error($status >= 500 ? 'Server error.' : ($exception->getMessage() ?: 'Request failed.'), $status);
             }
             report($exception);
+
             return ApiResponse::error('Server error.', 500);
         });
     })->create();

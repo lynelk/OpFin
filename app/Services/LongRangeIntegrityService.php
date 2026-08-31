@@ -17,7 +17,7 @@ class LongRangeIntegrityService
                 ->leftJoin('mobile_money_transactions as m', 'm.internal_reference', '=', 'i.reference')
                 ->where('i.status', 'settled')
                 ->groupBy('i.id', 'i.reference')
-                ->havingRaw("SUM(CASE WHEN m.status = ? THEN 1 ELSE 0 END) = 0", [MobileMoneyTransaction::STATUS_SUCCESSFUL])
+                ->havingRaw('SUM(CASE WHEN m.status = ? THEN 1 ELSE 0 END) = 0', [MobileMoneyTransaction::STATUS_SUCCESSFUL])
                 ->get(['i.reference']);
 
             foreach ($settledWithoutProviderFinality as $item) {

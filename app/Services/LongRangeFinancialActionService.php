@@ -27,6 +27,7 @@ class LongRangeFinancialActionService
             if ((int) $source->amount_minor !== $amountMinor) {
                 throw ValidationException::withMessages(['amount_minor' => ['Amount must match the approved commitment exactly.']]);
             }
+
             return $this->createIntent($user, 'participatory_fund', $sourceType, $sourceId, $amountMinor, $idempotencyKey);
         }
 
@@ -38,6 +39,7 @@ class LongRangeFinancialActionService
             if ((int) $source->deposit_minor <= 0 || (int) $source->deposit_minor !== $amountMinor) {
                 throw ValidationException::withMessages(['amount_minor' => ['Amount must match the approved asset-finance deposit.']]);
             }
+
             return $this->createIntent($user, 'asset_finance_deposit', $sourceType, $sourceId, $amountMinor, $idempotencyKey);
         }
 
@@ -51,6 +53,7 @@ class LongRangeFinancialActionService
             if ((int) $existing->user_id !== (int) $user->id || (int) $existing->amount_minor !== $amountMinor || $existing->source_type !== $sourceType || (int) $existing->source_id !== $sourceId) {
                 throw ValidationException::withMessages(['idempotency_key' => ['Idempotency key was already used for a different financial instruction.']]);
             }
+
             return $existing;
         }
 

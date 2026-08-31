@@ -20,6 +20,7 @@ class LongRangeGovernanceController extends Controller
     public function linkedAccount(Request $request, int $id): JsonResponse
     {
         $data = $request->validate(['status' => 'required|in:verified,rejected', 'evidence' => 'nullable|string|max:1000']);
+
         return ApiResponse::success('Linked account review completed.', ['linked_account' => $this->governance->verifyLinkedAccount($request->user(), $id, $data)]);
     }
 
@@ -31,36 +32,42 @@ class LongRangeGovernanceController extends Controller
             'approved_amount_minor' => 'nullable|integer|min:0',
             'pricing' => 'nullable|array',
         ]);
+
         return ApiResponse::success('Asset-finance decision recorded.', ['asset_finance_request' => $this->governance->decideAsset($request->user(), $id, $data)]);
     }
 
     public function community(Request $request, int $id): JsonResponse
     {
         $data = $request->validate(['status' => 'required|in:verified,rejected', 'evidence' => 'nullable|string|max:1000']);
+
         return ApiResponse::success('Community membership review completed.', ['membership' => $this->governance->verifyCommunity($request->user(), $id, $data)]);
     }
 
     public function participatory(Request $request, int $id): JsonResponse
     {
         $data = $request->validate(['status' => 'required|in:approved,rejected']);
+
         return ApiResponse::success('Participatory listing review completed.', ['listing' => $this->governance->approveParticipatory($request->user(), $id, $data)]);
     }
 
     public function capital(Request $request, int $id): JsonResponse
     {
         $data = $request->validate(['status' => 'required|in:approved,rejected']);
+
         return ApiResponse::success('Capital mandate review completed.', ['capital_mandate' => $this->governance->approveCapital($request->user(), $id, $data)]);
     }
 
     public function partner(Request $request, int $id): JsonResponse
     {
         $data = $request->validate(['status' => 'required|in:approved,rejected']);
+
         return ApiResponse::success('Partner due-diligence decision recorded.', ['partner' => $this->governance->approvePartner($request->user(), $id, $data)]);
     }
 
     public function referralReward(Request $request, int $id): JsonResponse
     {
         $data = $request->validate(['reward_minor' => 'required|integer|min:0|max:10000000']);
+
         return ApiResponse::success('Referral reward posted through the controlled reward ledger.', ['referral' => $this->governance->approveReferralReward($request->user(), $id, $data['reward_minor'])]);
     }
 }

@@ -234,6 +234,7 @@ class LongRangePlatformService
             if ($existing->payload_hash !== $hash) {
                 throw ValidationException::withMessages(['batch_reference' => ['Batch reference was already used with different data.']]);
             }
+
             return $existing;
         }
 
@@ -322,6 +323,7 @@ class LongRangePlatformService
         }
 
         $choice = collect(explode('*', $input))->last();
+
         return match ((string) $choice) {
             '1' => ['continue' => false, 'message' => 'Money status is available in your OpFin account. No balance is treated as confirmed unless provider evidence exists.'],
             '2' => ['continue' => false, 'message' => 'Borrowing requires secure authentication. Continue in OpFin or WhatsApp after verification.'],

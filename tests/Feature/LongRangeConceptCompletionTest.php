@@ -234,6 +234,7 @@ class LongRangeConceptCompletionTest extends TestCase
         $this->assertTrue(openssl_pkey_export($resource, $privateKey));
         $details = openssl_pkey_get_details($resource);
         $this->assertIsArray($details);
+
         return [$privateKey, $details['key']];
     }
 }
