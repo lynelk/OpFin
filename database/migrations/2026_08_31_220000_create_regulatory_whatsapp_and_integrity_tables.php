@@ -19,6 +19,7 @@ return new class extends Migration
             $table->json('validation_results')->nullable();
             $table->string('payload_hash', 64);
             $table->timestamp('generated_at');
+            $table->foreignId('generated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('validated_at')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
@@ -29,10 +30,13 @@ return new class extends Migration
         Schema::create('whatsapp_conversations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('wa_phone')->index();
+            $table->string('wa_phone')->unique();
             $table->string('state')->default('unverified')->index();
             $table->string('journey')->nullable()->index();
             $table->string('session_nonce', 64)->nullable()->unique();
+            $table->string('challenge_hash')->nullable();
+            $table->unsignedTinyInteger('challenge_attempts')->default(0);
+            $table->timestamp('challenge_expires_at')->nullable();
             $table->timestamp('verified_at')->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->json('context')->nullable();
@@ -49,6 +53,23 @@ return new class extends Migration
             $table->json('payload')->nullable();
             $table->string('payload_hash', 64);
             $table->timestamp('occurred_at');
+            $table->timestamps();
+        });
+
+        Schema::create('data_breach_incidents', function (Blueprint $table) {
+            $table->id();
+            $table->string('incident_reference')->unique();
+            $table->string('severity')->index();
+            $table->string('category')->index();
+            $table->unsignedInteger('affected_subjects')->default(0);
+            $table->string('status')->default('open')->index();
+            $table->text('description');
+            $table->text('containment')->nullable();
+            $table->text('remediation')->nullable();
+            $table->timestamp('detected_at')->index();
+            $table->timestamp('contained_at')->nullable();
+            $table->timestamp('notified_pdpo_at')->nullable();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
 
@@ -78,9 +99,11 @@ return new class extends Migration
             $table->text('description');
             $table->string('status')->default('open')->index();
             $table->json('evidence')->nullable();
+            $table->json('resolution_evidence')->nullable();
             $table->timestamp('resolved_at')->nullable();
             $table->foreignId('resolved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
+            $table->index(['status', 'type', 'reference']);
         });
     }
 
@@ -88,6 +111,7 @@ return new class extends Migration
     {
         Schema::dropIfExists('financial_integrity_alerts');
         Schema::dropIfExists('financial_integrity_runs');
+        Schema::dropIfExists('data_breach_incidents');
         Schema::dropIfExists('whatsapp_messages');
         Schema::dropIfExists('whatsapp_conversations');
         Schema::dropIfExists('regulatory_report_runs');
