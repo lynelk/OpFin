@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use LogicException;
 
 class LoanService
 {
@@ -23,10 +24,15 @@ class LoanService
     }
 
     /**
-     * Create a new loan from an approved application.
+     * Legacy compatibility origination. Production must use the governed
+     * decision -> offer -> CPay finality -> exact schedule path instead.
      */
     public function createLoanFromApplication(LoanApplication $loanApplication): ?Loan
     {
+        if (app()->environment('production') && ! config('opfin.credit.legacy_origination_enabled', false)) {
+            throw new LogicException('Legacy loan origination is disabled in production. Use the production credit-offer workflow.');
+        }
+
         try {
             return DB::transaction(function () use ($loanApplication) {
                 $existingLoan = Loan::where('loan_application_id', $loanApplication->id)->first();
@@ -79,7 +85,7 @@ class LoanService
     }
 
     /**
-     * Process a successful payment event once.
+     * Process a successful legacy payment event once.
      */
     public function processSuccessfulTransaction(Transaction $transaction): void
     {
@@ -89,6 +95,10 @@ class LoanService
             if ($transaction->type === 'Disbursement') {
                 if ($transaction->loan_id || Loan::where('loan_application_id', $transaction->loan_application_id)->exists()) {
                     return;
+                }
+
+                if (app()->environment('production') && ! config('opfin.credit.legacy_origination_enabled', false)) {
+                    throw new LogicException('Legacy disbursement finality cannot originate a production loan.');
                 }
 
                 $transaction->loanApplication->update([
@@ -121,24 +131,26 @@ class LoanService
                     $remainingPayment -= ($paymentBreakdown['interestPaid'] + $paymentBreakdown['principalPaid']);
                 }
 
+                if (abs((float) $remainingPayment) > 0.000001) {
+                    throw new LogicException('Legacy repayment allocation did not consume the collected amount exactly.');
+                }
+
                 $this->processCollection($transaction, $interestPaidTotal, $principalPaidTotal);
             }
         });
     }
 
     /**
-     * Process all disbursement activities.
+     * Legacy account/journal compatibility posting.
      */
     public function processDisbursement(Transaction $transaction, Loan $loan): void
     {
         try {
-            if ($transaction->network === 'AIRTEL') {
-                $disbursementAccountName = 'Airtel Disbursement';
-            } elseif ($transaction->network === 'MTN') {
-                $disbursementAccountName = 'MTN Disbursement';
-            } else {
-                throw new Exception('Unsupported network: '.$transaction->network);
-            }
+            $disbursementAccountName = match ($transaction->network) {
+                'AIRTEL' => 'Airtel Disbursement',
+                'MTN' => 'MTN Disbursement',
+                default => throw new Exception('Unsupported network: '.$transaction->network),
+            };
 
             $disbursementAccount = Account::where('name', $disbursementAccountName)->first();
             if (! $disbursementAccount) {
@@ -174,18 +186,16 @@ class LoanService
     }
 
     /**
-     * Process all collection (repayment) activities.
+     * Legacy account/journal compatibility posting.
      */
     public function processCollection(Transaction $transaction, float $interestPaid, float $principalPaid): void
     {
         try {
-            if ($transaction->network === 'AIRTEL') {
-                $collectionAccountName = 'Airtel Collection';
-            } elseif ($transaction->network === 'MTN') {
-                $collectionAccountName = 'MTN Collection';
-            } else {
-                throw new Exception('Unsupported network: '.$transaction->network);
-            }
+            $collectionAccountName = match ($transaction->network) {
+                'AIRTEL' => 'Airtel Collection',
+                'MTN' => 'MTN Collection',
+                default => throw new Exception('Unsupported network: '.$transaction->network),
+            };
 
             $collectionAccount = Account::where('name', $collectionAccountName)->first();
             if (! $collectionAccount) {
@@ -240,13 +250,6 @@ class LoanService
         }
     }
 
-    /**
-     * Resolve the principal balance account for a loan product.
-     *
-     * The legacy accounts table has no explicit account-role column yet, so
-     * interest income must be excluded to avoid non-deterministic `first()`
-     * selection when multiple accounts share the same loan_product_id.
-     */
     private function loanProductPrincipalAccount(int $loanProductId): Account
     {
         $account = Account::where('loan_product_id', $loanProductId)
@@ -261,9 +264,6 @@ class LoanService
         return $account;
     }
 
-    /**
-     * Update account balance and create journal entry.
-     */
     protected function updateAccountBalance(
         Account $account,
         float $amount,
@@ -271,18 +271,21 @@ class LoanService
         string $reference,
         string $description
     ): void {
+        $rounded = (int) round($amount);
+        if (abs($amount - $rounded) > 0.000001 || $rounded <= 0) {
+            throw new LogicException('Legacy account posting requires a positive integer minor-unit amount.');
+        }
+
         $previousBalance = $account->balance;
-
         $account->balance = $type === 'Debit'
-            ? $account->balance - $amount
-            : $account->balance + $amount;
-
+            ? $account->balance - $rounded
+            : $account->balance + $rounded;
         $account->save();
 
         JournalEntry::create([
             'account_id' => $account->id,
             'type' => $type,
-            'amount' => $amount,
+            'amount' => $rounded,
             'previous_balance' => $previousBalance,
             'current_balance' => $account->balance,
             'reference' => $reference,
@@ -290,18 +293,11 @@ class LoanService
         ]);
     }
 
-    /**
-     * Prepare and send disbursement notification.
-     */
     protected function sendDisbursementNotification(Loan $loan): void
     {
-        $message = $this->prepareDisbursementMessage($loan);
-        $this->smsService->queueSms($loan->user->phone, $message);
+        $this->smsService->queueSms($loan->user->phone, $this->prepareDisbursementMessage($loan));
     }
 
-    /**
-     * Prepare disbursement SMS message.
-     */
     protected function prepareDisbursementMessage(Loan $loan): string
     {
         return sprintf(
@@ -313,39 +309,26 @@ class LoanService
         );
     }
 
-    /**
-     * Prepare and send collection notification.
-     */
     protected function sendCollectionNotification(Transaction $transaction): void
     {
-        $message = $this->prepareCollectionMessage($transaction);
-        $this->smsService->queueSms($transaction->loan->user->phone, $message);
+        $this->smsService->queueSms($transaction->loan->user->phone, $this->prepareCollectionMessage($transaction));
     }
 
-    /**
-     * Prepare collection SMS message.
-     */
     protected function prepareCollectionMessage(Transaction $transaction): string
     {
         $outstandingBalance = $transaction->loan->outstanding_balance;
-        $hasOutstandingBalance = $outstandingBalance > 0;
-
         $message = sprintf(
             'Hello %s, thank you for your loan repayment of %s.',
             $transaction->loan->user->name,
             number_format($transaction->amount)
         );
 
-        if ($hasOutstandingBalance) {
-            $message .= sprintf(
-                ' Your outstanding balance is %s.',
-                number_format($outstandingBalance),
-            );
-        } else {
-            $message .= ' Your loan has been fully settled. We appreciate your business!';
-            $transaction->loan->update(['status' => 'Cleared']);
+        if ($outstandingBalance > 0) {
+            return $message.sprintf(' Your outstanding balance is %s.', number_format($outstandingBalance));
         }
 
-        return $message;
+        $transaction->loan->update(['status' => 'Cleared']);
+
+        return $message.' Your loan has been fully settled. We appreciate your business!';
     }
 }
