@@ -185,6 +185,14 @@ class LongRangeFinancialActionService
                                     'updated_at' => now(),
                                 ]);
                                 $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                                $this->auditLogger->record('long_range.financial_intent.reversed', null, $transaction, [
+                                    'intent_reference' => $current->reference,
+                                    'action_type' => $current->action_type,
+                                    'source_type' => $current->source_type,
+                                    'source_id' => (int) $current->source_id,
+                                    'amount_minor' => (int) $current->amount_minor,
+                                    'provider_reference' => $transaction->provider_reference,
+                                ]);
                                 $reversed++;
 
                                 return;
@@ -193,6 +201,14 @@ class LongRangeFinancialActionService
                                 DB::table('financial_action_intents')->where('id', $intent->id)->update(['status' => 'failed', 'updated_at' => now()]);
                                 $this->releaseFailedSource($current);
                                 $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                                $this->auditLogger->record('long_range.financial_intent.provider_reversed_before_settlement', null, $transaction, [
+                                    'intent_reference' => $current->reference,
+                                    'action_type' => $current->action_type,
+                                    'source_type' => $current->source_type,
+                                    'source_id' => (int) $current->source_id,
+                                    'amount_minor' => (int) $current->amount_minor,
+                                    'provider_reference' => $transaction->provider_reference,
+                                ]);
                                 $failed++;
                             }
                         });
