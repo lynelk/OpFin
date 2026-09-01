@@ -30,7 +30,9 @@ class ProductionLoanLedgerService
             throw new \InvalidArgumentException('Production credit disbursement can only be posted after successful provider finality.');
         }
 
-        [$principalMinor, $cashMinor, $deductedFeesMinor] = $this->creditDisbursementComponents($offer);
+        [$principalMinor, $cashMinor, $deductedFeesMinor, $financedFeesMinor] = $this->creditDisbursementComponents($offer);
+        $this->assertCreditPaymentMatchesOffer($mobileMoney, $offer, $cashMinor);
+
         $entries = [
             [
                 'account_id' => $this->loanReceivableAccount($loan, $offer->currency)->id,
@@ -45,12 +47,28 @@ class ProductionLoanLedgerService
                 'memo' => 'Cash disbursed through governed payment provider',
             ],
         ];
+
         if ($deductedFeesMinor > 0) {
             $entries[] = [
                 'account_id' => $this->creditFeeClearingAccount($loan, $offer->currency)->id,
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $deductedFeesMinor,
-                'memo' => 'Disclosed deducted credit fees held in clearing pending accounting-policy recognition',
+                'memo' => 'Disclosed deducted credit fees held in deferred-fee clearing pending recognition',
+            ];
+        }
+
+        if ($financedFeesMinor > 0) {
+            $entries[] = [
+                'account_id' => $this->creditFeeReceivableAccount($loan, $offer->currency)->id,
+                'direction' => LedgerEntry::DIRECTION_DEBIT,
+                'amount_minor' => $financedFeesMinor,
+                'memo' => 'Financed credit fee receivable created at origination',
+            ];
+            $entries[] = [
+                'account_id' => $this->creditFeeClearingAccount($loan, $offer->currency)->id,
+                'direction' => LedgerEntry::DIRECTION_CREDIT,
+                'amount_minor' => $financedFeesMinor,
+                'memo' => 'Financed credit fees deferred pending accounting-policy recognition',
             ];
         }
 
@@ -69,6 +87,7 @@ class ProductionLoanLedgerService
                 'principal_minor' => $principalMinor,
                 'cash_disbursed_minor' => $cashMinor,
                 'deducted_fees_minor' => $deductedFeesMinor,
+                'financed_fees_minor' => $financedFeesMinor,
                 'fee_treatment' => $offer->fee_treatment,
             ],
         );
@@ -80,6 +99,7 @@ class ProductionLoanLedgerService
             'principal_minor' => $principalMinor,
             'cash_disbursed_minor' => $cashMinor,
             'deducted_fees_minor' => $deductedFeesMinor,
+            'financed_fees_minor' => $financedFeesMinor,
         ]);
 
         return $posted;
@@ -103,7 +123,9 @@ class ProductionLoanLedgerService
             throw new \InvalidArgumentException('Production disbursement reversal requires provider-confirmed reversed status.');
         }
 
-        [$principalMinor, $cashMinor, $deductedFeesMinor] = $this->creditDisbursementComponents($offer);
+        [$principalMinor, $cashMinor, $deductedFeesMinor, $financedFeesMinor] = $this->creditDisbursementComponents($offer);
+        $this->assertCreditPaymentMatchesOffer($mobileMoney, $offer, $cashMinor);
+
         $entries = [
             [
                 'account_id' => $this->providerCashAccount($mobileMoney->provider, 'disbursement', $offer->currency)->id,
@@ -118,12 +140,28 @@ class ProductionLoanLedgerService
                 'memo' => 'Loan principal receivable reversed after provider reversal',
             ],
         ];
+
         if ($deductedFeesMinor > 0) {
             $entries[] = [
                 'account_id' => $this->creditFeeClearingAccount($loan, $offer->currency)->id,
                 'direction' => LedgerEntry::DIRECTION_DEBIT,
                 'amount_minor' => $deductedFeesMinor,
-                'memo' => 'Deducted fee clearing reversed with provider reversal',
+                'memo' => 'Deducted deferred-fee clearing reversed with provider reversal',
+            ];
+        }
+
+        if ($financedFeesMinor > 0) {
+            $entries[] = [
+                'account_id' => $this->creditFeeClearingAccount($loan, $offer->currency)->id,
+                'direction' => LedgerEntry::DIRECTION_DEBIT,
+                'amount_minor' => $financedFeesMinor,
+                'memo' => 'Financed deferred-fee clearing reversed with provider reversal',
+            ];
+            $entries[] = [
+                'account_id' => $this->creditFeeReceivableAccount($loan, $offer->currency)->id,
+                'direction' => LedgerEntry::DIRECTION_CREDIT,
+                'amount_minor' => $financedFeesMinor,
+                'memo' => 'Financed fee receivable reversed after provider reversal',
             ];
         }
 
@@ -143,6 +181,7 @@ class ProductionLoanLedgerService
                 'principal_minor' => $principalMinor,
                 'cash_reversed_minor' => $cashMinor,
                 'deducted_fees_reversed_minor' => $deductedFeesMinor,
+                'financed_fees_reversed_minor' => $financedFeesMinor,
             ],
         );
 
@@ -254,10 +293,12 @@ class ProductionLoanLedgerService
         }
         if ($feesMinor > 0) {
             $entries[] = [
-                'account_id' => $this->creditFeeClearingAccount($transaction->loan, $currency)->id,
+                'account_id' => $this->repaymentFeeAccount($transaction->loan, $currency)->id,
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $feesMinor,
-                'memo' => 'Cash allocated to disclosed credit fees pending accounting-policy recognition',
+                'memo' => $transaction->loan?->credit_offer_id
+                    ? 'Financed fee receivable extinguished by customer repayment'
+                    : 'Legacy cash allocated to disclosed credit fees pending accounting-policy recognition',
             ];
         }
         if ($suspenseMinor > 0) {
@@ -301,15 +342,61 @@ class ProductionLoanLedgerService
     {
         $principalMinor = (int) $offer->principal_amount_minor;
         $cashMinor = (int) $offer->net_disbursement_minor;
-        $deductedFeesMinor = $offer->fee_treatment === 'deducted' ? (int) $offer->fees_minor : 0;
-        if ($principalMinor <= 0 || $cashMinor <= 0) {
-            throw new \InvalidArgumentException('Production credit disbursement amounts must be positive integer minor units.');
-        }
-        if ($cashMinor + $deductedFeesMinor !== $principalMinor) {
-            throw new \InvalidArgumentException('Production credit disbursement components do not reconcile to approved principal.');
+        $feesMinor = (int) $offer->fees_minor;
+        if ($principalMinor <= 0 || $cashMinor <= 0 || $feesMinor < 0) {
+            throw new \InvalidArgumentException('Production credit disbursement amounts must use valid positive/non-negative integer minor units.');
         }
 
-        return [$principalMinor, $cashMinor, $deductedFeesMinor];
+        if ($offer->fee_treatment === 'deducted') {
+            if ($cashMinor + $feesMinor !== $principalMinor) {
+                throw new \InvalidArgumentException('Deducted-fee disbursement must satisfy net cash plus deducted fees equals approved principal.');
+            }
+
+            return [$principalMinor, $cashMinor, $feesMinor, 0];
+        }
+
+        if ($offer->fee_treatment === 'financed') {
+            if ($cashMinor !== $principalMinor) {
+                throw new \InvalidArgumentException('Financed-fee disbursement must send the full approved principal in cash.');
+            }
+
+            return [$principalMinor, $cashMinor, 0, $feesMinor];
+        }
+
+        throw new \InvalidArgumentException('Unsupported production credit fee treatment.');
+    }
+
+    private function assertCreditPaymentMatchesOffer(MobileMoneyTransaction $mobileMoney, CreditOffer $offer, int $cashMinor): void
+    {
+        if ($mobileMoney->direction !== MobileMoneyTransaction::DIRECTION_DISBURSEMENT) {
+            throw new \InvalidArgumentException('Credit-offer ledger posting requires a disbursement money movement.');
+        }
+        if ((int) $mobileMoney->credit_offer_id !== (int) $offer->id) {
+            throw new \InvalidArgumentException('Money movement credit_offer_id does not match the ledger offer.');
+        }
+        if ((int) $mobileMoney->amount_minor !== $cashMinor) {
+            throw new \InvalidArgumentException('Provider-confirmed disbursement amount does not match the offer net cash amount.');
+        }
+        if (strtoupper((string) $mobileMoney->currency) !== strtoupper((string) $offer->currency)) {
+            throw new \InvalidArgumentException('Provider-confirmed disbursement currency does not match the offer currency.');
+        }
+    }
+
+    private function repaymentFeeAccount(?Loan $loan, string $currency): LedgerAccount
+    {
+        if (! $loan) {
+            throw new \InvalidArgumentException('Repayment fee posting requires a loan.');
+        }
+        if (! $loan->credit_offer_id) {
+            return $this->creditFeeClearingAccount($loan, $currency);
+        }
+
+        $offer = CreditOffer::query()->find($loan->credit_offer_id);
+        if (! $offer || $offer->fee_treatment !== 'financed') {
+            throw new \InvalidArgumentException('Production repayment contains fees that are not backed by a financed-fee offer.');
+        }
+
+        return $this->creditFeeReceivableAccount($loan, $currency);
     }
 
     private function ledgerReference(string $eventType, Transaction $transaction): string
@@ -320,6 +407,11 @@ class ProductionLoanLedgerService
     private function loanReceivableAccount(Loan $loan, string $currency): LedgerAccount
     {
         return $this->account('asset.loan_receivable.product_'.$loan->loan_product_id, 'Loan receivable product '.$loan->loan_product_id, 'asset', $currency);
+    }
+
+    private function creditFeeReceivableAccount(Loan $loan, string $currency): LedgerAccount
+    {
+        return $this->account('asset.credit_fee_receivable.product_'.$loan->loan_product_id, 'Credit fee receivable product '.$loan->loan_product_id, 'asset', $currency);
     }
 
     private function interestIncomeAccount(Loan $loan, string $currency): LedgerAccount
@@ -353,6 +445,9 @@ class ProductionLoanLedgerService
         if ($existing) {
             if (strtoupper((string) $existing->currency) !== $currency) {
                 throw new \InvalidArgumentException("Ledger account {$code} is bound to {$existing->currency}; cross-currency reuse is not allowed.");
+            }
+            if (! $existing->is_active) {
+                throw new \InvalidArgumentException("Ledger account {$code} is inactive.");
             }
 
             return $existing;
