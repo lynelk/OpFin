@@ -63,15 +63,14 @@ class FinancialIntegrityService
                     $query->whereNotIn('e.direction', ['debit', 'credit'])
                         ->orWhere('e.amount_minor', '<=', 0)
                         ->orWhereColumn('e.currency', '!=', 't.currency')
-                        ->orWhereColumn('a.currency', '!=', 't.currency')
-                        ->orWhere('a.is_active', false);
+                        ->orWhereColumn('a.currency', '!=', 't.currency');
                 })
-                ->select('e.id', 't.reference', 'e.direction', 'e.amount_minor', 'e.currency as entry_currency', 't.currency as transaction_currency', 'a.code as account_code', 'a.currency as account_currency', 'a.is_active')
+                ->select('e.id', 't.reference', 'e.direction', 'e.amount_minor', 'e.currency as entry_currency', 't.currency as transaction_currency', 'a.code as account_code', 'a.currency as account_currency')
                 ->limit(250)
                 ->get();
             foreach ($invalidEntries as $entry) {
                 $findings[] = $this->alert($runId, 'critical', 'invalid_ledger_entry', (string) $entry->id,
-                    'Ledger entry violates amount, direction, account-state or currency invariants.', (array) $entry);
+                    'Ledger entry violates amount, direction or currency invariants.', (array) $entry);
             }
 
             $orphanEntries = DB::table('ledger_entries as e')
@@ -170,7 +169,7 @@ class FinancialIntegrityService
                 ? DB::table('financial_integrity_alerts')->where('status', 'open')->where('severity', 'high')->count()
                 : 0,
             'platform_balanced' => $latest?->status === 'balanced',
-            'funds_integrity_rule' => 'Every governed financial event must have exactly the expected economic posting. Any missing posting, imbalance, false settlement, funding mismatch, reward-ledger mismatch, duplicate provider reference, currency mismatch, invalid account state, or unreconciled successful/reversed payment is an exception and cannot be silently written off or auto-balanced away.',
+            'funds_integrity_rule' => 'Every governed financial event must have exactly the expected economic posting. Any missing posting, imbalance, false settlement, funding mismatch, reward-ledger mismatch, duplicate provider reference, currency mismatch, invalid entry shape, or unreconciled successful/reversed payment is an exception and cannot be silently written off or auto-balanced away. Account retirement blocks new postings but does not invalidate immutable historical entries.',
         ];
     }
 

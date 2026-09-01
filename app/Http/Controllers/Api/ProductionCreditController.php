@@ -212,8 +212,8 @@ class ProductionCreditController extends Controller
             $duration,
         );
         $frequencyDays = Loan::getDaysInFrequency((string) $term->repayment_frequency);
-        $occurrences = $duration < $frequencyDays
-            ? 1
+        $occurrences = $duration <= 30
+            ? $installments
             : max(1, min($installments, intdiv(30, $frequencyDays)));
         $base = intdiv($repaymentMinor, $installments);
         $remainder = $repaymentMinor % $installments;
