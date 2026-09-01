@@ -1,56 +1,35 @@
 # OpFin Money-Movement Integration
 
-## Status
+## Production boundary
 
-CPay v2 is the **only production money-movement boundary for OpFin**.
+CPay v2 is the only production money-movement boundary for OpFin. `mock` exists only for local development and automated tests. Direct MTN/Airtel collection or payout adapters are not valid production paths.
 
-Supported runtime adapters:
+OpFin owns customer/product decisions, obligations, schedules, product ledgers and customer financial state. CPay owns external execution and provider-side finality evidence. Provider success must be applied by the relevant product service before OpFin treats the product outcome as settled.
 
-- `cpay`: production and certified sandbox collection/payout/status boundary.
-- `mock`: local development and automated-test adapter only.
+## Canonical idempotency
 
-Direct MTN/Airtel payment and payout adapters were removed from the production codebase. Airtel configuration that remains in OpFin is KYC-only and must not be used for money movement.
+Every collection or payout requires a unique `idempotency_key`, positive integer `amount_minor`, currency and phone/MSISDN.
 
-## Architecture boundary
+An idempotency key is permanently bound to the original financial instruction. A replay is accepted only when the stored and requested instruction agree on the material fields supplied by the caller, including:
 
-OpFin owns customer journeys, product decisions, obligations, schedules, product ledgers and financial-wellbeing state. CPay owns external payment execution and provider-side payment/reconciliation evidence. A provider event must terminate at CPay first and enter OpFin only through the governed CPay callback boundary.
+- provider;
+- direction;
+- amount;
+- currency;
+- phone;
+- linked transaction, credit offer, loan, user and institution IDs;
+- internal reference when supplied;
+- purpose and source identifiers when supplied.
 
-Production code must fail closed if an attempt is made to route money movement outside CPay.
-
-## Main classes
-
-- `App\Contracts\MobileMoneyProviderInterface`
-- `App\Services\MobileMoney\MobileMoneyService`
-- `App\Services\MobileMoney\MobileMoneyProviderManager`
-- `App\Services\MobileMoney\MobileMoneyProviderResponse`
-- `App\Services\MobileMoney\WebhookSignatureValidator`
-- `App\Services\MobileMoney\Adapters\CpayV2Adapter`
-- `App\Services\MobileMoney\Adapters\MockMobileMoneyAdapter`
-- `App\Models\MobileMoneyTransaction`
+Exact replay returns the existing transaction. Reuse of the same key for a different instruction raises a hard conflict. A unique database constraint remains the final concurrency backstop.
 
 ## Outbound CPay contract
 
-Every collection or payout requires a unique OpFin `idempotency_key` and an integer `amount_minor` greater than zero. The CPay adapter propagates the v5 cross-system context:
+CPay requests include the merchant identity, amount, currency, party, merchant reference, callback URL and cross-system metadata such as correlation ID, trace ID, product/customer references and purpose. State-changing requests send `X-CPay-Idempotency-Key`.
 
-- correlation ID
-- trace ID
-- product reference
-- customer reference
-- purpose
-- country
-- preferred channel when configured
-- callback event route
-- OpFin transaction ID
-- currency and amount
-- merchant/payment reference
+Requests are RSA-signed with a fresh nonce and UTC timestamp. No live private key or callback secret may be committed.
 
-CPay requests are RSA-signed using the configured merchant private key and carry a fresh nonce and timestamp. `X-CPay-Idempotency-Key` is sent for state-changing payment instructions.
-
-## Required production configuration
-
-Production must use a dedicated managed PostgreSQL database and CPay credentials issued for the OpFin merchant/integration.
-
-Required money-movement settings include:
+Required production settings include:
 
 ```env
 MOBILE_MONEY_PROVIDER=cpay
@@ -64,104 +43,99 @@ CPAY_CALLBACK_REPLAY_WINDOW_SECONDS=300
 CPAY_ENVIRONMENT=production
 CPAY_COUNTRY=UG
 CPAY_CURRENCY=UGX
+CPAY_MINOR_UNIT_EXPONENT=0
 ```
 
-Never commit live keys or callback secrets. Production deployment must fail its release gate if mandatory CPay identity/signing values are absent.
+## Status normalization
 
-## Transaction tracking and idempotency
+CPay statuses are normalized into OpFin's finite state model:
 
-`mobile_money_transactions` records:
+```text
+SUCCESSFUL | SUCCEEDED | COMPLETED | SUCCESS -> successful
+FAILED | REJECTED | CANCELLED | CANCELED     -> failed
+REVERSED | REFUNDED and certified equivalents -> reversed
+other/undetermined                            -> pending
+```
 
-- linked internal transaction, credit offer and/or loan where applicable
-- user and institution scope
-- provider and direction
-- integer amount and currency
-- phone/MSISDN
-- unique `idempotency_key`
-- unique `internal_reference`
-- provider reference
-- normalized payment status
-- reconciliation status
-- retry metadata
-- unique webhook event ID when supplied
-- provider payload and cross-system metadata
+Refund/reversal webhook event types also normalize to `reversed`; they are never downgraded to `pending`.
 
-If the same outbound idempotency key is submitted again, OpFin returns the existing transaction rather than creating another money instruction.
+CPay terminal state regressions are rejected. A later webhook cannot silently rewrite one terminal state into another.
 
-## CPay callback verification
+## Credit disbursement finality and accounting
 
-The only live provider callback endpoint is:
+A production credit loan is not created from request acceptance. The sequence is:
+
+```text
+offer accepted
+→ CPay payout requested
+→ provider success verified
+→ loan and exact schedule created
+→ immutable disbursement ledger posted
+→ offer/application marked disbursed
+```
+
+These steps are applied transactionally after provider success. Replaying the successful event repairs a missing expected ledger posting idempotently instead of creating a second loan or posting.
+
+For deducted fees:
+
+```text
+Dr Loan receivable             approved principal
+Cr Provider disbursement cash  net cash paid
+Cr Credit-fee clearing         deducted fees
+```
+
+The system enforces `net cash paid + deducted fees = principal`.
+
+A provider-confirmed reversal of an unrepaid disbursement creates a separate append-only reversal transaction, zeroes the customer obligation by voiding the unrepaid schedule and marks the loan reversed. It never deletes the original posting. If repayment activity already exists, automatic reversal is blocked, the loan enters `Exception`, and operations must resolve the economic history from provider and customer evidence.
+
+## Callback verification
+
+The live callback endpoint is:
 
 ```text
 POST /api/webhooks/cpay
 ```
 
-`callback-v1` verification uses the **raw request body** and requires:
-
-- `X-CPay-Signature-Version: callback-v1`
-- `X-CPay-Signature`
-- `X-CPay-Timestamp`
-- `X-CPay-Nonce`
-- `X-CPay-Callback-Task-Id`
-- `X-CPay-Merchant-Id`
-- `X-CPay-Reference`
-
-The canonical HMAC input is:
-
-```text
-CALLBACK_TASK_ID
-MERCHANT_ID
-REFERENCE
-TIMESTAMP
-NONCE
-RAW_REQUEST_BODY
-```
-
-OpFin rejects unsupported signature versions, invalid HMACs, mismatched merchant IDs, stale timestamps, reused delivery nonces and terminal-state regressions. Consumed CPay nonces are persisted in `cpay_webhook_nonces` under a merchant+nonce uniqueness constraint for replay protection.
-
-CPay re-signs legitimate retry deliveries with a fresh nonce. When the payload carries an already-processed `event_id`, OpFin returns the existing transaction and audit-logs the duplicate rather than applying the event twice.
+`callback-v1` verification uses the raw request body and requires the CPay signature version, signature, timestamp, nonce, callback task ID, merchant ID and reference headers. OpFin validates HMAC, merchant identity, replay window and nonce uniqueness. Legitimate CPay retries must use a fresh nonce. Duplicate provider event IDs return the already-processed transaction without reapplying product state.
 
 ## Product-state safety
 
-Payment events do not directly rewrite product obligations. After a verified CPay transaction is normalized, product services apply their own idempotent state transitions:
+Verified CPay records are passed to idempotent product services:
 
-- credit-offer disbursement sync
-- production repayment allocation
-- savings movement sync
-- protection premium sync
+- production credit disbursement sync;
+- repayment allocation;
+- savings movement sync;
+- protection premium sync;
+- governed long-range financial-intent settlement.
 
-Terminal payment states cannot regress to a different terminal state through a later callback.
+Money movement and product settlement remain separate states by design.
 
 ## Reconciliation
 
-CPay and OpFin maintain separate accounting responsibilities. OpFin reconciliation compares external payment evidence against `mobile_money_transactions` and the relevant product obligation without using reconciliation to rewrite business truth.
+Provider statements are ingested by business date and compared with OpFin records on reference, amount, currency, direction and normalized status. Missing records, duplicate references, amount/currency/direction mismatches and status discrepancies remain explicit exceptions.
 
-Provider statement ingestion is immutable and business-date scoped. Exceptions include missing records, amount/currency/direction mismatches, duplicate references and status discrepancies.
+Reconciliation is evidence comparison. It must never create a balancing financial entry merely to make totals agree.
 
-## Audit events
+## Continuous integrity controls
 
-The payment boundary records events including:
+`opfin:integrity-audit` complements transaction-level balancing by testing event completeness. Among other checks it raises critical findings when:
 
-- `mobile_money.disbursement.requested`
-- `mobile_money.disbursement.duplicate`
-- `mobile_money.disbursement.provider_response`
-- `mobile_money.collection.requested`
-- `mobile_money.collection.duplicate`
-- `mobile_money.collection.provider_response`
-- `mobile_money.status_checked`
-- `mobile_money.webhook.processed`
-- `mobile_money.webhook.duplicate`
-- `mobile_money.reversal.requested`
-- `mobile_money.transaction.failed`
+- a successful production credit disbursement lacks its expected immutable ledger posting;
+- a provider-reversed production disbursement lacks its required reversal posting, unless it is already held in an operations exception state;
+- a long-range financial intent is settled without provider success;
+- duplicate provider references exist;
+- participatory funding is overfunded or over-reserved.
 
-## Production release checks
+A balanced set of existing entries is therefore not sufficient evidence of complete accounting.
 
-Before enabling real money movement, verify all of the following with evidence:
+## Production certification gate
 
-1. Managed PostgreSQL is reachable and migrations are current.
-2. `MOBILE_MONEY_PROVIDER=cpay`; mock mode is disabled.
-3. CPay merchant number, merchant ID, private key, callback URL and callback secret are configured through the secret manager/environment, not source control.
-4. Sandbox collect, payout, status and callback certification has passed with the real OpFin merchant credentials.
-5. Callback invalid-signature, stale-timestamp, reused-nonce, duplicate-event and terminal-regression tests pass.
-6. Reconciliation evidence closes payment, product obligation and provider statement records without unexplained differences.
-7. Monitoring, alerting, backup/restore, incident runbook and rollback gates are signed off before production go-live.
+Before real customer funds move, retain evidence that:
+
+1. managed PostgreSQL is current and recoverable;
+2. mock/direct-provider money paths are disabled in production;
+3. genuine CPay merchant/signing/callback credentials are configured in secrets management;
+4. signed collect, payout, callback, lookup and reconciliation certification passes;
+5. duplicate request, mismatched idempotency replay, stale callback, duplicate event, terminal regression, refund/reversal and reconciliation exception tests pass;
+6. successful disbursement and repayment events produce the expected product state and balanced immutable accounting exactly once;
+7. monitoring, integrity audit, incident response and restore procedures are operational.
