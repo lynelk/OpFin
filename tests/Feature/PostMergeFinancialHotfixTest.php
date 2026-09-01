@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\Api\ProductionCreditController;
 use App\Models\LedgerAccount;
+use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\LoanProductTerm;
 use App\Models\MobileMoneyTransaction;
@@ -67,7 +68,7 @@ class PostMergeFinancialHotfixTest extends TestCase
             'repayment_frequency' => 'Weekly',
             'duration' => 30,
         ]);
-        $application = new LoanApplication();
+        $application = new LoanApplication;
         $application->setRelation('loanProductTerm', $term);
 
         $method = new ReflectionMethod(ProductionCreditController::class, 'projectedThirtyDayDebtServiceMinor');
@@ -75,7 +76,7 @@ class PostMergeFinancialHotfixTest extends TestCase
 
         $projected = $method->invoke(app(ProductionCreditController::class), $application, 100000);
 
-        $this->assertSame(5, \App\Models\Loan::getInstallments(30, 'Weekly'));
+        $this->assertSame(5, Loan::getInstallments(30, 'Weekly'));
         $this->assertSame(100000, $projected);
     }
 
