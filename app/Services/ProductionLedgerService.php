@@ -98,7 +98,7 @@ class ProductionLedgerService
         }
 
         if ($debits !== $credits) {
-            throw new InvalidArgumentException("Ledger transaction is not balanced: debits={$debits}, credits={$credits}.");
+            throw new InvalidArgumentException("Ledger transaction is not balanced. debits={$debits}, credits={$credits}.");
         }
     }
 
