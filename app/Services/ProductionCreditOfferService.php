@@ -18,6 +18,7 @@ class ProductionCreditOfferService
 {
     public function __construct(
         private readonly MobileMoneyService $mobileMoney,
+        private readonly ProductionLoanLedgerService $loanLedger,
         private readonly AuditLogger $auditLogger,
     ) {}
 
@@ -25,11 +26,9 @@ class ProductionCreditOfferService
     {
         $application->loadMissing(['loanProductTerm', 'creditDecision']);
         $decision = $application->creditDecision;
-
         if (! $decision || $decision->status !== CreditDecision::STATUS_APPROVED) {
             throw new InvalidArgumentException('An approved production credit decision is required before an offer can be generated.');
         }
-
         if ($decision->approved_amount_minor <= 0) {
             throw new InvalidArgumentException('The approved amount must be positive before an offer can be generated.');
         }
@@ -38,7 +37,6 @@ class ProductionCreditOfferService
         if (! $term) {
             throw new InvalidArgumentException('The selected product term is unavailable.');
         }
-
         if (strcasecmp((string) $term->interest_type, 'Flat') !== 0) {
             throw new InvalidArgumentException('Production offer generation currently requires a flat-interest product term so the disclosed schedule is exact and reproducible.');
         }
@@ -47,7 +45,6 @@ class ProductionCreditOfferService
         if ($durationDays <= 0) {
             throw new InvalidArgumentException('The selected product term has an invalid duration.');
         }
-
         $ratePercent = (float) $term->interest_rate;
         if ($ratePercent < 0) {
             throw new InvalidArgumentException('The selected product term has an invalid interest rate.');
@@ -65,63 +62,35 @@ class ProductionCreditOfferService
         if (! in_array($feeTreatment, ['financed', 'deducted'], true)) {
             throw new InvalidArgumentException('Fee treatment must be financed or deducted.');
         }
-
         if ($accessFeeMinor < 0 || $disbursementFeeMinor < 0) {
             throw new InvalidArgumentException('Offer fees cannot be negative.');
         }
-
         if ($feeTreatment === 'deducted' && $feesMinor >= $principalMinor) {
             throw new InvalidArgumentException('Deducted fees must be lower than the approved principal amount.');
         }
 
-        $netDisbursementMinor = $feeTreatment === 'deducted'
-            ? $principalMinor - $feesMinor
-            : $principalMinor;
+        $netDisbursementMinor = $feeTreatment === 'deducted' ? $principalMinor - $feesMinor : $principalMinor;
         $repayableFeesMinor = $feeTreatment === 'financed' ? $feesMinor : 0;
         $totalRepaymentMinor = $principalMinor + $interestMinor + $repayableFeesMinor;
         $expiresInMinutes = max(5, min((int) ($pricing['expires_in_minutes'] ?? 1440), 10080));
 
         return DB::transaction(function () use (
-            $application,
-            $actor,
-            $decision,
-            $term,
-            $principalMinor,
-            $interestMinor,
-            $feesMinor,
-            $accessFeeMinor,
-            $disbursementFeeMinor,
-            $netDisbursementMinor,
-            $totalRepaymentMinor,
-            $durationDays,
-            $ratePercent,
-            $termRatePercent,
-            $feeTreatment,
-            $expiresInMinutes,
+            $application, $actor, $decision, $term, $principalMinor, $interestMinor, $feesMinor,
+            $accessFeeMinor, $disbursementFeeMinor, $netDisbursementMinor, $totalRepaymentMinor,
+            $durationDays, $ratePercent, $termRatePercent, $feeTreatment, $expiresInMinutes,
         ) {
-            CreditOffer::query()
-                ->where('loan_application_id', $application->id)
-                ->where('status', CreditOffer::STATUS_OFFERED)
-                ->where('expires_at', '<=', now())
+            CreditOffer::query()->where('loan_application_id', $application->id)
+                ->where('status', CreditOffer::STATUS_OFFERED)->where('expires_at', '<=', now())
                 ->update(['status' => CreditOffer::STATUS_EXPIRED]);
 
-            $activeOfferExists = CreditOffer::query()
-                ->where('loan_application_id', $application->id)
-                ->whereIn('status', [
-                    CreditOffer::STATUS_OFFERED,
-                    CreditOffer::STATUS_ACCEPTED,
-                    CreditOffer::STATUS_DISBURSEMENT_PENDING,
-                    CreditOffer::STATUS_DISBURSED,
-                ])
+            $activeOfferExists = CreditOffer::query()->where('loan_application_id', $application->id)
+                ->whereIn('status', [CreditOffer::STATUS_OFFERED, CreditOffer::STATUS_ACCEPTED, CreditOffer::STATUS_DISBURSEMENT_PENDING, CreditOffer::STATUS_DISBURSED])
                 ->exists();
-
             if ($activeOfferExists) {
                 throw new InvalidArgumentException('This application already has an active or completed offer.');
             }
 
-            $version = ((int) CreditOffer::query()
-                ->where('loan_application_id', $application->id)
-                ->max('version')) + 1;
+            $version = ((int) CreditOffer::query()->where('loan_application_id', $application->id)->max('version')) + 1;
             $offeredAt = now();
             $offer = CreditOffer::create([
                 'loan_application_id' => $application->id,
@@ -171,14 +140,12 @@ class ProductionCreditOfferService
             ]);
 
             $application->update(['status' => 'Offer Ready']);
-
             $this->auditLogger->record('credit.offer.created', $actor, $offer, [
                 'offer_reference' => $offer->offer_reference,
                 'policy_version' => $offer->policy_version,
                 'principal_amount_minor' => $principalMinor,
                 'total_repayment_minor' => $totalRepaymentMinor,
             ]);
-
             return $offer;
         });
     }
@@ -187,45 +154,30 @@ class ProductionCreditOfferService
     {
         $offer = DB::transaction(function () use ($offer, $user, $acceptanceMetadata) {
             $locked = CreditOffer::query()->lockForUpdate()->findOrFail($offer->id);
-
             if ($locked->user_id !== $user->id) {
                 throw new InvalidArgumentException('This offer does not belong to the authenticated customer.');
             }
-
             if ($locked->status === CreditOffer::STATUS_DISBURSED || $locked->status === CreditOffer::STATUS_DISBURSEMENT_PENDING) {
                 return $locked;
             }
-
             if ($locked->status !== CreditOffer::STATUS_OFFERED) {
                 throw new InvalidArgumentException('This offer is no longer available for acceptance.');
             }
-
             if ($locked->expires_at->isPast()) {
                 $locked->update(['status' => CreditOffer::STATUS_EXPIRED]);
                 throw new InvalidArgumentException('This offer has expired.');
             }
-
-            $locked->update([
-                'status' => CreditOffer::STATUS_DISBURSEMENT_PENDING,
-                'accepted_at' => now(),
-                'acceptance_metadata' => $acceptanceMetadata,
-            ]);
+            $locked->update(['status' => CreditOffer::STATUS_DISBURSEMENT_PENDING, 'accepted_at' => now(), 'acceptance_metadata' => $acceptanceMetadata]);
             $locked->application()->update(['status' => 'Accepted']);
-
             $this->auditLogger->record('credit.offer.accepted', $user, $locked, [
                 'offer_reference' => $locked->offer_reference,
                 'disclosed_total_repayment_minor' => $locked->total_repayment_minor,
             ]);
-
             return $locked->fresh();
         });
 
-        $existing = MobileMoneyTransaction::query()
-            ->where('credit_offer_id', $offer->id)
-            ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)
-            ->latest()
-            ->first();
-
+        $existing = MobileMoneyTransaction::query()->where('credit_offer_id', $offer->id)
+            ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)->latest()->first();
         $transaction = $existing ?: $this->mobileMoney->disburse([
             'credit_offer_id' => $offer->id,
             'user_id' => $offer->user_id,
@@ -240,12 +192,7 @@ class ProductionCreditOfferService
         ]);
 
         $loan = $this->syncDisbursementState($transaction);
-
-        return [
-            'offer' => $offer->fresh(),
-            'mobile_money' => $transaction->fresh(),
-            'loan' => $loan,
-        ];
+        return ['offer' => $offer->fresh(), 'mobile_money' => $transaction->fresh(), 'loan' => $loan];
     }
 
     public function syncDisbursementState(MobileMoneyTransaction $transaction): ?Loan
@@ -253,15 +200,10 @@ class ProductionCreditOfferService
         if (! $transaction->credit_offer_id || $transaction->direction !== MobileMoneyTransaction::DIRECTION_DISBURSEMENT) {
             return null;
         }
-
-        if ($transaction->status === MobileMoneyTransaction::STATUS_FAILED) {
-            CreditOffer::query()->whereKey($transaction->credit_offer_id)->update([
-                'status' => CreditOffer::STATUS_DISBURSEMENT_FAILED,
-            ]);
-
+        if (in_array($transaction->status, [MobileMoneyTransaction::STATUS_FAILED, MobileMoneyTransaction::STATUS_REVERSED], true)) {
+            CreditOffer::query()->whereKey($transaction->credit_offer_id)->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
             return null;
         }
-
         if ($transaction->status !== MobileMoneyTransaction::STATUS_SUCCESSFUL) {
             return null;
         }
@@ -269,19 +211,18 @@ class ProductionCreditOfferService
         return DB::transaction(function () use ($transaction) {
             $offer = CreditOffer::query()->lockForUpdate()->findOrFail($transaction->credit_offer_id);
             $existing = Loan::query()->where('credit_offer_id', $offer->id)->first();
-
             if ($existing) {
-                if ($transaction->loan_id !== $existing->id) {
+                if ((int) $transaction->loan_id !== (int) $existing->id) {
                     $transaction->update(['loan_id' => $existing->id]);
                 }
-
+                $this->loanLedger->postCreditOfferDisbursement($transaction->fresh(), $existing, $offer);
                 return $existing;
             }
 
             $application = LoanApplication::query()->findOrFail($offer->loan_application_id);
-            $firstDueDate = now()->addDays($this->frequencyDays($offer->repayment_frequency));
-
-            $loan = Loan::withoutEvents(function () use ($application, $offer, $firstDueDate) {
+            $disbursedAt = now();
+            $firstDueDate = $disbursedAt->copy()->addDays($this->frequencyDays($offer->repayment_frequency));
+            $loan = Loan::withoutEvents(function () use ($application, $offer, $firstDueDate, $disbursedAt) {
                 $loan = new Loan;
                 $loan->forceFill([
                     'user_id' => $application->user_id,
@@ -293,53 +234,47 @@ class ProductionCreditOfferService
                     'amount' => $offer->principal_amount_minor,
                     'status' => 'Active',
                     'reason' => $application->reason,
-                    'disbursed_at' => now(),
+                    'disbursed_at' => $disbursedAt,
                     'duration' => $offer->duration_days,
                     'repayment_amount' => $offer->total_repayment_minor,
                     'repayment_start_date' => $firstDueDate->toDateString(),
                 ]);
                 $loan->save();
-
                 return $loan;
             });
 
-            $this->createExactSchedule($loan, $offer);
-
-            $offer->update(['status' => CreditOffer::STATUS_DISBURSED]);
-            $application->update([
-                'status' => 'Disbursed',
-                'disbursed_at' => now(),
-            ]);
+            $this->createExactSchedule($loan, $offer, $disbursedAt);
             $transaction->update(['loan_id' => $loan->id]);
+            $this->loanLedger->postCreditOfferDisbursement($transaction->fresh(), $loan, $offer);
+            $offer->update(['status' => CreditOffer::STATUS_DISBURSED]);
+            $application->update(['status' => 'Disbursed', 'disbursed_at' => $disbursedAt]);
 
             $this->auditLogger->record('credit.disbursement.fulfilled', null, $loan, [
                 'offer_reference' => $offer->offer_reference,
                 'mobile_money_transaction_id' => $transaction->id,
                 'provider_reference' => $transaction->provider_reference,
+                'ledger_reference' => 'loan.disbursement:credit-offer:'.$offer->offer_reference,
             ]);
-
             return $loan;
         });
     }
 
-    private function createExactSchedule(Loan $loan, CreditOffer $offer): void
+    private function createExactSchedule(Loan $loan, CreditOffer $offer, $anchor): void
     {
         $frequencyDays = $this->frequencyDays($offer->repayment_frequency);
         $installments = max(1, (int) ceil($offer->duration_days / $frequencyDays));
         $repayableFeesMinor = $offer->fee_treatment === 'financed' ? $offer->fees_minor : 0;
-
         for ($installment = 1; $installment <= $installments; $installment++) {
             $principal = $this->allocate($offer->principal_amount_minor, $installments, $installment);
             $interest = $this->allocate($offer->interest_amount_minor, $installments, $installment);
             $fees = $this->allocate($repayableFeesMinor, $installments, $installment);
             $dueOffsetDays = min($offer->duration_days, $installment * $frequencyDays);
             $total = $principal + $interest + $fees;
-
             CreditRepaymentScheduleItem::create([
                 'loan_id' => $loan->id,
                 'credit_offer_id' => $offer->id,
                 'installment_number' => $installment,
-                'due_date' => now()->addDays($dueOffsetDays)->toDateString(),
+                'due_date' => $anchor->copy()->addDays($dueOffsetDays)->toDateString(),
                 'principal_minor' => $principal,
                 'interest_minor' => $interest,
                 'fees_minor' => $fees,
@@ -356,7 +291,6 @@ class ProductionCreditOfferService
     private function allocate(int $total, int $count, int $position): int
     {
         $base = intdiv($total, $count);
-
         return $position === $count ? $base + ($total % $count) : $base;
     }
 
