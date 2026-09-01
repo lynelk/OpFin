@@ -299,15 +299,23 @@ class MobileMoneyService
 
     private function applyProviderResponse(MobileMoneyTransaction $transaction, MobileMoneyProviderResponse $response, array $extra = []): void
     {
-        $this->assertProviderTransition($transaction, $response->status);
+        DB::transaction(function () use ($transaction, $response, $extra) {
+            $locked = MobileMoneyTransaction::query()
+                ->whereKey($transaction->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $transaction->update(array_merge([
-            'provider_reference' => $response->providerReference ?? $transaction->provider_reference,
-            'status' => $response->status,
-            'reconciliation_status' => $response->reconciliationStatus,
-            'failure_reason' => $response->successful ? $transaction->failure_reason : $response->message,
-            'provider_payload' => $response->raw,
-        ], $extra));
+            $this->assertProviderTransition($locked, $response->status);
+            $locked->update(array_merge([
+                'provider_reference' => $response->providerReference ?? $locked->provider_reference,
+                'status' => $response->status,
+                'reconciliation_status' => $response->reconciliationStatus,
+                'failure_reason' => $response->successful ? $locked->failure_reason : $response->message,
+                'provider_payload' => $response->raw,
+            ], $extra));
+
+            $transaction->setRawAttributes($locked->fresh()->getAttributes(), true);
+        });
     }
 
     private function audit(string $event, MobileMoneyTransaction $transaction, array $metadata = []): void
