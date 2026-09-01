@@ -37,7 +37,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
     public function processWebhook(array $payload, array $headers = []): MobileMoneyProviderResponse
     {
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
-        $eventType = strtolower(trim((string) ($payload['eventType'] ?? $payload['event_type'] ?? ''));
+        $eventType = strtolower(trim((string) ($payload['eventType'] ?? $payload['event_type'] ?? '')));
         $status = strtoupper(trim((string) ($payload['status'] ?? $data['status'] ?? '')));
 
         if ($status === '') {
