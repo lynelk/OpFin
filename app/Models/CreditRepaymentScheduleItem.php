@@ -7,28 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class CreditRepaymentScheduleItem extends Model
 {
     public const STATUS_DUE = 'due';
-
     public const STATUS_PARTIALLY_PAID = 'partially_paid';
-
     public const STATUS_PAID = 'paid';
-
     public const STATUS_OVERDUE = 'overdue';
+    public const STATUS_VOIDED = 'voided';
 
     protected $fillable = [
-        'loan_id',
-        'credit_offer_id',
-        'installment_number',
-        'due_date',
-        'principal_minor',
-        'interest_minor',
-        'fees_minor',
-        'total_due_minor',
-        'principal_outstanding_minor',
-        'interest_outstanding_minor',
-        'fees_outstanding_minor',
-        'total_outstanding_minor',
-        'status',
-        'paid_at',
+        'loan_id', 'credit_offer_id', 'installment_number', 'due_date', 'principal_minor', 'interest_minor',
+        'fees_minor', 'total_due_minor', 'principal_outstanding_minor', 'interest_outstanding_minor',
+        'fees_outstanding_minor', 'total_outstanding_minor', 'status', 'paid_at',
     ];
 
     protected function casts(): array
@@ -48,13 +35,6 @@ class CreditRepaymentScheduleItem extends Model
         ];
     }
 
-    public function loan()
-    {
-        return $this->belongsTo(Loan::class);
-    }
-
-    public function offer()
-    {
-        return $this->belongsTo(CreditOffer::class, 'credit_offer_id');
-    }
+    public function loan() { return $this->belongsTo(Loan::class); }
+    public function offer() { return $this->belongsTo(CreditOffer::class, 'credit_offer_id'); }
 }
