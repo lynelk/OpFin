@@ -123,7 +123,7 @@ class CpayV2AdapterTest extends TestCase
 
         $this->assertFalse($response->successful);
         $this->assertSame(MobileMoneyTransaction::STATUS_FAILED, $response->status);
-        $this->assertSame(MobileMoneyTransaction::RECONCILIATION_EXCEPTION, $response->reconciliationStatus);
+        $this->assertSame(MobileMoneyTransaction::RECONCILIATION_MATCHED, $response->reconciliationStatus);
         $this->assertFalse($response->retryable);
     }
 

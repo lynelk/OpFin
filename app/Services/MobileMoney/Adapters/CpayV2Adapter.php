@@ -68,9 +68,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
             providerReference: $providerReference,
             message: 'CPay webhook event normalized.',
             retryable: $normalizedStatus === MobileMoneyTransaction::STATUS_PENDING,
-            reconciliationStatus: $normalizedStatus === MobileMoneyTransaction::STATUS_FAILED
-                ? MobileMoneyTransaction::RECONCILIATION_EXCEPTION
-                : MobileMoneyTransaction::RECONCILIATION_PENDING,
+            reconciliationStatus: $this->reconciliationStatus($normalizedStatus),
             webhookEventId: $payload['eventId'] ?? $payload['event_id'] ?? null,
             raw: $payload,
         );
@@ -78,12 +76,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
 
     public function reverse(MobileMoneyTransaction $transaction, string $reason): MobileMoneyProviderResponse
     {
-        return MobileMoneyProviderResponse::failed(
-            'cpay',
-            'CPay v2 reversal is not enabled in OpFin until a certified refund/reversal contract is configured.',
-            false,
-            ['reason' => $reason],
-        );
+        throw new InvalidArgumentException('CPay v2 reversal is not enabled until a certified refund/reversal request contract is configured. Existing transaction state was left unchanged.');
     }
 
     public function handleFailure(MobileMoneyTransaction $transaction, string $reason): MobileMoneyProviderResponse
@@ -185,9 +178,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
                 providerReference: $payload['transactionId'] ?? $payload['reference'] ?? $fallbackReference,
                 message: $payload['message'] ?? 'CPay request accepted.',
                 retryable: $normalizedStatus === MobileMoneyTransaction::STATUS_PENDING,
-                reconciliationStatus: $normalizedStatus === MobileMoneyTransaction::STATUS_FAILED
-                    ? MobileMoneyTransaction::RECONCILIATION_EXCEPTION
-                    : MobileMoneyTransaction::RECONCILIATION_PENDING,
+                reconciliationStatus: $this->reconciliationStatus($normalizedStatus),
                 raw: $this->safePayload($payload, $response->status()),
             );
         }
@@ -198,6 +189,18 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
             $response->serverError() || $response->status() === 429,
             $this->safePayload($payload, $response->status()),
         );
+    }
+
+    private function reconciliationStatus(string $status): string
+    {
+        return match ($status) {
+            MobileMoneyTransaction::STATUS_FAILED => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+            MobileMoneyTransaction::STATUS_SUCCESSFUL,
+            MobileMoneyTransaction::STATUS_REVERSED,
+            MobileMoneyTransaction::STATUS_PENDING,
+            MobileMoneyTransaction::STATUS_PROCESSING => MobileMoneyTransaction::RECONCILIATION_PENDING,
+            default => MobileMoneyTransaction::RECONCILIATION_UNRECONCILED,
+        };
     }
 
     private function safePayload(array $payload, int $httpStatus): array

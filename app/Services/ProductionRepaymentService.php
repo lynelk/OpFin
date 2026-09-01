@@ -151,17 +151,41 @@ class ProductionRepaymentService
             },
         ]);
 
+        if ($mobileMoney->status === MobileMoneyTransaction::STATUS_REVERSED) {
+            $ledgerReference = 'loan.repayment:'.$transaction->reference;
+            if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
+                $mobileMoney->update([
+                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+                    'failure_reason' => 'Provider reversed a previously posted repayment. Automatic schedule rewriting is blocked until exact allocation reversal evidence is available.',
+                ]);
+                $transaction->update(['status' => 'Exception']);
+                $loan->update(['status' => 'Exception']);
+                $this->auditLogger->record('credit.repayment.reversal_exception', null, $mobileMoney, [
+                    'loan_id' => $loan->id,
+                    'ledger_reference' => $ledgerReference,
+                    'provider_reference' => $mobileMoney->provider_reference,
+                ]);
+            }
+
+            return $loan->fresh();
+        }
+
         if ($mobileMoney->status !== MobileMoneyTransaction::STATUS_SUCCESSFUL) {
             return $loan;
         }
 
         $ledgerReference = 'loan.repayment:'.$transaction->reference;
         if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
+            $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+
             return $loan->fresh();
         }
 
         if (! $loan->credit_offer_id) {
             $this->loanService->processSuccessfulTransaction($transaction);
+            if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
+                $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+            }
 
             return $loan->fresh();
         }
@@ -170,6 +194,8 @@ class ProductionRepaymentService
             $lockedLoan = Loan::query()->lockForUpdate()->findOrFail($loan->id);
 
             if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
+                $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+
                 return $lockedLoan;
             }
 
@@ -201,6 +227,7 @@ class ProductionRepaymentService
                 $lockedLoan->update(['status' => 'Cleared']);
             }
 
+            $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
             $this->auditLogger->record('credit.repayment.fulfilled', null, $lockedLoan, [
                 'mobile_money_transaction_id' => $mobileMoney->id,
                 'provider_reference' => $mobileMoney->provider_reference,

@@ -16,7 +16,7 @@ class LegacyLoanMathTest extends TestCase
     public function test_zero_rate_amortization_returns_principal_without_division_by_zero(): void
     {
         $this->assertSame(
-            100000.0,
+            100000,
             Loan::getRepaymentAmount(0.0, 100000, 'Amortization', 1, 'Monthly', 30),
         );
     }

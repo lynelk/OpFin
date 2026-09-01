@@ -56,6 +56,24 @@ class FinancialIntegrityService
                     ]);
             }
 
+            $invalidEntries = DB::table('ledger_entries as e')
+                ->join('ledger_transactions as t', 't.id', '=', 'e.ledger_transaction_id')
+                ->join('ledger_accounts as a', 'a.id', '=', 'e.ledger_account_id')
+                ->where(function ($query) {
+                    $query->whereNotIn('e.direction', ['debit', 'credit'])
+                        ->orWhere('e.amount_minor', '<=', 0)
+                        ->orWhereColumn('e.currency', '!=', 't.currency')
+                        ->orWhereColumn('a.currency', '!=', 't.currency')
+                        ->orWhere('a.is_active', false);
+                })
+                ->select('e.id', 't.reference', 'e.direction', 'e.amount_minor', 'e.currency as entry_currency', 't.currency as transaction_currency', 'a.code as account_code', 'a.currency as account_currency', 'a.is_active')
+                ->limit(250)
+                ->get();
+            foreach ($invalidEntries as $entry) {
+                $findings[] = $this->alert($runId, 'critical', 'invalid_ledger_entry', (string) $entry->id,
+                    'Ledger entry violates amount, direction, account-state or currency invariants.', (array) $entry);
+            }
+
             $orphanEntries = DB::table('ledger_entries as e')
                 ->leftJoin('ledger_transactions as t', 't.id', '=', 'e.ledger_transaction_id')
                 ->whereNull('t.id')->count();
@@ -77,27 +95,32 @@ class FinancialIntegrityService
                 ->where(function ($query) {
                     $query->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_EXCEPTION)
                         ->orWhere(function ($query) {
-                            $query->where('status', MobileMoneyTransaction::STATUS_SUCCESSFUL)
+                            $query->whereIn('status', [MobileMoneyTransaction::STATUS_SUCCESSFUL, MobileMoneyTransaction::STATUS_REVERSED])
                                 ->where('reconciliation_status', '!=', MobileMoneyTransaction::RECONCILIATION_MATCHED);
                         });
                 })->count();
 
             if ($paymentExceptions > 0) {
                 $findings[] = $this->alert($runId, 'high', 'payment_reconciliation_exception', null,
-                    'Successful or excepted payment records are not fully reconciled.', ['count' => $paymentExceptions]);
+                    'Successful, reversed or explicitly excepted payment records are not fully reconciled.', ['count' => $paymentExceptions]);
             }
 
             $duplicateProviderRefs = MobileMoneyTransaction::query()
-                ->whereNotNull('provider_reference')->select('provider_reference')
-                ->groupBy('provider_reference')->havingRaw('count(*) > 1')->pluck('provider_reference');
-            foreach ($duplicateProviderRefs as $reference) {
+                ->whereNotNull('provider_reference')->select('provider', 'provider_reference')
+                ->groupBy('provider', 'provider_reference')->havingRaw('count(*) > 1')->get();
+            foreach ($duplicateProviderRefs as $duplicate) {
+                $reference = strtolower((string) $duplicate->provider).':'.$duplicate->provider_reference;
                 $findings[] = $this->alert($runId, 'critical', 'duplicate_provider_reference', $reference,
-                    'The same provider reference appears on multiple money-movement records.', ['provider_reference' => $reference]);
+                    'The same provider reference appears on multiple money-movement records for one provider.', [
+                        'provider' => $duplicate->provider,
+                        'provider_reference' => $duplicate->provider_reference,
+                    ]);
             }
         }
 
         $this->scanExpectedCreditPostings($runId, $findings);
         $this->scanAssetEconomics($runId, $findings);
+        $this->scanLongRangePaymentReconciliation($runId, $findings);
 
         foreach ($this->longRangeIntegrity->scan() as $finding) {
             $findings[] = $this->alert(
@@ -147,7 +170,7 @@ class FinancialIntegrityService
                 ? DB::table('financial_integrity_alerts')->where('status', 'open')->where('severity', 'high')->count()
                 : 0,
             'platform_balanced' => $latest?->status === 'balanced',
-            'funds_integrity_rule' => 'Every governed financial event must have exactly the expected economic posting. Any missing posting, imbalance, false settlement, funding mismatch, reward-ledger mismatch, duplicate provider reference, or unreconciled successful payment is an exception and cannot be silently written off or auto-balanced away.',
+            'funds_integrity_rule' => 'Every governed financial event must have exactly the expected economic posting. Any missing posting, imbalance, false settlement, funding mismatch, reward-ledger mismatch, duplicate provider reference, currency mismatch, invalid account state, or unreconciled successful/reversed payment is an exception and cannot be silently written off or auto-balanced away.',
         ];
     }
 
@@ -161,7 +184,7 @@ class FinancialIntegrityService
             ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)
             ->whereNotNull('credit_offer_id')
             ->whereIn('status', [MobileMoneyTransaction::STATUS_SUCCESSFUL, MobileMoneyTransaction::STATUS_REVERSED])
-            ->get(['id', 'credit_offer_id', 'loan_id', 'status', 'provider_reference']);
+            ->get(['id', 'credit_offer_id', 'loan_id', 'provider', 'amount_minor', 'currency', 'status', 'provider_reference']);
 
         foreach ($transactions as $transaction) {
             $offer = CreditOffer::query()->find($transaction->credit_offer_id);
@@ -172,15 +195,31 @@ class FinancialIntegrityService
                 continue;
             }
 
-            $originalReference = 'loan.disbursement:credit-offer:'.$offer->offer_reference;
-            if ($transaction->status === MobileMoneyTransaction::STATUS_SUCCESSFUL && ! LedgerTransaction::query()->where('reference', $originalReference)->exists()) {
-                $findings[] = $this->alert($runId, 'critical', 'credit_disbursement_missing_ledger_posting', $offer->offer_reference,
-                    'Successful production credit disbursement has no required immutable ledger posting.', [
+            if ((int) $transaction->amount_minor !== (int) $offer->net_disbursement_minor || strtoupper((string) $transaction->currency) !== strtoupper((string) $offer->currency)) {
+                $findings[] = $this->alert($runId, 'critical', 'credit_disbursement_provider_amount_mismatch', $offer->offer_reference,
+                    'Provider-confirmed disbursement amount or currency does not match the immutable credit offer.', [
                         'mobile_money_transaction_id' => $transaction->id,
-                        'credit_offer_id' => $offer->id,
-                        'loan_id' => $transaction->loan_id,
-                        'expected_ledger_reference' => $originalReference,
+                        'provider_amount_minor' => (int) $transaction->amount_minor,
+                        'offer_net_disbursement_minor' => (int) $offer->net_disbursement_minor,
+                        'provider_currency' => $transaction->currency,
+                        'offer_currency' => $offer->currency,
                     ]);
+            }
+
+            $originalReference = 'loan.disbursement:credit-offer:'.$offer->offer_reference;
+            $original = LedgerTransaction::query()->where('reference', $originalReference)->first();
+            if (! $original) {
+                if ($transaction->status === MobileMoneyTransaction::STATUS_SUCCESSFUL || $transaction->loan_id) {
+                    $findings[] = $this->alert($runId, 'critical', 'credit_disbursement_missing_ledger_posting', $offer->offer_reference,
+                        'Production credit disbursement has no required immutable ledger posting.', [
+                            'mobile_money_transaction_id' => $transaction->id,
+                            'credit_offer_id' => $offer->id,
+                            'loan_id' => $transaction->loan_id,
+                            'expected_ledger_reference' => $originalReference,
+                        ]);
+                }
+            } else {
+                $this->scanCreditPostingArithmetic($runId, $findings, $transaction, $offer, $originalReference, false);
             }
 
             if ($transaction->status === MobileMoneyTransaction::STATUS_REVERSED && $transaction->loan_id) {
@@ -194,9 +233,75 @@ class FinancialIntegrityService
                             'loan_id' => $transaction->loan_id,
                             'expected_reversal_reference' => $reversalReference,
                         ]);
+                } elseif ($loanStatus !== 'Exception') {
+                    $this->scanCreditPostingArithmetic($runId, $findings, $transaction, $offer, $reversalReference, true);
                 }
             }
         }
+    }
+
+    private function scanCreditPostingArithmetic(int $runId, array &$findings, MobileMoneyTransaction $transaction, CreditOffer $offer, string $ledgerReference, bool $reversal): void
+    {
+        if (! $transaction->loan_id) {
+            $findings[] = $this->alert($runId, 'critical', 'credit_disbursement_missing_loan', $offer->offer_reference,
+                'Provider-final production credit movement is not linked to a loan.', ['mobile_money_transaction_id' => $transaction->id]);
+
+            return;
+        }
+
+        $loanProductId = DB::table('loans')->where('id', $transaction->loan_id)->value('loan_product_id');
+        if (! $loanProductId) {
+            return;
+        }
+
+        $principal = (int) $offer->principal_amount_minor;
+        $cash = (int) $offer->net_disbursement_minor;
+        $fees = (int) $offer->fees_minor;
+        $expected = [];
+        $this->expect($expected, 'asset.loan_receivable.product_'.$loanProductId, $reversal ? 'credit' : 'debit', $principal);
+        $this->expect($expected, 'cash.'.strtolower((string) $transaction->provider).'.disbursement', $reversal ? 'debit' : 'credit', $cash);
+
+        if ($offer->fee_treatment === 'deducted' && $fees > 0) {
+            $this->expect($expected, 'liability.credit_fee_clearing.product_'.$loanProductId, $reversal ? 'debit' : 'credit', $fees);
+        }
+        if ($offer->fee_treatment === 'financed' && $fees > 0) {
+            $this->expect($expected, 'asset.credit_fee_receivable.product_'.$loanProductId, $reversal ? 'credit' : 'debit', $fees);
+            $this->expect($expected, 'liability.credit_fee_clearing.product_'.$loanProductId, $reversal ? 'debit' : 'credit', $fees);
+        }
+
+        $actual = DB::table('ledger_transactions as t')
+            ->join('ledger_entries as e', 'e.ledger_transaction_id', '=', 't.id')
+            ->join('ledger_accounts as a', 'a.id', '=', 'e.ledger_account_id')
+            ->where('t.reference', $ledgerReference)
+            ->select('a.code', 'e.direction')
+            ->selectRaw('SUM(e.amount_minor) as amount_minor')
+            ->groupBy('a.code', 'e.direction')
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->code.'|'.$row->direction => (int) $row->amount_minor])
+            ->all();
+
+        ksort($expected);
+        ksort($actual);
+        if ($expected !== $actual) {
+            $findings[] = $this->alert($runId, 'critical', 'credit_ledger_economic_mismatch', $ledgerReference,
+                'Credit ledger transaction is balanced but does not match the expected economic posting.', [
+                    'expected' => $expected,
+                    'actual' => $actual,
+                    'fee_treatment' => $offer->fee_treatment,
+                    'principal_minor' => $principal,
+                    'cash_minor' => $cash,
+                    'fees_minor' => $fees,
+                    'reversal' => $reversal,
+                ]);
+        }
+    }
+
+    private function expect(array &$expected, string $code, string $direction, int $amountMinor): void
+    {
+        if ($amountMinor <= 0) {
+            return;
+        }
+        $expected[$code.'|'.$direction] = ($expected[$code.'|'.$direction] ?? 0) + $amountMinor;
     }
 
     private function scanAssetEconomics(int $runId, array &$findings): void
@@ -232,6 +337,28 @@ class FinancialIntegrityService
                             'deposit_minor' => $deposit,
                         ]);
                 }
+            }
+        }
+    }
+
+    private function scanLongRangePaymentReconciliation(int $runId, array &$findings): void
+    {
+        if (! Schema::hasTable('financial_action_intents')) {
+            return;
+        }
+
+        $settled = DB::table('financial_action_intents')->where('status', 'settled')->get();
+        foreach ($settled as $intent) {
+            $payment = MobileMoneyTransaction::query()->where('internal_reference', $intent->reference)->latest('id')->first();
+            if (! $payment || $payment->status !== MobileMoneyTransaction::STATUS_SUCCESSFUL) {
+                $findings[] = $this->alert($runId, 'critical', 'long_range_false_settlement', $intent->reference,
+                    'Long-range financial intent is marked settled without a currently successful provider collection.', [
+                        'intent_id' => $intent->id,
+                        'source_type' => $intent->source_type,
+                        'source_id' => $intent->source_id,
+                        'provider_status' => $payment?->status,
+                        'provider_transaction_id' => $payment?->id,
+                    ]);
             }
         }
     }

@@ -39,6 +39,7 @@ class MobileMoneyAdapterTest extends TestCase
         $this->assertDatabaseCount('mobile_money_transactions', 1);
         $this->assertSame(MobileMoneyTransaction::STATUS_PENDING, $first->status);
         $this->assertNotNull($first->provider_reference);
+        $this->assertNotEmpty($first->metadata['instruction_fingerprint'] ?? null);
         $this->assertDatabaseHas('audit_logs', [
             'event' => 'mobile_money.disbursement.requested',
             'subject_type' => MobileMoneyTransaction::class,
@@ -63,7 +64,7 @@ class MobileMoneyAdapterTest extends TestCase
         ]);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('amount_minor mismatch');
+        $this->expectExceptionMessage('different canonical money instruction');
 
         $service->collect([
             'idempotency_key' => 'bound-key-001',
@@ -120,6 +121,7 @@ class MobileMoneyAdapterTest extends TestCase
                 'status' => $status,
             ]);
             $this->assertSame(MobileMoneyTransaction::STATUS_REVERSED, $response->status);
+            $this->assertSame(MobileMoneyTransaction::RECONCILIATION_PENDING, $response->reconciliationStatus);
             $this->assertFalse($response->retryable);
         }
 
@@ -129,6 +131,33 @@ class MobileMoneyAdapterTest extends TestCase
             'transactionId' => 'cpay-refund-completed',
         ]);
         $this->assertSame(MobileMoneyTransaction::STATUS_REVERSED, $eventOnly->status);
+    }
+
+    public function test_uncertified_cpay_reversal_request_does_not_corrupt_successful_state(): void
+    {
+        $transaction = MobileMoneyTransaction::create([
+            'provider' => 'cpay',
+            'direction' => MobileMoneyTransaction::DIRECTION_DISBURSEMENT,
+            'amount_minor' => 75000,
+            'currency' => 'UGX',
+            'phone' => '256700000011',
+            'idempotency_key' => 'cpay-success-reversal-guard',
+            'internal_reference' => 'CPAY-SUCCESS-REVERSAL-GUARD',
+            'provider_reference' => 'provider-success-guard',
+            'status' => MobileMoneyTransaction::STATUS_SUCCESSFUL,
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+        ]);
+
+        try {
+            app(MobileMoneyService::class)->reverse($transaction, 'operator test');
+            $this->fail('Uncertified CPay reversal must fail closed.');
+        } catch (InvalidArgumentException $exception) {
+            $this->assertStringContainsString('not enabled', $exception->getMessage());
+        }
+
+        $transaction->refresh();
+        $this->assertSame(MobileMoneyTransaction::STATUS_SUCCESSFUL, $transaction->status);
+        $this->assertSame(MobileMoneyTransaction::RECONCILIATION_MATCHED, $transaction->reconciliation_status);
     }
 
     public function test_webhook_rejects_invalid_signature(): void
@@ -149,6 +178,17 @@ class MobileMoneyAdapterTest extends TestCase
             'idempotency_key' => 'invalid-amount-key',
             'amount_minor' => 0,
             'currency' => 'UGX',
+            'phone' => '256700000002',
+        ]);
+    }
+
+    public function test_mobile_money_requires_valid_currency_code(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        app(MobileMoneyService::class)->collect([
+            'idempotency_key' => 'invalid-currency-key',
+            'amount_minor' => 50000,
+            'currency' => 'UGANDA-SHILLINGS',
             'phone' => '256700000002',
         ]);
     }

@@ -48,7 +48,9 @@ class MobileMoneyProviderResponse
             status: MobileMoneyTransaction::STATUS_FAILED,
             message: $message,
             retryable: $retryable,
-            reconciliationStatus: MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+            reconciliationStatus: $retryable
+                ? MobileMoneyTransaction::RECONCILIATION_PENDING
+                : MobileMoneyTransaction::RECONCILIATION_MATCHED,
             raw: $raw,
         );
     }

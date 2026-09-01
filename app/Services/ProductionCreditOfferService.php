@@ -210,6 +210,7 @@ class ProductionCreditOfferService
 
         if ($transaction->status === MobileMoneyTransaction::STATUS_FAILED) {
             CreditOffer::query()->whereKey($transaction->credit_offer_id)->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
+            $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
 
             return null;
         }
@@ -218,13 +219,15 @@ class ProductionCreditOfferService
         }
 
         return DB::transaction(function () use ($transaction) {
-            $offer = CreditOffer::query()->lockForUpdate()->findOrFail($transaction->credit_offer_id);
+            $lockedTransaction = MobileMoneyTransaction::query()->whereKey($transaction->id)->lockForUpdate()->firstOrFail();
+            $offer = CreditOffer::query()->lockForUpdate()->findOrFail($lockedTransaction->credit_offer_id);
             $existing = Loan::query()->where('credit_offer_id', $offer->id)->first();
             if ($existing) {
-                if ((int) $transaction->loan_id !== (int) $existing->id) {
-                    $transaction->update(['loan_id' => $existing->id]);
+                if ((int) $lockedTransaction->loan_id !== (int) $existing->id) {
+                    $lockedTransaction->update(['loan_id' => $existing->id]);
                 }
-                $this->loanLedger->postCreditOfferDisbursement($transaction->fresh(), $existing, $offer);
+                $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $existing, $offer);
+                $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
 
                 return $existing;
             }
@@ -255,15 +258,16 @@ class ProductionCreditOfferService
             });
 
             $this->createExactSchedule($loan, $offer, $disbursedAt);
-            $transaction->update(['loan_id' => $loan->id]);
-            $this->loanLedger->postCreditOfferDisbursement($transaction->fresh(), $loan, $offer);
+            $lockedTransaction->update(['loan_id' => $loan->id]);
+            $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $loan, $offer);
             $offer->update(['status' => CreditOffer::STATUS_DISBURSED]);
             $application->update(['status' => 'Disbursed', 'disbursed_at' => $disbursedAt]);
+            $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
 
             $this->auditLogger->record('credit.disbursement.fulfilled', null, $loan, [
                 'offer_reference' => $offer->offer_reference,
-                'mobile_money_transaction_id' => $transaction->id,
-                'provider_reference' => $transaction->provider_reference,
+                'mobile_money_transaction_id' => $lockedTransaction->id,
+                'provider_reference' => $lockedTransaction->provider_reference,
                 'ledger_reference' => 'loan.disbursement:credit-offer:'.$offer->offer_reference,
             ]);
 
@@ -274,11 +278,22 @@ class ProductionCreditOfferService
     private function handleDisbursementReversal(MobileMoneyTransaction $transaction): ?Loan
     {
         return DB::transaction(function () use ($transaction) {
-            $offer = CreditOffer::query()->lockForUpdate()->findOrFail($transaction->credit_offer_id);
+            $lockedTransaction = MobileMoneyTransaction::query()->whereKey($transaction->id)->lockForUpdate()->firstOrFail();
+            $offer = CreditOffer::query()->lockForUpdate()->findOrFail($lockedTransaction->credit_offer_id);
             $loan = Loan::query()->where('credit_offer_id', $offer->id)->lockForUpdate()->first();
             $offer->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
 
             if (! $loan) {
+                $originalReference = 'loan.disbursement:credit-offer:'.$offer->offer_reference;
+                if (DB::table('ledger_transactions')->where('reference', $originalReference)->exists()) {
+                    $lockedTransaction->update([
+                        'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+                        'failure_reason' => 'Provider reversal is linked to an original credit ledger posting but no loan record can be found.',
+                    ]);
+                } else {
+                    $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                }
+
                 return null;
             }
 
@@ -286,14 +301,14 @@ class ProductionCreditOfferService
             $totalDue = (int) $schedule->sum('total_due_minor');
             $totalOutstanding = (int) $schedule->sum('total_outstanding_minor');
             if ($totalOutstanding !== $totalDue) {
-                $transaction->update([
+                $lockedTransaction->update([
                     'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                     'failure_reason' => 'Disbursement reversed after repayment activity; automatic economic reversal is blocked and operations review is required.',
                 ]);
                 $loan->update(['status' => 'Exception']);
                 $this->auditLogger->record('credit.disbursement.reversal_exception', null, $loan, [
                     'credit_offer_id' => $offer->id,
-                    'mobile_money_transaction_id' => $transaction->id,
+                    'mobile_money_transaction_id' => $lockedTransaction->id,
                     'total_due_minor' => $totalDue,
                     'total_outstanding_minor' => $totalOutstanding,
                 ]);
@@ -301,7 +316,7 @@ class ProductionCreditOfferService
                 return $loan;
             }
 
-            $this->loanLedger->reverseCreditOfferDisbursement($transaction, $loan, $offer);
+            $this->loanLedger->reverseCreditOfferDisbursement($lockedTransaction, $loan, $offer);
             CreditRepaymentScheduleItem::query()->where('loan_id', $loan->id)->update([
                 'principal_outstanding_minor' => 0,
                 'interest_outstanding_minor' => 0,
@@ -312,11 +327,12 @@ class ProductionCreditOfferService
             ]);
             $loan->update(['status' => 'Reversed']);
             LoanApplication::query()->whereKey($offer->loan_application_id)->update(['status' => 'Disbursement Reversed']);
+            $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
 
             $this->auditLogger->record('credit.disbursement.reversed', null, $loan, [
                 'credit_offer_id' => $offer->id,
-                'mobile_money_transaction_id' => $transaction->id,
-                'provider_reference' => $transaction->provider_reference,
+                'mobile_money_transaction_id' => $lockedTransaction->id,
+                'provider_reference' => $lockedTransaction->provider_reference,
             ]);
 
             return $loan->fresh();
@@ -354,6 +370,9 @@ class ProductionCreditOfferService
 
     private function allocate(int $total, int $count, int $position): int
     {
+        if ($total < 0 || $count <= 0 || $position < 1 || $position > $count) {
+            throw new InvalidArgumentException('Invalid production monetary allocation parameters.');
+        }
         $base = intdiv($total, $count);
 
         return $position === $count ? $base + ($total % $count) : $base;
