@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\CreditOffer;
+use App\Models\LedgerTransaction;
 use App\Models\MobileMoneyTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -43,7 +45,6 @@ class FinancialIntegrityService
                 if ($difference === 0) {
                     continue;
                 }
-
                 $unbalanced++;
                 $netImbalance += $difference;
                 $findings[] = $this->alert($runId, 'critical', 'ledger_unbalanced', $balance->reference,
@@ -57,18 +58,14 @@ class FinancialIntegrityService
 
             $orphanEntries = DB::table('ledger_entries as e')
                 ->leftJoin('ledger_transactions as t', 't.id', '=', 'e.ledger_transaction_id')
-                ->whereNull('t.id')
-                ->count();
+                ->whereNull('t.id')->count();
             if ($orphanEntries > 0) {
                 $findings[] = $this->alert($runId, 'critical', 'orphan_ledger_entries', null,
                     'Ledger entries exist without a parent transaction.', ['count' => $orphanEntries]);
             }
 
             $duplicateReferences = DB::table('ledger_transactions')
-                ->select('reference')
-                ->groupBy('reference')
-                ->havingRaw('count(*) > 1')
-                ->count();
+                ->select('reference')->groupBy('reference')->havingRaw('count(*) > 1')->count();
             if ($duplicateReferences > 0) {
                 $findings[] = $this->alert($runId, 'critical', 'duplicate_ledger_reference', null,
                     'Duplicate immutable ledger references were detected.', ['count' => $duplicateReferences]);
@@ -83,8 +80,7 @@ class FinancialIntegrityService
                             $query->where('status', MobileMoneyTransaction::STATUS_SUCCESSFUL)
                                 ->where('reconciliation_status', '!=', MobileMoneyTransaction::RECONCILIATION_MATCHED);
                         });
-                })
-                ->count();
+                })->count();
 
             if ($paymentExceptions > 0) {
                 $findings[] = $this->alert($runId, 'high', 'payment_reconciliation_exception', null,
@@ -92,16 +88,16 @@ class FinancialIntegrityService
             }
 
             $duplicateProviderRefs = MobileMoneyTransaction::query()
-                ->whereNotNull('provider_reference')
-                ->select('provider_reference')
-                ->groupBy('provider_reference')
-                ->havingRaw('count(*) > 1')
-                ->pluck('provider_reference');
+                ->whereNotNull('provider_reference')->select('provider_reference')
+                ->groupBy('provider_reference')->havingRaw('count(*) > 1')->pluck('provider_reference');
             foreach ($duplicateProviderRefs as $reference) {
                 $findings[] = $this->alert($runId, 'critical', 'duplicate_provider_reference', $reference,
                     'The same provider reference appears on multiple money-movement records.', ['provider_reference' => $reference]);
             }
         }
+
+        $this->scanExpectedCreditPostings($runId, $findings);
+        $this->scanAssetEconomics($runId, $findings);
 
         foreach ($this->longRangeIntegrity->scan() as $finding) {
             $findings[] = $this->alert(
@@ -151,8 +147,91 @@ class FinancialIntegrityService
                 ? DB::table('financial_integrity_alerts')->where('status', 'open')->where('severity', 'high')->count()
                 : 0,
             'platform_balanced' => $latest?->status === 'balanced',
-            'funds_integrity_rule' => 'Any imbalance, false settlement, funding mismatch, reward-ledger mismatch, duplicate provider reference, or unreconciled successful payment is an exception and cannot be silently written off or auto-balanced away.',
+            'funds_integrity_rule' => 'Every governed financial event must have exactly the expected economic posting. Any missing posting, imbalance, false settlement, funding mismatch, reward-ledger mismatch, duplicate provider reference, or unreconciled successful payment is an exception and cannot be silently written off or auto-balanced away.',
         ];
+    }
+
+    private function scanExpectedCreditPostings(int $runId, array &$findings): void
+    {
+        if (! Schema::hasTable('credit_offers') || ! Schema::hasTable('mobile_money_transactions') || ! Schema::hasTable('ledger_transactions')) {
+            return;
+        }
+
+        $transactions = MobileMoneyTransaction::query()
+            ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)
+            ->whereNotNull('credit_offer_id')
+            ->whereIn('status', [MobileMoneyTransaction::STATUS_SUCCESSFUL, MobileMoneyTransaction::STATUS_REVERSED])
+            ->get(['id', 'credit_offer_id', 'loan_id', 'status', 'provider_reference']);
+
+        foreach ($transactions as $transaction) {
+            $offer = CreditOffer::query()->find($transaction->credit_offer_id);
+            if (! $offer) {
+                $findings[] = $this->alert($runId, 'critical', 'credit_disbursement_missing_offer', (string) $transaction->id,
+                    'Production disbursement references a missing credit offer.', ['mobile_money_transaction_id' => $transaction->id]);
+                continue;
+            }
+
+            $originalReference = 'loan.disbursement:credit-offer:'.$offer->offer_reference;
+            if ($transaction->status === MobileMoneyTransaction::STATUS_SUCCESSFUL && ! LedgerTransaction::query()->where('reference', $originalReference)->exists()) {
+                $findings[] = $this->alert($runId, 'critical', 'credit_disbursement_missing_ledger_posting', $offer->offer_reference,
+                    'Successful production credit disbursement has no required immutable ledger posting.', [
+                        'mobile_money_transaction_id' => $transaction->id,
+                        'credit_offer_id' => $offer->id,
+                        'loan_id' => $transaction->loan_id,
+                        'expected_ledger_reference' => $originalReference,
+                    ]);
+            }
+
+            if ($transaction->status === MobileMoneyTransaction::STATUS_REVERSED && $transaction->loan_id) {
+                $reversalReference = 'loan.disbursement.reversal:credit-offer:'.$offer->offer_reference;
+                $loanStatus = DB::table('loans')->where('id', $transaction->loan_id)->value('status');
+                if ($loanStatus !== 'Exception' && ! LedgerTransaction::query()->where('reference', $reversalReference)->exists()) {
+                    $findings[] = $this->alert($runId, 'critical', 'credit_disbursement_missing_reversal_posting', $offer->offer_reference,
+                        'Provider-reversed production disbursement still lacks its append-only economic reversal posting.', [
+                            'mobile_money_transaction_id' => $transaction->id,
+                            'credit_offer_id' => $offer->id,
+                            'loan_id' => $transaction->loan_id,
+                            'expected_reversal_reference' => $reversalReference,
+                        ]);
+                }
+            }
+        }
+    }
+
+    private function scanAssetEconomics(int $runId, array &$findings): void
+    {
+        if (! Schema::hasTable('asset_finance_requests')) {
+            return;
+        }
+
+        $records = DB::table('asset_finance_requests')->get(['reference', 'asset_price_minor', 'deposit_minor', 'status', 'decision_evidence']);
+        foreach ($records as $record) {
+            $assetPrice = (int) $record->asset_price_minor;
+            $deposit = (int) $record->deposit_minor;
+            if ($assetPrice <= 0 || $deposit < 0 || $deposit >= $assetPrice) {
+                $findings[] = $this->alert($runId, 'critical', 'asset_finance_invalid_economics', $record->reference,
+                    'Asset-finance request has an invalid asset-price/deposit relationship.', [
+                        'asset_price_minor' => $assetPrice,
+                        'deposit_minor' => $deposit,
+                    ]);
+                continue;
+            }
+
+            if (in_array($record->status, ['approved', 'deposit_settled'], true)) {
+                $evidence = (array) json_decode((string) ($record->decision_evidence ?? '{}'), true);
+                $approved = isset($evidence['approved_amount_minor']) ? (int) $evidence['approved_amount_minor'] : 0;
+                $maximum = $assetPrice - $deposit;
+                if ($approved <= 0 || $approved > $maximum) {
+                    $findings[] = $this->alert($runId, 'critical', 'asset_finance_approval_mismatch', $record->reference,
+                        'Approved asset-finance amount does not reconcile to asset price less deposit.', [
+                            'approved_amount_minor' => $approved,
+                            'maximum_finance_minor' => $maximum,
+                            'asset_price_minor' => $assetPrice,
+                            'deposit_minor' => $deposit,
+                        ]);
+                }
+            }
+        }
     }
 
     private function alert(int $runId, string $severity, string $type, ?string $reference, string $description, array $evidence): array
