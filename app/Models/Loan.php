@@ -3,35 +3,19 @@
 namespace App\Models;
 
 use App\Scopes\InstitutionScope;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 class Loan extends Model
 {
     use HasFactory, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     public $fillable = [
-        'user_id',
-        'loan_product_id',
-        'loan_product_term_id',
-        'institution_id',
-        'loan_application_id',
-        'amount',
-        'status',
-        'reason',
-        'disbursed_at',
-        'duration',
-        'repayment_amount',
-        'repayment_start_date',
+        'user_id', 'loan_product_id', 'loan_product_term_id', 'institution_id', 'loan_application_id',
+        'amount', 'status', 'reason', 'disbursed_at', 'duration', 'repayment_amount', 'repayment_start_date',
     ];
 
     public $casts = [
@@ -43,90 +27,88 @@ class Loan extends Model
     {
         parent::boot();
         static::addGlobalScope(new InstitutionScope);
-
         static::created(function ($loan) {
             $loan->createLoanSchedule();
         });
     }
 
-    public function createLoanSchedule()
+    public function createLoanSchedule(): void
     {
-        // Validate required fields
-        if (!$this->repayment_amount || !$this->duration || !$this->repayment_start_date) {
-            throw new \Exception('Missing required loan details.');
+        if (! $this->repayment_amount || ! $this->duration || ! $this->repayment_start_date) {
+            throw new InvalidArgumentException('Missing required loan details.');
         }
 
-        // Extract variables for clarity
-        $repaymentAmount = $this->repayment_amount;
-        $duration = $this->duration;
-        $interestType = $this->loanProductTerm->interest_type;
-        $repaymentFrequency = $this->loanProductTerm->repayment_frequency; // Assuming repayment_frequency is in months
-        $interestRate = $this->loanProductTerm->interest_rate / 100; // Convert percentage to decimal
-        $loanAmount = $this->amount;
+        $duration = (int) $this->duration;
+        $loanAmount = self::minorUnit((float) $this->amount, 'loan amount');
+        $interestType = (string) $this->loanProductTerm->interest_type;
+        $repaymentFrequency = (string) $this->loanProductTerm->repayment_frequency;
+        $configuredRate = (float) $this->loanProductTerm->interest_rate / 100;
+        $interestCycle = (string) $this->loanProductTerm->interest_cycle;
         $repaymentStartDate = Carbon::parse($this->repayment_start_date);
-        $interestCycle = $this->loanProductTerm->interest_cycle; // Weekly, Monthly.
-
-        $interestRate = self::getTermInterestRate($interestCycle, $interestRate, $duration);
-        // Calculate the number of installments
+        $termRate = self::getTermInterestRate($interestCycle, $configuredRate, $duration);
         $numberOfInstallments = self::getInstallments($duration, $repaymentFrequency);
-
-        // Calculate the number of days between installments
         $daysBetweenInstallments = self::getDays($repaymentFrequency);
+        $remainingPrincipal = $loanAmount;
 
-        // Initialize the remaining balance
-        $remainingBalance = $loanAmount;
-
-        // Loop through each installment
-        for ($i = 0; $i < $numberOfInstallments; $i++) {
-            // Calculate interest and principal based on the interest type
-            if ($interestType === 'Flat') {
-                // Flat interest: Interest is fixed for each installment
-                $interest = ($loanAmount * $interestRate) / $numberOfInstallments;
-                $principal = $loanAmount / $numberOfInstallments;
-            } elseif ($interestType === 'Amortization') {
-                // Calculate the fixed repayment amount for amortization
-                $interestRatePerPeriod = $interestRate / $numberOfInstallments;
-                $repaymentAmount = ($loanAmount * $interestRatePerPeriod * pow(1 + $interestRatePerPeriod, $numberOfInstallments))
-                    / (pow(1 + $interestRatePerPeriod, $numberOfInstallments) - 1);
-
-                // Calculate interest and principal for the current installment
-                $interest = $remainingBalance * $interestRatePerPeriod;
-                $principal = $repaymentAmount - $interest;
-
-                // Ensure the principal does not exceed the remaining balance
-                if ($principal > $remainingBalance) {
-                    $principal = $remainingBalance;
-                    $repaymentAmount = $principal + $interest; // Adjust repayment amount for the last installment
-                }
-            } else {
-                throw new \Exception('Unsupported interest type:' . $interestType);
+        if (strcasecmp($interestType, 'Flat') === 0) {
+            $totalInterest = (int) round($loanAmount * $termRate);
+            for ($position = 1; $position <= $numberOfInstallments; $position++) {
+                $principal = self::allocateMinor($loanAmount, $numberOfInstallments, $position);
+                $interest = self::allocateMinor($totalInterest, $numberOfInstallments, $position);
+                $this->createScheduleItem($repaymentStartDate, $daysBetweenInstallments, $position, $principal, $interest);
             }
-
-            // Update the remaining balance
-            $remainingBalance -= $principal;
-
-            // Create the loan schedule entry
-            LoanSchedule::create([
-                'loan_id' => $this->id,
-                'user_id' => $this->user_id,
-                'institution_id' => $this->institution_id,
-                'due_date' => $repaymentStartDate->copy()->addDays($daysBetweenInstallments * $i),
-                'principal' => $principal,
-                'interest' => $interest,
-                'principal_outstanding' => $principal,
-                'interest_outstanding' => $interest,
-                'total_outstanding' => $principal + $interest,
-            ]);
+            return;
         }
+
+        if (strcasecmp($interestType, 'Amortization') !== 0) {
+            throw new InvalidArgumentException('Unsupported interest type: '.$interestType);
+        }
+
+        $periodRate = $numberOfInstallments > 0 ? $termRate / $numberOfInstallments : 0.0;
+        $periodPayment = $periodRate == 0.0
+            ? $loanAmount / $numberOfInstallments
+            : ($loanAmount * $periodRate * pow(1 + $periodRate, $numberOfInstallments))
+                / (pow(1 + $periodRate, $numberOfInstallments) - 1);
+
+        for ($position = 1; $position <= $numberOfInstallments; $position++) {
+            if ($position === $numberOfInstallments) {
+                $principal = $remainingPrincipal;
+            } else {
+                $interestPreview = (int) round($remainingPrincipal * $periodRate);
+                $principal = max(0, min($remainingPrincipal, (int) round($periodPayment) - $interestPreview));
+            }
+            $interest = $periodRate == 0.0 ? 0 : (int) round($remainingPrincipal * $periodRate);
+            $remainingPrincipal -= $principal;
+            $this->createScheduleItem($repaymentStartDate, $daysBetweenInstallments, $position, $principal, $interest);
+        }
+    }
+
+    private function createScheduleItem(Carbon $startDate, int $daysBetween, int $position, int $principal, int $interest): void
+    {
+        LoanSchedule::create([
+            'loan_id' => $this->id,
+            'user_id' => $this->user_id,
+            'institution_id' => $this->institution_id,
+            'due_date' => $startDate->copy()->addDays($daysBetween * ($position - 1)),
+            'principal' => $principal,
+            'interest' => $interest,
+            'principal_outstanding' => $principal,
+            'interest_outstanding' => $interest,
+            'total_outstanding' => $principal + $interest,
+        ]);
     }
 
     public static function getTermInterestRate(string $interestCycle, float $interestRate, int $termInDays): float
     {
+        if ($interestRate < 0 || $termInDays <= 0) {
+            throw new InvalidArgumentException('Interest rate must be non-negative and term must be positive.');
+        }
+
         $dailyRate = match (strtolower($interestCycle)) {
-            'daily'   => $interestRate,
-            'weekly'  => $interestRate / 7,
+            'daily' => $interestRate,
+            'weekly' => $interestRate / 7,
             'monthly' => $interestRate / 30,
-            default   => throw new InvalidArgumentException("Unsupported interest cycle: $interestCycle"),
+            default => throw new InvalidArgumentException("Unsupported interest cycle: $interestCycle"),
         };
 
         return $dailyRate * $termInDays;
@@ -134,42 +116,61 @@ class Loan extends Model
 
     public static function getRepaymentAmount($interestRate, $loanAmount, $interestType, $numberOfInstallments, $interestCycle, $duration): float
     {
-        $interestRate = self::getTermInterestRate($interestCycle, $interestRate, $duration);
-        if ($interestType === 'Flat') {
-            // Flat interest: Total repayment = Loan amount + (Loan amount * Interest rate)
-            return $loanAmount + ($loanAmount * $interestRate);
-        } elseif ($interestType === 'Amortization') {
-            // Amortization: Calculate fixed repayment amount per installment
-            // Calculate the fixed repayment amount for amortization
-            $interestRatePerPeriod = $interestRate / $numberOfInstallments;
-            $repaymentAmount = ($loanAmount * $interestRatePerPeriod * pow(1 + $interestRatePerPeriod, $numberOfInstallments))
-                / (pow(1 + $interestRatePerPeriod, $numberOfInstallments) - 1);
-            return $repaymentAmount * $numberOfInstallments;
-        } else {
-            throw new \Exception('Unsupported interest type.');
+        $loanAmountMinor = self::minorUnit((float) $loanAmount, 'loan amount');
+        $installments = (int) $numberOfInstallments;
+        if ($installments <= 0) {
+            throw new InvalidArgumentException('Number of instalments must be positive.');
         }
+
+        $termRate = self::getTermInterestRate((string) $interestCycle, (float) $interestRate, (int) $duration);
+        if (strcasecmp((string) $interestType, 'Flat') === 0) {
+            return $loanAmountMinor + (int) round($loanAmountMinor * $termRate);
+        }
+
+        if (strcasecmp((string) $interestType, 'Amortization') === 0) {
+            if ($termRate == 0.0) {
+                return $loanAmountMinor;
+            }
+            $periodRate = $termRate / $installments;
+            if ($periodRate == 0.0) {
+                return $loanAmountMinor;
+            }
+            $periodPayment = ($loanAmountMinor * $periodRate * pow(1 + $periodRate, $installments))
+                / (pow(1 + $periodRate, $installments) - 1);
+            return (int) round($periodPayment * $installments);
+        }
+
+        throw new InvalidArgumentException('Unsupported interest type.');
     }
 
     public static function getRepaymentStartDate(string $repaymentFrequency)
     {
-        if ($repaymentFrequency == 'Weekly') {
-            return now()->addDays(7);
-        }
-        return now()->addMonth();
+        return match (strtolower($repaymentFrequency)) {
+            'daily' => now()->addDay(),
+            'weekly' => now()->addDays(7),
+            'fortnightly' => now()->addDays(14),
+            'monthly' => now()->addDays(30),
+            default => throw new InvalidArgumentException('Unsupported repayment frequency'),
+        };
     }
 
     public static function getMonthlyInterestRate(string $interestCycle, float $interestRate): float
     {
-        if ($interestCycle == 'Weekly') {
-            return $interestRate * 4;
-        }
-        return $interestRate;
+        return match (strtolower($interestCycle)) {
+            'daily' => $interestRate * 30,
+            'weekly' => $interestRate * (30 / 7),
+            'monthly' => $interestRate,
+            default => throw new InvalidArgumentException('Unsupported interest cycle'),
+        };
     }
 
     public static function getInstallments(int $duration, string $frequency): int
     {
+        if ($duration <= 0) {
+            throw new InvalidArgumentException('Loan duration must be positive.');
+        }
         $daysInFrequency = self::getDaysInFrequency($frequency);
-        return round($duration / $daysInFrequency);
+        return max(1, (int) ceil($duration / $daysInFrequency));
     }
 
     public static function getDays(string $frequency): int
@@ -177,75 +178,45 @@ class Loan extends Model
         return self::getDaysInFrequency($frequency);
     }
 
-    /**
-     * Helper method to get the number of days in a repayment frequency.
-     *
-     * @param string $frequency
-     * @return int
-     * @throws \Exception
-     */
     public static function getDaysInFrequency(string $frequency): int
     {
-        switch ($frequency) {
-            case 'Weekly':
-                return 7;
-            case 'Monthly':
-                return 30;
-            default:
-                throw new \Exception('Unsupported repayment frequency');
+        return match (strtolower($frequency)) {
+            'daily' => 1,
+            'weekly' => 7,
+            'fortnightly' => 14,
+            'monthly' => 30,
+            default => throw new InvalidArgumentException('Unsupported repayment frequency'),
+        };
+    }
+
+    private static function allocateMinor(int $total, int $count, int $position): int
+    {
+        if ($count <= 0 || $position < 1 || $position > $count) {
+            throw new InvalidArgumentException('Invalid monetary allocation parameters.');
         }
+        $base = intdiv($total, $count);
+        return $position === $count ? $base + ($total % $count) : $base;
     }
 
-    /**
-     * Get the user that owns the loan.
-     */
-    public function user()
+    private static function minorUnit(float $value, string $label): int
     {
-        return $this->belongsTo(User::class);
+        $rounded = (int) round($value);
+        if (abs($value - $rounded) > 0.000001) {
+            throw new InvalidArgumentException("{$label} contains fractional minor units.");
+        }
+        return $rounded;
     }
 
-    /**
-     * Get the loan product term that the loan belongs to.
-     */
-    public function loanProduct()
-    {
-        return $this->belongsTo(LoanProduct::class);
-    }
-
-    /**
-     * Get the loan product term that the loan belongs to.
-     */
-    public function loanApplication()
-    {
-        return $this->belongsTo(LoanApplication::class);
-    }
-
-    /**
-     * Get the loan product term that the loan belongs to.
-     */
-    public function loanProductTerm()
-    {
-        return $this->belongsTo(LoanProductTerm::class);
-    }
-
-    /**
-     * Get the loan schedules for the loan.
-     */
-    public function schedules()
-    {
-        return $this->hasMany(LoanSchedule::class);
-    }
+    public function user() { return $this->belongsTo(User::class); }
+    public function loanProduct() { return $this->belongsTo(LoanProduct::class); }
+    public function loanApplication() { return $this->belongsTo(LoanApplication::class); }
+    public function loanProductTerm() { return $this->belongsTo(LoanProductTerm::class); }
+    public function schedules() { return $this->hasMany(LoanSchedule::class); }
 
     public function getOutstandingBalanceAttribute()
     {
-        return round($this->schedules()->sum('total_outstanding'));
+        return (int) round((float) $this->schedules()->sum('total_outstanding'));
     }
 
-    /**
-     * Get the institution that owns the transaction.
-     */
-    public function institution()
-    {
-        return $this->belongsTo(Institution::class);
-    }
+    public function institution() { return $this->belongsTo(Institution::class); }
 }
