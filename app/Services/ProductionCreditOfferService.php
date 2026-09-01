@@ -200,7 +200,12 @@ class ProductionCreditOfferService
         if (! $transaction->credit_offer_id || $transaction->direction !== MobileMoneyTransaction::DIRECTION_DISBURSEMENT) {
             return null;
         }
-        if (in_array($transaction->status, [MobileMoneyTransaction::STATUS_FAILED, MobileMoneyTransaction::STATUS_REVERSED], true)) {
+
+        if ($transaction->status === MobileMoneyTransaction::STATUS_REVERSED) {
+            return $this->handleDisbursementReversal($transaction);
+        }
+
+        if ($transaction->status === MobileMoneyTransaction::STATUS_FAILED) {
             CreditOffer::query()->whereKey($transaction->credit_offer_id)->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
             return null;
         }
@@ -256,6 +261,56 @@ class ProductionCreditOfferService
                 'ledger_reference' => 'loan.disbursement:credit-offer:'.$offer->offer_reference,
             ]);
             return $loan;
+        });
+    }
+
+    private function handleDisbursementReversal(MobileMoneyTransaction $transaction): ?Loan
+    {
+        return DB::transaction(function () use ($transaction) {
+            $offer = CreditOffer::query()->lockForUpdate()->findOrFail($transaction->credit_offer_id);
+            $loan = Loan::query()->where('credit_offer_id', $offer->id)->lockForUpdate()->first();
+            $offer->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
+
+            if (! $loan) {
+                return null;
+            }
+
+            $schedule = CreditRepaymentScheduleItem::query()->where('loan_id', $loan->id)->lockForUpdate()->get();
+            $totalDue = (int) $schedule->sum('total_due_minor');
+            $totalOutstanding = (int) $schedule->sum('total_outstanding_minor');
+            if ($totalOutstanding !== $totalDue) {
+                $transaction->update([
+                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+                    'failure_reason' => 'Disbursement reversed after repayment activity; automatic economic reversal is blocked and operations review is required.',
+                ]);
+                $loan->update(['status' => 'Exception']);
+                $this->auditLogger->record('credit.disbursement.reversal_exception', null, $loan, [
+                    'credit_offer_id' => $offer->id,
+                    'mobile_money_transaction_id' => $transaction->id,
+                    'total_due_minor' => $totalDue,
+                    'total_outstanding_minor' => $totalOutstanding,
+                ]);
+                return $loan;
+            }
+
+            $this->loanLedger->reverseCreditOfferDisbursement($transaction, $loan, $offer);
+            CreditRepaymentScheduleItem::query()->where('loan_id', $loan->id)->update([
+                'principal_outstanding_minor' => 0,
+                'interest_outstanding_minor' => 0,
+                'fees_outstanding_minor' => 0,
+                'total_outstanding_minor' => 0,
+                'status' => CreditRepaymentScheduleItem::STATUS_VOIDED,
+                'paid_at' => null,
+            ]);
+            $loan->update(['status' => 'Reversed']);
+            LoanApplication::query()->whereKey($offer->loan_application_id)->update(['status' => 'Disbursement Reversed']);
+
+            $this->auditLogger->record('credit.disbursement.reversed', null, $loan, [
+                'credit_offer_id' => $offer->id,
+                'mobile_money_transaction_id' => $transaction->id,
+                'provider_reference' => $transaction->provider_reference,
+            ]);
+            return $loan->fresh();
         });
     }
 
