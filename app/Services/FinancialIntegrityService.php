@@ -168,6 +168,7 @@ class FinancialIntegrityService
             if (! $offer) {
                 $findings[] = $this->alert($runId, 'critical', 'credit_disbursement_missing_offer', (string) $transaction->id,
                     'Production disbursement references a missing credit offer.', ['mobile_money_transaction_id' => $transaction->id]);
+
                 continue;
             }
 
@@ -214,6 +215,7 @@ class FinancialIntegrityService
                         'asset_price_minor' => $assetPrice,
                         'deposit_minor' => $deposit,
                     ]);
+
                 continue;
             }
 

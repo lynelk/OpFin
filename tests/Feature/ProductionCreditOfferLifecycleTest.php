@@ -199,6 +199,7 @@ class ProductionCreditOfferLifecycleTest extends TestCase
             'decided_at' => now(),
         ]);
         $application->update(['status' => 'Approved', 'approved_at' => now()]);
+
         return [$customer, $operations, $application, $decision];
     }
 
@@ -241,6 +242,7 @@ class ProductionCreditOfferLifecycleTest extends TestCase
             'decision_summary' => 'Prerequisite gates passed and operations review is required.',
             'decided_at' => now(),
         ]);
+
         return [$customer, $operations, $application, $decision];
     }
 }

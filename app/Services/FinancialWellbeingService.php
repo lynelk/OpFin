@@ -98,6 +98,7 @@ class FinancialWellbeingService
                 ->whereBetween('occurred_at', [$from, $to])->sum('amount_minor');
             $limit = (int) $budget->monthly_limit_minor;
             $percent = $limit > 0 ? round(($actual / $limit) * 100, 1) : 0.0;
+
             return [
                 'id' => $budget->id, 'category' => $budget->category, 'monthly_limit_minor' => $limit,
                 'actual_minor' => $actual, 'remaining_minor' => max(0, $limit - $actual),
@@ -141,6 +142,7 @@ class FinancialWellbeingService
         }
 
         usort($events, fn (array $a, array $b) => strcmp($a['scheduled_for'], $b['scheduled_for']));
+
         return $events;
     }
 
@@ -166,6 +168,7 @@ class FinancialWellbeingService
                 }
             }
         }
+
         return 'Other';
     }
 
@@ -231,6 +234,7 @@ class FinancialWellbeingService
                 'amount_minor' => (int) $payment->amount_minor, 'currency' => $payment->currency, 'status' => $payment->status,
                 'occurred_at' => $payment->created_at?->toIso8601String(),
             ]);
+
         return $entries->concat($payments)->sortByDesc('occurred_at')->take(12)->values()->all();
     }
 
@@ -253,6 +257,7 @@ class FinancialWellbeingService
         if ($goals !== []) {
             return ['code' => 'build_goal', 'title' => 'Keep building '.$goals[0]['name'], 'text' => 'Your recorded safe-to-spend is '.($safeToSpendMinor ?? 0).' minor units after upcoming commitments.', 'href' => '/save', 'action' => 'View goal'];
         }
+
         return ['code' => 'review_position', 'title' => 'Your next 30 days are funded', 'text' => 'Review your budget and calendar before adding another recurring commitment.', 'href' => '/money', 'action' => 'Review money plan'];
     }
 
@@ -274,6 +279,7 @@ class FinancialWellbeingService
                 $scheduled = $recurrence === 'weekly' ? $scheduled->addWeek() : $scheduled->addMonthNoOverflow();
             }
         }
+
         return array_map(fn (CarbonImmutable $date) => [
             'id' => (string) $event->id, 'title' => $event->title, 'event_type' => $event->event_type,
             'direction' => $event->direction, 'amount_minor' => (int) $event->amount_minor, 'currency' => $event->currency,
@@ -292,6 +298,7 @@ class FinancialWellbeingService
         if ($values->count() === 1) {
             return $values->first() === 'connected_verified' ? 'verified' : $values->first();
         }
+
         return 'mixed';
     }
 
@@ -309,6 +316,7 @@ class FinancialWellbeingService
     private function scope(Builder $query, User $user): Builder
     {
         $query->where('user_id', $user->id);
+
         return $user->institution_id === null ? $query->whereNull('institution_id') : $query->where('institution_id', $user->institution_id);
     }
 }

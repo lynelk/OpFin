@@ -30,6 +30,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         $path = "/api/v2/payments/{$reference}";
         $query = ['merchantNumber' => $this->merchantNumber()];
         $response = $this->sendSigned('GET', $path, $query, null, null);
+
         return $this->normalizeHttpResponse($response, $transaction->provider_reference ?: $transaction->internal_reference);
     }
 
@@ -132,6 +133,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         }
 
         $response = $this->sendSigned('POST', $path, [], $payload, $transaction->idempotency_key);
+
         return $this->normalizeHttpResponse($response, $transaction->internal_reference);
     }
 
@@ -165,6 +167,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         if ($canonicalQuery !== '') {
             $url .= '?'.$canonicalQuery;
         }
+
         return $request->withBody($body, 'application/json')->send(strtoupper($method), $url);
     }
 
@@ -174,6 +177,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         $status = strtoupper((string) ($payload['status'] ?? ''));
         if ($response->successful()) {
             $normalizedStatus = $this->normalizeStatus($status ?: 'PENDING');
+
             return new MobileMoneyProviderResponse(
                 provider: 'cpay',
                 successful: $normalizedStatus !== MobileMoneyTransaction::STATUS_FAILED,
@@ -200,6 +204,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
     {
         unset($payload['providerResponse'], $payload['signature'], $payload['token'], $payload['secret']);
         $payload['http_status'] = $httpStatus;
+
         return $payload;
     }
 
@@ -219,6 +224,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
             return '';
         }
         ksort($query);
+
         return http_build_query($query, '', '&', PHP_QUERY_RFC3986);
     }
 
@@ -233,6 +239,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         if (! $signed) {
             throw new RuntimeException('Unable to sign CPay v2 request.');
         }
+
         return base64_encode($signature);
     }
 
@@ -245,6 +252,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         $divisor = 10 ** $exponent;
         $major = intdiv($amountMinor, $divisor);
         $fraction = $amountMinor % $divisor;
+
         return sprintf('%d.%0'.$exponent.'d', $major, $fraction);
     }
 

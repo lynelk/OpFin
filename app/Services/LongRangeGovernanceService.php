@@ -66,6 +66,7 @@ class LongRangeGovernanceService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.linked_account.reviewed', $actor, null, ['linked_account_id' => $id, 'status' => $data['status']]);
+
         return DB::table('linked_financial_accounts')->find($id);
     }
 
@@ -122,6 +123,7 @@ class LongRangeGovernanceService
                 'approved_amount_minor' => $approvedAmount,
                 'maximum_finance_minor' => $maximumFinance,
             ]);
+
             return DB::table('asset_finance_requests')->find($id);
         });
     }
@@ -141,6 +143,7 @@ class LongRangeGovernanceService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.community.membership_reviewed', $actor, null, ['reference' => $record->reference, 'status' => $data['status']]);
+
         return DB::table('community_finance_memberships')->find($id);
     }
 
@@ -165,6 +168,7 @@ class LongRangeGovernanceService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.participatory.listing_reviewed', $actor, null, ['reference' => $record->reference, 'status' => $data['status']]);
+
         return DB::table('participatory_finance_listings')->find($id);
     }
 
@@ -185,6 +189,7 @@ class LongRangeGovernanceService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.capital.mandate_reviewed', $actor, null, ['reference' => $record->reference, 'status' => $data['status']]);
+
         return DB::table('capital_mandates')->find($id);
     }
 
@@ -205,6 +210,7 @@ class LongRangeGovernanceService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.partner.reviewed', $actor, null, ['reference' => $record->reference, 'status' => $data['status']]);
+
         return DB::table('partner_distribution_accounts')->find($id);
     }
 
@@ -240,6 +246,7 @@ class LongRangeGovernanceService
                 'updated_at' => now(),
             ]);
             $this->auditLogger->record('long_range.referral.reward_posted', $actor, null, ['reference' => $record->reference, 'reward_minor' => $rewardMinor]);
+
             return DB::table('referral_events')->find($id);
         });
     }

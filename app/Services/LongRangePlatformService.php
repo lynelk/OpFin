@@ -45,6 +45,7 @@ class LongRangePlatformService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.linked_account.created', $user, null, ['linked_account_id' => $id, 'provider' => $data['provider']]);
+
         return DB::table('linked_financial_accounts')->find($id);
     }
 
@@ -61,6 +62,7 @@ class LongRangePlatformService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.household.updated', $user);
+
         return DB::table('household_finance_profiles')->where('user_id', $user->id)->first();
     }
 
@@ -77,6 +79,7 @@ class LongRangePlatformService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.microbusiness.updated', $user);
+
         return DB::table('microbusiness_profiles')->where('user_id', $user->id)->first();
     }
 
@@ -114,6 +117,7 @@ class LongRangePlatformService
             'deposit_minor' => $deposit,
             'maximum_finance_minor' => $assetPrice - $deposit,
         ]);
+
         return DB::table('asset_finance_requests')->find($id);
     }
 
@@ -132,6 +136,7 @@ class LongRangePlatformService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.community.membership_created', $user, null, ['reference' => $reference, 'institution_type' => $data['institution_type']]);
+
         return DB::table('community_finance_memberships')->find($id);
     }
 
@@ -158,6 +163,7 @@ class LongRangePlatformService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.participatory.listing_created', $user, null, ['reference' => $reference]);
+
         return DB::table('participatory_finance_listings')->find($id);
     }
 
@@ -199,6 +205,7 @@ class LongRangePlatformService
                 'reserved_amount_minor' => $amountMinor,
                 'remaining_unreserved_minor' => $remainingMinor - $amountMinor,
             ]);
+
             return DB::table('participatory_finance_commitments')->find($id);
         });
     }
@@ -225,6 +232,7 @@ class LongRangePlatformService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.referral.created', $user, null, ['reference' => $reference]);
+
         return DB::table('referral_events')->find($id);
     }
 
@@ -237,6 +245,7 @@ class LongRangePlatformService
             if ((int) $existing->user_id !== (int) $user->id || $existing->device_reference !== $data['device_reference'] || $existing->payload_hash !== $hash) {
                 throw ValidationException::withMessages(['batch_reference' => ['Batch reference was already used for a different user, device or payload.']]);
             }
+
             return $existing;
         }
 
@@ -255,6 +264,7 @@ class LongRangePlatformService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.offline_sync.processed', $user, null, ['batch_reference' => $data['batch_reference'], 'event_count' => count($data['events'])]);
+
         return DB::table('offline_sync_batches')->find($id);
     }
 
@@ -274,6 +284,7 @@ class LongRangePlatformService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.capital.mandate_created', $user, null, ['reference' => $reference]);
+
         return DB::table('capital_mandates')->find($id);
     }
 
@@ -292,6 +303,7 @@ class LongRangePlatformService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.partner.created', $user, null, ['reference' => $reference, 'partner_type' => $data['partner_type']]);
+
         return DB::table('partner_distribution_accounts')->find($id);
     }
 
@@ -322,6 +334,7 @@ class LongRangePlatformService
         }
 
         $choice = collect(explode('*', $input))->last();
+
         return match ((string) $choice) {
             '1' => ['continue' => false, 'message' => 'Money status is available in your OpFin account. No balance is treated as confirmed unless provider evidence exists.'],
             '2' => ['continue' => false, 'message' => 'Borrowing requires secure authentication. Continue in OpFin or WhatsApp after verification.'],

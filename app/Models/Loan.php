@@ -57,6 +57,7 @@ class Loan extends Model
                 $interest = self::allocateMinor($totalInterest, $numberOfInstallments, $position);
                 $this->createScheduleItem($repaymentStartDate, $daysBetweenInstallments, $position, $principal, $interest);
             }
+
             return;
         }
 
@@ -137,6 +138,7 @@ class Loan extends Model
             }
             $periodPayment = ($loanAmountMinor * $periodRate * pow(1 + $periodRate, $installments))
                 / (pow(1 + $periodRate, $installments) - 1);
+
             return (int) round($periodPayment * $installments);
         }
 
@@ -170,6 +172,7 @@ class Loan extends Model
             throw new InvalidArgumentException('Loan duration must be positive.');
         }
         $daysInFrequency = self::getDaysInFrequency($frequency);
+
         return max(1, (int) ceil($duration / $daysInFrequency));
     }
 
@@ -195,6 +198,7 @@ class Loan extends Model
             throw new InvalidArgumentException('Invalid monetary allocation parameters.');
         }
         $base = intdiv($total, $count);
+
         return $position === $count ? $base + ($total % $count) : $base;
     }
 
@@ -204,19 +208,42 @@ class Loan extends Model
         if (abs($value - $rounded) > 0.000001) {
             throw new InvalidArgumentException("{$label} contains fractional minor units.");
         }
+
         return $rounded;
     }
 
-    public function user() { return $this->belongsTo(User::class); }
-    public function loanProduct() { return $this->belongsTo(LoanProduct::class); }
-    public function loanApplication() { return $this->belongsTo(LoanApplication::class); }
-    public function loanProductTerm() { return $this->belongsTo(LoanProductTerm::class); }
-    public function schedules() { return $this->hasMany(LoanSchedule::class); }
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function loanProduct()
+    {
+        return $this->belongsTo(LoanProduct::class);
+    }
+
+    public function loanApplication()
+    {
+        return $this->belongsTo(LoanApplication::class);
+    }
+
+    public function loanProductTerm()
+    {
+        return $this->belongsTo(LoanProductTerm::class);
+    }
+
+    public function schedules()
+    {
+        return $this->hasMany(LoanSchedule::class);
+    }
 
     public function getOutstandingBalanceAttribute()
     {
         return (int) round((float) $this->schedules()->sum('total_outstanding'));
     }
 
-    public function institution() { return $this->belongsTo(Institution::class); }
+    public function institution()
+    {
+        return $this->belongsTo(Institution::class);
+    }
 }

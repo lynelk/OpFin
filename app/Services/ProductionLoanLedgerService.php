@@ -308,6 +308,7 @@ class ProductionLoanLedgerService
         if ($cashMinor + $deductedFeesMinor !== $principalMinor) {
             throw new \InvalidArgumentException('Production credit disbursement components do not reconcile to approved principal.');
         }
+
         return [$principalMinor, $cashMinor, $deductedFeesMinor];
     }
 
@@ -334,12 +335,14 @@ class ProductionLoanLedgerService
     private function providerCashAccount(string $provider, string $purpose, string $currency): LedgerAccount
     {
         $provider = strtolower($provider ?: 'unknown');
+
         return $this->account("cash.{$provider}.{$purpose}", ucfirst($provider).' '.$purpose.' cash', 'asset', $currency);
     }
 
     private function paymentProvider(Transaction $transaction): string
     {
         $provider = MobileMoneyTransaction::query()->where('transaction_id', $transaction->id)->latest('id')->value('provider');
+
         return ucfirst(strtolower((string) ($provider ?: $transaction->network ?: 'unknown')));
     }
 
@@ -351,6 +354,7 @@ class ProductionLoanLedgerService
             if (strtoupper((string) $existing->currency) !== $currency) {
                 throw new \InvalidArgumentException("Ledger account {$code} is bound to {$existing->currency}; cross-currency reuse is not allowed.");
             }
+
             return $existing;
         }
 
@@ -370,6 +374,7 @@ class ProductionLoanLedgerService
         if (abs($numeric - $rounded) > 0.000001) {
             throw new \InvalidArgumentException('Legacy monetary value contains fractional minor units and cannot be posted safely.');
         }
+
         return $rounded;
     }
 }

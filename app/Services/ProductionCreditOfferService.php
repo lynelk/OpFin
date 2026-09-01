@@ -146,6 +146,7 @@ class ProductionCreditOfferService
                 'principal_amount_minor' => $principalMinor,
                 'total_repayment_minor' => $totalRepaymentMinor,
             ]);
+
             return $offer;
         });
     }
@@ -173,6 +174,7 @@ class ProductionCreditOfferService
                 'offer_reference' => $locked->offer_reference,
                 'disclosed_total_repayment_minor' => $locked->total_repayment_minor,
             ]);
+
             return $locked->fresh();
         });
 
@@ -192,6 +194,7 @@ class ProductionCreditOfferService
         ]);
 
         $loan = $this->syncDisbursementState($transaction);
+
         return ['offer' => $offer->fresh(), 'mobile_money' => $transaction->fresh(), 'loan' => $loan];
     }
 
@@ -207,6 +210,7 @@ class ProductionCreditOfferService
 
         if ($transaction->status === MobileMoneyTransaction::STATUS_FAILED) {
             CreditOffer::query()->whereKey($transaction->credit_offer_id)->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
+
             return null;
         }
         if ($transaction->status !== MobileMoneyTransaction::STATUS_SUCCESSFUL) {
@@ -221,6 +225,7 @@ class ProductionCreditOfferService
                     $transaction->update(['loan_id' => $existing->id]);
                 }
                 $this->loanLedger->postCreditOfferDisbursement($transaction->fresh(), $existing, $offer);
+
                 return $existing;
             }
 
@@ -245,6 +250,7 @@ class ProductionCreditOfferService
                     'repayment_start_date' => $firstDueDate->toDateString(),
                 ]);
                 $loan->save();
+
                 return $loan;
             });
 
@@ -260,6 +266,7 @@ class ProductionCreditOfferService
                 'provider_reference' => $transaction->provider_reference,
                 'ledger_reference' => 'loan.disbursement:credit-offer:'.$offer->offer_reference,
             ]);
+
             return $loan;
         });
     }
@@ -290,6 +297,7 @@ class ProductionCreditOfferService
                     'total_due_minor' => $totalDue,
                     'total_outstanding_minor' => $totalOutstanding,
                 ]);
+
                 return $loan;
             }
 
@@ -310,6 +318,7 @@ class ProductionCreditOfferService
                 'mobile_money_transaction_id' => $transaction->id,
                 'provider_reference' => $transaction->provider_reference,
             ]);
+
             return $loan->fresh();
         });
     }
@@ -346,6 +355,7 @@ class ProductionCreditOfferService
     private function allocate(int $total, int $count, int $position): int
     {
         $base = intdiv($total, $count);
+
         return $position === $count ? $base + ($total % $count) : $base;
     }
 

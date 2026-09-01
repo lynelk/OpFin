@@ -27,6 +27,7 @@ class LongRangeFinancialActionService
             if ((int) $source->amount_minor !== $amountMinor) {
                 throw ValidationException::withMessages(['amount_minor' => ['Amount must match the approved commitment exactly.']]);
             }
+
             return $this->createIntent($user, 'participatory_fund', $sourceType, $sourceId, $amountMinor, $idempotencyKey);
         }
 
@@ -41,6 +42,7 @@ class LongRangeFinancialActionService
             if ((int) $source->deposit_minor >= (int) $source->asset_price_minor) {
                 throw ValidationException::withMessages(['amount_minor' => ['Asset-finance deposit must remain below the asset price.']]);
             }
+
             return $this->createIntent($user, 'asset_finance_deposit', $sourceType, $sourceId, $amountMinor, $idempotencyKey);
         }
 
@@ -54,6 +56,7 @@ class LongRangeFinancialActionService
             if ((int) $existing->user_id !== (int) $user->id || (int) $existing->amount_minor !== $amountMinor || $existing->source_type !== $sourceType || (int) $existing->source_id !== $sourceId || $existing->action_type !== $actionType) {
                 throw ValidationException::withMessages(['idempotency_key' => ['Idempotency key was already used for a different financial instruction.']]);
             }
+
             return $existing;
         }
 
@@ -73,6 +76,7 @@ class LongRangeFinancialActionService
             'updated_at' => now(),
         ]);
         $this->auditLogger->record('long_range.financial_intent.created', $user, null, ['reference' => $reference, 'action_type' => $actionType, 'source_type' => $sourceType]);
+
         return DB::table('financial_action_intents')->find($id);
     }
 
@@ -129,6 +133,7 @@ class LongRangeFinancialActionService
         });
 
         $this->auditLogger->record('long_range.financial_intent.confirmed', $user, null, ['reference' => $reference, 'provider_status' => $transaction->status]);
+
         return DB::table('financial_action_intents')->where('id', $intent->id)->first();
     }
 
@@ -178,6 +183,7 @@ class LongRangeFinancialActionService
         if (! $otp || ! $otp->verified_at || ! $otp->verification_token_hash || $otp->verified_at->lt(now()->subMinutes(10))) {
             return false;
         }
+
         return hash_equals((string) $otp->verification_token_hash, hash('sha256', $verificationToken));
     }
 

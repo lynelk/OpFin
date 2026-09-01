@@ -46,6 +46,7 @@ class ProductionCreditController extends Controller
         ]);
 
         $this->auditLogger->record('crb.report.recorded', $request->user(), $report, ['status' => $report->status], $request);
+
         return ApiResponse::success('CRB report recorded.', ['crb_report' => $report], 201);
     }
 
@@ -53,6 +54,7 @@ class ProductionCreditController extends Controller
     {
         $decision = $this->decisionService->decide($application, $request->user());
         $this->auditLogger->record('credit.decision.created', $request->user(), $decision, ['status' => $decision->status], $request);
+
         return ApiResponse::success('Credit decision recorded.', ['decision' => $decision]);
     }
 

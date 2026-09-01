@@ -32,6 +32,7 @@ class MobileMoneyService
         $response = $this->providers->provider($transaction->provider)->lookupStatus($transaction);
         $this->applyProviderResponse($transaction, $response, ['last_status_checked_at' => now()]);
         $this->audit('mobile_money.status_checked', $transaction, ['response' => $response->raw]);
+
         return $transaction->fresh();
     }
 
@@ -40,6 +41,7 @@ class MobileMoneyService
         $response = $this->providers->provider($transaction->provider)->reverse($transaction, $reason);
         $this->applyProviderResponse($transaction, $response);
         $this->audit('mobile_money.reversal.requested', $transaction, ['reason' => $reason, 'response' => $response->raw]);
+
         return $transaction->fresh();
     }
 
@@ -52,6 +54,7 @@ class MobileMoneyService
             'next_retry_at' => $transaction->retry_count + 1 < $transaction->max_retries ? now()->addMinutes(5) : null,
         ]);
         $this->audit('mobile_money.transaction.failed', $transaction, ['reason' => $reason, 'retryable' => $response->retryable]);
+
         return $transaction->fresh();
     }
 
@@ -78,6 +81,7 @@ class MobileMoneyService
             $duplicate = MobileMoneyTransaction::where('webhook_event_id', $response->webhookEventId)->first();
             if ($duplicate) {
                 $this->audit('mobile_money.webhook.duplicate', $duplicate, ['provider' => $providerName, 'webhook_event_id' => $response->webhookEventId]);
+
                 return $duplicate;
             }
         }
@@ -86,6 +90,7 @@ class MobileMoneyService
         $this->assertWebhookTransition($transaction, $response->status);
         $this->applyProviderResponse($transaction, $response, ['webhook_event_id' => $response->webhookEventId, 'webhook_received_at' => now()]);
         $this->audit('mobile_money.webhook.processed', $transaction, ['provider' => $providerName, 'webhook_event_id' => $response->webhookEventId, 'response' => $response->raw]);
+
         return $transaction->fresh();
     }
 
@@ -116,6 +121,7 @@ class MobileMoneyService
             if ($existing) {
                 $this->assertIdempotentReplay($existing, $direction, $providerName, $attributes, $amountMinor, $phone, $currency);
                 $this->audit("mobile_money.{$direction}.duplicate", $existing, ['idempotency_key' => $idempotencyKey]);
+
                 return $existing;
             }
 
@@ -147,6 +153,7 @@ class MobileMoneyService
                 : $provider->collect($transaction);
             $this->applyProviderResponse($transaction, $response);
             $this->audit("mobile_money.{$direction}.provider_response", $transaction, ['response' => $response->raw]);
+
             return $transaction->fresh();
         });
     }
@@ -207,8 +214,10 @@ class MobileMoneyService
                     $transactionId ? $inner->orWhere('internal_reference', $merchantReference) : $inner->where('internal_reference', $merchantReference);
                 }
             });
+
             return $query->firstOrFail();
         }
+
         return $query->where('provider_reference', $providerReference)->firstOrFail();
     }
 
