@@ -40,6 +40,11 @@ class Loan extends Model
 
         $duration = (int) $this->duration;
         $loanAmount = self::minorUnit((float) $this->amount, 'loan amount');
+        $targetRepayment = self::minorUnit((float) $this->repayment_amount, 'repayment amount');
+        if ($targetRepayment < $loanAmount) {
+            throw new InvalidArgumentException('Repayment amount cannot be lower than principal.');
+        }
+
         $interestType = (string) $this->loanProductTerm->interest_type;
         $repaymentFrequency = (string) $this->loanProductTerm->repayment_frequency;
         $configuredRate = (float) $this->loanProductTerm->interest_rate / 100;
@@ -48,14 +53,30 @@ class Loan extends Model
         $termRate = self::getTermInterestRate($interestCycle, $configuredRate, $duration);
         $numberOfInstallments = self::getInstallments($duration, $repaymentFrequency);
         $daysBetweenInstallments = self::getDays($repaymentFrequency);
-        $remainingPrincipal = $loanAmount;
+        $expectedRepayment = self::getRepaymentAmount(
+            $configuredRate,
+            $loanAmount,
+            $interestType,
+            $numberOfInstallments,
+            $interestCycle,
+            $duration,
+        );
+        if ($targetRepayment !== $expectedRepayment) {
+            throw new InvalidArgumentException("Legacy repayment amount {$targetRepayment} does not reconcile to the configured loan formula {$expectedRepayment}.");
+        }
+
+        $termStart = $this->disbursed_at
+            ? Carbon::parse($this->disbursed_at)
+            : $repaymentStartDate->copy()->subDays($daysBetweenInstallments);
+        $termEndDate = $termStart->copy()->addDays($duration);
 
         if (strcasecmp($interestType, 'Flat') === 0) {
-            $totalInterest = (int) round($loanAmount * $termRate);
+            $totalInterest = $targetRepayment - $loanAmount;
             for ($position = 1; $position <= $numberOfInstallments; $position++) {
                 $principal = self::allocateMinor($loanAmount, $numberOfInstallments, $position);
                 $interest = self::allocateMinor($totalInterest, $numberOfInstallments, $position);
-                $this->createScheduleItem($repaymentStartDate, $daysBetweenInstallments, $position, $principal, $interest);
+                $dueDate = $this->boundedDueDate($repaymentStartDate, $termEndDate, $daysBetweenInstallments, $position);
+                $this->createScheduleItem($dueDate, $principal, $interest);
             }
 
             return;
@@ -65,32 +86,64 @@ class Loan extends Model
             throw new InvalidArgumentException('Unsupported interest type: '.$interestType);
         }
 
-        $periodRate = $numberOfInstallments > 0 ? $termRate / $numberOfInstallments : 0.0;
+        $periodRate = $termRate / $numberOfInstallments;
         $periodPayment = $periodRate == 0.0
             ? $loanAmount / $numberOfInstallments
             : ($loanAmount * $periodRate * pow(1 + $periodRate, $numberOfInstallments))
                 / (pow(1 + $periodRate, $numberOfInstallments) - 1);
 
+        $remainingPrincipal = $loanAmount;
+        $schedule = [];
+        $interestTotal = 0;
         for ($position = 1; $position <= $numberOfInstallments; $position++) {
+            $interest = $periodRate == 0.0 ? 0 : (int) round($remainingPrincipal * $periodRate);
             if ($position === $numberOfInstallments) {
                 $principal = $remainingPrincipal;
             } else {
-                $interestPreview = (int) round($remainingPrincipal * $periodRate);
-                $principal = max(0, min($remainingPrincipal, (int) round($periodPayment) - $interestPreview));
+                $principal = max(0, min($remainingPrincipal, (int) round($periodPayment) - $interest));
             }
-            $interest = $periodRate == 0.0 ? 0 : (int) round($remainingPrincipal * $periodRate);
             $remainingPrincipal -= $principal;
-            $this->createScheduleItem($repaymentStartDate, $daysBetweenInstallments, $position, $principal, $interest);
+            $interestTotal += $interest;
+            $schedule[] = ['principal' => $principal, 'interest' => $interest];
+        }
+
+        if ($remainingPrincipal !== 0) {
+            throw new InvalidArgumentException('Amortization schedule did not allocate principal exactly.');
+        }
+
+        $targetInterest = $targetRepayment - $loanAmount;
+        $interestAdjustment = $targetInterest - $interestTotal;
+        $last = count($schedule) - 1;
+        if ($schedule[$last]['interest'] + $interestAdjustment < 0) {
+            throw new InvalidArgumentException('Amortization rounding adjustment would create negative interest.');
+        }
+        $schedule[$last]['interest'] += $interestAdjustment;
+
+        foreach ($schedule as $index => $item) {
+            $position = $index + 1;
+            $dueDate = $this->boundedDueDate($repaymentStartDate, $termEndDate, $daysBetweenInstallments, $position);
+            $this->createScheduleItem($dueDate, $item['principal'], $item['interest']);
         }
     }
 
-    private function createScheduleItem(Carbon $startDate, int $daysBetween, int $position, int $principal, int $interest): void
+    private function boundedDueDate(Carbon $startDate, Carbon $termEndDate, int $daysBetween, int $position): Carbon
     {
+        $candidate = $startDate->copy()->addDays($daysBetween * ($position - 1));
+
+        return $candidate->greaterThan($termEndDate) ? $termEndDate->copy() : $candidate;
+    }
+
+    private function createScheduleItem(Carbon $dueDate, int $principal, int $interest): void
+    {
+        if ($principal < 0 || $interest < 0 || ($principal + $interest) <= 0) {
+            throw new InvalidArgumentException('Legacy schedule components must be non-negative and the instalment total must be positive.');
+        }
+
         LoanSchedule::create([
             'loan_id' => $this->id,
             'user_id' => $this->user_id,
             'institution_id' => $this->institution_id,
-            'due_date' => $startDate->copy()->addDays($daysBetween * ($position - 1)),
+            'due_date' => $dueDate,
             'principal' => $principal,
             'interest' => $interest,
             'principal_outstanding' => $principal,
@@ -115,7 +168,7 @@ class Loan extends Model
         return $dailyRate * $termInDays;
     }
 
-    public static function getRepaymentAmount($interestRate, $loanAmount, $interestType, $numberOfInstallments, $interestCycle, $duration): float
+    public static function getRepaymentAmount($interestRate, $loanAmount, $interestType, $numberOfInstallments, $interestCycle, $duration): int
     {
         $loanAmountMinor = self::minorUnit((float) $loanAmount, 'loan amount');
         $installments = (int) $numberOfInstallments;
@@ -133,9 +186,6 @@ class Loan extends Model
                 return $loanAmountMinor;
             }
             $periodRate = $termRate / $installments;
-            if ($periodRate == 0.0) {
-                return $loanAmountMinor;
-            }
             $periodPayment = ($loanAmountMinor * $periodRate * pow(1 + $periodRate, $installments))
                 / (pow(1 + $periodRate, $installments) - 1);
 
@@ -153,16 +203,6 @@ class Loan extends Model
             'fortnightly' => now()->addDays(14),
             'monthly' => now()->addDays(30),
             default => throw new InvalidArgumentException('Unsupported repayment frequency'),
-        };
-    }
-
-    public static function getMonthlyInterestRate(string $interestCycle, float $interestRate): float
-    {
-        return match (strtolower($interestCycle)) {
-            'daily' => $interestRate * 30,
-            'weekly' => $interestRate * (30 / 7),
-            'monthly' => $interestRate,
-            default => throw new InvalidArgumentException('Unsupported interest cycle'),
         };
     }
 
@@ -194,7 +234,7 @@ class Loan extends Model
 
     private static function allocateMinor(int $total, int $count, int $position): int
     {
-        if ($count <= 0 || $position < 1 || $position > $count) {
+        if ($total < 0 || $count <= 0 || $position < 1 || $position > $count) {
             throw new InvalidArgumentException('Invalid monetary allocation parameters.');
         }
         $base = intdiv($total, $count);
@@ -204,6 +244,9 @@ class Loan extends Model
 
     private static function minorUnit(float $value, string $label): int
     {
+        if (! is_finite($value)) {
+            throw new InvalidArgumentException("{$label} must be finite.");
+        }
         $rounded = (int) round($value);
         if (abs($value - $rounded) > 0.000001) {
             throw new InvalidArgumentException("{$label} contains fractional minor units.");
