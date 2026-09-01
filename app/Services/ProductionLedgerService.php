@@ -86,11 +86,13 @@ class ProductionLedgerService
             $direction = $entry['direction'] ?? null;
             if ($direction === LedgerEntry::DIRECTION_DEBIT) {
                 $debits = $this->safeAdd($debits, $amountMinor);
+
                 continue;
             }
 
             if ($direction === LedgerEntry::DIRECTION_CREDIT) {
                 $credits = $this->safeAdd($credits, $amountMinor);
+
                 continue;
             }
 
