@@ -60,6 +60,7 @@ class MobileMoneyService
 
     public function processWebhook(string $providerName, array $payload, array $headers = [], ?string $rawBody = null): MobileMoneyTransaction
     {
+        $providerName = strtolower(trim($providerName));
         $secret = config("services.mobile_money.providers.{$providerName}.webhook_secret");
         $validSignature = $providerName === 'cpay'
             ? $this->signatureValidator->isValidCpay(
@@ -87,7 +88,6 @@ class MobileMoneyService
         }
 
         $transaction = $this->findWebhookTransaction($providerName, $payload, $response->providerReference);
-        $this->assertWebhookTransition($transaction, $response->status);
         $this->applyProviderResponse($transaction, $response, ['webhook_event_id' => $response->webhookEventId, 'webhook_received_at' => now()]);
         $this->audit('mobile_money.webhook.processed', $transaction, ['provider' => $providerName, 'webhook_event_id' => $response->webhookEventId, 'response' => $response->raw]);
 
@@ -112,8 +112,8 @@ class MobileMoneyService
             throw new InvalidArgumentException('A mobile money phone number is required.');
         }
         $currency = strtoupper(trim((string) Arr::get($attributes, 'currency', 'UGX')));
-        if ($currency === '') {
-            throw new InvalidArgumentException('A mobile money currency is required.');
+        if (! preg_match('/^[A-Z]{3}$/', $currency)) {
+            throw new InvalidArgumentException('Mobile money currency must be a three-letter currency code.');
         }
 
         return DB::transaction(function () use ($direction, $attributes, $providerName, $idempotencyKey, $amountMinor, $phone, $currency) {
@@ -124,6 +124,12 @@ class MobileMoneyService
 
                 return $existing;
             }
+
+            $metadata = Arr::except($attributes, [
+                'transaction_id', 'credit_offer_id', 'loan_id', 'user_id', 'institution_id', 'provider', 'direction',
+                'amount_minor', 'currency', 'phone', 'idempotency_key', 'internal_reference',
+            ]);
+            $metadata['instruction_fingerprint'] = $this->instructionFingerprint($direction, $providerName, $attributes, $amountMinor, $phone, $currency);
 
             $transaction = MobileMoneyTransaction::create([
                 'transaction_id' => Arr::get($attributes, 'transaction_id'),
@@ -140,10 +146,7 @@ class MobileMoneyService
                 'internal_reference' => Arr::get($attributes, 'internal_reference', (string) Str::uuid()),
                 'status' => MobileMoneyTransaction::STATUS_PROCESSING,
                 'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_UNRECONCILED,
-                'metadata' => Arr::except($attributes, [
-                    'transaction_id', 'credit_offer_id', 'loan_id', 'user_id', 'institution_id', 'provider', 'direction',
-                    'amount_minor', 'currency', 'phone', 'idempotency_key', 'internal_reference',
-                ]),
+                'metadata' => $metadata,
             ]);
 
             $this->audit("mobile_money.{$direction}.requested", $transaction, ['idempotency_key' => $idempotencyKey]);
@@ -167,6 +170,13 @@ class MobileMoneyService
         string $phone,
         string $currency,
     ): void {
+        $fingerprint = $this->instructionFingerprint($direction, $providerName, $attributes, $amountMinor, $phone, $currency);
+        $existingMetadata = is_array($existing->metadata) ? $existing->metadata : [];
+        $storedFingerprint = $existingMetadata['instruction_fingerprint'] ?? null;
+        if (is_string($storedFingerprint) && $storedFingerprint !== '' && ! hash_equals($storedFingerprint, $fingerprint)) {
+            throw new InvalidArgumentException('The supplied idempotency key was already used for a different canonical money instruction.');
+        }
+
         $comparisons = [
             'provider' => [strtolower((string) $existing->provider), $providerName],
             'direction' => [(string) $existing->direction, $direction],
@@ -185,7 +195,6 @@ class MobileMoneyService
             $comparisons['internal_reference'] = [(string) $existing->internal_reference, (string) $requestedInternalReference];
         }
 
-        $existingMetadata = is_array($existing->metadata) ? $existing->metadata : [];
         foreach (['purpose', 'source_type', 'source_id', 'savings_movement_id', 'protection_premium_payment_id'] as $key) {
             if (array_key_exists($key, $attributes)) {
                 $comparisons[$key] = [$existingMetadata[$key] ?? null, $attributes[$key]];
@@ -199,41 +208,99 @@ class MobileMoneyService
         }
     }
 
-    private function findWebhookTransaction(string $providerName, array $payload, ?string $providerReference): MobileMoneyTransaction
-    {
-        $query = MobileMoneyTransaction::where('provider', $providerName);
-        if ($providerName === 'cpay') {
-            $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
-            $merchantReference = $payload['reference'] ?? $payload['merchantReference'] ?? $payload['merchant_reference'] ?? $data['merchantReference'] ?? $data['merchant_reference'] ?? null;
-            $transactionId = $payload['transactionId'] ?? $payload['transaction_id'] ?? $data['transactionId'] ?? $data['transaction_id'] ?? $providerReference;
-            $query->where(function ($inner) use ($transactionId, $merchantReference) {
-                if ($transactionId) {
-                    $inner->where('provider_reference', $transactionId);
-                }
-                if ($merchantReference) {
-                    $transactionId ? $inner->orWhere('internal_reference', $merchantReference) : $inner->where('internal_reference', $merchantReference);
-                }
-            });
+    private function instructionFingerprint(
+        string $direction,
+        string $providerName,
+        array $attributes,
+        int $amountMinor,
+        string $phone,
+        string $currency,
+    ): string {
+        $instruction = [
+            'provider' => $providerName,
+            'direction' => $direction,
+            'amount_minor' => $amountMinor,
+            'currency' => $currency,
+            'phone' => $phone,
+            'transaction_id' => Arr::get($attributes, 'transaction_id'),
+            'credit_offer_id' => Arr::get($attributes, 'credit_offer_id'),
+            'loan_id' => Arr::get($attributes, 'loan_id'),
+            'user_id' => Arr::get($attributes, 'user_id'),
+            'institution_id' => Arr::get($attributes, 'institution_id'),
+            'internal_reference' => Arr::get($attributes, 'internal_reference'),
+            'purpose' => Arr::get($attributes, 'purpose'),
+            'source_type' => Arr::get($attributes, 'source_type'),
+            'source_id' => Arr::get($attributes, 'source_id'),
+            'savings_movement_id' => Arr::get($attributes, 'savings_movement_id'),
+            'protection_premium_payment_id' => Arr::get($attributes, 'protection_premium_payment_id'),
+        ];
 
-            return $query->firstOrFail();
-        }
-
-        return $query->where('provider_reference', $providerReference)->firstOrFail();
+        return hash('sha256', json_encode($instruction, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
     }
 
-    private function assertWebhookTransition(MobileMoneyTransaction $transaction, string $nextStatus): void
+    private function findWebhookTransaction(string $providerName, array $payload, ?string $providerReference): MobileMoneyTransaction
     {
-        if ($transaction->provider !== 'cpay') {
+        if ($providerName !== 'cpay') {
+            return MobileMoneyTransaction::where('provider', $providerName)
+                ->where('provider_reference', $providerReference)
+                ->firstOrFail();
+        }
+
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $merchantReference = $payload['reference'] ?? $payload['merchantReference'] ?? $payload['merchant_reference'] ?? $data['merchantReference'] ?? $data['merchant_reference'] ?? null;
+        $transactionId = $payload['transactionId'] ?? $payload['transaction_id'] ?? $data['transactionId'] ?? $data['transaction_id'] ?? $providerReference;
+
+        $byProviderReference = $transactionId
+            ? MobileMoneyTransaction::where('provider', $providerName)->where('provider_reference', $transactionId)->first()
+            : null;
+        $byMerchantReference = $merchantReference
+            ? MobileMoneyTransaction::where('provider', $providerName)->where('internal_reference', $merchantReference)->first()
+            : null;
+
+        if ($byProviderReference && $byMerchantReference && $byProviderReference->id !== $byMerchantReference->id) {
+            throw new InvalidArgumentException('CPay webhook identifiers resolve to different money movements.');
+        }
+
+        $transaction = $byProviderReference ?: $byMerchantReference;
+        if (! $transaction) {
+            throw new InvalidArgumentException('CPay webhook could not be matched to an OpFin money movement.');
+        }
+
+        return $transaction;
+    }
+
+    private function assertProviderTransition(MobileMoneyTransaction $transaction, string $nextStatus): void
+    {
+        if (strtolower((string) $transaction->provider) !== 'cpay') {
             return;
         }
-        $terminal = [MobileMoneyTransaction::STATUS_SUCCESSFUL, MobileMoneyTransaction::STATUS_FAILED, MobileMoneyTransaction::STATUS_REVERSED];
-        if (in_array($transaction->status, $terminal, true) && $transaction->status !== $nextStatus) {
-            throw new InvalidArgumentException("CPay webhook cannot regress terminal status {$transaction->status} to {$nextStatus}.");
+
+        $allowed = match ($transaction->status) {
+            MobileMoneyTransaction::STATUS_PROCESSING, MobileMoneyTransaction::STATUS_PENDING => [
+                MobileMoneyTransaction::STATUS_PROCESSING,
+                MobileMoneyTransaction::STATUS_PENDING,
+                MobileMoneyTransaction::STATUS_SUCCESSFUL,
+                MobileMoneyTransaction::STATUS_FAILED,
+                MobileMoneyTransaction::STATUS_REVERSED,
+            ],
+            MobileMoneyTransaction::STATUS_SUCCESSFUL => [
+                MobileMoneyTransaction::STATUS_SUCCESSFUL,
+                MobileMoneyTransaction::STATUS_REVERSED,
+            ],
+            MobileMoneyTransaction::STATUS_FAILED => [MobileMoneyTransaction::STATUS_FAILED],
+            MobileMoneyTransaction::STATUS_REVERSED => [MobileMoneyTransaction::STATUS_REVERSED],
+            default => [],
+        };
+
+        if (! in_array($nextStatus, $allowed, true)) {
+            throw new InvalidArgumentException("CPay status transition {$transaction->status} -> {$nextStatus} is not allowed.");
         }
     }
 
     private function applyProviderResponse(MobileMoneyTransaction $transaction, MobileMoneyProviderResponse $response, array $extra = []): void
     {
+        $this->assertProviderTransition($transaction, $response->status);
+
         $transaction->update(array_merge([
             'provider_reference' => $response->providerReference ?? $transaction->provider_reference,
             'status' => $response->status,
