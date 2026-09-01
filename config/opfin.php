@@ -3,8 +3,13 @@
 return [
     'default_country' => env('OPFIN_DEFAULT_COUNTRY', 'UG'),
 
+    'credit' => [
+        'max_debt_service_ratio_percent' => (float) env('OPFIN_MAX_DSR_PERCENT', 35),
+        'affordability_formula' => 'estimated_monthly_obligation_minor / verified_monthly_income_minor * 100',
+        'legacy_origination_enabled' => (bool) env('OPFIN_ENABLE_LEGACY_LOAN_ORIGINATION', false),
+    ],
+
     'capabilities' => [
-        // Customer shell and foundation
         'home' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'activation' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'identity' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
@@ -13,8 +18,6 @@ return [
         'financial_passport' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'support' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'security_centre' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
-
-        // Customer financial journeys
         'borrow' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'licensed_product_and_funding_configuration'],
         'budgeting' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'financial_calendar' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
@@ -36,19 +39,13 @@ return [
         'p2p_participatory_finance' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'lender_of_record_custody_settlement_and_regulatory_approval'],
         'rewards_referrals' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'linked_accounts' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'provider_open_api_or_authorised_data_connection'],
-
-        // Inclusive and assisted channels
         'whatsapp' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'meta_whatsapp_production_credentials'],
         'ussd' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'ussd_aggregator_short_code_and_callback_configuration'],
         'offline_aware_mode' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
-
-        // Institutional journeys
         'employer' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'employer_payroll_integration_for_live_deductions'],
         'sacco' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'institution_integration_and_membership_verification'],
         'capital' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'capital_provider_and_regulatory_activation'],
         'partner_distribution' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'partner_due_diligence_contract_and_credentials'],
-
-        // Shared platform capabilities
         'payments' => ['status' => 'AVAILABLE', 'owner' => 'cpay'],
         'payment_reconciliation' => ['status' => 'AVAILABLE', 'owner' => 'cpay'],
         'product_factory' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
