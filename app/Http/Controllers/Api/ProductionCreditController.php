@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CrbReport;
 use App\Models\CreditDecision;
+use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Services\AuditLogger;
 use App\Services\ProductionCreditDecisionService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -78,7 +81,8 @@ class ProductionCreditController extends Controller
         }
 
         $validated = $validator->validated();
-        if ((int) $validated['approved_amount_minor'] > $decision->requested_amount_minor) {
+        $approvedAmountMinor = (int) $validated['approved_amount_minor'];
+        if ($approvedAmountMinor > $decision->requested_amount_minor) {
             return ApiResponse::error(
                 'Approved amount cannot exceed the customer requested amount.',
                 422,
@@ -86,9 +90,14 @@ class ProductionCreditController extends Controller
             );
         }
 
+        $application = LoanApplication::query()->with('loanProductTerm')->findOrFail($decision->loan_application_id);
         $monthlyIncomeMinor = (int) $validated['monthly_income_minor'];
-        $estimatedObligationMinor = (int) $validated['estimated_obligation_minor'];
-        $dsrPercent = round(($estimatedObligationMinor / $monthlyIncomeMinor) * 100, 2);
+        $declaredObligationMinor = (int) $validated['estimated_obligation_minor'];
+        $existingThirtyDayDebtMinor = $this->existingThirtyDayDebtServiceMinor((int) $decision->user_id);
+        $proposedThirtyDayDebtMinor = $this->projectedThirtyDayDebtServiceMinor($application, $approvedAmountMinor);
+        $systemMinimumObligationMinor = $existingThirtyDayDebtMinor + $proposedThirtyDayDebtMinor;
+        $effectiveObligationMinor = max($declaredObligationMinor, $systemMinimumObligationMinor);
+        $dsrPercent = round(($effectiveObligationMinor / $monthlyIncomeMinor) * 100, 2);
         $maxDsrPercent = (float) config('opfin.credit.max_debt_service_ratio_percent', 35);
         if ($dsrPercent > $maxDsrPercent) {
             return ApiResponse::error(
@@ -101,14 +110,15 @@ class ProductionCreditController extends Controller
         $reasonCodes = array_values(array_unique([
             ...$validated['reason_codes'],
             'AFFORDABILITY_DSR_WITHIN_POLICY',
+            'AFFORDABILITY_SYSTEM_OBLIGATION_FLOOR_APPLIED',
         ]));
 
         $decision->update([
             'decided_by' => $request->user()->id,
             'status' => CreditDecision::STATUS_APPROVED,
-            'approved_amount_minor' => (int) $validated['approved_amount_minor'],
+            'approved_amount_minor' => $approvedAmountMinor,
             'monthly_income_minor' => $monthlyIncomeMinor,
-            'estimated_obligation_minor' => $estimatedObligationMinor,
+            'estimated_obligation_minor' => $effectiveObligationMinor,
             'policy_version' => $validated['policy_version'],
             'reason_codes' => $reasonCodes,
             'decision_summary' => $validated['decision_summary'],
@@ -124,7 +134,11 @@ class ProductionCreditController extends Controller
                 'policy_version' => $decision->policy_version,
                 'approved_amount_minor' => $decision->approved_amount_minor,
                 'monthly_income_minor' => $monthlyIncomeMinor,
-                'estimated_obligation_minor' => $estimatedObligationMinor,
+                'declared_obligation_minor' => $declaredObligationMinor,
+                'existing_thirty_day_debt_service_minor' => $existingThirtyDayDebtMinor,
+                'proposed_thirty_day_debt_service_minor' => $proposedThirtyDayDebtMinor,
+                'system_minimum_obligation_minor' => $systemMinimumObligationMinor,
+                'effective_obligation_minor' => $effectiveObligationMinor,
                 'debt_service_ratio_percent' => $dsrPercent,
                 'maximum_debt_service_ratio_percent' => $maxDsrPercent,
                 'reason_codes' => $decision->reason_codes,
@@ -137,9 +151,73 @@ class ProductionCreditController extends Controller
             'affordability' => [
                 'debt_service_ratio_percent' => $dsrPercent,
                 'maximum_debt_service_ratio_percent' => $maxDsrPercent,
-                'formula' => (string) config('opfin.credit.affordability_formula'),
+                'declared_obligation_minor' => $declaredObligationMinor,
+                'existing_thirty_day_debt_service_minor' => $existingThirtyDayDebtMinor,
+                'proposed_thirty_day_debt_service_minor' => $proposedThirtyDayDebtMinor,
+                'effective_obligation_minor' => $effectiveObligationMinor,
+                'formula' => 'max(declared_obligation, existing_30d_debt_service + proposed_30d_debt_service) / monthly_income * 100',
             ],
             'next_state' => 'offer_generation',
         ]);
+    }
+
+    private function existingThirtyDayDebtServiceMinor(int $userId): int
+    {
+        $from = now()->toDateString();
+        $to = now()->addDays(30)->toDateString();
+        $production = 0;
+        if (Schema::hasTable('credit_repayment_schedule_items')) {
+            $production = (int) DB::table('credit_repayment_schedule_items as schedule')
+                ->join('loans', 'loans.id', '=', 'schedule.loan_id')
+                ->where('loans.user_id', $userId)
+                ->whereNotNull('loans.credit_offer_id')
+                ->whereNull('loans.deleted_at')
+                ->whereNotIn('loans.status', ['Reversed'])
+                ->where('schedule.total_outstanding_minor', '>', 0)
+                ->whereBetween('schedule.due_date', [$from, $to])
+                ->sum('schedule.total_outstanding_minor');
+        }
+
+        $legacy = 0;
+        if (Schema::hasTable('loan_schedules')) {
+            $legacy = (int) round((float) DB::table('loan_schedules as schedule')
+                ->join('loans', 'loans.id', '=', 'schedule.loan_id')
+                ->where('loans.user_id', $userId)
+                ->whereNull('loans.credit_offer_id')
+                ->whereNull('loans.deleted_at')
+                ->whereNotIn('loans.status', ['Reversed'])
+                ->where('schedule.total_outstanding', '>', 0)
+                ->whereBetween('schedule.due_date', [$from, $to])
+                ->sum('schedule.total_outstanding'));
+        }
+
+        return $production + $legacy;
+    }
+
+    private function projectedThirtyDayDebtServiceMinor(LoanApplication $application, int $approvedAmountMinor): int
+    {
+        $term = $application->loanProductTerm;
+        if (! $term) {
+            return $approvedAmountMinor;
+        }
+
+        $duration = (int) $term->duration;
+        $installments = Loan::getInstallments($duration, (string) $term->repayment_frequency);
+        $repaymentMinor = Loan::getRepaymentAmount(
+            (float) $term->interest_rate / 100,
+            $approvedAmountMinor,
+            (string) $term->interest_type,
+            $installments,
+            (string) $term->interest_cycle,
+            $duration,
+        );
+        $frequencyDays = Loan::getDaysInFrequency((string) $term->repayment_frequency);
+        $occurrences = $duration < $frequencyDays
+            ? 1
+            : max(1, min($installments, intdiv(30, $frequencyDays)));
+        $base = intdiv($repaymentMinor, $installments);
+        $remainder = $repaymentMinor % $installments;
+
+        return ($base * $occurrences) + ($occurrences === $installments ? $remainder : 0);
     }
 }
