@@ -46,7 +46,6 @@ class ProductionCreditController extends Controller
         ]);
 
         $this->auditLogger->record('crb.report.recorded', $request->user(), $report, ['status' => $report->status], $request);
-
         return ApiResponse::success('CRB report recorded.', ['crb_report' => $report], 201);
     }
 
@@ -54,7 +53,6 @@ class ProductionCreditController extends Controller
     {
         $decision = $this->decisionService->decide($application, $request->user());
         $this->auditLogger->record('credit.decision.created', $request->user(), $decision, ['status' => $decision->status], $request);
-
         return ApiResponse::success('Credit decision recorded.', ['decision' => $decision]);
     }
 
@@ -73,7 +71,6 @@ class ProductionCreditController extends Controller
         if ($validator->fails()) {
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
-
         if ($decision->status !== CreditDecision::STATUS_REFERRED) {
             return ApiResponse::error('Only referred decisions can be approved through the controlled review step.', 409);
         }
@@ -87,23 +84,36 @@ class ProductionCreditController extends Controller
             );
         }
 
+        $monthlyIncomeMinor = (int) $validated['monthly_income_minor'];
+        $estimatedObligationMinor = (int) $validated['estimated_obligation_minor'];
+        $dsrPercent = round(($estimatedObligationMinor / $monthlyIncomeMinor) * 100, 2);
+        $maxDsrPercent = (float) config('opfin.credit.max_debt_service_ratio_percent', 35);
+        if ($dsrPercent > $maxDsrPercent) {
+            return ApiResponse::error(
+                'Debt-service ratio exceeds the configured production affordability limit.',
+                422,
+                ['estimated_obligation_minor' => ['AFFORDABILITY_DSR_EXCEEDED']],
+            );
+        }
+
+        $reasonCodes = array_values(array_unique([
+            ...$validated['reason_codes'],
+            'AFFORDABILITY_DSR_WITHIN_POLICY',
+        ]));
+
         $decision->update([
             'decided_by' => $request->user()->id,
             'status' => CreditDecision::STATUS_APPROVED,
             'approved_amount_minor' => (int) $validated['approved_amount_minor'],
-            'monthly_income_minor' => (int) $validated['monthly_income_minor'],
-            'estimated_obligation_minor' => (int) $validated['estimated_obligation_minor'],
+            'monthly_income_minor' => $monthlyIncomeMinor,
+            'estimated_obligation_minor' => $estimatedObligationMinor,
             'policy_version' => $validated['policy_version'],
-            'reason_codes' => $validated['reason_codes'],
+            'reason_codes' => $reasonCodes,
             'decision_summary' => $validated['decision_summary'],
             'decided_at' => now(),
         ]);
 
-        $decision->application()->update([
-            'status' => 'Approved',
-            'approved_at' => now(),
-        ]);
-
+        $decision->application()->update(['status' => 'Approved', 'approved_at' => now()]);
         $this->auditLogger->record(
             'credit.decision.approved',
             $request->user(),
@@ -111,6 +121,10 @@ class ProductionCreditController extends Controller
             [
                 'policy_version' => $decision->policy_version,
                 'approved_amount_minor' => $decision->approved_amount_minor,
+                'monthly_income_minor' => $monthlyIncomeMinor,
+                'estimated_obligation_minor' => $estimatedObligationMinor,
+                'debt_service_ratio_percent' => $dsrPercent,
+                'maximum_debt_service_ratio_percent' => $maxDsrPercent,
                 'reason_codes' => $decision->reason_codes,
             ],
             $request,
@@ -118,6 +132,11 @@ class ProductionCreditController extends Controller
 
         return ApiResponse::success('Credit decision approved for offer generation.', [
             'decision' => $decision->fresh(),
+            'affordability' => [
+                'debt_service_ratio_percent' => $dsrPercent,
+                'maximum_debt_service_ratio_percent' => $maxDsrPercent,
+                'formula' => (string) config('opfin.credit.affordability_formula'),
+            ],
             'next_state' => 'offer_generation',
         ]);
     }
