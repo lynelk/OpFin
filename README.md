@@ -1,19 +1,111 @@
 # OpFin Backend
 
-OpFin is a Uganda-first personal finance backend built on Laravel 11 and PHP 8.2. The current backend contains API authentication, role foundations, audit logging, NIN validation hooks, credit application flows, loan creation, repayment schedule generation, payment callbacks, transaction records, accounts, and journal entries.
+OpFin is a Uganda-first financial platform backend built on Laravel 11 and PHP 8.2. It provides the governed product and relationship layer for borrowing, savings, protection, financial wellbeing, linked accounts, community finance, asset finance, participatory finance and partner distribution. External money movement is executed through CPay; OpFin remains authoritative for product decisions, obligations, schedules, customer state and product accounting.
 
-This repository is not yet production-ready for regulated financial operations. Several broader OpFin modules, including dedicated consent records, affordability checks, loan offers, compliance reporting, employer benefits, savings, investments, and insurance, still need implementation behind audited service boundaries.
+## Production invariants
 
-## Local Setup
+The backend is designed around explicit financial invariants rather than controller-side arithmetic:
 
-Required tools:
+- Money is stored and transferred as integer minor units. UGX currently uses minor-unit exponent `0`.
+- CPay is the only production collection/payout boundary. The mock adapter is test/local only.
+- An idempotency key is bound to one canonical money instruction. Reuse with a different provider, direction, amount, currency, party, source or reference is rejected.
+- Provider success is not equivalent to product settlement until the relevant product service applies the verified finality event.
+- Provider refunds/reversals normalize to the terminal `reversed` state. A clean unrepaid credit-disbursement reversal is corrected through an append-only reversal ledger transaction; repayment activity blocks automatic rewriting and creates an operations exception.
+- Every production credit disbursement must have exactly one immutable disbursement ledger posting. Missing expected postings are critical financial-integrity findings.
+- Every ledger transaction must contain positive integer entries and total debits must equal total credits.
+- Reconciliation never manufactures balancing entries. Differences remain exceptions until resolved with provider and source evidence.
+- Production credit uses exact integer schedules. Remainders are allocated deterministically to the final instalment.
+- Production affordability applies the configured debt-service-ratio control: `estimated_monthly_obligation_minor / verified_monthly_income_minor * 100`, with `OPFIN_MAX_DSR_PERCENT=35` by default.
+- Legacy loan origination is compatibility-only. New production lending must use the production decision → offer → CPay finality → exact schedule → ledger path.
+
+## Credit economics
+
+Production credit currently requires flat-interest product terms so pricing and disclosures are reproducible.
+
+For a term with configured rate `r`, rate-cycle days `c`, duration `d` and principal `P`:
+
+```text
+term_rate_percent = r / c * d
+interest_minor = round(P * term_rate_percent / 100)
+```
+
+Financed fees:
+
+```text
+net_disbursement_minor = P
+total_repayment_minor = P + interest_minor + fees_minor
+```
+
+Deducted fees:
+
+```text
+net_disbursement_minor = P - fees_minor
+total_repayment_minor = P + interest_minor
+```
+
+A deducted-fee disbursement posts the complete economic event:
+
+```text
+Dr Loan receivable             principal
+Cr Provider disbursement cash  net cash paid
+Cr Credit-fee clearing         deducted fees
+```
+
+The posting is rejected unless `net cash paid + deducted fees = principal`.
+
+Repayments allocate oldest due first using the versioned policy `oldest-due-interest-fees-principal-v1`. The full collected amount must be consumed exactly.
+
+## Long-range financial controls
+
+Participatory finance reserves approved target capacity while a commitment awaits step-up. Reservation creation locks the listing and calculates:
+
+```text
+unreserved_capacity = target - settled_funding - active_reserved_commitments
+```
+
+A new commitment cannot exceed that amount. Failed/reversed provider collections release their reservation. Settlement revalidates the locked listing and cannot overfund it.
+
+Asset finance enforces:
+
+```text
+0 <= deposit < asset_price
+maximum_finance = asset_price - deposit
+0 < approved_finance <= maximum_finance
+```
+
+Deposit collection requires an approved request, exact approved deposit amount, fresh OTP step-up and CPay finality.
+
+Savings balances distinguish collected money from partner-confirmed custody:
+
+```text
+confirmed_balance = confirmed_contributions - paid_withdrawals
+available_balance = confirmed_balance - reserved_withdrawals
+```
+
+## Financial integrity audit
+
+`php artisan opfin:integrity-audit` verifies both arithmetic balance and event completeness. It checks, among other controls:
+
+- ledger debit/credit equality;
+- orphan ledger entries and duplicate immutable references;
+- successful/unreconciled payment exceptions and duplicate provider references;
+- successful production disbursements missing their expected ledger posting;
+- reversed production disbursements missing append-only reversal accounting;
+- false long-range settlement without provider finality;
+- participatory funded-vs-settled mismatches and over-reservation;
+- referral reward ledger mismatches;
+- asset-finance price/deposit/approved-finance inconsistencies.
+
+The production scheduler runs this audit repeatedly. A ledger is not considered financially sound merely because the entries that happen to exist balance.
+
+## Local setup
+
+Requirements:
 
 - PHP 8.2+
 - Composer
-- SQLite for local tests, or MySQL/PostgreSQL for development parity
-- Node.js/npm only if working on Laravel UI assets
-
-Setup:
+- SQLite for tests or PostgreSQL for production parity
+- Node.js/npm only for Laravel asset work
 
 ```bash
 composer install
@@ -21,163 +113,90 @@ cp .env.example .env
 php artisan key:generate
 php artisan migrate
 php artisan db:seed
-```
-
-Run the API locally:
-
-```bash
 php artisan serve
 ```
 
-## Environment Variables
-
-Core:
-
-- `APP_NAME`
-- `APP_ENV`
-- `APP_KEY`
-- `APP_DEBUG`
-- `APP_URL`
-- `APP_TIMEZONE`
-- `DB_CONNECTION`
-- `DB_DATABASE`
-- `QUEUE_CONNECTION`
-- `CACHE_STORE`
-- `SESSION_DRIVER`
-- `SANCTUM_TOKEN_EXPIRY`
-- `CORS_ALLOWED_ORIGINS`
-
-Security and integrations:
-
-- `PAYMENT_CALLBACK_SECRET`
-- `CRB_URL`
-- `CRB_CLIENT_ID`
-- `CRB_CLIENT_SECRET`
-- `AIRTEL_CLIENT_ID`
-- `AIRTEL_CLIENT_SECRET`
-- `AIRTEL_BASE_URL`
-- `AIRTEL_COUNTRY`
-- `AIRTEL_CURRENCY`
-- `AIRTEL_PIN`
-- `AIRTEL_PUBLIC_KEY`
-- `MTN_MOMO_COLLECTION_SUB_KEY`
-- `MTN_MOMO_DISBURSEMENT_SUB_KEY`
-- `MTN_MOMO_BASE_URL`
-- `MTN_MOMO_CALLBACK_URL`
-- `MTN_MOMO_API_USER`
-- `MTN_MOMO_API_KEY`
-- `MTN_MOMO_CURRENCY`
-- `MTN_MOMO_ENVIRONMENT`
-- `YO_SMS_GATEWAY`
-- `YO_SMS_ACCOUNT`
-- `YO_SMS_PASSWORD`
-- `OPENAI_API_KEY`
-- `PINECONE_API_KEY`
-- `PINECONE_URL`
-
-No live credentials should be committed. Demo and test environments must use sandbox credentials only.
-
-## Test and Quality Commands
-
-Run tests:
+Run quality gates:
 
 ```bash
 php artisan test
+./vendor/bin/pint --test
+composer audit
 ```
 
-Run a specific test class:
+## Important environment variables
 
-```bash
-php artisan test --filter=FoundationApiTest
-php artisan test --filter=ApiSecurityTest
-php artisan test --filter=BackendCheckpointTest
-php artisan test --filter=InvestorDemoSliceTest
+Core runtime:
+
+```text
+APP_ENV
+APP_KEY
+APP_DEBUG
+APP_URL
+APP_TIMEZONE
+DB_CONNECTION
+QUEUE_CONNECTION
+CACHE_STORE
+SESSION_DRIVER
+SANCTUM_TOKEN_EXPIRY
+CORS_ALLOWED_ORIGINS
 ```
 
-Run migrations from a clean database:
+Production financial controls:
 
-```bash
-php artisan migrate:fresh --seed
+```text
+MOBILE_MONEY_PROVIDER=cpay
+CPAY_BASE_URL
+CPAY_MERCHANT_NUMBER
+CPAY_MERCHANT_ID
+CPAY_PRIVATE_KEY
+CPAY_CALLBACK_URL
+CPAY_CALLBACK_SECRET
+CPAY_CALLBACK_REPLAY_WINDOW_SECONDS
+CPAY_ENVIRONMENT=production
+CPAY_COUNTRY=UG
+CPAY_CURRENCY=UGX
+CPAY_MINOR_UNIT_EXPONENT=0
+OPFIN_MAX_DSR_PERCENT=35
+OPFIN_ENABLE_LEGACY_LOAN_ORIGINATION=false
 ```
 
-Run Laravel Pint if installed:
+OTP/SMS, WhatsApp, CRB, KYC and partner-specific integrations require their own production credentials. Missing external credentials must keep affected capabilities fail-closed; no fake secrets belong in source or deployment configuration.
 
-```bash
-./vendor/bin/pint
+## Architecture boundaries
+
+**OpFin owns:** identity and consent state, credit decisions, pricing snapshots, disclosures, product obligations, schedules, savings/protection state, financial wellbeing, product ledgers, audit evidence and operational exceptions.
+
+**CPay owns:** execution of collections/payouts and provider-side payment/finality evidence.
+
+A production money-changing path must therefore follow:
+
+```text
+authenticated product instruction
+→ canonical idempotent intent
+→ step-up where required
+→ CPay execution
+→ verified provider finality
+→ product state transition
+→ immutable accounting
+→ reconciliation
+→ integrity audit
 ```
 
-## Current Module Status
+## Demo and legacy surfaces
 
-Implemented/foundation:
+`/api/demo/*` is intentionally mock-labelled and is not a production financial rail. Older account, transaction, journal and web/Blade surfaces remain only where required for historical compatibility. New financial implementation must not depend on those legacy paths when an integer-minor-unit production service exists.
 
-- Sanctum API login/logout.
-- Standard API response helper for foundation endpoints.
-- User profile endpoint.
-- Role constants for platform admin, operations, customer, employer admin, and support.
-- Audit log model, migration, service, and profile audit middleware.
-- Health check endpoint.
-- NIN validation endpoint backed by CRB configuration.
-- Credit product listing and loan application endpoints.
-- Loan account creation from successful disbursement transactions.
-- Repayment schedule generation from loan terms.
-- Payment callback endpoints with shared-secret protection.
-- Transaction approval authorization for platform admin and operations roles.
-- Sensitive-action audit middleware on profile access, loan application status updates, and transaction approvals.
-- Provider-agnostic mobile money adapter foundation with mock provider, MTN/Airtel placeholders, idempotency tracking, webhook signature validation, retry metadata, reconciliation status, and audit logs.
-- Mobile money adapter requests now require positive integer `amount_minor` values and a phone number before persistence or provider dispatch.
-- Investor-demo vertical slice endpoints under `/api/demo/*` for demo consent, loan application submission, mock affordability decisioning, reason-coded decisions, loan offers, offer acceptance, loan account creation, repayment schedule generation, sandbox mobile money disbursement, ledger entries, and admin snapshot review.
-- Investor demo seed data for customer/admin users, product terms, accounts, and demo consent state.
-
-Partial or legacy:
-
-- Credit application, disbursement, repayment, accounts, and journal logic exists but still mixes controller and service responsibilities.
-- Financial migrations use a mix of `string`, `decimal`, and integer-like columns for money; the target standard is integer minor units only.
-- The mobile money adapter table uses integer minor units, but the older loan, repayment, account, transaction, and journal tables still require a planned migration.
-- Payment gateway services exist, but demo/live separation needs stronger environment gates.
-- Existing loan disbursement/repayment controllers still call older gateway services directly; new work should migrate through the mobile money adapter layer.
-- Some web controllers and Blade views remain from the older admin surface.
-
-Missing or not yet production-grade:
-
-- Dedicated consent module.
-- Consent revocation enforcement.
-- Formal affordability checks.
-- Loan offer module.
-- Policies, form requests, and API resources for the financial API.
-- Idempotency-key tables/unique constraints for disbursement and repayment commands.
-- Full ledger balancing guarantees.
-- Compliance reporting.
-- Savings, investments, insurance, employer-linked benefits, and CRB reporting workflows.
-
-## Investor Demo
-
-Seed demo data:
-
-```bash
-php artisan db:seed --class=InvestorDemoSeeder
-```
-
-Demo users:
-
-- Customer: `256700000001` / `password`
-- Platform admin: `256700000099` / `password`
-
-Demo endpoints are protected by Sanctum and intentionally mock-labelled:
-
-- `GET /api/demo/dashboard`
-- `POST /api/demo/consent`
-- `DELETE /api/demo/consent`
-- `POST /api/demo/loan-applications`
-- `GET /api/demo/loan-applications/{application}/decision`
-- `GET /api/demo/loan-applications/{application}/offer`
-- `POST /api/demo/loan-offers/{offer}/accept`
-- `GET /api/demo/admin/investor-snapshot`
-
-See `docs/demo/investor-demo-script.md`, `docs/demo/screenshots-checklist.md`, and `docs/demo/demo-limitations.md`.
+Do not treat old demo arithmetic, seed data, legacy journal balances or direct provider-era code as production source of truth.
 
 ## Documentation
 
-- Backend audit: `docs/audit/backend-audit.md`
-- Architecture guide: `docs/architecture/`
-- Checkpoint findings: `docs/audit/backend-checkpoint.md`
-- API summaries: `docs/api/`
+Start with:
+
+- `AGENTS.md` for engineering rules and financial invariants.
+- `docs/integrations/mobile-money.md` for CPay, callbacks, idempotency and reconciliation.
+- `docs/api/frontend-backend-contract.md` for client/server contracts.
+- `docs/audit/backend-checkpoint.md` for historical findings and remediation status.
+- `docs/architecture/` for architecture records.
+
+The root README is the current high-level source of truth. Historical audit documents should be read as dated evidence, not as a description of the current production state.

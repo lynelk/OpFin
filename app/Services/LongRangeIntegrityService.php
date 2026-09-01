@@ -46,22 +46,37 @@ class LongRangeIntegrityService
                 ->leftJoin('participatory_finance_commitments as c', 'c.listing_id', '=', 'l.id')
                 ->select('l.id', 'l.reference', 'l.target_amount_minor', 'l.funded_amount_minor')
                 ->selectRaw("COALESCE(SUM(CASE WHEN c.status = 'settled' THEN c.amount_minor ELSE 0 END), 0) as settled_commitments_minor")
+                ->selectRaw("COALESCE(SUM(CASE WHEN c.status = 'awaiting_step_up' THEN c.amount_minor ELSE 0 END), 0) as reserved_commitments_minor")
                 ->groupBy('l.id', 'l.reference', 'l.target_amount_minor', 'l.funded_amount_minor')
                 ->get();
 
             foreach ($listings as $listing) {
-                if ((int) $listing->funded_amount_minor !== (int) $listing->settled_commitments_minor) {
+                $funded = (int) $listing->funded_amount_minor;
+                $settled = (int) $listing->settled_commitments_minor;
+                $reserved = (int) $listing->reserved_commitments_minor;
+                $target = (int) $listing->target_amount_minor;
+
+                if ($funded !== $settled) {
                     $findings[] = $this->finding('critical', 'participatory_funding_mismatch', $listing->reference,
                         'Participatory listing funded amount does not equal settled commitments.', [
-                            'funded_amount_minor' => (int) $listing->funded_amount_minor,
-                            'settled_commitments_minor' => (int) $listing->settled_commitments_minor,
+                            'funded_amount_minor' => $funded,
+                            'settled_commitments_minor' => $settled,
                         ]);
                 }
-                if ((int) $listing->funded_amount_minor > (int) $listing->target_amount_minor) {
+                if ($funded > $target) {
                     $findings[] = $this->finding('critical', 'participatory_overfunded', $listing->reference,
                         'Participatory listing is funded above its approved target.', [
-                            'target_amount_minor' => (int) $listing->target_amount_minor,
-                            'funded_amount_minor' => (int) $listing->funded_amount_minor,
+                            'target_amount_minor' => $target,
+                            'funded_amount_minor' => $funded,
+                        ]);
+                }
+                if ($funded + $reserved > $target) {
+                    $findings[] = $this->finding('critical', 'participatory_over_reserved', $listing->reference,
+                        'Settled funding plus active payment reservations exceed the approved target.', [
+                            'target_amount_minor' => $target,
+                            'funded_amount_minor' => $funded,
+                            'reserved_commitments_minor' => $reserved,
+                            'combined_minor' => $funded + $reserved,
                         ]);
                 }
             }

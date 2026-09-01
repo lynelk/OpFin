@@ -32,7 +32,6 @@ class LongRangePlatformService
     {
         $identifier = preg_replace('/\s+/', '', (string) $data['identifier']);
         $masked = strlen($identifier) > 4 ? str_repeat('•', max(0, strlen($identifier) - 4)).substr($identifier, -4) : $identifier;
-
         $id = DB::table('linked_financial_accounts')->insertGetId([
             'user_id' => $user->id,
             'account_type' => $data['account_type'],
@@ -45,7 +44,6 @@ class LongRangePlatformService
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-
         $this->auditLogger->record('long_range.linked_account.created', $user, null, ['linked_account_id' => $id, 'provider' => $data['provider']]);
 
         return DB::table('linked_financial_accounts')->find($id);
@@ -53,19 +51,16 @@ class LongRangePlatformService
 
     public function saveHousehold(User $user, array $data): object
     {
-        DB::table('household_finance_profiles')->updateOrInsert(
-            ['user_id' => $user->id],
-            [
-                'household_size' => $data['household_size'],
-                'monthly_income_minor' => $data['monthly_income_minor'] ?? null,
-                'monthly_fixed_costs_minor' => $data['monthly_fixed_costs_minor'] ?? null,
-                'emergency_target_minor' => $data['emergency_target_minor'] ?? null,
-                'shared_goals' => json_encode($data['shared_goals'] ?? []),
-                'dependants' => json_encode($data['dependants'] ?? []),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
+        DB::table('household_finance_profiles')->updateOrInsert(['user_id' => $user->id], [
+            'household_size' => $data['household_size'],
+            'monthly_income_minor' => $data['monthly_income_minor'] ?? null,
+            'monthly_fixed_costs_minor' => $data['monthly_fixed_costs_minor'] ?? null,
+            'emergency_target_minor' => $data['emergency_target_minor'] ?? null,
+            'shared_goals' => json_encode($data['shared_goals'] ?? []),
+            'dependants' => json_encode($data['dependants'] ?? []),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         $this->auditLogger->record('long_range.household.updated', $user);
 
         return DB::table('household_finance_profiles')->where('user_id', $user->id)->first();
@@ -73,19 +68,16 @@ class LongRangePlatformService
 
     public function saveMicrobusiness(User $user, array $data): object
     {
-        DB::table('microbusiness_profiles')->updateOrInsert(
-            ['user_id' => $user->id],
-            [
-                'business_name' => $data['business_name'],
-                'business_type' => $data['business_type'],
-                'registration_reference' => $data['registration_reference'] ?? null,
-                'monthly_revenue_minor' => $data['monthly_revenue_minor'] ?? null,
-                'monthly_expense_minor' => $data['monthly_expense_minor'] ?? null,
-                'operating_data' => json_encode($data['operating_data'] ?? []),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
+        DB::table('microbusiness_profiles')->updateOrInsert(['user_id' => $user->id], [
+            'business_name' => $data['business_name'],
+            'business_type' => $data['business_type'],
+            'registration_reference' => $data['registration_reference'] ?? null,
+            'monthly_revenue_minor' => $data['monthly_revenue_minor'] ?? null,
+            'monthly_expense_minor' => $data['monthly_expense_minor'] ?? null,
+            'operating_data' => json_encode($data['operating_data'] ?? []),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         $this->auditLogger->record('long_range.microbusiness.updated', $user);
 
         return DB::table('microbusiness_profiles')->where('user_id', $user->id)->first();
@@ -93,8 +85,10 @@ class LongRangePlatformService
 
     public function requestAssetFinance(User $user, array $data): object
     {
-        if (($data['deposit_minor'] ?? 0) >= $data['asset_price_minor']) {
-            throw ValidationException::withMessages(['deposit_minor' => ['Deposit must be less than the asset price.']]);
+        $assetPrice = (int) $data['asset_price_minor'];
+        $deposit = (int) ($data['deposit_minor'] ?? 0);
+        if ($assetPrice <= 0 || $deposit < 0 || $deposit >= $assetPrice) {
+            throw ValidationException::withMessages(['deposit_minor' => ['Deposit must be non-negative and strictly less than the asset price.']]);
         }
 
         $reference = (string) Str::uuid();
@@ -103,8 +97,8 @@ class LongRangePlatformService
             'user_id' => $user->id,
             'asset_category' => $data['asset_category'],
             'asset_description' => $data['asset_description'],
-            'asset_price_minor' => $data['asset_price_minor'],
-            'deposit_minor' => $data['deposit_minor'] ?? 0,
+            'asset_price_minor' => $assetPrice,
+            'deposit_minor' => $deposit,
             'requested_term_months' => $data['requested_term_months'],
             'status' => 'submitted',
             'geolocation_consent' => (bool) ($data['geolocation_consent'] ?? false),
@@ -112,11 +106,17 @@ class LongRangePlatformService
                 'decision_state' => 'pending_assessment',
                 'privacy_rule' => 'geolocation_is_optional_and_purpose_bound',
                 'money_movement' => 'cpay_only_after_offer_acceptance',
+                'maximum_finance_minor' => $assetPrice - $deposit,
             ]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        $this->auditLogger->record('long_range.asset_finance.requested', $user, null, ['reference' => $reference]);
+        $this->auditLogger->record('long_range.asset_finance.requested', $user, null, [
+            'reference' => $reference,
+            'asset_price_minor' => $assetPrice,
+            'deposit_minor' => $deposit,
+            'maximum_finance_minor' => $assetPrice - $deposit,
+        ]);
 
         return DB::table('asset_finance_requests')->find($id);
     }
@@ -169,34 +169,45 @@ class LongRangePlatformService
 
     public function commitParticipatory(User $user, array $data): object
     {
-        $listing = DB::table('participatory_finance_listings')->find($data['listing_id']);
-        if (! $listing || ! in_array($listing->status, ['approved', 'funding'], true)) {
-            throw ValidationException::withMessages(['listing_id' => ['Listing is not open for funding.']]);
-        }
-        if ($listing->borrower_user_id === $user->id) {
-            throw ValidationException::withMessages(['listing_id' => ['You cannot fund your own listing.']]);
-        }
-        if ($listing->funded_amount_minor + $data['amount_minor'] > $listing->target_amount_minor) {
-            throw ValidationException::withMessages(['amount_minor' => ['Commitment exceeds the remaining funding amount.']]);
-        }
+        return DB::transaction(function () use ($user, $data) {
+            $listing = DB::table('participatory_finance_listings')->where('id', $data['listing_id'])->lockForUpdate()->first();
+            if (! $listing || ! in_array($listing->status, ['approved', 'funding'], true)) {
+                throw ValidationException::withMessages(['listing_id' => ['Listing is not open for funding.']]);
+            }
+            if ((int) $listing->borrower_user_id === (int) $user->id) {
+                throw ValidationException::withMessages(['listing_id' => ['You cannot fund your own listing.']]);
+            }
 
-        $reference = (string) Str::uuid();
-        $id = DB::table('participatory_finance_commitments')->insertGetId([
-            'reference' => $reference,
-            'listing_id' => $listing->id,
-            'investor_user_id' => $user->id,
-            'amount_minor' => $data['amount_minor'],
-            'status' => 'awaiting_step_up',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        $this->auditLogger->record('long_range.participatory.commitment_created', $user, null, [
-            'reference' => $reference,
-            'listing_reference' => $listing->reference,
-            'step_up_required' => true,
-        ]);
+            $reservedMinor = (int) DB::table('participatory_finance_commitments')
+                ->where('listing_id', $listing->id)
+                ->where('status', 'awaiting_step_up')
+                ->sum('amount_minor');
+            $remainingMinor = (int) $listing->target_amount_minor - (int) $listing->funded_amount_minor - $reservedMinor;
+            $amountMinor = (int) $data['amount_minor'];
+            if ($amountMinor <= 0 || $amountMinor > $remainingMinor) {
+                throw ValidationException::withMessages(['amount_minor' => ['Commitment exceeds the unreserved remaining funding amount.']]);
+            }
 
-        return DB::table('participatory_finance_commitments')->find($id);
+            $reference = (string) Str::uuid();
+            $id = DB::table('participatory_finance_commitments')->insertGetId([
+                'reference' => $reference,
+                'listing_id' => $listing->id,
+                'investor_user_id' => $user->id,
+                'amount_minor' => $amountMinor,
+                'status' => 'awaiting_step_up',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $this->auditLogger->record('long_range.participatory.commitment_created', $user, null, [
+                'reference' => $reference,
+                'listing_reference' => $listing->reference,
+                'step_up_required' => true,
+                'reserved_amount_minor' => $amountMinor,
+                'remaining_unreserved_minor' => $remainingMinor - $amountMinor,
+            ]);
+
+            return DB::table('participatory_finance_commitments')->find($id);
+        });
     }
 
     public function createReferral(User $user, array $data): object
@@ -227,12 +238,12 @@ class LongRangePlatformService
 
     public function syncOffline(User $user, array $data): object
     {
-        $canonical = json_encode($data['events'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        $hash = hash('sha256', $canonical ?: '[]');
+        $canonical = json_encode($data['events'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $hash = hash('sha256', $canonical);
         $existing = DB::table('offline_sync_batches')->where('batch_reference', $data['batch_reference'])->first();
         if ($existing) {
-            if ($existing->payload_hash !== $hash) {
-                throw ValidationException::withMessages(['batch_reference' => ['Batch reference was already used with different data.']]);
+            if ((int) $existing->user_id !== (int) $user->id || $existing->device_reference !== $data['device_reference'] || $existing->payload_hash !== $hash) {
+                throw ValidationException::withMessages(['batch_reference' => ['Batch reference was already used for a different user, device or payload.']]);
             }
 
             return $existing;

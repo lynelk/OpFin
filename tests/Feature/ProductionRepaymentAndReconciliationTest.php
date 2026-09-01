@@ -25,36 +25,25 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
         [$customer, , $loan] = $this->productionLoan();
         Sanctum::actingAs($customer);
 
-        $this->postJson("/api/loans/{$loan->id}/repay", [
-            'amount_minor' => 50000,
-        ])->assertStatus(422);
+        $this->postJson("/api/loans/{$loan->id}/repay", ['amount_minor' => 50000])->assertStatus(422);
 
         $first = $this->withHeader('Idempotency-Key', 'repayment-key-001')
-            ->postJson("/api/loans/{$loan->id}/repay", [
-                'amount_minor' => 50000,
-            ]);
-
-        $first
-            ->assertStatus(202)
+            ->postJson("/api/loans/{$loan->id}/repay", ['amount_minor' => 50000]);
+        $first->assertStatus(202)
             ->assertJsonPath('data.status', MobileMoneyTransaction::STATUS_PENDING)
             ->assertJsonPath('data.amount_minor', 50000);
 
         $reference = $first->json('data.reference');
-
         $this->withHeader('Idempotency-Key', 'repayment-key-001')
-            ->postJson("/api/loans/{$loan->id}/repay", [
-                'amount_minor' => 50000,
-            ])
+            ->postJson("/api/loans/{$loan->id}/repay", ['amount_minor' => 50000])
             ->assertStatus(202)
             ->assertJsonPath('data.reference', $reference);
 
-        $this->assertDatabaseCount('mobile_money_transactions', 2); // one payout plus one repayment
+        $this->assertDatabaseCount('mobile_money_transactions', 2);
         $this->assertDatabaseCount('transactions', 1);
 
         $this->withHeader('Idempotency-Key', 'repayment-key-002')
-            ->postJson("/api/loans/{$loan->id}/repay", [
-                'amount_minor' => 10000,
-            ])
+            ->postJson("/api/loans/{$loan->id}/repay", ['amount_minor' => 10000])
             ->assertStatus(409);
     }
 
@@ -64,9 +53,7 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
         Sanctum::actingAs($customer);
 
         $this->withHeader('Idempotency-Key', 'repayment-success-001')
-            ->postJson("/api/loans/{$loan->id}/repay", [
-                'amount_minor' => 50000,
-            ])
+            ->postJson("/api/loans/{$loan->id}/repay", ['amount_minor' => 50000])
             ->assertStatus(202);
 
         $repayment = MobileMoneyTransaction::query()
@@ -84,33 +71,23 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             ->assertJsonPath('data.loan_id', $loan->id);
 
         $remaining = (int) $this->app['db']->table('credit_repayment_schedule_items')
-            ->where('loan_id', $loan->id)
-            ->sum('total_outstanding_minor');
+            ->where('loan_id', $loan->id)->sum('total_outstanding_minor');
         $this->assertSame(120000, $remaining);
 
-        $ledger = $this->app['db']->table('ledger_transactions')
-            ->where('event_type', 'loan.repayment')
-            ->first();
+        $ledger = $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.repayment')->first();
         $this->assertNotNull($ledger);
-        $this->assertDatabaseHas('ledger_accounts', [
-            'code' => 'cash.mock.collection',
-        ]);
-        $this->assertDatabaseHas('ledger_accounts', [
-            'code' => 'liability.credit_fee_clearing.product_'.$loan->loan_product_id,
-        ]);
+        $this->assertDatabaseHas('ledger_accounts', ['code' => 'cash.mock.collection']);
+        $this->assertDatabaseHas('ledger_accounts', ['code' => 'liability.credit_fee_clearing.product_'.$loan->loan_product_id]);
 
-        $this->postJson("/api/admin/mobile-money-transactions/{$repayment->id}/refresh-status")
-            ->assertOk();
+        $this->postJson("/api/admin/mobile-money-transactions/{$repayment->id}/refresh-status")->assertOk();
 
         $remainingAfterReplay = (int) $this->app['db']->table('credit_repayment_schedule_items')
-            ->where('loan_id', $loan->id)
-            ->sum('total_outstanding_minor');
+            ->where('loan_id', $loan->id)->sum('total_outstanding_minor');
         $this->assertSame(120000, $remainingAfterReplay);
-        $this->assertDatabaseCount('ledger_transactions', 1);
-        $this->assertDatabaseHas('audit_logs', [
-            'event' => 'credit.repayment.fulfilled',
-            'subject_id' => $loan->id,
-        ]);
+        $this->assertDatabaseCount('ledger_transactions', 2);
+        $this->assertSame(1, $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.disbursement')->count());
+        $this->assertSame(1, $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.repayment')->count());
+        $this->assertDatabaseHas('audit_logs', ['event' => 'credit.repayment.fulfilled', 'subject_id' => $loan->id]);
     }
 
     public function test_repayment_rejects_amount_above_exact_production_obligation(): void
@@ -119,13 +96,12 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
         Sanctum::actingAs($customer);
 
         $this->withHeader('Idempotency-Key', 'repayment-overpay-001')
-            ->postJson("/api/loans/{$loan->id}/repay", [
-                'amount_minor' => 170001,
-            ])
+            ->postJson("/api/loans/{$loan->id}/repay", ['amount_minor' => 170001])
             ->assertStatus(409);
 
         $this->assertDatabaseCount('transactions', 0);
-        $this->assertSame(1, MobileMoneyTransaction::query()->count()); // disbursement only
+        $this->assertSame(1, MobileMoneyTransaction::query()->count());
+        $this->assertSame(1, $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.disbursement')->count());
     }
 
     public function test_reconciliation_is_business_date_scoped_and_classifies_provider_evidence(): void
@@ -136,29 +112,20 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             'phone' => '256700001100',
             'email' => fake()->unique()->safeEmail(),
         ]);
-        $operations = User::factory()->create([
-            'role' => User::ROLE_OPERATIONS,
-            'institution_id' => $institution->id,
-        ]);
+        $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS, 'institution_id' => $institution->id]);
 
         $matched = $this->systemPayment($institution, 'rec-match-1', 'provider-match-1', 50000, MobileMoneyTransaction::STATUS_SUCCESSFUL);
         $mismatch = $this->systemPayment($institution, 'rec-mismatch-1', 'provider-mismatch-1', 60000, MobileMoneyTransaction::STATUS_SUCCESSFUL);
         $missingProvider = $this->systemPayment($institution, 'rec-missing-provider-1', 'provider-missing-1', 70000, MobileMoneyTransaction::STATUS_PENDING);
         $yesterday = $this->systemPayment($institution, 'rec-yesterday-1', 'provider-yesterday-1', 80000, MobileMoneyTransaction::STATUS_SUCCESSFUL);
-        $yesterday->forceFill([
-            'created_at' => now()->subDay(),
-            'updated_at' => now()->subDay(),
-        ])->saveQuietly();
+        $yesterday->forceFill(['created_at' => now()->subDay(), 'updated_at' => now()->subDay()])->saveQuietly();
 
         Sanctum::actingAs($operations);
         $runResponse = $this->postJson('/api/admin/reconciliation-runs', [
             'provider' => 'cpay',
             'business_date' => now()->toDateString(),
         ]);
-
-        $runResponse
-            ->assertCreated()
-            ->assertJsonPath('data.item_count', 3);
+        $runResponse->assertCreated()->assertJsonPath('data.item_count', 3);
         $runId = (int) $runResponse->json('data.run.id');
 
         $this->postJson("/api/admin/reconciliation-runs/{$runId}/provider-records", [
@@ -192,15 +159,10 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             'status' => ReconciliationItem::STATUS_EXCEPTION,
             'exception_type' => ReconciliationItem::EXCEPTION_AMOUNT_MISMATCH,
         ]);
-        $this->assertDatabaseMissing('reconciliation_items', [
-            'mobile_money_transaction_id' => $yesterday->id,
-        ]);
+        $this->assertDatabaseMissing('reconciliation_items', ['mobile_money_transaction_id' => $yesterday->id]);
 
-        $complete = $this->postJson("/api/admin/reconciliation-runs/{$runId}/complete")
-            ->assertOk();
-
-        $complete
-            ->assertJsonPath('data.run.status', 'completed')
+        $complete = $this->postJson("/api/admin/reconciliation-runs/{$runId}/complete")->assertOk();
+        $complete->assertJsonPath('data.run.status', 'completed')
             ->assertJsonPath('data.run.summary.matched_count', 1)
             ->assertJsonPath('data.run.summary.exception_count', 2)
             ->assertJsonPath('data.run.summary.pending_provider_match_count', 0);
@@ -233,15 +195,8 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             'institution_id' => $institution->id,
             'phone' => '256700000902',
         ]);
-        $operations = User::factory()->create([
-            'role' => User::ROLE_OPERATIONS,
-            'institution_id' => $institution->id,
-        ]);
-        $product = LoanProduct::create([
-            'name' => 'Repayment Credit',
-            'type' => 'Cash',
-            'institution_id' => $institution->id,
-        ]);
+        $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS, 'institution_id' => $institution->id]);
+        $product = LoanProduct::create(['name' => 'Repayment Credit', 'type' => 'Cash', 'institution_id' => $institution->id]);
         $term = LoanProductTerm::create([
             'loan_product_id' => $product->id,
             'interest_rate' => 10,
@@ -292,6 +247,7 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
         $loan = $offers->syncDisbursementState($payout->fresh());
 
         $this->assertInstanceOf(Loan::class, $loan);
+        $this->assertSame(1, $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.disbursement')->count());
 
         return [$customer, $operations, $loan];
     }
@@ -304,7 +260,6 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
         string $status,
     ): MobileMoneyTransaction {
         return MobileMoneyTransaction::create([
-            'user_id' => null,
             'institution_id' => $institution->id,
             'provider' => 'cpay',
             'direction' => MobileMoneyTransaction::DIRECTION_COLLECTION,
@@ -315,7 +270,8 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             'internal_reference' => $internalReference,
             'provider_reference' => $providerReference,
             'status' => $status,
-            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_UNRECONCILED,
+            'metadata' => [],
         ]);
     }
 }

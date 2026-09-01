@@ -14,21 +14,12 @@ class CreditRepaymentScheduleItem extends Model
 
     public const STATUS_OVERDUE = 'overdue';
 
+    public const STATUS_VOIDED = 'voided';
+
     protected $fillable = [
-        'loan_id',
-        'credit_offer_id',
-        'installment_number',
-        'due_date',
-        'principal_minor',
-        'interest_minor',
-        'fees_minor',
-        'total_due_minor',
-        'principal_outstanding_minor',
-        'interest_outstanding_minor',
-        'fees_outstanding_minor',
-        'total_outstanding_minor',
-        'status',
-        'paid_at',
+        'loan_id', 'credit_offer_id', 'installment_number', 'due_date', 'principal_minor', 'interest_minor',
+        'fees_minor', 'total_due_minor', 'principal_outstanding_minor', 'interest_outstanding_minor',
+        'fees_outstanding_minor', 'total_outstanding_minor', 'status', 'paid_at',
     ];
 
     protected function casts(): array
