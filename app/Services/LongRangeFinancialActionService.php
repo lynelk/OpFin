@@ -51,6 +51,14 @@ class LongRangeFinancialActionService
 
     public function createIntent(User $user, string $actionType, string $sourceType, int $sourceId, int $amountMinor, string $idempotencyKey): object
     {
+        $idempotencyKey = trim($idempotencyKey);
+        if ($amountMinor <= 0) {
+            throw ValidationException::withMessages(['amount_minor' => ['Financial action amount must be positive.']]);
+        }
+        if ($idempotencyKey === '') {
+            throw ValidationException::withMessages(['idempotency_key' => ['A financial action idempotency key is required.']]);
+        }
+
         $existing = DB::table('financial_action_intents')->where('idempotency_key', $idempotencyKey)->first();
         if ($existing) {
             if ((int) $existing->user_id !== (int) $user->id || (int) $existing->amount_minor !== $amountMinor || $existing->source_type !== $sourceType || (int) $existing->source_id !== $sourceId || $existing->action_type !== $actionType) {
@@ -112,6 +120,11 @@ class LongRangeFinancialActionService
         };
 
         DB::transaction(function () use ($intent, $transaction, $status) {
+            $current = DB::table('financial_action_intents')->where('id', $intent->id)->lockForUpdate()->first();
+            if (! $current || $current->status !== 'awaiting_step_up') {
+                return;
+            }
+
             DB::table('financial_action_intents')->where('id', $intent->id)->update([
                 'status' => $status,
                 'cpay_reference' => $transaction->internal_reference,
@@ -126,9 +139,13 @@ class LongRangeFinancialActionService
                 'updated_at' => now(),
             ]);
             if ($status === 'settled') {
-                $this->applySettlement($intent);
+                $this->applySettlement($current);
+                $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
             } elseif ($status === 'failed') {
-                $this->releaseFailedSource($intent);
+                $this->releaseFailedSource($current);
+                if ($transaction->status === MobileMoneyTransaction::STATUS_FAILED) {
+                    $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                }
             }
         });
 
@@ -142,39 +159,82 @@ class LongRangeFinancialActionService
         $processed = 0;
         $settled = 0;
         $failed = 0;
+        $reversed = 0;
 
-        DB::table('financial_action_intents')->where('status', 'provider_processing')->orderBy('id')->chunkById(100, function ($intents) use (&$processed, &$settled, &$failed) {
-            foreach ($intents as $intent) {
-                $transaction = MobileMoneyTransaction::query()->where('internal_reference', $intent->reference)->latest('id')->first();
-                if (! $transaction) {
-                    continue;
-                }
-                $processed++;
-                if ($transaction->status === MobileMoneyTransaction::STATUS_SUCCESSFUL) {
-                    DB::transaction(function () use ($intent) {
-                        $current = DB::table('financial_action_intents')->where('id', $intent->id)->lockForUpdate()->first();
-                        if (! $current || $current->status === 'settled') {
-                            return;
-                        }
-                        DB::table('financial_action_intents')->where('id', $intent->id)->update(['status' => 'settled', 'settled_at' => now(), 'updated_at' => now()]);
-                        $this->applySettlement($current);
-                    });
-                    $settled++;
-                } elseif (in_array($transaction->status, [MobileMoneyTransaction::STATUS_FAILED, MobileMoneyTransaction::STATUS_REVERSED], true)) {
-                    DB::transaction(function () use ($intent) {
-                        $current = DB::table('financial_action_intents')->where('id', $intent->id)->lockForUpdate()->first();
-                        if (! $current || $current->status !== 'provider_processing') {
-                            return;
-                        }
-                        DB::table('financial_action_intents')->where('id', $intent->id)->update(['status' => 'failed', 'updated_at' => now()]);
-                        $this->releaseFailedSource($current);
-                    });
-                    $failed++;
-                }
-            }
-        });
+        DB::table('financial_action_intents')
+            ->whereIn('status', ['provider_processing', 'settled'])
+            ->orderBy('id')
+            ->chunkById(100, function ($intents) use (&$processed, &$settled, &$failed, &$reversed) {
+                foreach ($intents as $intent) {
+                    $transaction = MobileMoneyTransaction::query()->where('internal_reference', $intent->reference)->latest('id')->first();
+                    if (! $transaction) {
+                        continue;
+                    }
+                    $processed++;
 
-        return compact('processed', 'settled', 'failed');
+                    if ($transaction->status === MobileMoneyTransaction::STATUS_REVERSED) {
+                        DB::transaction(function () use ($intent, $transaction, &$reversed, &$failed) {
+                            $current = DB::table('financial_action_intents')->where('id', $intent->id)->lockForUpdate()->first();
+                            if (! $current) {
+                                return;
+                            }
+                            if ($current->status === 'settled') {
+                                $this->applyReversal($current);
+                                DB::table('financial_action_intents')->where('id', $intent->id)->update([
+                                    'status' => 'reversed',
+                                    'updated_at' => now(),
+                                ]);
+                                $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                                $reversed++;
+
+                                return;
+                            }
+                            if ($current->status === 'provider_processing') {
+                                DB::table('financial_action_intents')->where('id', $intent->id)->update(['status' => 'failed', 'updated_at' => now()]);
+                                $this->releaseFailedSource($current);
+                                $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                                $failed++;
+                            }
+                        });
+
+                        continue;
+                    }
+
+                    if ($transaction->status === MobileMoneyTransaction::STATUS_SUCCESSFUL) {
+                        DB::transaction(function () use ($intent, $transaction, &$settled) {
+                            $current = DB::table('financial_action_intents')->where('id', $intent->id)->lockForUpdate()->first();
+                            if (! $current) {
+                                return;
+                            }
+                            if ($current->status === 'settled') {
+                                $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+
+                                return;
+                            }
+                            if ($current->status !== 'provider_processing') {
+                                return;
+                            }
+                            $this->applySettlement($current);
+                            DB::table('financial_action_intents')->where('id', $intent->id)->update(['status' => 'settled', 'settled_at' => now(), 'updated_at' => now()]);
+                            $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                            $settled++;
+                        });
+                    } elseif ($transaction->status === MobileMoneyTransaction::STATUS_FAILED) {
+                        DB::transaction(function () use ($intent, $transaction, &$failed) {
+                            $current = DB::table('financial_action_intents')->where('id', $intent->id)->lockForUpdate()->first();
+                            if (! $current || $current->status !== 'provider_processing') {
+                                return;
+                            }
+                            DB::table('financial_action_intents')->where('id', $intent->id)->update(['status' => 'failed', 'updated_at' => now()]);
+                            $this->releaseFailedSource($current);
+                            $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                            $failed++;
+                        });
+                    }
+                }
+            });
+
+        return compact('processed', 'settled', 'failed', 'reversed');
     }
 
     private function validStepUp(User $user, string $verificationToken): bool
@@ -219,6 +279,41 @@ class LongRangeFinancialActionService
                 throw ValidationException::withMessages(['asset' => ['Asset-finance deposit no longer reconciles to the approved asset economics.']]);
             }
             DB::table('asset_finance_requests')->where('id', $intent->source_id)->update(['status' => 'deposit_settled', 'updated_at' => now()]);
+        }
+    }
+
+    private function applyReversal(object $intent): void
+    {
+        if ($intent->source_type === 'participatory_commitment') {
+            $commitment = DB::table('participatory_finance_commitments')->where('id', $intent->source_id)->lockForUpdate()->first();
+            if (! $commitment || $commitment->status === 'reversed') {
+                return;
+            }
+            if ($commitment->status !== 'settled') {
+                throw ValidationException::withMessages(['listing' => ['Only a settled commitment can be reversed automatically.']]);
+            }
+            $listing = DB::table('participatory_finance_listings')->where('id', $commitment->listing_id)->lockForUpdate()->first();
+            if (! $listing || (int) $listing->funded_amount_minor < (int) $commitment->amount_minor) {
+                throw ValidationException::withMessages(['listing' => ['Participatory reversal would make funded amount negative and requires operations review.']]);
+            }
+            $newFunded = (int) $listing->funded_amount_minor - (int) $commitment->amount_minor;
+            DB::table('participatory_finance_commitments')->where('id', $commitment->id)->update(['status' => 'reversed', 'updated_at' => now()]);
+            DB::table('participatory_finance_listings')->where('id', $listing->id)->update([
+                'funded_amount_minor' => $newFunded,
+                'status' => 'funding',
+                'updated_at' => now(),
+            ]);
+        }
+
+        if ($intent->source_type === 'asset_finance_deposit') {
+            $asset = DB::table('asset_finance_requests')->where('id', $intent->source_id)->lockForUpdate()->first();
+            if (! $asset || $asset->status === 'approved') {
+                return;
+            }
+            if ($asset->status !== 'deposit_settled') {
+                throw ValidationException::withMessages(['asset' => ['Asset deposit reversal requires a settled deposit state.']]);
+            }
+            DB::table('asset_finance_requests')->where('id', $intent->source_id)->update(['status' => 'approved', 'updated_at' => now()]);
         }
     }
 
