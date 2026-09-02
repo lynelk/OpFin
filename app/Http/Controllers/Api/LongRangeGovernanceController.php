@@ -45,9 +45,21 @@ class LongRangeGovernanceController extends Controller
 
     public function participatory(Request $request, int $id): JsonResponse
     {
-        $data = $request->validate(['status' => 'required|in:approved,rejected']);
+        $data = $request->validate([
+            'status' => 'required|in:approved,rejected',
+            'lender_of_record' => 'required_if:status,approved|nullable|string|max:160',
+            'loss_allocation' => 'required_if:status,approved|nullable|string|max:500',
+            'fees' => 'required_if:status,approved|nullable|string|max:500',
+            'custody' => 'required_if:status,approved|nullable|string|max:500',
+            'guarantee' => 'nullable|string|max:500',
+            'expected_return_percent' => 'required_if:status,approved|nullable|numeric|min:0|max:100',
+            'risk_grade' => 'required_if:status,approved|nullable|string|max:20',
+            'risk_summary' => 'nullable|string|max:500',
+            'borrower_summary' => 'required_if:status,approved|nullable|string|max:500',
+            'repayment_frequency' => 'required_if:status,approved|nullable|string|max:80',
+        ]);
 
-        return ApiResponse::success('Participatory listing review completed.', ['listing' => $this->governance->approveParticipatory($request->user(), $id, $data)]);
+        return ApiResponse::success('Peer-lending listing review completed.', ['listing' => $this->governance->approveParticipatory($request->user(), $id, $data)]);
     }
 
     public function capital(Request $request, int $id): JsonResponse

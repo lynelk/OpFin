@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\ExperiencePlatformController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/activation', [ExperiencePlatformController::class, 'activation']);
     Route::patch('/activation', [ExperiencePlatformController::class, 'saveActivation']);
+    Route::delete('/account', [AccountController::class, 'destroy']);
 
     Route::get('/money-autopilot', [ExperiencePlatformController::class, 'moneyAutopilot']);
     Route::post('/money-autopilot/rules', [ExperiencePlatformController::class, 'createMoneyAutopilotRule']);
