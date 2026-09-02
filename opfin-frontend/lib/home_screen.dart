@@ -88,15 +88,17 @@ class _HomeWidgetState extends State<HomeWidget> {
                   label: const Text('Check credit options'),
                 ),
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen())),
-                  icon: const Icon(Icons.handshake_outlined),
-                  label: const Text('Peer lending marketplace'),
+              if (appStorePeerLendingEnabled) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen())),
+                    icon: const Icon(Icons.handshake_outlined),
+                    label: const Text('Peer lending marketplace'),
+                  ),
                 ),
-              ),
+              ],
             ]),
           ),
         ),
@@ -107,7 +109,7 @@ class _HomeWidgetState extends State<HomeWidget> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('How OpFin stays simple', style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
-              Text('Borrow asks what you need. Save focuses on resilience. Grow separates investing from lending. More holds occasional account, privacy and support tasks.'),
+              Text('Borrow asks what you need. Save focuses on resilience. Grow keeps investment risk clear. More holds occasional account, privacy and support tasks.'),
             ]),
           ),
         ),
