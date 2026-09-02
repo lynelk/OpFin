@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CreditOffer;
 use App\Models\LoanApplication;
+use App\Services\AppStoreCreditPolicy;
 use App\Services\ProductionCreditOfferService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -15,7 +16,10 @@ use InvalidArgumentException;
 
 class ProductionCreditOfferController extends Controller
 {
-    public function __construct(private readonly ProductionCreditOfferService $offerService) {}
+    public function __construct(
+        private readonly ProductionCreditOfferService $offerService,
+        private readonly AppStoreCreditPolicy $appStorePolicy,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -31,9 +35,7 @@ class ProductionCreditOfferController extends Controller
             ->limit(50)
             ->get();
 
-        return ApiResponse::success('Credit offers loaded.', [
-            'offers' => $offers,
-        ]);
+        return ApiResponse::success('Credit offers loaded.', ['offers' => $offers]);
     }
 
     public function show(CreditOffer $offer, Request $request): JsonResponse
@@ -66,11 +68,17 @@ class ProductionCreditOfferController extends Controller
         }
 
         try {
-            $offer = $this->offerService->createOffer(
-                $application,
-                $request->user(),
-                $validator->validated(),
-            );
+            $validated = $validator->validated();
+            $appStoreDisclosure = $this->appStorePolicy->validateOffer($application, $validated);
+            $offer = $this->offerService->createOffer($application, $request->user(), $validated);
+
+            if ($appStoreDisclosure !== []) {
+                $offer->forceFill([
+                    'pricing_snapshot' => array_merge($offer->pricing_snapshot ?? [], $appStoreDisclosure),
+                    'disclosure_snapshot' => array_merge($offer->disclosure_snapshot ?? [], $appStoreDisclosure),
+                ])->save();
+                $offer = $offer->fresh();
+            }
         } catch (InvalidArgumentException $exception) {
             return ApiResponse::error($exception->getMessage(), 409);
         }
@@ -98,11 +106,7 @@ class ProductionCreditOfferController extends Controller
 
         $expectedHash = $this->disclosureHash($offer);
         if (! hash_equals($expectedHash, (string) $request->input('disclosure_hash'))) {
-            return ApiResponse::error(
-                'The offer disclosure has changed or the supplied disclosure hash is invalid. Reload the offer before accepting it.',
-                409,
-                ['disclosure_hash' => ['DISCLOSURE_HASH_MISMATCH']],
-            );
+            return ApiResponse::error('The offer disclosure has changed or the supplied disclosure hash is invalid. Reload the offer before accepting it.', 409, ['disclosure_hash' => ['DISCLOSURE_HASH_MISMATCH']]);
         }
 
         try {

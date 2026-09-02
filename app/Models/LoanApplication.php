@@ -18,6 +18,7 @@ class LoanApplication extends Model
         'amount',
         'status',
         'reason',
+        'distribution_channel',
         'disbursed_at',
         'approved_at',
         'rejected_at',
