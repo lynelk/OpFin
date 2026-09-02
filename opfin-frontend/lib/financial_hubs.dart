@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +12,8 @@ import 'package:opfin/peer_lending_screen.dart';
 import 'package:opfin/products_screen.dart';
 import 'package:opfin/profile_screen.dart';
 import 'package:opfin/services/user_session.dart';
+
+bool get appStorePeerLendingEnabled => !Platform.isIOS || const bool.fromEnvironment('OPFIN_APP_STORE_PEER_LENDING_ENABLED', defaultValue: false);
 
 class BorrowMobileScreen extends StatelessWidget {
   const BorrowMobileScreen({super.key});
@@ -31,13 +34,14 @@ class BorrowMobileScreen extends StatelessWidget {
           action: 'Start request',
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductsScreen())),
         ),
-        _ActionCard(
-          icon: Icons.handshake_outlined,
-          title: 'Borrow from investors',
-          description: 'Ask verified investors to fund an independently reviewed marketplace request.',
-          action: 'Open marketplace',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen())),
-        ),
+        if (appStorePeerLendingEnabled)
+          _ActionCard(
+            icon: Icons.handshake_outlined,
+            title: 'Borrow from investors',
+            description: 'Ask verified investors to fund an independently reviewed marketplace request.',
+            action: 'Open marketplace',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen())),
+          ),
         _ActionCard(
           icon: Icons.receipt_long_outlined,
           title: 'My loan applications',
@@ -164,7 +168,9 @@ class _GrowMobileScreenState extends State<GrowMobileScreen> {
         return ListView(padding: const EdgeInsets.all(20), children: [
           const Text('Grow', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('Choose between provider investments and peer lending, with each risk model kept clear.'),
+          Text(appStorePeerLendingEnabled
+              ? 'Choose between provider investments and peer lending, with each risk model kept clear.'
+              : 'Use regulated provider investment products once the licensed provider and custody arrangement are activated.'),
           const SizedBox(height: 20),
           _ActionCard(
             icon: Icons.trending_up,
@@ -175,13 +181,14 @@ class _GrowMobileScreenState extends State<GrowMobileScreen> {
             action: 'Investment status',
             onTap: () => _showProviderInvestmentNotice(context, suitabilityReady),
           ),
-          _ActionCard(
-            icon: Icons.handshake_outlined,
-            title: 'Peer lending',
-            description: 'Lend directly through independently reviewed marketplace opportunities with risk and expected return shown first.',
-            action: 'Open marketplace',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen())),
-          ),
+          if (appStorePeerLendingEnabled)
+            _ActionCard(
+              icon: Icons.handshake_outlined,
+              title: 'Peer lending',
+              description: 'Lend directly through independently reviewed marketplace opportunities with risk and expected return shown first.',
+              action: 'Open marketplace',
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen())),
+            ),
           const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('Expected returns are not guaranteed. Risk, provider responsibility and settlement state remain visible before and after you commit money.'))),
         ]);
       },
@@ -215,7 +222,8 @@ class MoreMobileScreen extends StatelessWidget {
       _MenuTile(icon: Icons.hub_outlined, title: 'Connected financial life', subtitle: 'Accounts, household, business and community context.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConnectedFinancialLifeScreen()))),
       _MenuTile(icon: Icons.person_outline, title: 'Profile & security', subtitle: 'Review your account and identity information.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()))),
       _MenuTile(icon: Icons.help_outline, title: 'Help & support', subtitle: 'Find answers and support guidance.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FaqsScreen()))),
-      _MenuTile(icon: Icons.handshake_outlined, title: 'Peer lending', subtitle: 'Borrow from investors or fund reviewed requests.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen()))),
+      if (appStorePeerLendingEnabled)
+        _MenuTile(icon: Icons.handshake_outlined, title: 'Peer lending', subtitle: 'Borrow from investors or fund reviewed requests.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen()))),
     ]);
   }
 }
