@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { getAccessToken } from "@/lib/auth/session";
-import { opfinApi } from "@/lib/api/client";
 import { OpfinApiError } from "@/lib/api/errors";
+import { submitSimpleCreditApplication } from "@/lib/api/simple-credit";
 
 function value(formData: FormData, key: string): string {
   const raw = formData.get(key);
@@ -26,7 +26,7 @@ export async function submitSimpleLoanApplicationAction(formData: FormData) {
     const reason = value(formData, "reason");
     if (!reason) throw new Error("Tell OpFin what you need the money for.");
 
-    const response = await opfinApi.submitCreditApplication({ amount_minor: amountMinor, reason }, token);
+    const response = await submitSimpleCreditApplication({ amount_minor: amountMinor, reason }, token);
     applicationId = response.data.application.id;
   } catch (error) {
     fail(error);
