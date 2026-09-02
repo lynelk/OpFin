@@ -49,6 +49,43 @@ class ProductionLoanApplicationTest extends TestCase
         ]);
     }
 
+    public function test_customer_can_submit_one_simple_request_and_backend_selects_the_configured_credit_route(): void
+    {
+        [$user, $institution, $product, $term] = $this->eligibleCustomer();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/credit/applications', [
+            'amount_minor' => 175000,
+            'reason' => 'School fees',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.routing_mode', 'system_selected')
+            ->assertJsonPath('data.application.loan_product_id', $product->id)
+            ->assertJsonPath('data.application.loan_product_term_id', $term->id)
+            ->assertJsonPath('data.application.institution_id', $institution->id)
+            ->assertJsonPath('data.application.amount', 175000);
+
+        $this->assertDatabaseCount('loan_applications', 1);
+        $this->assertDatabaseCount('transactions', 0);
+        $this->assertDatabaseCount('mobile_money_transactions', 0);
+    }
+
+    public function test_partial_product_selection_is_rejected_instead_of_guessing_missing_product_configuration(): void
+    {
+        [$user, , $product] = $this->eligibleCustomer();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/credit/applications', [
+            'loan_product_id' => $product->id,
+            'amount_minor' => 100000,
+            'reason' => 'Emergency expense',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.code.0', 'PARTIAL_PRODUCT_SELECTION');
+
+        $this->assertDatabaseCount('loan_applications', 0);
+    }
+
     public function test_legacy_application_post_is_a_safe_compatibility_alias_without_disbursement(): void
     {
         [$user, $institution, $product, $term] = $this->eligibleCustomer();

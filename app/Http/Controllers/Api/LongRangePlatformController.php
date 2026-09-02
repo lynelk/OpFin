@@ -32,7 +32,7 @@ class LongRangePlatformController extends Controller
             ->limit(100)
             ->get(['id', 'reference', 'purpose', 'target_amount_minor', 'funded_amount_minor', 'term_days', 'lender_of_record', 'disclosures', 'approved_at']);
 
-        return ApiResponse::success('Participatory-finance marketplace loaded.', ['listings' => $listings]);
+        return ApiResponse::success('Peer-lending marketplace loaded.', ['listings' => $listings]);
     }
 
     public function linkAccount(Request $request): JsonResponse
@@ -108,14 +108,13 @@ class LongRangePlatformController extends Controller
             'purpose' => 'required|string|max:160',
             'target_amount_minor' => 'required|integer|min:1000',
             'term_days' => 'required|integer|min:1|max:730',
-            'lender_of_record' => 'nullable|string|max:160',
-            'loss_allocation' => 'nullable|string|max:500',
-            'fees' => 'nullable|string|max:500',
-            'guarantee' => 'nullable|string|max:500',
-            'custody' => 'nullable|string|max:500',
         ]);
 
-        return ApiResponse::success('Participatory-finance listing created for compliance review.', ['listing' => $this->service->createParticipatoryListing($request->user(), $data)], 201);
+        return ApiResponse::success(
+            'Marketplace funding request created for independent review. OpFin operations will attach the responsible lender, pricing, risk and settlement disclosures before investors can see it.',
+            ['listing' => $this->service->createParticipatoryListing($request->user(), $data)],
+            201,
+        );
     }
 
     public function participatoryCommitment(Request $request): JsonResponse
@@ -125,7 +124,7 @@ class LongRangePlatformController extends Controller
             'amount_minor' => 'required|integer|min:1000',
         ]);
 
-        return ApiResponse::success('Commitment recorded. Step-up authentication and CPay settlement are required before funds move.', ['commitment' => $this->service->commitParticipatory($request->user(), $data)], 201);
+        return ApiResponse::success('Investment reserved. Fresh verification and CPay settlement are required before funds move.', ['commitment' => $this->service->commitParticipatory($request->user(), $data)], 201);
     }
 
     public function referral(Request $request): JsonResponse

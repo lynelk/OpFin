@@ -100,7 +100,7 @@ class LongRangeConceptCompletionTest extends TestCase
             ->assertJsonFragment(['message' => 'Borrowing requires secure authentication. Continue in OpFin or WhatsApp after verification.']);
     }
 
-    public function test_participatory_finance_requires_independent_compliance_approval_and_step_up_before_cpay(): void
+    public function test_peer_lending_keeps_borrower_request_simple_and_requires_independent_marketplace_governance_before_step_up(): void
     {
         $borrower = User::factory()->create(['role' => User::ROLE_CUSTOMER, 'phone' => '256700100003']);
         $investor = User::factory()->create(['role' => User::ROLE_CUSTOMER, 'phone' => '256700100004']);
@@ -111,20 +111,42 @@ class LongRangeConceptCompletionTest extends TestCase
             'purpose' => 'Working capital',
             'target_amount_minor' => 500000,
             'term_days' => 90,
-            'lender_of_record' => 'Licensed Lender Ltd',
-            'loss_allocation' => 'Investors bear disclosed pro-rata credit loss subject to lender-of-record terms.',
-            'fees' => 'All fees disclosed before commitment.',
-            'custody' => 'Funds remain on the governed CPay/provider rail until settlement.',
-        ])->assertCreated();
+            'lender_of_record' => 'Borrower must not control this',
+            'fees' => 'Borrower must not control pricing disclosure',
+        ])->assertCreated()
+            ->assertJsonPath('data.listing.status', 'awaiting_compliance_review')
+            ->assertJsonPath('data.listing.lender_of_record', null);
         $listingId = $listingResponse->json('data.listing.id');
 
         $this->postJson("/api/admin/long-range/participatory/listings/{$listingId}/review", ['status' => 'approved'])->assertForbidden();
 
         Sanctum::actingAs($operator);
-        $this->postJson("/api/admin/long-range/participatory/listings/{$listingId}/review", ['status' => 'approved'])
-            ->assertOk()->assertJsonPath('data.listing.status', 'funding');
+        $this->postJson("/api/admin/long-range/participatory/listings/{$listingId}/review", [
+            'status' => 'approved',
+            'lender_of_record' => 'Licensed Lender Ltd',
+            'loss_allocation' => 'Investors bear disclosed pro-rata credit loss subject to lender-of-record terms.',
+            'fees' => 'All investor and borrower fees are disclosed before commitment.',
+            'custody' => 'Funds remain on the governed CPay/provider rail until settlement.',
+            'guarantee' => 'No guarantee unless separately disclosed in the final agreement.',
+            'expected_return_percent' => 14.2,
+            'risk_grade' => 'B',
+            'risk_summary' => 'Moderate credit risk based on verified affordability and repayment evidence.',
+            'borrower_summary' => 'Verified customer with reviewed affordability and no undisclosed marketplace identity data.',
+            'repayment_frequency' => 'Monthly',
+        ])->assertOk()->assertJsonPath('data.listing.status', 'funding');
+
+        $listing = DB::table('participatory_finance_listings')->find($listingId);
+        $this->assertSame('Licensed Lender Ltd', $listing->lender_of_record);
+        $disclosures = json_decode($listing->disclosures, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('B', $disclosures['risk_grade']);
+        $this->assertSame(14.2, $disclosures['expected_return_percent']);
+        $this->assertSame('Monthly', $disclosures['repayment_frequency']);
 
         Sanctum::actingAs($investor);
+        $this->getJson('/api/long-range/participatory/marketplace')
+            ->assertOk()
+            ->assertJsonPath('data.listings.0.id', $listingId);
+
         $commitmentResponse = $this->postJson('/api/long-range/participatory/commitments', [
             'listing_id' => $listingId,
             'amount_minor' => 100000,

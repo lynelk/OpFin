@@ -55,9 +55,9 @@ class ProductionLoanApplicationController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'loan_product_id' => 'required|integer|exists:loan_products,id',
-            'loan_product_term_id' => 'required|integer|exists:loan_product_terms,id',
-            'institution_id' => 'required|integer|exists:institutions,id',
+            'loan_product_id' => 'nullable|integer|exists:loan_products,id',
+            'loan_product_term_id' => 'nullable|integer|exists:loan_product_terms,id',
+            'institution_id' => 'nullable|integer|exists:institutions,id',
             'amount_minor' => 'nullable|required_without:amount|integer|min:1',
             'amount' => 'nullable|required_without:amount_minor|integer|min:1',
             'reason' => 'required|string|max:255',
@@ -103,8 +103,46 @@ class ProductionLoanApplicationController extends Controller
             );
         }
 
-        $product = LoanProduct::findOrFail($validated['loan_product_id']);
-        $term = LoanProductTerm::findOrFail($validated['loan_product_term_id']);
+        $selection = collect([
+            $validated['loan_product_id'] ?? null,
+            $validated['loan_product_term_id'] ?? null,
+            $validated['institution_id'] ?? null,
+        ])->filter(fn ($value) => $value !== null);
+
+        if ($selection->isNotEmpty() && $selection->count() !== 3) {
+            return ApiResponse::error(
+                'Product routing is either fully selected or fully automatic; partial product configuration is not allowed.',
+                422,
+                ['code' => ['PARTIAL_PRODUCT_SELECTION']],
+            );
+        }
+
+        $routingMode = 'system_selected';
+        if ($selection->count() === 3) {
+            $routingMode = 'customer_selected_compatibility';
+            $product = LoanProduct::findOrFail($validated['loan_product_id']);
+            $term = LoanProductTerm::findOrFail($validated['loan_product_term_id']);
+            $institutionId = (int) $validated['institution_id'];
+        } else {
+            $product = LoanProduct::query()
+                ->where('status', 'Active')
+                ->whereNotNull('institution_id')
+                ->with(['terms' => fn ($query) => $query->where('status', 'Active')->orderBy('duration')->orderBy('id')])
+                ->orderBy('id')
+                ->get()
+                ->first(fn (LoanProduct $candidate) => $candidate->terms->isNotEmpty());
+
+            if (! $product) {
+                return ApiResponse::error(
+                    'No active credit route is currently available for this customer. Your request has not been submitted or paid out.',
+                    409,
+                    ['code' => ['NO_ELIGIBLE_CREDIT_ROUTE']],
+                );
+            }
+
+            $term = $product->terms->first();
+            $institutionId = (int) $product->institution_id;
+        }
 
         if ((int) $term->loan_product_id !== (int) $product->id) {
             return ApiResponse::error(
@@ -114,7 +152,7 @@ class ProductionLoanApplicationController extends Controller
             );
         }
 
-        if ($product->institution_id !== null && (int) $product->institution_id !== (int) $validated['institution_id']) {
+        if ($product->institution_id !== null && (int) $product->institution_id !== $institutionId) {
             return ApiResponse::error(
                 'The selected institution is not eligible for this credit product.',
                 422,
@@ -148,15 +186,15 @@ class ProductionLoanApplicationController extends Controller
             );
         }
 
-        $application = DB::transaction(function () use ($user, $validated, $amountMinor) {
+        $application = DB::transaction(function () use ($user, $product, $term, $institutionId, $amountMinor) {
             return LoanApplication::create([
                 'user_id' => $user->id,
-                'loan_product_id' => $validated['loan_product_id'],
-                'loan_product_term_id' => $validated['loan_product_term_id'],
-                'institution_id' => $validated['institution_id'],
+                'loan_product_id' => $product->id,
+                'loan_product_term_id' => $term->id,
+                'institution_id' => $institutionId,
                 'amount' => $amountMinor,
                 'status' => 'Pending',
-                'reason' => $validated['reason'],
+                'reason' => request()->string('reason')->trim()->toString(),
             ]);
         });
 
@@ -169,6 +207,10 @@ class ProductionLoanApplicationController extends Controller
                 'currency' => config('services.mobile_money.currency', 'UGX'),
                 'kyc_case_id' => $kyc->id,
                 'consent_id' => $consent->id,
+                'routing_mode' => $routingMode,
+                'loan_product_id' => $product->id,
+                'loan_product_term_id' => $term->id,
+                'institution_id' => $institutionId,
             ],
             $request,
         );
@@ -176,6 +218,7 @@ class ProductionLoanApplicationController extends Controller
         return ApiResponse::success('Credit application submitted for assessment.', [
             'application' => $application->load(['loanProduct', 'loanProductTerm', 'institution']),
             'next_state' => 'assessment',
+            'routing_mode' => $routingMode,
         ], 201);
     }
 }

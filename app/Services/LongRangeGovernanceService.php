@@ -150,24 +150,53 @@ class LongRangeGovernanceService
     public function approveParticipatory(User $actor, int $id, array $data): object
     {
         $record = DB::table('participatory_finance_listings')->find($id);
-        $this->assertRecord($record, 'Participatory listing');
+        $this->assertRecord($record, 'Peer-lending request');
         if ((int) $record->borrower_user_id === (int) $actor->id) {
-            throw ValidationException::withMessages(['id' => ['Borrower cannot approve their own listing.']]);
+            throw ValidationException::withMessages(['id' => ['Borrower cannot approve their own marketplace request.']]);
         }
-        if ($data['status'] === 'approved' && empty($record->lender_of_record)) {
-            throw ValidationException::withMessages(['lender_of_record' => ['A lender of record is required before approval.']]);
-        }
+
         $disclosures = (array) json_decode($record->disclosures ?? '{}', true);
-        if ($data['status'] === 'approved' && collect(['loss_allocation', 'fees', 'custody'])->contains(fn ($key) => empty($disclosures[$key]))) {
-            throw ValidationException::withMessages(['disclosures' => ['Loss allocation, fees and custody disclosures are required before approval.']]);
+        $lenderOfRecord = $record->lender_of_record;
+
+        if ($data['status'] === 'approved') {
+            $lenderOfRecord = $data['lender_of_record'];
+            $disclosures = array_merge($disclosures, [
+                'loss_allocation' => $data['loss_allocation'],
+                'fees' => $data['fees'],
+                'guarantee' => $data['guarantee'] ?? null,
+                'custody' => $data['custody'],
+                'expected_return_percent' => (float) $data['expected_return_percent'],
+                'risk_grade' => $data['risk_grade'],
+                'risk_summary' => $data['risk_summary'] ?? null,
+                'borrower_summary' => $data['borrower_summary'],
+                'repayment_frequency' => $data['repayment_frequency'],
+                'regulatory_review_required' => true,
+                'reviewed_by' => $actor->id,
+            ]);
+
+            if (empty($lenderOfRecord)) {
+                throw ValidationException::withMessages(['lender_of_record' => ['A lender of record is required before approval.']]);
+            }
+            if (collect(['loss_allocation', 'fees', 'custody', 'risk_grade', 'borrower_summary', 'repayment_frequency'])->contains(fn ($key) => empty($disclosures[$key]))) {
+                throw ValidationException::withMessages(['disclosures' => ['Complete risk, repayment, loss, fee, custody and borrower disclosures are required before approval.']]);
+            }
         }
+
         DB::table('participatory_finance_listings')->where('id', $id)->update([
             'status' => $data['status'] === 'approved' ? 'funding' : 'rejected',
+            'lender_of_record' => $lenderOfRecord,
+            'disclosures' => json_encode($disclosures),
             'approved_by' => $actor->id,
             'approved_at' => now(),
             'updated_at' => now(),
         ]);
-        $this->auditLogger->record('long_range.participatory.listing_reviewed', $actor, null, ['reference' => $record->reference, 'status' => $data['status']]);
+        $this->auditLogger->record('long_range.participatory.listing_reviewed', $actor, null, [
+            'reference' => $record->reference,
+            'status' => $data['status'],
+            'lender_of_record' => $lenderOfRecord,
+            'risk_grade' => $disclosures['risk_grade'] ?? null,
+            'expected_return_percent' => $disclosures['expected_return_percent'] ?? null,
+        ]);
 
         return DB::table('participatory_finance_listings')->find($id);
     }
