@@ -16,6 +16,15 @@ describe("OpFin simplicity contract", () => {
     expect(page).not.toContain('name="loan_product_term_id"');
   });
 
+  it("keeps mobile credit on the same universal request", () => {
+    const mobileCredit = source("opfin-frontend/lib/products_screen.dart");
+    expect(mobileCredit).toContain("How much do you need? (UGX)");
+    expect(mobileCredit).toContain("What do you need it for?");
+    expect(mobileCredit).toContain("/credit/applications");
+    expect(mobileCredit).not.toContain("/products");
+    expect(mobileCredit).not.toContain("ProductTermsPage");
+  });
+
   it("keeps peer-borrower governance fields out of the customer form", () => {
     const page = source("src/app/(portal)/peer-lending/borrow/page.tsx");
     expect(page).toContain("How much do you need?");
