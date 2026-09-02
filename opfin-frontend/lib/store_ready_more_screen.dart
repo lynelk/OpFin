@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opfin/account_delete_screen.dart';
 import 'package:opfin/connected_financial_life_screen.dart';
 import 'package:opfin/faq_screen.dart';
+import 'package:opfin/financial_hubs.dart';
 import 'package:opfin/peer_lending_screen.dart';
 import 'package:opfin/profile_screen.dart';
 
@@ -29,12 +30,13 @@ class StoreReadyMoreMobileScreen extends StatelessWidget {
           subtitle: 'Review your account and identity information.',
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
         ),
-        _MenuTile(
-          icon: Icons.handshake_outlined,
-          title: 'Peer lending',
-          subtitle: 'Review independently governed marketplace opportunities.',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen())),
-        ),
+        if (appStorePeerLendingEnabled)
+          _MenuTile(
+            icon: Icons.handshake_outlined,
+            title: 'Peer lending',
+            subtitle: 'Review independently governed marketplace opportunities.',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen())),
+          ),
         _MenuTile(
           icon: Icons.help_outline,
           title: 'Help & support',
