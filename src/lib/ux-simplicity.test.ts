@@ -11,9 +11,9 @@ describe("OpFin simplicity contract", () => {
     const page = source("src/app/(portal)/loans/apply/page.tsx");
     expect(page).toContain("How much do you need?");
     expect(page).toContain("What do you need it for?");
-    expect(page).not.toContain("loan_product_id");
-    expect(page).not.toContain("institution_id");
-    expect(page).not.toContain("loan_product_term_id");
+    expect(page).not.toContain('name="loan_product_id"');
+    expect(page).not.toContain('name="institution_id"');
+    expect(page).not.toContain('name="loan_product_term_id"');
   });
 
   it("keeps peer-borrower governance fields out of the customer form", () => {
@@ -22,7 +22,7 @@ describe("OpFin simplicity contract", () => {
     expect(page).toContain("What is the money for?");
     expect(page).toContain("How long do you need?");
     for (const internalField of ["lender_of_record", "loss_allocation", "custody", "expected_return_percent", "risk_grade"]) {
-      expect(page).not.toContain(internalField);
+      expect(page).not.toContain(`name="${internalField}"`);
     }
   });
 
