@@ -22,31 +22,28 @@ export default async function BorrowPage() {
       ? {
           eyebrow: "YOUR OFFER IS READY",
           title: "Review the full cost before you accept",
-          text: `Offer ${actionableOffer.offer_reference} is ready. Review amount received, fees, interest, repayment dates and expiry before making a decision.`,
+          text: `Offer ${actionableOffer.offer_reference} is ready. Review the amount you receive, all costs, repayment dates and expiry before deciding.`,
           href: `/loans/offer?offer=${actionableOffer.id}`,
           action: "Review offer"
         }
       : latestApplication
         ? {
             eyebrow: "APPLICATION IN PROGRESS",
-            title: "Continue from where your application is now",
-            text: `Your latest application is ${latestApplication.status}. OpFin keeps assessment, offer and disbursement as separate states so you always know what has and has not happened.`,
+            title: "Continue from where you stopped",
+            text: `Your latest request is ${latestApplication.status}. Assessment, offer and payout remain separate so you can always see what has happened.`,
             href: `/loans/decision?application=${latestApplication.id}`,
-            action: "Track application"
+            action: "Track request"
           }
         : {
             eyebrow: "BORROW RESPONSIBLY",
-            title: "See what you may qualify for",
-            text: "Start with need, affordability and eligibility. Submitting an application never triggers a payout by itself.",
+            title: "Choose the funding route that fits your need",
+            text: "Apply once for configured credit or ask verified investors to fund a reviewed marketplace request. Neither route moves money until the required approvals and confirmations are complete.",
             href: "/loans/apply",
-            action: "Start application"
+            action: "Check credit options"
           };
 
     return (
-      <Screen
-        title="Borrow"
-        description="One borrowing journey from need and affordability through application, decision, offer, disbursement, repayment and hardship support."
-      >
+      <Screen title="Borrow" description="One place to access suitable credit, marketplace funding, repayment and hardship support without learning OpFin's internal product structure.">
         <section className="panel compass-next-action">
           <p className="eyebrow">{primary.eyebrow}</p>
           <h2>{primary.title}</h2>
@@ -54,56 +51,54 @@ export default async function BorrowPage() {
           <Link className="button compass-action" href={primary.href}>{primary.action}</Link>
         </section>
 
+        <section className="panel">
+          <h2>Ways to fund your need</h2>
+          <div className="grid grid-2">
+            <article className="case-card">
+              <p className="eyebrow">CREDIT</p>
+              <h3>Check my credit options</h3>
+              <p className="muted">Tell us the amount and purpose. OpFin routes the request to an active eligible product; you compare the formal offer before accepting.</p>
+              <Link className="button" href="/loans/apply">Start one request</Link>
+            </article>
+            <article className="case-card">
+              <p className="eyebrow">OPFIN MARKETPLACE</p>
+              <h3>Borrow from investors</h3>
+              <p className="muted">Submit a simple funding request. OpFin handles lender-of-record, risk, fees, custody and investor disclosures through independent review.</p>
+              <Link className="button secondary" href="/peer-lending/borrow">Request marketplace funding</Link>
+            </article>
+          </div>
+        </section>
+
         {latestApplication ? (
           <section className="panel">
             <div className="case-card-head">
-              <div>
-                <p className="eyebrow">Latest application</p>
-                <h2>{latestApplication.status}</h2>
-              </div>
+              <div><p className="eyebrow">LATEST CREDIT REQUEST</p><h2>{latestApplication.status}</h2></div>
               <Link href={`/loans/decision?application=${latestApplication.id}`}>View progress</Link>
             </div>
-            <table className="table">
-              <tbody>
-                <tr><th>Requested amount</th><td>{formatUgx(Number(latestApplication.amount))}</td></tr>
-                <tr><th>Purpose</th><td>{latestApplication.reason ?? "Not supplied"}</td></tr>
-                <tr><th>Assessment</th><td>{latestApplication.credit_decision?.status ?? "Pending"}</td></tr>
-              </tbody>
-            </table>
+            <div className="grid grid-3">
+              <div><strong>Amount</strong><p>{formatUgx(Number(latestApplication.amount))}</p></div>
+              <div><strong>Purpose</strong><p>{latestApplication.reason ?? "Not supplied"}</p></div>
+              <div><strong>Assessment</strong><p>{latestApplication.credit_decision?.status ?? "Pending"}</p></div>
+            </div>
           </section>
-        ) : (
-          <StateNotice state="empty" message="You do not have a credit application in progress." />
-        )}
+        ) : null}
 
         <div className="grid grid-2">
           <section className="panel">
             <h2>Already have a loan?</h2>
-            <p className="muted">Review your schedule, repayment evidence and current loan account without starting a new application.</p>
+            <p className="muted">See your schedule, repayment evidence and current balance without starting another request.</p>
             <Link className="button secondary" href="/loans/account">Open loan account</Link>
           </section>
           <section className="panel">
             <h2>Payment difficulty?</h2>
-            <p className="muted">Tell OpFin about a financial shock before taking more debt where possible. Relief requests remain independently reviewed.</p>
+            <p className="muted">Tell OpFin about a financial shock before taking more debt where possible.</p>
             <Link className="button secondary" href="/hardship">Get hardship support</Link>
           </section>
         </div>
-
-        <section className="panel">
-          <h2>Before you accept any credit</h2>
-          <p className="muted">
-            OpFin shows the amount received, all fees, interest, total repayment, repayment dates, affordability context and offer expiry before acceptance. CPay receives a payout instruction only after explicit acceptance, and a loan is never treated as disbursed merely because an application or offer exists.
-          </p>
-        </section>
       </Screen>
     );
   } catch (error) {
     const state = error instanceof OpfinApiError ? error.kind : "server";
-    const message = error instanceof Error ? error.message : "Unable to load the Borrow journey.";
-
-    return (
-      <Screen title="Borrow" description="Apply, follow assessment, review a formal offer and track disbursement.">
-        <StateNotice state={state} message={message} />
-      </Screen>
-    );
+    return <Screen title="Borrow" description="Access suitable funding and manage repayment from one place."><StateNotice state={state} message={error instanceof Error ? error.message : "Unable to load Borrow."} /></Screen>;
   }
 }

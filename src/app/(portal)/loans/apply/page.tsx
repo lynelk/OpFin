@@ -1,78 +1,44 @@
-import { submitLoanApplicationAction } from "@/app/actions";
+import Link from "next/link";
+import { submitSimpleLoanApplicationAction } from "@/app/simple-credit-actions";
 import { Screen, StateNotice } from "@/components/Screen";
-import { OpfinApiError } from "@/lib/api/errors";
-import { opfinApi } from "@/lib/api/client";
-import { getAccessToken } from "@/lib/auth/session";
 
 export default async function LoanApplyPage({ searchParams }: { searchParams?: Promise<{ error?: string; message?: string }> }) {
   const params = await searchParams;
-  const token = await getAccessToken();
 
-  try {
-    const [products, institutions] = await Promise.all([
-      opfinApi.products(token),
-      opfinApi.institutions(token)
-    ]);
-    const selectedProduct = products.data[0];
-    const terms = selectedProduct ? await opfinApi.productTerms(selectedProduct.id, token) : null;
-    const selectedTerm = terms?.data[0];
-    const selectedInstitution = selectedProduct?.institution ?? institutions.data[0];
+  return (
+    <Screen
+      title="Tell us what you need"
+      description="One short request is enough. OpFin checks the active credit routes you may use; you do not need to choose a lender, product code or internal term configuration."
+    >
+      <section className="panel compass-next-action">
+        <p className="eyebrow">ONE REQUEST</p>
+        <h2>Amount and purpose. OpFin handles the routing.</h2>
+        <p className="muted">Submitting starts assessment only. It never approves a loan or triggers a payout by itself.</p>
+      </section>
 
-    return (
-      <Screen title="Credit application" description="Tell OpFin what you need. Submission starts assessment only; it does not approve or disburse a loan.">
-        <section className="panel">
-          <h2>Application details</h2>
-          {params?.message ? <StateNotice state={params.error === "validation" ? "validation" : "server"} message={params.message} /> : null}
-          {!selectedProduct || !selectedTerm || !selectedInstitution ? (
-            <StateNotice state="empty" message="No active credit products or terms are available." />
-          ) : (
-            <form action={submitLoanApplicationAction} className="form-grid">
-              <div className="field">
-                <label htmlFor="product">Credit product</label>
-                <select id="product" name="loan_product_id" defaultValue={selectedProduct.id}>
-                  {products.data.map((product) => (
-                    <option key={product.id} value={product.id}>{product.name}</option>
-                  ))}
-                </select>
-              </div>
-              <input type="hidden" name="loan_product_term_id" value={selectedTerm.id} />
-              <div className="field">
-                <label htmlFor="institution">Institution</label>
-                <select id="institution" name="institution_id" defaultValue={selectedInstitution.id}>
-                  {institutions.data.map((institution) => (
-                    <option key={institution.id} value={institution.id}>{institution.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="term">Requested term</label>
-                <input id="term" value={`${selectedTerm.duration} days, ${selectedTerm.repayment_frequency} repayment`} readOnly />
-              </div>
-              <div className="field">
-                <label htmlFor="amount">Requested amount (UGX)</label>
-                <input id="amount" name="amount" inputMode="numeric" min="1" defaultValue="100000" required />
-              </div>
-              <div className="field">
-                <label htmlFor="reason">Reason</label>
-                <textarea id="reason" name="reason" rows={4} defaultValue="School fees" required />
-              </div>
-              <div className="placeholder">
-                Final interest, fees, amount received, total repayment and expiry will be shown only in a versioned offer after assessment. You can review that offer before accepting anything.
-              </div>
-              <button className="button" type="submit">Submit for assessment</button>
-            </form>
-          )}
-        </section>
-      </Screen>
-    );
-  } catch (error) {
-    const state = error instanceof OpfinApiError ? error.kind : "server";
-    const message = error instanceof Error ? error.message : "Unable to load credit application data.";
+      <section className="panel">
+        {params?.message ? <StateNotice state={params.error === "validation" ? "validation" : "server"} message={params.message} /> : null}
+        <form action={submitSimpleLoanApplicationAction} className="form-grid">
+          <div className="field">
+            <label htmlFor="amount">How much do you need? (UGX)</label>
+            <input id="amount" name="amount" type="number" inputMode="numeric" min="1" placeholder="100000" required autoFocus />
+          </div>
+          <div className="field">
+            <label htmlFor="reason">What do you need it for?</label>
+            <textarea id="reason" name="reason" rows={4} placeholder="For example: school fees, emergency, business stock" required />
+          </div>
+          <div className="placeholder">
+            After assessment, you will see the responsible provider, amount received, every fee, interest, total repayment, repayment dates and offer expiry before you can accept anything.
+          </div>
+          <button className="button" type="submit">Check my options</button>
+        </form>
+      </section>
 
-    return (
-      <Screen title="Credit application" description="Tell OpFin what you need. Submission starts assessment only; it does not approve or disburse a loan.">
-        <StateNotice state={state} message={message} />
-      </Screen>
-    );
-  }
+      <section className="panel">
+        <h2>Prefer marketplace funding?</h2>
+        <p className="muted">You can also ask verified investors to fund an independently reviewed request through the OpFin Marketplace.</p>
+        <Link className="button secondary" href="/peer-lending/borrow">Borrow from investors</Link>
+      </section>
+    </Screen>
+  );
 }
