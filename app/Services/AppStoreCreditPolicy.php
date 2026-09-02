@@ -8,6 +8,7 @@ use InvalidArgumentException;
 class AppStoreCreditPolicy
 {
     public const MAX_APR_PERCENT = 36.0;
+
     public const MIN_FULL_REPAYMENT_DAYS = 61;
 
     public function validateOffer(LoanApplication $application, array $pricing): array
