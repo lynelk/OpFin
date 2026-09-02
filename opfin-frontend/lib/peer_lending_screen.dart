@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -17,6 +18,8 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
   final _currency = NumberFormat('#,##0', 'en_US');
   late Future<Map<String, dynamic>> _data;
 
+  bool get _borrowerRequestsEnabled => !Platform.isIOS || const bool.fromEnvironment('OPFIN_APP_STORE_P2P_BORROWING_ENABLED', defaultValue: false);
+
   @override
   void initState() {
     super.initState();
@@ -26,11 +29,7 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
   Future<Map<String, String>> _headers() async {
     final token = await UserSession.getAccessToken();
     if (token == null || token.isEmpty) throw Exception('Secure session is required.');
-    return {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
+    return {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
   }
 
   Future<Map<String, dynamic>> _get(String path) async {
@@ -43,11 +42,7 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
   }
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> payload) async {
-    final response = await http.post(
-      Uri.parse('$apiUrl$path'),
-      headers: await _headers(),
-      body: jsonEncode(payload),
-    );
+    final response = await http.post(Uri.parse('$apiUrl$path'), headers: await _headers(), body: jsonEncode(payload));
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300 || decoded['success'] != true) {
       throw Exception(decoded['message']?.toString() ?? 'Unable to complete that action.');
@@ -71,7 +66,6 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
   }
 
   int _amount(dynamic value) => value is num ? value.toInt() : int.tryParse('$value') ?? 0;
-
   String _money(dynamic value) => 'UGX ${_currency.format(_amount(value))}';
 
   Future<void> _refresh() async {
@@ -80,6 +74,7 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
   }
 
   Future<void> _requestFunding() async {
+    if (!_borrowerRequestsEnabled) return;
     final amountController = TextEditingController();
     final purposeController = TextEditingController();
     final termController = TextEditingController(text: '90');
@@ -113,11 +108,7 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
     }
 
     try {
-      await _post('/long-range/participatory/listings', {
-        'target_amount_minor': amount,
-        'purpose': purpose,
-        'term_days': term,
-      });
+      await _post('/long-range/participatory/listings', {'target_amount_minor': amount, 'purpose': purpose, 'term_days': term});
       _message('Funding request submitted for independent review.');
       await _refresh();
     } catch (error) {
@@ -132,11 +123,7 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Lend to ${listing['purpose'] ?? 'this request'}'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: 'Amount (UGX)', helperText: '${_money(remaining)} remaining'),
-        ),
+        content: TextField(controller: controller, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Amount (UGX)', helperText: '${_money(remaining)} remaining')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Continue')),
@@ -151,10 +138,7 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
     }
 
     try {
-      final commitment = await _post('/long-range/participatory/commitments', {
-        'listing_id': listing['id'],
-        'amount_minor': amount,
-      });
+      final commitment = await _post('/long-range/participatory/commitments', {'listing_id': listing['id'], 'amount_minor': amount});
       final commitmentId = (commitment['commitment'] as Map)['id'];
       final intent = await _post('/long-range/financial-intents', {
         'source_type': 'participatory_commitment',
@@ -238,17 +222,11 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: Text(listing['purpose']?.toString() ?? 'Funding request', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-            Chip(label: Text('Risk $risk')),
-          ]),
+          Row(children: [Expanded(child: Text(listing['purpose']?.toString() ?? 'Funding request', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))), Chip(label: Text('Risk $risk'))]),
           const SizedBox(height: 8),
           Text('${_money(target)} target · ${listing['term_days']} days'),
           const SizedBox(height: 12),
-          Row(children: [
-            Expanded(child: _metric('Expected return', expectedReturn == null ? 'See disclosure' : '$expectedReturn%')),
-            Expanded(child: _metric('Repayment', repayment)),
-          ]),
+          Row(children: [Expanded(child: _metric('Expected return', expectedReturn == null ? 'See disclosure' : '$expectedReturn%')), Expanded(child: _metric('Repayment', repayment))]),
           const SizedBox(height: 12),
           Text(disclosure['borrower_summary']?.toString() ?? 'Independently reviewed borrower information is available in the marketplace disclosure.'),
           const SizedBox(height: 12),
@@ -274,8 +252,8 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
   }
 
   Widget _metric(String label, String value) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(fontSize: 12)), Text(value, style: const TextStyle(fontWeight: FontWeight.bold))]);
-
   Widget _detail(String label, dynamic value) => ListTile(contentPadding: EdgeInsets.zero, title: Text(label), subtitle: Text(value?.toString().isNotEmpty == true ? value.toString() : 'See formal agreement.'));
+  Widget _summary(String label, String value) => Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(children: [Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), Text(label, textAlign: TextAlign.center)])));
 
   @override
   Widget build(BuildContext context) {
@@ -289,25 +267,23 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
           final data = snapshot.data ?? <String, dynamic>{};
           final listings = (data['listings'] as List? ?? const []).whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
           final overview = (data['overview'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
-          final commitments = (overview['participatory_commitments'] as List? ?? const []);
-          final requests = (overview['participatory_listings'] as List? ?? const []);
+          final commitments = overview['participatory_commitments'] as List? ?? const [];
+          final requests = overview['participatory_listings'] as List? ?? const [];
 
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(padding: const EdgeInsets.all(20), children: [
-              const Text('Lend or borrow through one governed marketplace.', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const Text('Lend through one governed marketplace.', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              const Text('Investor commitments and borrower requests stay separate from payment settlement. Risk and return are shown before money moves.'),
+              Text(Platform.isIOS
+                  ? 'Investor opportunities remain subject to lender-of-record, licensing, custody and settlement activation. Borrower marketplace origination is excluded from the default iOS build until its regulated pricing and App Store loan terms are certified.'
+                  : 'Investor commitments and borrower requests stay separate from payment settlement. Risk and return are shown before money moves.'),
               const SizedBox(height: 16),
-              Row(children: [
-                Expanded(child: _summary('Open', listings.length.toString())),
-                const SizedBox(width: 10),
-                Expanded(child: _summary('Your lending', commitments.length.toString())),
-                const SizedBox(width: 10),
-                Expanded(child: _summary('Your requests', requests.length.toString())),
-              ]),
-              const SizedBox(height: 16),
-              SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _requestFunding, icon: const Icon(Icons.request_quote_outlined), label: const Text('Borrow from investors'))),
+              Row(children: [Expanded(child: _summary('Open', listings.length.toString())), const SizedBox(width: 10), Expanded(child: _summary('Your lending', commitments.length.toString())), const SizedBox(width: 10), Expanded(child: _summary('Your requests', requests.length.toString()))]),
+              if (_borrowerRequestsEnabled) ...[
+                const SizedBox(height: 16),
+                SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _requestFunding, icon: const Icon(Icons.request_quote_outlined), label: const Text('Borrow from investors'))),
+              ],
               const SizedBox(height: 24),
               const Text('Opportunities', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
@@ -320,6 +296,4 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
       ),
     );
   }
-
-  Widget _summary(String label, String value) => Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(children: [Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), Text(label, textAlign: TextAlign.center)])));
 }

@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:opfin/constants.dart';
+import 'package:opfin/credit_offers_screen.dart';
 import 'package:opfin/loan_applications_screen.dart';
 import 'package:opfin/services/user_session.dart';
 
@@ -47,7 +49,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({'amount_minor': amount, 'reason': purpose}),
+        body: jsonEncode({
+          'amount_minor': amount,
+          'reason': purpose,
+          'distribution_channel': Platform.isIOS ? 'app_store' : 'android',
+        }),
       );
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode < 200 || response.statusCode >= 300 || decoded['success'] != true) {
@@ -77,7 +83,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         children: [
           const Text('Tell us what you need', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('One short request is enough. OpFin selects an active configured credit route; you do not need to choose a lender, product code or internal term.'),
+          const Text('One short request is enough. OpFin selects an eligible configured credit route; you do not need to choose a lender, product code or internal term.'),
           const SizedBox(height: 22),
           TextField(
             controller: _amountController,
@@ -93,18 +99,25 @@ class _ProductsScreenState extends State<ProductsScreen> {
             decoration: const InputDecoration(labelText: 'What do you need it for?', hintText: 'For example: school fees, emergency, business stock', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 14),
-          const Card(
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('After assessment, OpFin shows the responsible provider, amount received, every fee, interest, total repayment and repayment dates before you can accept anything.'),
+              padding: const EdgeInsets.all(16),
+              child: Text(Platform.isIOS
+                  ? 'iOS requests are restricted to App Store-compliant personal-loan terms. Before acceptance, OpFin shows the amount received, every fee, total repayment, equivalent maximum APR and payment due terms.'
+                  : 'After assessment, OpFin shows the responsible provider, amount received, every fee, interest, total repayment and repayment dates before you can accept anything.'),
             ),
           ),
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: _submitting ? null : _submit,
-              child: Text(_submitting ? 'Submitting…' : 'Check my options'),
+            child: FilledButton(onPressed: _submitting ? null : _submit, child: Text(_submitting ? 'Submitting…' : 'Check my options')),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreditOffersScreen())),
+              child: const Text('Review my credit offers'),
             ),
           ),
         ],

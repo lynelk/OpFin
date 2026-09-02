@@ -11,6 +11,7 @@ export default function MorePage() {
           <JourneyCard title="Identity & KYC" description="See your verification status and continue only the step that is incomplete." href="/kyc" action="Manage verification" status="available" />
           <JourneyCard title="Data permissions" description="Review purpose-specific permissions and revoke them where permitted." href="/consent" action="Manage permissions" status="available" />
           <JourneyCard title="Security Centre" description="Freeze transactions, manage alerts and review account-security activity." href="/security" action="Manage security" status="available" />
+          <JourneyCard title="Delete account" description="Delete your OpFin account in-app, with regulated retention and active-obligation handling explained before confirmation." href="/account/delete" action="Manage account deletion" status="available" />
         </div>
       </section>
 

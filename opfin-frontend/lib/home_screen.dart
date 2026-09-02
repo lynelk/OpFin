@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opfin/financial_hubs.dart';
 import 'package:opfin/peer_lending_screen.dart';
 import 'package:opfin/products_screen.dart';
+import 'package:opfin/store_ready_more_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
     BorrowMobileScreen(),
     SaveMobileScreen(),
     GrowMobileScreen(),
-    MoreMobileScreen(),
+    StoreReadyMoreMobileScreen(),
   ];
 
   @override
@@ -106,7 +107,7 @@ class _HomeWidgetState extends State<HomeWidget> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('How OpFin stays simple', style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
-              Text('Borrow asks what you need. Save focuses on resilience. Grow separates investing from lending. More holds occasional account and support tasks.'),
+              Text('Borrow asks what you need. Save focuses on resilience. Grow separates investing from lending. More holds occasional account, privacy and support tasks.'),
             ]),
           ),
         ),
