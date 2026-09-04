@@ -1,0 +1,162 @@
+name: Frontend CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  next:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Install TypeScript 6 API for ESLint
+        # TypeScript 7 currently ships without the compiler API consumed by typescript-eslint.
+        # Keep the application on its locked TS7 compiler, but run ESLint against Microsoft's
+        # supported TypeScript 6 compatibility package until typescript-eslint supports TS7.
+        run: npm install --no-save --legacy-peer-deps typescript@npm:@typescript/typescript6@6.0.2
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Restore locked application dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_OPFIN_API_URL: http://localhost:8000/api
+          NEXT_PUBLIC_USE_MOCK_API: "false"
+          OPFIN_ENABLE_DEMO_SHORTCUTS: "false"
+        run: npm run build
+
+      - name: Reject production mock API mode
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_USE_MOCK_API: "true"
+        run: |
+          if node -e "import('./next.config.mjs')"; then
+            echo "Expected production mock API guard to fail"
+            exit 1
+          fi
+
+      - name: Reject production demo shortcuts
+        env:
+          NODE_ENV: production
+          OPFIN_ENABLE_DEMO_SHORTCUTS: "true"
+        run: |
+          if node -e "import('./next.config.mjs')"; then
+            echo "Expected production demo shortcut guard to fail"
+            exit 1
+          fi
+
+  flutter:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: opfin-frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build Android release
+        run: |
+          status=1
+          for attempt in 1 2 3; do
+            if flutter build apk --release --no-pub; then
+              exit 0
+            else
+              status=$?
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              delay=$((attempt * 30))
+              echo "Android release build attempt $attempt failed; retrying in ${delay}s for transient repository/network errors."
+              sleep "$delay"
+            fi
+          done
+          exit "$status"
+
+  ios:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: opfin-frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Select Xcode 26+
+        run: |
+          candidate="$(find /Applications -maxdepth 1 -type d -name 'Xcode_26*.app' -print | sort -V | tail -1)"
+          if [ -n "$candidate" ]; then
+            sudo xcode-select -s "$candidate/Contents/Developer"
+          fi
+          xcodebuild -version
+          major="$(xcodebuild -version | awk '/Xcode / {split($2,v,"."); print v[1]}')"
+          if [ -z "$major" ] || [ "$major" -lt 26 ]; then
+            echo "App Store uploads require Xcode 26 or later."
+            exit 1
+          fi
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+          cache: true
+
+      - name: Configure CI bundle identifier
+        env:
+          OPFIN_IOS_BUNDLE_ID: co.opfin.ci
+        run: bash tool/prepare_app_store.sh
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build unsigned iOS release
+        run: |
+          flutter build ios --release --no-codesign --no-pub \
+            --dart-define=OPFIN_API_BASE_URL=https://opfin-api-production.up.railway.app/api \
+            --dart-define=OPFIN_APP_STORE_P2P_BORROWING_ENABLED=false

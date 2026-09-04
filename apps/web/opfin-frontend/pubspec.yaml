@@ -1,0 +1,31 @@
+name: opfin
+description: "OpFin financial wellbeing, responsible credit, savings and peer-lending platform."
+publish_to: "none"
+version: 1.0.0+16
+
+environment:
+  sdk: ">=3.4.4 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.6.0
+  intl: ^0.20.3
+  lottie: ^3.5.1
+  shared_preferences: ^2.5.5
+  flutter_secure_storage: ^9.2.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/lottie/
+
+flutter_icons:
+  android: true
+  image_path: "assets/logo.png"
