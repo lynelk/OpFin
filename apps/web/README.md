@@ -3,7 +3,7 @@
 OpFin-FE contains the production web portal and mobile application for OpFin:
 
 - repository root `src/`: Next.js 16 + TypeScript customer, operations and administration web experience;
-- `opfin-frontend/`: Flutter mobile application with persistent offline-aware sync support.
+- `../client/`: Flutter mobile application with persistent offline-aware sync support.
 
 The frontend is a client of the Laravel OpFin backend. It does not own financial pricing, balances, repayment allocation, ledger accounting, provider finality or other authoritative money calculations. Those remain backend responsibilities. Human beings have already invented enough ways for two screens to disagree about money without adding duplicated financial formulas.
 
@@ -94,7 +94,7 @@ npm run check
 Flutter changes must additionally pass:
 
 ```bash
-cd opfin-frontend
+cd ../client
 flutter pub get
 flutter analyze
 flutter test

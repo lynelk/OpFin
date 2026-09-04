@@ -88,7 +88,7 @@ npm run check
 Flutter when mobile code changes:
 
 ```bash
-cd opfin-frontend
+cd ../client
 flutter pub get
 flutter analyze
 flutter test

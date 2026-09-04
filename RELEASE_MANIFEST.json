@@ -1,0 +1,21 @@
+{
+  "repository": "lynelk/OpFin",
+  "status": "monorepo_candidate",
+  "generated_at": "2026-09-04",
+  "source": {
+    "backend": {
+      "repository": "lynelk/OpFin-BE",
+      "commit": "fda182cc2d3d741c5f9b462e5d80d5caea6e594a"
+    },
+    "frontend_mobile": {
+      "repository": "lynelk/OpFin-FE",
+      "commit": "1ef9a0e9a4766ba802afc97f9b91f366620d053a"
+    }
+  },
+  "paths": {
+    "api": "apps/api",
+    "web": "apps/web",
+    "client": "apps/client"
+  },
+  "production_cutover": false
+}
