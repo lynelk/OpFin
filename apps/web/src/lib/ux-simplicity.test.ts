@@ -17,7 +17,7 @@ describe("OpFin simplicity contract", () => {
   });
 
   it("keeps mobile credit on the same universal request", () => {
-    const mobileCredit = source("opfin-frontend/lib/products_screen.dart");
+    const mobileCredit = source("../client/lib/products_screen.dart");
     expect(mobileCredit).toContain("How much do you need? (UGX)");
     expect(mobileCredit).toContain("What do you need it for?");
     expect(mobileCredit).toContain("/credit/applications");
@@ -61,7 +61,7 @@ describe("OpFin simplicity contract", () => {
   });
 
   it("keeps web and Flutter on the same five-part customer mental model", () => {
-    const mobile = source("opfin-frontend/lib/home_screen.dart");
+    const mobile = source("../client/lib/home_screen.dart");
     for (const label of ["Home", "Borrow", "Save", "Grow", "More"]) {
       expect(mobile).toContain(`label: '${label}'`);
     }
