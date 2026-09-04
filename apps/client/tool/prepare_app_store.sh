@@ -5,7 +5,7 @@ BUNDLE_ID="${OPFIN_IOS_BUNDLE_ID:-co.opfin.app}"
 PROJECT="ios/Runner.xcodeproj/project.pbxproj"
 
 if [[ ! -f "$PROJECT" ]]; then
-  echo "Run this script from opfin-frontend." >&2
+  echo "Run this script from apps/client." >&2
   exit 1
 fi
 

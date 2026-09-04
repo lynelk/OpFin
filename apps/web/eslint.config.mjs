@@ -20,6 +20,6 @@ export default [
     }
   },
   {
-    ignores: [".next/**", "node_modules/**", "opfin-frontend/**"]
+    ignores: [".next/**", "node_modules/**"]
   }
 ];
