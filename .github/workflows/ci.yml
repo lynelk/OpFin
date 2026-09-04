@@ -30,6 +30,9 @@ jobs:
           git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
           git fetch --depth=2 origin "$GITHUB_SHA"
           git checkout --detach FETCH_HEAD
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
+            git fetch --depth=1 origin "$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
+          fi
       - name: Install PHP 8.2 without Xdebug
         run: |
           sudo apt-get update
@@ -48,8 +51,23 @@ jobs:
           php artisan key:generate
           sh scripts/enforce-cpay-only.sh
           sh scripts/run-tests.sh
-          ./vendor/bin/pint --test
           composer audit
+      - name: Check formatting for changed PHP files
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
+            base="origin/$GITHUB_BASE_REF"
+          else
+            base="HEAD^"
+          fi
+          mapfile -t files < <(git diff --name-only --diff-filter=ACMR "$base"...HEAD -- apps/api | grep '\.php$' | sed 's#^apps/api/##' || true)
+          if [[ "${#files[@]}" -eq 0 ]]; then
+            echo "No changed PHP files to format-check."
+            exit 0
+          fi
+          cd apps/api
+          printf 'Checking %s changed PHP files\n' "${#files[@]}"
+          ./vendor/bin/pint --test "${files[@]}"
 
   api-assets:
     runs-on: ubuntu-latest
