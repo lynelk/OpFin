@@ -1,0 +1,32 @@
+FROM php:8.2-cli-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git unzip libsqlite3-dev nodejs npm \
+    && docker-php-ext-install pdo_sqlite \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+COPY . .
+
+RUN composer install --no-interaction --prefer-dist --no-progress \
+    && cp .env.example .env \
+    && php artisan key:generate \
+    && for file in \
+        app/Services/MtnMomoService.php \
+        app/Services/AirtelCollectionService.php \
+        app/Services/AirtelDisbursementService.php \
+        app/Services/CitotechPaymentService.php \
+        app/Services/MobileMoney/Adapters/MtnMobileMoneyAdapter.php \
+        app/Services/MobileMoney/Adapters/AirtelMoneyAdapter.php; do \
+        if [ -e "$file" ]; then echo "Forbidden direct payment implementation exists: $file"; exit 1; fi; \
+    done \
+    && ! grep -R -nE 'MtnMomoService|AirtelDisbursementService|AirtelCollectionService|CitotechPaymentService|MtnMobileMoneyAdapter|AirtelMoneyAdapter' app config routes tests \
+    && php artisan test \
+    && composer audit \
+    && npm ci \
+    && npm audit --omit=dev --audit-level=high \
+    && npm run build
+
+CMD ["php", "-r", "echo 'OpFin backend release gate passed'.PHP_EOL; sleep(3600);"]

@@ -1,0 +1,50 @@
+name: Dependency Maintenance Verification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+
+      - name: Prepare application
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+
+      - name: Install locked dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Verify dependency audit
+        run: composer audit
+
+      - name: Run backend tests
+        run: php artisan test
+
+      - name: Verify changed PHP formatting
+        shell: bash
+        run: |
+          git fetch origin main --depth=1
+          mapfile -t files < <(git diff --name-only --diff-filter=ACMR origin/main...HEAD -- '*.php')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No changed PHP files to lint."
+            exit 0
+          fi
+          ./vendor/bin/pint --test "${files[@]}"
