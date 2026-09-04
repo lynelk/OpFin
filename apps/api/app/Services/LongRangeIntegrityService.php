@@ -14,7 +14,7 @@ class LongRangeIntegrityService
 
         if (Schema::hasTable('financial_action_intents') && Schema::hasTable('mobile_money_transactions')) {
             $settledWithoutProviderFinality = DB::table('financial_action_intents as i')
-                ->leftJoin('mobile_money_transactions as m', 'm.internal_reference', '=', 'i.reference')
+                ->leftJoin('mobile_money_transactions as m', 'm.internal_reference', '=', DB::raw('CAST(i.reference AS TEXT)'))
                 ->where('i.status', 'settled')
                 ->groupBy('i.id', 'i.reference')
                 ->havingRaw('SUM(CASE WHEN m.status = ? THEN 1 ELSE 0 END) = 0', [MobileMoneyTransaction::STATUS_SUCCESSFUL])
@@ -26,7 +26,7 @@ class LongRangeIntegrityService
             }
 
             $providerSuccessNotApplied = DB::table('financial_action_intents as i')
-                ->join('mobile_money_transactions as m', 'm.internal_reference', '=', 'i.reference')
+                ->join('mobile_money_transactions as m', 'm.internal_reference', '=', DB::raw('CAST(i.reference AS TEXT)'))
                 ->where('m.status', MobileMoneyTransaction::STATUS_SUCCESSFUL)
                 ->where('i.status', '!=', 'settled')
                 ->where('m.updated_at', '<=', now()->subMinutes(10))
