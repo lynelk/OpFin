@@ -1,6 +1,6 @@
 {
   "repository": "lynelk/OpFin",
-  "status": "monorepo_candidate",
+  "status": "canonical_validated",
   "generated_at": "2026-09-04",
   "source": {
     "backend": {
@@ -16,6 +16,11 @@
     "api": "apps/api",
     "web": "apps/web",
     "client": "apps/client"
+  },
+  "canonical_validation": {
+    "workflow_run": 33917468702,
+    "validated_head": "ee1e7864690a47e10235db67988bbfbfb3485ee2",
+    "result": "success"
   },
   "production_cutover": false
 }
