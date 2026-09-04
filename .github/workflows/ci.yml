@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - monorepo-candidate
 
 permissions:
   contents: read
@@ -14,8 +13,7 @@ jobs:
   layout:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
       - name: Verify monorepo boundaries
         run: sh scripts/verify-layout.sh
 
@@ -25,16 +23,14 @@ jobs:
       run:
         working-directory: apps/api
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.2"
-          extensions: mbstring, pdo_sqlite, sqlite3
-          coverage: none
+      - name: Verify PHP runtime
+        run: |
+          php -v
+          composer --version
+          php -m | grep -E 'mbstring|PDO|pdo_sqlite|sqlite3' || true
       - name: Prepare CI environment
         run: cp .env.example .env
       - name: Install Composer dependencies
@@ -45,25 +41,8 @@ jobs:
         run: sh scripts/enforce-cpay-only.sh
       - name: Run hermetic tests
         run: sh scripts/run-tests.sh
-      - name: Check formatting for changed PHP files
-        shell: bash
-        run: |
-          if [[ "${GITHUB_REF_NAME}" == "monorepo-candidate" && "${GITHUB_EVENT_NAME}" == "push" ]]; then
-            echo "Initial import was already formatting-gated in the source repository."
-            exit 0
-          fi
-          if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
-            git -C "$GITHUB_WORKSPACE" fetch origin "$GITHUB_BASE_REF" --depth=1
-            base="origin/$GITHUB_BASE_REF"
-          else
-            base="HEAD^"
-          fi
-          mapfile -t files < <(git -C "$GITHUB_WORKSPACE" diff --name-only --diff-filter=ACMR "$base"...HEAD -- apps/api | grep '\.php$' | sed 's#^apps/api/##' || true)
-          if [[ "${#files[@]}" -eq 0 ]]; then
-            echo "No changed PHP files to format-check."
-            exit 0
-          fi
-          ./vendor/bin/pint --test "${files[@]}"
+      - name: Check PHP formatting
+        run: ./vendor/bin/pint --test
       - name: Audit Composer dependencies
         run: composer audit
 
@@ -73,18 +52,14 @@ jobs:
       run:
         working-directory: apps/api
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-      - name: Set up Node
-        uses: actions/setup-node@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/api/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Build assets
-        run: npm run build
+      - run: npm ci
+      - run: npm run build
 
   web:
     runs-on: ubuntu-latest
@@ -92,29 +67,21 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-      - name: Set up Node
-        uses: actions/setup-node@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
-      - name: Install locked dependencies
-        run: npm ci --legacy-peer-deps
-      - name: Audit dependencies
-        run: npm audit --audit-level=high
-      - name: Typecheck
-        run: npm run typecheck
+      - run: npm ci --legacy-peer-deps
+      - run: npm audit --audit-level=high
+      - run: npm run typecheck
       - name: Install TypeScript 6 API for ESLint
         run: npm install --no-save --legacy-peer-deps typescript@npm:@typescript/typescript6@6.0.2
-      - name: Lint
-        run: npm run lint
-      - name: Restore locked application dependencies
-        run: npm ci --legacy-peer-deps
-      - name: Test
-        run: npm run test
-      - name: Build
+      - run: npm run lint
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test
+      - name: Build production web
         env:
           NEXT_PUBLIC_OPFIN_API_URL: http://localhost:8000/api
           NEXT_PUBLIC_USE_MOCK_API: "false"
@@ -125,19 +92,13 @@ jobs:
           NODE_ENV: production
           NEXT_PUBLIC_USE_MOCK_API: "true"
         run: |
-          if node -e "import('./next.config.mjs')"; then
-            echo "Expected production mock API guard to fail"
-            exit 1
-          fi
+          if node -e "import('./next.config.mjs')"; then exit 1; fi
       - name: Reject production demo shortcuts
         env:
           NODE_ENV: production
           OPFIN_ENABLE_DEMO_SHORTCUTS: "true"
         run: |
-          if node -e "import('./next.config.mjs')"; then
-            echo "Expected production demo shortcut guard to fail"
-            exit 1
-          fi
+          if node -e "import('./next.config.mjs')"; then exit 1; fi
 
   client-android:
     runs-on: ubuntu-latest
@@ -145,24 +106,17 @@ jobs:
       run:
         working-directory: apps/client
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.47.1"
-          channel: stable
-          cache: true
-      - name: Install dependencies
-        run: flutter pub get
-      - name: Analyze
-        run: flutter analyze
-      - name: Run tests
-        run: flutter test
-      - name: Build Android release APK
-        run: flutter build apk --release --no-pub
-      - name: Build Android App Bundle
-        run: flutter build appbundle --release --no-pub
+      - uses: actions/checkout@v7
+      - name: Install Flutter 3.47.1
+        run: |
+          git clone --depth 1 --branch 3.47.1 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build apk --release --no-pub
+      - run: flutter build appbundle --release --no-pub
 
   client-ios:
     runs-on: macos-15
@@ -170,36 +124,26 @@ jobs:
       run:
         working-directory: apps/client
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
       - name: Select Xcode 26+
         run: |
           candidate="$(find /Applications -maxdepth 1 -type d -name 'Xcode_26*.app' -print | sort -V | tail -1)"
-          if [[ -n "$candidate" ]]; then
-            sudo xcode-select -s "$candidate/Contents/Developer"
-          fi
+          if [[ -n "$candidate" ]]; then sudo xcode-select -s "$candidate/Contents/Developer"; fi
           xcodebuild -version
           major="$(xcodebuild -version | awk '/Xcode / {split($2,v,"."); print v[1]}')"
-          if [[ -z "$major" || "$major" -lt 26 ]]; then
-            echo "App Store uploads require Xcode 26 or later."
-            exit 1
-          fi
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.47.1"
-          channel: stable
-          cache: true
+          test -n "$major" && test "$major" -ge 26
+      - name: Install Flutter 3.47.1
+        run: |
+          git clone --depth 1 --branch 3.47.1 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - run: flutter --version
       - name: Configure CI bundle identifier
         env:
           OPFIN_IOS_BUNDLE_ID: co.opfin.ci
         run: bash tool/prepare_app_store.sh
-      - name: Install dependencies
-        run: flutter pub get
-      - name: Analyze
-        run: flutter analyze
-      - name: Run tests
-        run: flutter test
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
       - name: Build unsigned iOS release
         run: |
           flutter build ios --release --no-codesign --no-pub \
@@ -210,19 +154,17 @@ jobs:
     needs: [layout, api, api-assets, web, client-android, client-ios]
     runs-on: ubuntu-latest
     steps:
-      - name: Check out complete history
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Package exact validated monorepo head
+      - name: Package exact canonical head
         run: |
           set -Eeuo pipefail
           git branch -f main "$GITHUB_SHA"
           git bundle create "$RUNNER_TEMP/OpFin-monorepo.bundle" main
           git archive --format=tar.gz --output="$RUNNER_TEMP/OpFin-monorepo-source.tar.gz" "$GITHUB_SHA"
           sha256sum "$RUNNER_TEMP/OpFin-monorepo.bundle" "$RUNNER_TEMP/OpFin-monorepo-source.tar.gz" > "$RUNNER_TEMP/SHA256SUMS.txt"
-      - name: Upload validated migration package
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: OpFin-monorepo-${{ github.sha }}
           path: |
