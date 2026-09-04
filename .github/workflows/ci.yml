@@ -30,8 +30,14 @@ jobs:
           git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
           git fetch --depth=2 origin "$GITHUB_SHA"
           git checkout --detach FETCH_HEAD
-      - name: Verify PHP and Composer
+      - name: Install PHP 8.2 without Xdebug
         run: |
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository ppa:ondrej/php -y
+          sudo apt-get update
+          sudo apt-get install -y php8.2-cli php8.2-mbstring php8.2-sqlite3 php8.2-xml php8.2-curl
+          sudo update-alternatives --set php /usr/bin/php8.2
           php -v
           composer --version
       - name: Test API
