@@ -11,6 +11,6 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command(CheckTransactionStatus::class)->everyMinute();
 Schedule::command(ReconcileLongRangeFinancialIntents::class)->everyFiveMinutes()->withoutOverlapping();
 Schedule::command(RunFinancialIntegrityAudit::class)->everyFiveMinutes()->withoutOverlapping();
-Schedule::command(RunPlatformAutopilot::class)->everyFiveMinutes()->withoutOverlapping();
+Schedule::command(RunPlatformAutopilot::class)->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command(EvaluateMoneyAutopilot::class)->hourly()->withoutOverlapping();
 Schedule::command(GenerateRegulatoryReports::class)->dailyAt('01:15')->withoutOverlapping();

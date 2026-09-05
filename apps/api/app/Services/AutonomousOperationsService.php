@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Schema;
 
 class AutonomousOperationsService
 {
+    private const BATCH_SIZE = 200;
     public function run(string $trigger = 'scheduled'): array
     {
         $runId = DB::table('autopilot_runs')->insertGetId([
@@ -87,9 +88,13 @@ class AutonomousOperationsService
                 ->groupBy('severity')
                 ->orderByDesc('total')
                 ->get(),
-            'last_run' => Schema::hasTable('autopilot_runs')
-                ? DB::table('autopilot_runs')->where('status', 'completed')->orderByDesc('id')->first()
-                : null,
+            // Keep summaries bounded. Never recursively embed the previous run's JSON summary.
+  'last_run' => Schema::hasTable('autopilot_runs')
+      ? DB::table('autopilot_runs')
+          ->where('status', 'completed')
+          ->orderByDesc('id')
+          ->first(['id', 'status', 'trigger', 'started_at', 'completed_at', 'observations', 'actions_executed', 'exceptions_created'])
+      : null,
         ];
     }
 
@@ -127,7 +132,7 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $cases = DB::table('kyc_cases')->whereIn('status', ['submitted', 'pending', 'manual_review'])->get();
+        $cases = DB::table('kyc_cases')->whereIn('status', ['submitted', 'pending', 'manual_review'])-limit(self::BATCH_SIZE)->get();
         $created = 0;
         foreach ($cases as $case) {
             $created += $this->upsertWorkItem($runId, [
@@ -160,6 +165,7 @@ class AutonomousOperationsService
             ->where('status', 'granted')
             ->whereNotNull('expires_at')
             ->whereBetween('expires_at', [now(), now()->addDays(14)])
+            ->limit(self::BATCH_SIZE)
             ->get();
         $created = 0;
         foreach ($expiring as $consent) {
@@ -192,6 +198,7 @@ class AutonomousOperationsService
         $stale = DB::table('mobile_money_transactions')
             ->whereIn('status', ['pending', 'processing', 'unknown'])
             ->where('updated_at', '<=', now()->subMinutes(15))
+            ->limit(self::BATCH_SIZE)
             ->get();
         $created = 0;
         foreach ($stale as $transaction) {
@@ -221,7 +228,7 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $items = DB::table('reconciliation_items')->whereIn('status', ['open', 'mismatch', 'unmatched'])->get();
+        $items = DB::table('reconciliation_items')->whereIn('status', ['open', 'mismatch', 'unmatched'])-limit(self::BATCH_SIZE)->get();
         $created = 0;
         foreach ($items as $item) {
             $created += $this->upsertWorkItem($runId, [
@@ -253,6 +260,7 @@ class AutonomousOperationsService
         $cases = DB::table('support_cases')
             ->whereIn('status', ['open', 'new', 'escalated'])
             ->where('created_at', '<=', now()->subHours(24))
+            ->limit(self::BATCH_SIZE)
             ->get();
         $created = 0;
         foreach ($cases as $case) {
@@ -282,7 +290,7 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $cases = DB::table('hardship_cases')->where('status', 'submitted')->get();
+        $cases = DB::table('hardship_cases')->where('status', 'submitted')-limit(self::BATCH_SIZE)->get();
         $created = 0;
         foreach ($cases as $case) {
             $created += $this->upsertWorkItem($runId, [
@@ -308,7 +316,7 @@ class AutonomousOperationsService
     private function executeSafeActions(int $runId): int
     {
         $executed = 0;
-        $items = DB::table('autopilot_work_items')->where('status', 'open')->where('requires_human', false)->get();
+        $items = DB::table('autopilot_work_items')->where('status', 'open')->where('requires_human', false)-limit(self::BATCH_SIZE)->get();
         foreach ($items as $item) {
             if ($item->type !== 'consent_expiring') {
                 continue;
