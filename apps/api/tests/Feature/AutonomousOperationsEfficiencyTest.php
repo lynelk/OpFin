@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RecordWorkerHeartbeat;
 use App\Models\User;
 use App\Services\AutonomousOperationsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -62,5 +64,26 @@ class AutonomousOperationsEfficiencyTest extends TestCase
             'observations' => 225,
             'exceptions_created' => 225,
         ]);
+    }
+
+    public function test_readiness_reports_worker_and_scheduler_heartbeat_freshness(): void
+    {
+        Cache::forget(RecordWorkerHeartbeat::CACHE_KEY);
+        Cache::forget('opfin:operations:scheduler_heartbeat');
+
+        $this->getJson('/api/health/ready')
+            ->assertOk()
+            ->assertJsonPath('data.worker.status', 'missing')
+            ->assertJsonPath('data.scheduler.status', 'missing')
+            ->assertJsonPath('data.operations', 'degraded');
+
+        app(RecordWorkerHeartbeat::class)->handle();
+        Cache::put('opfin:operations:scheduler_heartbeat', now()->toIso8601String(), now()->addMinutes(20));
+
+        $this->getJson('/api/health/ready')
+            ->assertOk()
+            ->assertJsonPath('data.worker.status', 'ready')
+            ->assertJsonPath('data.scheduler.status', 'ready')
+            ->assertJsonPath('data.operations', 'ready');
     }
 }
