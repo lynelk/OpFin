@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 class AutonomousOperationsService
 {
     private const BATCH_SIZE = 200;
+
     public function run(string $trigger = 'scheduled'): array
     {
         $runId = DB::table('autopilot_runs')->insertGetId([
@@ -88,13 +89,13 @@ class AutonomousOperationsService
                 ->groupBy('severity')
                 ->orderByDesc('total')
                 ->get(),
-  // Keep summaries bounded. Never recursively embed the previous run's JSON summary.
-  'last_run' => Schema::hasTable('autopilot_runs')
-      ? DB::table('autopilot_runs')
-          ->where('status', 'completed')
-          ->orderByDesc('id')
-          ->first(['id', 'status', 'trigger', 'started_at', 'completed_at', 'observations', 'actions_executed', 'exceptions_created'])
-      : null,
+            // Keep summaries bounded. Never recursively embed the previous run's JSON summary.
+            'last_run' => Schema::hasTable('autopilot_runs')
+                ? DB::table('autopilot_runs')
+                    ->where('status', 'completed')
+                    ->orderByDesc('id')
+                    ->first(['id', 'status', 'trigger', 'started_at', 'completed_at', 'observations', 'actions_executed', 'exceptions_created'])
+                : null,
         ];
     }
 
