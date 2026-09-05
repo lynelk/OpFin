@@ -1,6 +1,5 @@
 <?php
 
-use App\Console\Commands\CheckTransactionStatus;
 use App\Console\Commands\EvaluateMoneyAutopilot;
 use App\Console\Commands\GenerateRegulatoryReports;
 use App\Console\Commands\ReconcileLongRangeFinancialIntents;
@@ -10,7 +9,6 @@ use App\Jobs\QueueWorkerHeartbeat;
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::job(new QueueWorkerHeartbeat)->everyFiveMinutes()->onOneServer();
-Schedule::command(CheckTransactionStatus::class)->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
 Schedule::command(ReconcileLongRangeFinancialIntents::class)->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
 Schedule::command(RunFinancialIntegrityAudit::class)->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
 Schedule::command(RunPlatformAutopilot::class)->everyFifteenMinutes()->withoutOverlapping(15)->onOneServer();
