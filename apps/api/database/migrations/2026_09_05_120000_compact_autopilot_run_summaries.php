@@ -13,12 +13,13 @@ return new class extends Migration
         }
 
         if (DB::connection()->getDriverName() === 'pgsql') {
+            // Use the function form so PDO cannot treat the JSONB operator as a binding.
             DB::statement(<<<'SQL'
                 UPDATE autopilot_runs
                 SET summary = (summary::jsonb - 'last_run')
                 WHERE summary IS NOT NULL
                   AND jsonb_typeof(summary::jsonb) = 'object'
-                  AND summary::jsonb ? 'last_run'
+                  AND jsonb_exists(summary::jsonb, 'last_run')
             SQL);
 
             return;
