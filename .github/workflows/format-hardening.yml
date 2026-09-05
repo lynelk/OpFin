@@ -1,0 +1,32 @@
+name: Format hardening branch
+on:
+  push:
+    branches: [ops/rightsize-recovery-hardening]
+permissions:
+  contents: write
+jobs:
+  format:
+    if: github.event.head_commit.message != 'Format operations hardening changes'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: ops/rightsize-recovery-hardening
+    steps:
+      - name: Format changed PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init repo && cd repo
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth=2 origin "${BRANCH}"
+          git checkout -B "${BRANCH}" FETCH_HEAD
+          cd apps/api
+          composer install --no-interaction --prefer-dist --no-progress
+          vendor/bin/pint app/Services/AutonomousOperationsService.php routes/console.php
+          cd ../..
+          git config user.name "OpFin Release Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add apps/api/app/Services/AutonomousOperationsService.php apps/api/routes/console.php
+          git diff --cached --check
+          git commit -m "Format operations hardening changes"
+          git push origin "HEAD:${BRANCH}"
