@@ -1,0 +1,28 @@
+{
+    admin off
+    persist_config off
+    auto_https off
+
+    log {
+        format json
+        output stderr
+        level WARN
+    }
+
+    frankenphp {
+        num_threads 4
+        max_threads 4
+        php_ini display_errors Off
+        php_ini expose_php Off
+        php_ini memory_limit 256M
+    }
+}
+
+:{$PORT:8080} {
+    root * /app/public
+    encode zstd gzip
+    header -Server
+    @sensitive path /.env /.env.* /.git /.git/*
+    respond @sensitive 404
+    php_server
+}

@@ -1,0 +1,20 @@
+name: Deployment contract
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  deployment-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact commit
+        run: |
+          git init .
+          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+      - name: Verify service boundaries and client release safety
+        run: python3 scripts/tests/test_deployment_contract.py

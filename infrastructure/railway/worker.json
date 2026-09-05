@@ -1,0 +1,17 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK",
+    "watchPatterns": [
+      "/apps/api/**",
+      "/packages/contracts/**",
+      "/infrastructure/railway/worker.json"
+    ]
+  },
+  "deploy": {
+    "startCommand": "sh railway/start-worker.sh",
+    "numReplicas": 1,
+    "sleepApplication": false,
+    "restartPolicyType": "ALWAYS"
+  }
+}
