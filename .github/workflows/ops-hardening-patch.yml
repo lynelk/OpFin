@@ -1,0 +1,86 @@
+name: Apply operations hardening patch
+
+on:
+  push:
+    branches:
+      - ops/rightsize-recovery-hardening
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'Apply operations hardening patch'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: ops/rightsize-recovery-hardening
+    steps:
+      - name: Patch scheduler and operational scans
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init repo
+          cd repo
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth=2 origin "${BRANCH}"
+          git checkout -B "${BRANCH}" FETCH_HEAD
+          python3 - <<'PY'
+          from pathlib import Path
+
+          service = Path('apps/api/app/Services/AutonomousOperationsService.php')
+          text = service.read_text()
+          text = text.replace('class AutonomousOperationsService\n{', 'class AutonomousOperationsService\n{\n    private const BATCH_SIZE = 200;')
+          old = """            'last_run' => Schema::hasTable('autopilot_runs')
+                ? DB::table('autopilot_runs')->where('status', 'completed')->orderByDesc('id')->first()
+                : null,"""
+          new = """            // Keep summaries bounded. Never recursively embed the previous run's JSON summary.
+            'last_run' => Schema::hasTable('autopilot_runs')
+                ? DB::table('autopilot_runs')
+                    ->where('status', 'completed')
+                    ->orderByDesc('id')
+                    ->first(['id', 'status', 'trigger', 'started_at', 'completed_at', 'observations', 'actions_executed', 'exceptions_created'])
+                : null,"""
+          if old not in text:
+              raise SystemExit('last_run pattern not found')
+          text = text.replace(old, new)
+
+          # Bound operational scans so one cron invocation cannot materialize an unbounded table in memory.
+          patterns = [
+              "DB::table('kyc_cases')->whereIn('status', ['submitted', 'pending', 'manual_review'])->get()",
+              "->whereBetween('expires_at', [now(), now()->addDays(14)])\n            ->get()",
+              "->where('updated_at', '<=', now()->subMinutes(15))\n            ->get()",
+              "DB::table('reconciliation_items')->whereIn('status', ['open', 'mismatch', 'unmatched'])->get()",
+              "->where('created_at', '<=', now()->subHours(24))\n            ->get()",
+              "DB::table('hardship_cases')->where('status', 'submitted')->get()",
+              "DB::table('autopilot_work_items')->where('status', 'open')->where('requires_human', false)->get()",
+          ]
+          replacements = [
+              "DB::table('kyc_cases')->whereIn('status', ['submitted', 'pending', 'manual_review'])->limit(self::BATCH_SIZE)->get()",
+              "->whereBetween('expires_at', [now(), now()->addDays(14)])\n            ->limit(self::BATCH_SIZE)\n            ->get()",
+              "->where('updated_at', '<=', now()->subMinutes(15))\n            ->limit(self::BATCH_SIZE)\n            ->get()",
+              "DB::table('reconciliation_items')->whereIn('status', ['open', 'mismatch', 'unmatched'])->limit(self::BATCH_SIZE)->get()",
+              "->where('created_at', '<=', now()->subHours(24))\n            ->limit(self::BATCH_SIZE)\n            ->get()",
+              "DB::table('hardship_cases')->where('status', 'submitted')->limit(self::BATCH_SIZE)->get()",
+              "DB::table('autopilot_work_items')->where('status', 'open')->where('requires_human', false)->limit(self::BATCH_SIZE)->get()",
+          ]
+          for oldp, newp in zip(patterns, replacements):
+              if oldp not in text:
+                  raise SystemExit(f'scan pattern not found: {oldp[:80]}')
+              text = text.replace(oldp, newp, 1)
+          service.write_text(text)
+
+          routes = Path('apps/api/routes/console.php')
+          r = routes.read_text()
+          oldr = "Schedule::command(RunPlatformAutopilot::class)->everyFiveMinutes()->withoutOverlapping();"
+          newr = "Schedule::command(RunPlatformAutopilot::class)->everyFifteenMinutes()->withoutOverlapping();"
+          if oldr not in r:
+              raise SystemExit('autopilot cadence pattern not found')
+          routes.write_text(r.replace(oldr, newr))
+          PY
+          git config user.name "OpFin Release Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add apps/api/app/Services/AutonomousOperationsService.php apps/api/routes/console.php
+          git diff --cached --check
+          git commit -m "Apply operations hardening patch"
+          git push origin "HEAD:${BRANCH}"
