@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Schema;
 
 class AutonomousOperationsService
 {
+    private const SCAN_BATCH_SIZE = 100;
+
     public function run(string $trigger = 'scheduled'): array
     {
         $runId = DB::table('autopilot_runs')->insertGetId([
@@ -54,7 +56,7 @@ class AutonomousOperationsService
             'observations' => $observations,
             'actions_executed' => $actions,
             'exceptions_created' => $exceptions,
-            'summary' => json_encode($summary),
+            'summary' => json_encode($summary, JSON_THROW_ON_ERROR),
             'completed_at' => now(),
             'updated_at' => now(),
         ]);
@@ -87,9 +89,7 @@ class AutonomousOperationsService
                 ->groupBy('severity')
                 ->orderByDesc('total')
                 ->get(),
-            'last_run' => Schema::hasTable('autopilot_runs')
-                ? DB::table('autopilot_runs')->where('status', 'completed')->orderByDesc('id')->first()
-                : null,
+            'last_run' => $this->lastRunSnapshot(),
         ];
     }
 
@@ -127,27 +127,33 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $cases = DB::table('kyc_cases')->whereIn('status', ['submitted', 'pending', 'manual_review'])->get();
+        $count = 0;
         $created = 0;
-        foreach ($cases as $case) {
-            $created += $this->upsertWorkItem($runId, [
-                'domain' => 'kyc',
-                'type' => 'kyc_review_required',
-                'severity' => $case->status === 'manual_review' ? 'high' : 'medium',
-                'subject_type' => 'kyc_case',
-                'subject_reference' => (string) $case->id,
-                'title' => 'Identity verification needs review',
-                'description' => 'A KYC case is waiting for a reviewer or a provider result.',
-                'recommended_action' => 'Review identity evidence and either verify, request correction, or reject with a reason.',
-                'confidence' => 1,
-                'automation_tier' => 'A1',
-                'requires_human' => true,
-                'due_at' => now()->addHours(4),
-                'context' => ['status' => $case->status, 'user_id' => $case->user_id ?? null],
-            ]);
-        }
+        DB::table('kyc_cases')
+            ->whereIn('status', ['submitted', 'pending', 'manual_review'])
+            ->orderBy('id')
+            ->chunkById(self::SCAN_BATCH_SIZE, function ($cases) use ($runId, &$count, &$created): void {
+                $count += $cases->count();
+                foreach ($cases as $case) {
+                    $created += $this->upsertWorkItem($runId, [
+                        'domain' => 'kyc',
+                        'type' => 'kyc_review_required',
+                        'severity' => $case->status === 'manual_review' ? 'high' : 'medium',
+                        'subject_type' => 'kyc_case',
+                        'subject_reference' => (string) $case->id,
+                        'title' => 'Identity verification needs review',
+                        'description' => 'A KYC case is waiting for a reviewer or a provider result.',
+                        'recommended_action' => 'Review identity evidence and either verify, request correction, or reject with a reason.',
+                        'confidence' => 1,
+                        'automation_tier' => 'A1',
+                        'requires_human' => true,
+                        'due_at' => now()->addHours(4),
+                        'context' => ['status' => $case->status, 'user_id' => $case->user_id ?? null],
+                    ]);
+                }
+            });
 
-        return [$cases->count(), $created];
+        return [$count, $created];
     }
 
     private function scanConsents(int $runId): array
@@ -156,31 +162,35 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $expiring = DB::table('consents')
+        $count = 0;
+        $created = 0;
+        DB::table('consents')
             ->where('status', 'granted')
             ->whereNotNull('expires_at')
             ->whereBetween('expires_at', [now(), now()->addDays(14)])
-            ->get();
-        $created = 0;
-        foreach ($expiring as $consent) {
-            $created += $this->upsertWorkItem($runId, [
-                'domain' => 'consent',
-                'type' => 'consent_expiring',
-                'severity' => 'low',
-                'subject_type' => 'consent',
-                'subject_reference' => (string) $consent->id,
-                'title' => 'Customer consent is expiring',
-                'description' => 'A granted permission will expire soon and may interrupt a product journey.',
-                'recommended_action' => 'Prompt the customer contextually for re-consent before the permission expires.',
-                'confidence' => 1,
-                'automation_tier' => 'A2',
-                'requires_human' => false,
-                'due_at' => $consent->expires_at,
-                'context' => ['purpose' => $consent->purpose ?? null, 'user_id' => $consent->user_id ?? null],
-            ]);
-        }
+            ->orderBy('id')
+            ->chunkById(self::SCAN_BATCH_SIZE, function ($consents) use ($runId, &$count, &$created): void {
+                $count += $consents->count();
+                foreach ($consents as $consent) {
+                    $created += $this->upsertWorkItem($runId, [
+                        'domain' => 'consent',
+                        'type' => 'consent_expiring',
+                        'severity' => 'low',
+                        'subject_type' => 'consent',
+                        'subject_reference' => (string) $consent->id,
+                        'title' => 'Customer consent is expiring',
+                        'description' => 'A granted permission will expire soon and may interrupt a product journey.',
+                        'recommended_action' => 'Prompt the customer contextually for re-consent before the permission expires.',
+                        'confidence' => 1,
+                        'automation_tier' => 'A2',
+                        'requires_human' => false,
+                        'due_at' => $consent->expires_at,
+                        'context' => ['purpose' => $consent->purpose ?? null, 'user_id' => $consent->user_id ?? null],
+                    ]);
+                }
+            });
 
-        return [$expiring->count(), $created];
+        return [$count, $created];
     }
 
     private function scanPayments(int $runId): array
@@ -189,30 +199,34 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $stale = DB::table('mobile_money_transactions')
+        $count = 0;
+        $created = 0;
+        DB::table('mobile_money_transactions')
             ->whereIn('status', ['pending', 'processing', 'unknown'])
             ->where('updated_at', '<=', now()->subMinutes(15))
-            ->get();
-        $created = 0;
-        foreach ($stale as $transaction) {
-            $created += $this->upsertWorkItem($runId, [
-                'domain' => 'payments',
-                'type' => 'payment_status_stale',
-                'severity' => 'high',
-                'subject_type' => 'mobile_money_transaction',
-                'subject_reference' => (string) $transaction->id,
-                'title' => 'Payment outcome is ambiguous',
-                'description' => 'A money movement has remained unresolved beyond the normal processing window.',
-                'recommended_action' => 'Refresh provider status and reconcile before any retry or customer-facing finality message.',
-                'confidence' => 1,
-                'automation_tier' => 'A3',
-                'requires_human' => true,
-                'due_at' => now()->addMinutes(30),
-                'context' => ['status' => $transaction->status, 'provider' => $transaction->provider ?? null],
-            ]);
-        }
+            ->orderBy('id')
+            ->chunkById(self::SCAN_BATCH_SIZE, function ($transactions) use ($runId, &$count, &$created): void {
+                $count += $transactions->count();
+                foreach ($transactions as $transaction) {
+                    $created += $this->upsertWorkItem($runId, [
+                        'domain' => 'payments',
+                        'type' => 'payment_status_stale',
+                        'severity' => 'high',
+                        'subject_type' => 'mobile_money_transaction',
+                        'subject_reference' => (string) $transaction->id,
+                        'title' => 'Payment outcome is ambiguous',
+                        'description' => 'A money movement has remained unresolved beyond the normal processing window.',
+                        'recommended_action' => 'Refresh provider status and reconcile before any retry or customer-facing finality message.',
+                        'confidence' => 1,
+                        'automation_tier' => 'A3',
+                        'requires_human' => true,
+                        'due_at' => now()->addMinutes(30),
+                        'context' => ['status' => $transaction->status, 'provider' => $transaction->provider ?? null],
+                    ]);
+                }
+            });
 
-        return [$stale->count(), $created];
+        return [$count, $created];
     }
 
     private function scanReconciliation(int $runId): array
@@ -221,27 +235,33 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $items = DB::table('reconciliation_items')->whereIn('status', ['open', 'mismatch', 'unmatched'])->get();
+        $count = 0;
         $created = 0;
-        foreach ($items as $item) {
-            $created += $this->upsertWorkItem($runId, [
-                'domain' => 'reconciliation',
-                'type' => 'reconciliation_exception',
-                'severity' => 'high',
-                'subject_type' => 'reconciliation_item',
-                'subject_reference' => (string) $item->id,
-                'title' => 'Reconciliation exception needs attention',
-                'description' => 'Provider and internal records do not yet agree.',
-                'recommended_action' => 'Inspect provider evidence and resolve using the documented correction path. Never overwrite the ledger.',
-                'confidence' => 1,
-                'automation_tier' => 'A1',
-                'requires_human' => true,
-                'due_at' => now()->addHours(2),
-                'context' => ['status' => $item->status],
-            ]);
-        }
+        DB::table('reconciliation_items')
+            ->whereIn('status', ['open', 'mismatch', 'unmatched'])
+            ->orderBy('id')
+            ->chunkById(self::SCAN_BATCH_SIZE, function ($items) use ($runId, &$count, &$created): void {
+                $count += $items->count();
+                foreach ($items as $item) {
+                    $created += $this->upsertWorkItem($runId, [
+                        'domain' => 'reconciliation',
+                        'type' => 'reconciliation_exception',
+                        'severity' => 'high',
+                        'subject_type' => 'reconciliation_item',
+                        'subject_reference' => (string) $item->id,
+                        'title' => 'Reconciliation exception needs attention',
+                        'description' => 'Provider and internal records do not yet agree.',
+                        'recommended_action' => 'Inspect provider evidence and resolve using the documented correction path. Never overwrite the ledger.',
+                        'confidence' => 1,
+                        'automation_tier' => 'A1',
+                        'requires_human' => true,
+                        'due_at' => now()->addHours(2),
+                        'context' => ['status' => $item->status],
+                    ]);
+                }
+            });
 
-        return [$items->count(), $created];
+        return [$count, $created];
     }
 
     private function scanSupport(int $runId): array
@@ -250,30 +270,34 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $cases = DB::table('support_cases')
+        $count = 0;
+        $created = 0;
+        DB::table('support_cases')
             ->whereIn('status', ['open', 'new', 'escalated'])
             ->where('created_at', '<=', now()->subHours(24))
-            ->get();
-        $created = 0;
-        foreach ($cases as $case) {
-            $created += $this->upsertWorkItem($runId, [
-                'domain' => 'support',
-                'type' => 'support_sla_risk',
-                'severity' => $case->status === 'escalated' ? 'high' : 'medium',
-                'subject_type' => 'support_case',
-                'subject_reference' => (string) $case->id,
-                'title' => 'Support case is approaching or beyond SLA',
-                'description' => 'A customer case has remained unresolved for more than 24 hours.',
-                'recommended_action' => 'Review the full customer context, respond, and escalate only if specialist judgment is required.',
-                'confidence' => 1,
-                'automation_tier' => 'A1',
-                'requires_human' => true,
-                'due_at' => now()->addHours(1),
-                'context' => ['status' => $case->status, 'user_id' => $case->user_id ?? null],
-            ]);
-        }
+            ->orderBy('id')
+            ->chunkById(self::SCAN_BATCH_SIZE, function ($cases) use ($runId, &$count, &$created): void {
+                $count += $cases->count();
+                foreach ($cases as $case) {
+                    $created += $this->upsertWorkItem($runId, [
+                        'domain' => 'support',
+                        'type' => 'support_sla_risk',
+                        'severity' => $case->status === 'escalated' ? 'high' : 'medium',
+                        'subject_type' => 'support_case',
+                        'subject_reference' => (string) $case->id,
+                        'title' => 'Support case is approaching or beyond SLA',
+                        'description' => 'A customer case has remained unresolved for more than 24 hours.',
+                        'recommended_action' => 'Review the full customer context, respond, and escalate only if specialist judgment is required.',
+                        'confidence' => 1,
+                        'automation_tier' => 'A1',
+                        'requires_human' => true,
+                        'due_at' => now()->addHours(1),
+                        'context' => ['status' => $case->status, 'user_id' => $case->user_id ?? null],
+                    ]);
+                }
+            });
 
-        return [$cases->count(), $created];
+        return [$count, $created];
     }
 
     private function scanHardship(int $runId): array
@@ -282,68 +306,106 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $cases = DB::table('hardship_cases')->where('status', 'submitted')->get();
+        $count = 0;
         $created = 0;
-        foreach ($cases as $case) {
-            $created += $this->upsertWorkItem($runId, [
-                'domain' => 'hardship',
-                'type' => 'hardship_review_required',
-                'severity' => 'high',
-                'subject_type' => 'hardship_case',
-                'subject_reference' => (string) $case->id,
-                'title' => 'Customer hardship request needs review',
-                'description' => 'A customer has requested repayment relief.',
-                'recommended_action' => 'Review affordability and requested relief using maker-checker approval. Do not automate the final adverse or relief decision.',
-                'confidence' => 1,
-                'automation_tier' => 'A5',
-                'requires_human' => true,
-                'due_at' => now()->addHours(4),
-                'context' => ['user_id' => $case->user_id ?? null],
-            ]);
-        }
+        DB::table('hardship_cases')
+            ->where('status', 'submitted')
+            ->orderBy('id')
+            ->chunkById(self::SCAN_BATCH_SIZE, function ($cases) use ($runId, &$count, &$created): void {
+                $count += $cases->count();
+                foreach ($cases as $case) {
+                    $created += $this->upsertWorkItem($runId, [
+                        'domain' => 'hardship',
+                        'type' => 'hardship_review_required',
+                        'severity' => 'high',
+                        'subject_type' => 'hardship_case',
+                        'subject_reference' => (string) $case->id,
+                        'title' => 'Customer hardship request needs review',
+                        'description' => 'A customer has requested repayment relief.',
+                        'recommended_action' => 'Review affordability and requested relief using maker-checker approval. Do not automate the final adverse or relief decision.',
+                        'confidence' => 1,
+                        'automation_tier' => 'A5',
+                        'requires_human' => true,
+                        'due_at' => now()->addHours(4),
+                        'context' => ['user_id' => $case->user_id ?? null],
+                    ]);
+                }
+            });
 
-        return [$cases->count(), $created];
+        return [$count, $created];
     }
 
     private function executeSafeActions(int $runId): int
     {
         $executed = 0;
-        $items = DB::table('autopilot_work_items')->where('status', 'open')->where('requires_human', false)->get();
-        foreach ($items as $item) {
-            if ($item->type !== 'consent_expiring') {
-                continue;
-            }
+        DB::table('autopilot_work_items')
+            ->where('status', 'open')
+            ->where('requires_human', false)
+            ->orderBy('id')
+            ->chunkById(self::SCAN_BATCH_SIZE, function ($items) use ($runId, &$executed): void {
+                foreach ($items as $item) {
+                    if ($item->type !== 'consent_expiring') {
+                        continue;
+                    }
 
-            DB::transaction(function () use ($runId, $item): void {
-                $current = DB::table('autopilot_work_items')->where('id', $item->id)->lockForUpdate()->first();
-                if (! $current || $current->status !== 'open') {
-                    return;
+                    $didExecute = false;
+                    DB::transaction(function () use ($runId, $item, &$didExecute): void {
+                        $current = DB::table('autopilot_work_items')->where('id', $item->id)->lockForUpdate()->first();
+                        if (! $current || $current->status !== 'open') {
+                            return;
+                        }
+
+                        DB::table('autopilot_action_logs')->insert([
+                            'autopilot_run_id' => $runId,
+                            'work_item_id' => $item->id,
+                            'domain' => $item->domain,
+                            'action' => 'queue_contextual_reconsent_prompt',
+                            'outcome' => 'queued',
+                            'automation_tier' => 'A2',
+                            'context' => $item->context,
+                            'executed_at' => now(),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+
+                        DB::table('autopilot_work_items')->where('id', $item->id)->update([
+                            'status' => 'automated',
+                            'resolved_at' => now(),
+                            'resolved_by' => 'SYSTEM:autopilot',
+                            'updated_at' => now(),
+                        ]);
+                        $didExecute = true;
+                    });
+
+                    if ($didExecute) {
+                        $executed++;
+                    }
                 }
-
-                DB::table('autopilot_action_logs')->insert([
-                    'autopilot_run_id' => $runId,
-                    'work_item_id' => $item->id,
-                    'domain' => $item->domain,
-                    'action' => 'queue_contextual_reconsent_prompt',
-                    'outcome' => 'queued',
-                    'automation_tier' => 'A2',
-                    'context' => $item->context,
-                    'executed_at' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                DB::table('autopilot_work_items')->where('id', $item->id)->update([
-                    'status' => 'automated',
-                    'resolved_at' => now(),
-                    'resolved_by' => 'SYSTEM:autopilot',
-                    'updated_at' => now(),
-                ]);
             });
-            $executed++;
-        }
 
         return $executed;
+    }
+
+    private function lastRunSnapshot(): ?object
+    {
+        if (! Schema::hasTable('autopilot_runs')) {
+            return null;
+        }
+
+        return DB::table('autopilot_runs')
+            ->where('status', 'completed')
+            ->select([
+                'id',
+                'status',
+                'trigger',
+                'observations',
+                'actions_executed',
+                'exceptions_created',
+                'started_at',
+                'completed_at',
+            ])
+            ->orderByDesc('id')
+            ->first();
     }
 
     private function upsertWorkItem(int $runId, array $data): int
@@ -365,7 +427,7 @@ class AutonomousOperationsService
             'confidence' => $data['confidence'],
             'automation_tier' => $data['automation_tier'],
             'requires_human' => $data['requires_human'],
-            'context' => json_encode($data['context'] ?? []),
+            'context' => json_encode($data['context'] ?? [], JSON_THROW_ON_ERROR),
             'due_at' => $data['due_at'] ?? null,
             'autopilot_run_id' => $runId,
             'created_at' => now(),
