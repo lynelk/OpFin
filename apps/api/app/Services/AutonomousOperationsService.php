@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class AutonomousOperationsService
 {
+    private const BATCH_SIZE = 200;
+
     public function run(string $trigger = 'scheduled'): array
     {
         $runId = DB::table('autopilot_runs')->insertGetId([
@@ -73,6 +76,23 @@ class AutonomousOperationsService
         $automatic = (clone $open)->where('requires_human', false)->count();
         $human = (clone $open)->where('requires_human', true)->count();
 
+        $lastRun = null;
+        if (Schema::hasTable('autopilot_runs')) {
+            $lastRun = DB::table('autopilot_runs')
+                ->where('status', 'completed')
+                ->orderByDesc('id')
+                ->first([
+                    'id',
+                    'status',
+                    'trigger',
+                    'observations',
+                    'actions_executed',
+                    'exceptions_created',
+                    'started_at',
+                    'completed_at',
+                ]);
+        }
+
         return [
             'autonomy_rate' => $openCount === 0 ? 100.0 : round(($automatic / max(1, $openCount)) * 100, 1),
             'open_exceptions' => $human,
@@ -87,9 +107,7 @@ class AutonomousOperationsService
                 ->groupBy('severity')
                 ->orderByDesc('total')
                 ->get(),
-            'last_run' => Schema::hasTable('autopilot_runs')
-                ? DB::table('autopilot_runs')->where('status', 'completed')->orderByDesc('id')->first()
-                : null,
+            'last_run' => $lastRun,
         ];
     }
 
@@ -127,10 +145,9 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $cases = DB::table('kyc_cases')->whereIn('status', ['submitted', 'pending', 'manual_review'])->get();
-        $created = 0;
-        foreach ($cases as $case) {
-            $created += $this->upsertWorkItem($runId, [
+        return $this->processInBatches(
+            DB::table('kyc_cases')->whereIn('status', ['submitted', 'pending', 'manual_review']),
+            fn ($case): int => $this->upsertWorkItem($runId, [
                 'domain' => 'kyc',
                 'type' => 'kyc_review_required',
                 'severity' => $case->status === 'manual_review' ? 'high' : 'medium',
@@ -144,10 +161,8 @@ class AutonomousOperationsService
                 'requires_human' => true,
                 'due_at' => now()->addHours(4),
                 'context' => ['status' => $case->status, 'user_id' => $case->user_id ?? null],
-            ]);
-        }
-
-        return [$cases->count(), $created];
+            ])
+        );
     }
 
     private function scanConsents(int $runId): array
@@ -156,14 +171,12 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $expiring = DB::table('consents')
-            ->where('status', 'granted')
-            ->whereNotNull('expires_at')
-            ->whereBetween('expires_at', [now(), now()->addDays(14)])
-            ->get();
-        $created = 0;
-        foreach ($expiring as $consent) {
-            $created += $this->upsertWorkItem($runId, [
+        return $this->processInBatches(
+            DB::table('consents')
+                ->where('status', 'granted')
+                ->whereNotNull('expires_at')
+                ->whereBetween('expires_at', [now(), now()->addDays(14)]),
+            fn ($consent): int => $this->upsertWorkItem($runId, [
                 'domain' => 'consent',
                 'type' => 'consent_expiring',
                 'severity' => 'low',
@@ -177,10 +190,8 @@ class AutonomousOperationsService
                 'requires_human' => false,
                 'due_at' => $consent->expires_at,
                 'context' => ['purpose' => $consent->purpose ?? null, 'user_id' => $consent->user_id ?? null],
-            ]);
-        }
-
-        return [$expiring->count(), $created];
+            ])
+        );
     }
 
     private function scanPayments(int $runId): array
@@ -189,13 +200,11 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $stale = DB::table('mobile_money_transactions')
-            ->whereIn('status', ['pending', 'processing', 'unknown'])
-            ->where('updated_at', '<=', now()->subMinutes(15))
-            ->get();
-        $created = 0;
-        foreach ($stale as $transaction) {
-            $created += $this->upsertWorkItem($runId, [
+        return $this->processInBatches(
+            DB::table('mobile_money_transactions')
+                ->whereIn('status', ['pending', 'processing', 'unknown'])
+                ->where('updated_at', '<=', now()->subMinutes(15)),
+            fn ($transaction): int => $this->upsertWorkItem($runId, [
                 'domain' => 'payments',
                 'type' => 'payment_status_stale',
                 'severity' => 'high',
@@ -209,10 +218,8 @@ class AutonomousOperationsService
                 'requires_human' => true,
                 'due_at' => now()->addMinutes(30),
                 'context' => ['status' => $transaction->status, 'provider' => $transaction->provider ?? null],
-            ]);
-        }
-
-        return [$stale->count(), $created];
+            ])
+        );
     }
 
     private function scanReconciliation(int $runId): array
@@ -221,10 +228,9 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $items = DB::table('reconciliation_items')->whereIn('status', ['open', 'mismatch', 'unmatched'])->get();
-        $created = 0;
-        foreach ($items as $item) {
-            $created += $this->upsertWorkItem($runId, [
+        return $this->processInBatches(
+            DB::table('reconciliation_items')->whereIn('status', ['open', 'mismatch', 'unmatched']),
+            fn ($item): int => $this->upsertWorkItem($runId, [
                 'domain' => 'reconciliation',
                 'type' => 'reconciliation_exception',
                 'severity' => 'high',
@@ -238,10 +244,8 @@ class AutonomousOperationsService
                 'requires_human' => true,
                 'due_at' => now()->addHours(2),
                 'context' => ['status' => $item->status],
-            ]);
-        }
-
-        return [$items->count(), $created];
+            ])
+        );
     }
 
     private function scanSupport(int $runId): array
@@ -250,13 +254,11 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $cases = DB::table('support_cases')
-            ->whereIn('status', ['open', 'new', 'escalated'])
-            ->where('created_at', '<=', now()->subHours(24))
-            ->get();
-        $created = 0;
-        foreach ($cases as $case) {
-            $created += $this->upsertWorkItem($runId, [
+        return $this->processInBatches(
+            DB::table('support_cases')
+                ->whereIn('status', ['open', 'new', 'escalated'])
+                ->where('created_at', '<=', now()->subHours(24)),
+            fn ($case): int => $this->upsertWorkItem($runId, [
                 'domain' => 'support',
                 'type' => 'support_sla_risk',
                 'severity' => $case->status === 'escalated' ? 'high' : 'medium',
@@ -270,10 +272,8 @@ class AutonomousOperationsService
                 'requires_human' => true,
                 'due_at' => now()->addHours(1),
                 'context' => ['status' => $case->status, 'user_id' => $case->user_id ?? null],
-            ]);
-        }
-
-        return [$cases->count(), $created];
+            ])
+        );
     }
 
     private function scanHardship(int $runId): array
@@ -282,10 +282,9 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $cases = DB::table('hardship_cases')->where('status', 'submitted')->get();
-        $created = 0;
-        foreach ($cases as $case) {
-            $created += $this->upsertWorkItem($runId, [
+        return $this->processInBatches(
+            DB::table('hardship_cases')->where('status', 'submitted'),
+            fn ($case): int => $this->upsertWorkItem($runId, [
                 'domain' => 'hardship',
                 'type' => 'hardship_review_required',
                 'severity' => 'high',
@@ -299,51 +298,74 @@ class AutonomousOperationsService
                 'requires_human' => true,
                 'due_at' => now()->addHours(4),
                 'context' => ['user_id' => $case->user_id ?? null],
-            ]);
-        }
-
-        return [$cases->count(), $created];
+            ])
+        );
     }
 
     private function executeSafeActions(int $runId): int
     {
         $executed = 0;
-        $items = DB::table('autopilot_work_items')->where('status', 'open')->where('requires_human', false)->get();
-        foreach ($items as $item) {
-            if ($item->type !== 'consent_expiring') {
-                continue;
-            }
 
-            DB::transaction(function () use ($runId, $item): void {
-                $current = DB::table('autopilot_work_items')->where('id', $item->id)->lockForUpdate()->first();
-                if (! $current || $current->status !== 'open') {
-                    return;
+        DB::table('autopilot_work_items')
+            ->where('status', 'open')
+            ->where('requires_human', false)
+            ->chunkById(self::BATCH_SIZE, function ($items) use ($runId, &$executed): void {
+                foreach ($items as $item) {
+                    if ($item->type !== 'consent_expiring') {
+                        continue;
+                    }
+
+                    $didExecute = DB::transaction(function () use ($runId, $item): bool {
+                        $current = DB::table('autopilot_work_items')->where('id', $item->id)->lockForUpdate()->first();
+                        if (! $current || $current->status !== 'open') {
+                            return false;
+                        }
+
+                        DB::table('autopilot_action_logs')->insert([
+                            'autopilot_run_id' => $runId,
+                            'work_item_id' => $item->id,
+                            'domain' => $item->domain,
+                            'action' => 'queue_contextual_reconsent_prompt',
+                            'outcome' => 'queued',
+                            'automation_tier' => 'A2',
+                            'context' => $item->context,
+                            'executed_at' => now(),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+
+                        DB::table('autopilot_work_items')->where('id', $item->id)->update([
+                            'status' => 'automated',
+                            'resolved_at' => now(),
+                            'resolved_by' => 'SYSTEM:autopilot',
+                            'updated_at' => now(),
+                        ]);
+
+                        return true;
+                    });
+
+                    if ($didExecute) {
+                        $executed++;
+                    }
                 }
-
-                DB::table('autopilot_action_logs')->insert([
-                    'autopilot_run_id' => $runId,
-                    'work_item_id' => $item->id,
-                    'domain' => $item->domain,
-                    'action' => 'queue_contextual_reconsent_prompt',
-                    'outcome' => 'queued',
-                    'automation_tier' => 'A2',
-                    'context' => $item->context,
-                    'executed_at' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                DB::table('autopilot_work_items')->where('id', $item->id)->update([
-                    'status' => 'automated',
-                    'resolved_at' => now(),
-                    'resolved_by' => 'SYSTEM:autopilot',
-                    'updated_at' => now(),
-                ]);
             });
-            $executed++;
-        }
 
         return $executed;
+    }
+
+    private function processInBatches(Builder $query, callable $processor): array
+    {
+        $observations = 0;
+        $created = 0;
+
+        $query->chunkById(self::BATCH_SIZE, function ($rows) use (&$observations, &$created, $processor): void {
+            foreach ($rows as $row) {
+                $observations++;
+                $created += $processor($row);
+            }
+        });
+
+        return [$observations, $created];
     }
 
     private function upsertWorkItem(int $runId, array $data): int
@@ -357,7 +379,7 @@ class AutonomousOperationsService
         ];
 
         $exists = DB::table('autopilot_work_items')->where($key)->exists();
-        DB::table('autopilot_work_items')->updateOrInsert($key, [
+        $values = [
             'severity' => $data['severity'],
             'title' => $data['title'],
             'description' => $data['description'],
@@ -368,9 +390,14 @@ class AutonomousOperationsService
             'context' => json_encode($data['context'] ?? []),
             'due_at' => $data['due_at'] ?? null,
             'autopilot_run_id' => $runId,
-            'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+
+        if (! $exists) {
+            $values['created_at'] = now();
+        }
+
+        DB::table('autopilot_work_items')->updateOrInsert($key, $values);
 
         return $exists ? 0 : 1;
     }
