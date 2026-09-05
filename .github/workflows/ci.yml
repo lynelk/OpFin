@@ -21,6 +21,18 @@ jobs:
           git checkout --detach FETCH_HEAD
       - run: sh scripts/verify-layout.sh
 
+  repo-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact commit
+        run: |
+          git init .
+          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+      - name: Reject committed secrets and non-source artifacts
+        run: sh scripts/verify-repository-security.sh
+
   api:
     runs-on: ubuntu-latest
     steps:
@@ -173,7 +185,7 @@ jobs:
             --dart-define=OPFIN_APP_STORE_P2P_BORROWING_ENABLED=false
 
   release-gate:
-    needs: [layout, api, api-assets, web, client-android, client-ios]
+    needs: [layout, repo-security, api, api-assets, web, client-android, client-ios]
     runs-on: ubuntu-latest
     steps:
       - name: Record validated canonical SHA
