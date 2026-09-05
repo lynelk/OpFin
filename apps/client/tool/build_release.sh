@@ -7,12 +7,27 @@ case "$target" in android|ios) ;; *) echo 'Usage: OPFIN_API_BASE_URL=https://hos
 export OPFIN_API_BASE_URL
 python3 - <<'PY'
 import os
+import re
 from urllib.parse import urlsplit
-u = urlsplit(os.environ['OPFIN_API_BASE_URL'])
-if (u.scheme != 'https' or not u.hostname or u.hostname in {'localhost', '127.0.0.1', '::1'}
-        or u.hostname.endswith('.internal') or u.username or u.password or u.query or u.fragment
-        or u.path.rstrip('/') != '/api'):
-    raise SystemExit('Release API URL must be a public HTTPS origin with /api, without credentials, a query, or a fragment.')
+
+value = os.environ['OPFIN_API_BASE_URL']
+try:
+    u = urlsplit(value)
+    host = (u.hostname or '').lower().rstrip('.')
+    labels = host.split('.')
+    local = any(host == suffix or host.endswith('.' + suffix)
+                for suffix in ('localhost', 'local', 'internal', 'test', 'invalid'))
+    # A DNS hostname is required. This also excludes all IP literals and legacy
+    # numeric/hexadecimal loopback aliases without requiring a DNS lookup.
+    valid = (value == value.strip() and u.scheme == 'https' and not local
+             and len(labels) >= 2 and re.search('[a-z]', labels[-1])
+             and all(re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', label) for label in labels)
+             and not u.username and not u.password and not u.query and not u.fragment
+             and u.path in ('/api', '/api/') and (u.port is None or 1 <= u.port <= 65535))
+except ValueError:
+    valid = False
+if not valid:
+    raise SystemExit('Release API URL must use HTTPS, a public DNS hostname and /api, without credentials, query or fragment.')
 PY
 command -v flutter >/dev/null || { echo 'Flutter must be installed.' >&2; exit 1; }
 flutter pub get

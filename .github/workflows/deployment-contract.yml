@@ -17,4 +17,7 @@ jobs:
           git checkout --detach FETCH_HEAD
           git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
       - name: Verify service boundaries and client release safety
-        run: python3 scripts/tests/test_deployment_contract.py
+        run: |
+          python3 scripts/tests/test_deployment_contract.py
+          python3 scripts/tests/test_release_host_safety.py
+          node --test apps/web/scripts/validate-production-env.node-test.mjs
