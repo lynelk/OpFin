@@ -88,7 +88,7 @@ class AutonomousOperationsService
                 ->groupBy('severity')
                 ->orderByDesc('total')
                 ->get(),
-            // Keep summaries bounded. Never recursively embed the previous run's JSON summary.
+  // Keep summaries bounded. Never recursively embed the previous run's JSON summary.
   'last_run' => Schema::hasTable('autopilot_runs')
       ? DB::table('autopilot_runs')
           ->where('status', 'completed')
@@ -132,7 +132,7 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $cases = DB::table('kyc_cases')->whereIn('status', ['submitted', 'pending', 'manual_review'])-limit(self::BATCH_SIZE)->get();
+        $cases = DB::table('kyc_cases')->whereIn('status', ['submitted', 'pending', 'manual_review'])->limit(self::BATCH_SIZE)->get();
         $created = 0;
         foreach ($cases as $case) {
             $created += $this->upsertWorkItem($runId, [
@@ -228,7 +228,7 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $items = DB::table('reconciliation_items')->whereIn('status', ['open', 'mismatch', 'unmatched'])-limit(self::BATCH_SIZE)->get();
+        $items = DB::table('reconciliation_items')->whereIn('status', ['open', 'mismatch', 'unmatched'])->limit(self::BATCH_SIZE)->get();
         $created = 0;
         foreach ($items as $item) {
             $created += $this->upsertWorkItem($runId, [
@@ -290,7 +290,7 @@ class AutonomousOperationsService
             return [0, 0];
         }
 
-        $cases = DB::table('hardship_cases')->where('status', 'submitted')-limit(self::BATCH_SIZE)->get();
+        $cases = DB::table('hardship_cases')->where('status', 'submitted')->limit(self::BATCH_SIZE)->get();
         $created = 0;
         foreach ($cases as $case) {
             $created += $this->upsertWorkItem($runId, [
@@ -316,7 +316,7 @@ class AutonomousOperationsService
     private function executeSafeActions(int $runId): int
     {
         $executed = 0;
-        $items = DB::table('autopilot_work_items')->where('status', 'open')->where('requires_human', false)-limit(self::BATCH_SIZE)->get();
+        $items = DB::table('autopilot_work_items')->where('status', 'open')->where('requires_human', false)->limit(self::BATCH_SIZE)->get();
         foreach ($items as $item) {
             if ($item->type !== 'consent_expiring') {
                 continue;
