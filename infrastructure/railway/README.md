@@ -13,7 +13,7 @@ OpFin is one source repository, not one executable application. Deploying its ro
 
 Set the root directory separately in Railway service settings. Railway config-file paths are relative to the repository, not to the selected application root. Never create separate databases for the API, worker and scheduler.
 
-All application services use `lynelk/OpFin:main`. Keep one scheduler replica. The schedule in `apps/api/routes/console.php` retains five-minute payment status, financial reconciliation, integrity-audit and worker-heartbeat tasks; platform autopilot runs every fifteen minutes. Only the API pre-deploy hook runs forward migrations. No automatic seeding, schema reset, or shared cache flush is permitted.
+All application services use `lynelk/OpFin:main`. Keep one scheduler replica. The schedule in `apps/api/routes/console.php` retains five-minute governed long-range financial reconciliation, integrity-audit and worker-heartbeat tasks; platform autopilot runs every fifteen minutes. The dangling legacy `CheckTransactionStatus` schedule was removed because that command class does not exist; it was failing each cycle, not providing a working payment-status poller. `ScheduledCommandRegistrationTest` prevents missing scheduled classes and verifies the financial cadence and locks. Only the API pre-deploy hook runs forward migrations. No automatic seeding, schema reset, or shared cache flush is permitted.
 
 Use the versioned startup scripts rather than Railpack's default Laravel startup, which runs `optimize:clear`. Flushing the shared database cache during a restart can remove locks and security state. The custom Caddyfile serves only `/app/public`, suppresses debug request logging and starts four PHP threads.
 
