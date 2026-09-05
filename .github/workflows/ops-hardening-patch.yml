@@ -10,13 +10,13 @@ permissions:
 
 jobs:
   patch:
-    if: github.event.head_commit.message != 'Apply operations hardening patch'
+    if: github.event.head_commit.message != 'Finalize operations hardening patch'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
       BRANCH: ops/rightsize-recovery-hardening
     steps:
-      - name: Patch scheduler and operational scans
+      - name: Finalize scheduler hardening
         shell: bash
         run: |
           set -euo pipefail
@@ -28,15 +28,13 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-
-          service = Path('apps/api/app/Services/AutonomousOperationsService.php')
-          text = service.read_text()
-          if 'private const BATCH_SIZE' not in text:
-              text = text.replace('class AutonomousOperationsService\n{', 'class AutonomousOperationsService\n{\n    private const BATCH_SIZE = 200;', 1)
-
-          text, count = re.subn(
-              r"'last_run' => Schema::hasTable\('autopilot_runs'\)\s*\? DB::table\('autopilot_runs'\)->where\('status', 'completed'\)->orderByDesc\('id'\)->first\(\)\s*: null,",
-              """// Keep summaries bounded. Never recursively embed the previous run's JSON summary.
+          p = Path('apps/api/app/Services/AutonomousOperationsService.php')
+          text = p.read_text()
+          text = text.replace(')-limit(self::BATCH_SIZE)', ')->limit(self::BATCH_SIZE)')
+          text = re.sub(
+              r"\s*// Keep summaries bounded\. Never recursively embed the previous run's JSON summary\.\s*'last_run' => Schema::hasTable\('autopilot_runs'\)\s*\? DB::table\('autopilot_runs'\)\s*->where\('status', 'completed'\)\s*->orderByDesc\('id'\)\s*->first\(\['id', 'status', 'trigger', 'started_at', 'completed_at', 'observations', 'actions_executed', 'exceptions_created'\]\)\s*: null,",
+              """
+            // Keep summaries bounded. Never recursively embed the previous run's JSON summary.
             'last_run' => Schema::hasTable('autopilot_runs')
                 ? DB::table('autopilot_runs')
                     ->where('status', 'completed')
@@ -46,55 +44,16 @@ jobs:
               text,
               count=1,
           )
-          if count != 1:
-              raise SystemExit(f'expected one last_run replacement, got {count}')
-
-          # Bound each operational scan. limit() is deliberately applied before get().
-          anchors = [
-              "DB::table('kyc_cases')->whereIn('status', ['submitted', 'pending', 'manual_review'])->get()",
-              "DB::table('reconciliation_items')->whereIn('status', ['open', 'mismatch', 'unmatched'])->get()",
-              "DB::table('hardship_cases')->where('status', 'submitted')->get()",
-              "DB::table('autopilot_work_items')->where('status', 'open')->where('requires_human', false)->get()",
-          ]
-          for anchor in anchors:
-              if anchor in text:
-                  text = text.replace(anchor, anchor[:-6] + "limit(self::BATCH_SIZE)->get()", 1)
-
-          for marker in [
-              "->whereBetween('expires_at', [now(), now()->addDays(14)])",
-              "->where('updated_at', '<=', now()->subMinutes(15))",
-              "->where('created_at', '<=', now()->subHours(24))",
-          ]:
-              pos = text.find(marker)
-              if pos < 0:
-                  raise SystemExit(f'missing scan marker: {marker}')
-              getpos = text.find('->get();', pos)
-              if getpos < 0:
-                  raise SystemExit(f'missing get after: {marker}')
-              segment = text[pos:getpos]
-              if 'limit(self::BATCH_SIZE)' not in segment:
-                  text = text[:getpos] + '->limit(self::BATCH_SIZE)\n            ' + text[getpos:]
-
-          service.write_text(text)
-
-          routes = Path('apps/api/routes/console.php')
-          r = routes.read_text()
-          r2, count = re.subn(
-              r"Schedule::command\(RunPlatformAutopilot::class\)->everyFiveMinutes\(\)->withoutOverlapping\(\);",
-              "Schedule::command(RunPlatformAutopilot::class)->everyFifteenMinutes()->withoutOverlapping();",
-              r,
-              count=1,
-          )
-          if count != 1:
-              raise SystemExit(f'expected one autopilot cadence replacement, got {count}')
-          routes.write_text(r2)
+          p.write_text(text)
           PY
           php -l apps/api/app/Services/AutonomousOperationsService.php
           php -l apps/api/routes/console.php
+          cd apps/api
+          if [ -x vendor/bin/pint ]; then vendor/bin/pint --test app/Services/AutonomousOperationsService.php routes/console.php; fi
+          cd ../..
           git config user.name "OpFin Release Automation"
           git config user.email "actions@users.noreply.github.com"
           git add apps/api/app/Services/AutonomousOperationsService.php apps/api/routes/console.php
           git diff --cached --check
-          git diff --cached --stat
-          git commit -m "Apply operations hardening patch"
+          git commit -m "Finalize operations hardening patch"
           git push origin "HEAD:${BRANCH}"
