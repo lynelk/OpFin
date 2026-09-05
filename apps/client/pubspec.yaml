@@ -13,7 +13,7 @@ dependencies:
   intl: ^0.20.3
   lottie: ^3.5.1
   shared_preferences: ^2.5.5
-  flutter_secure_storage: ^9.2.4
+  flutter_secure_storage: ^11.0.0
 
 dev_dependencies:
   flutter_test:
