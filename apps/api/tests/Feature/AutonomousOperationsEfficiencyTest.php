@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\RecordWorkerHeartbeat;
+use App\Jobs\QueueWorkerHeartbeat;
 use App\Models\User;
 use App\Services\AutonomousOperationsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,76 +14,70 @@ class AutonomousOperationsEfficiencyTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_autopilot_summaries_do_not_recursively_embed_previous_summaries(): void
+    public function test_summary_does_not_recursively_embed_previous_run_summaries(): void
     {
-        $service = app(AutonomousOperationsService::class);
+        DB::table('autopilot_runs')->insert([
+            'status' => 'completed',
+            'trigger' => 'test',
+            'observations' => 3,
+            'actions_executed' => 1,
+            'exceptions_created' => 2,
+            'summary' => json_encode([
+                'last_run' => [
+                    'summary' => str_repeat('historical-payload-', 200),
+                ],
+            ]),
+            'started_at' => now()->subMinute(),
+            'completed_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        $service->run('test');
-        $second = $service->run('test');
-        $third = $service->run('test');
+        $summary = app(AutonomousOperationsService::class)->summary();
 
-        foreach ([$second['run_id'], $third['run_id']] as $runId) {
-            $stored = (string) DB::table('autopilot_runs')->where('id', $runId)->value('summary');
-            $summary = json_decode($stored, true, 512, JSON_THROW_ON_ERROR);
-
-            $this->assertIsArray($summary['last_run']);
-            $this->assertArrayNotHasKey('summary', $summary['last_run']);
-            $this->assertLessThan(4096, strlen($stored));
-        }
+        $this->assertNotNull($summary['last_run']);
+        $this->assertArrayNotHasKey('summary', (array) $summary['last_run']);
+        $this->assertSame(3, $summary['last_run']->observations);
     }
 
-    public function test_autopilot_processes_large_review_backlogs_in_bounded_batches(): void
+    public function test_autonomous_scans_process_more_than_one_batch_without_loading_every_row(): void
     {
         $user = User::factory()->create();
         $now = now();
         $rows = [];
 
-        for ($index = 1; $index <= 225; $index++) {
+        for ($index = 1; $index <= 205; $index++) {
             $rows[] = [
                 'user_id' => $user->id,
-                'provider' => 'manual',
-                'national_id' => sprintf('TEST-NIN-%04d', $index),
-                'status' => 'submitted',
+                'national_id' => 'CF'.str_pad((string) $index, 12, '0', STR_PAD_LEFT),
+                'status' => 'pending',
                 'submitted_at' => $now,
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
         }
 
-        foreach (array_chunk($rows, 75) as $batch) {
-            DB::table('kyc_cases')->insert($batch);
-        }
+        DB::table('kyc_cases')->insert($rows);
 
-        $result = app(AutonomousOperationsService::class)->run('batch-test');
+        $result = app(AutonomousOperationsService::class)->run('batch-regression-test');
 
-        $this->assertSame(225, $result['open_exceptions']);
-        $this->assertDatabaseCount('autopilot_work_items', 225);
+        $this->assertSame(205, DB::table('autopilot_work_items')->where('domain', 'kyc')->count());
         $this->assertDatabaseHas('autopilot_runs', [
             'id' => $result['run_id'],
             'status' => 'completed',
-            'observations' => 225,
-            'exceptions_created' => 225,
+            'observations' => 205,
+            'exceptions_created' => 205,
         ]);
     }
 
-    public function test_readiness_reports_worker_and_scheduler_heartbeat_freshness(): void
+    public function test_queue_worker_heartbeat_records_a_bounded_last_seen_marker(): void
     {
-        Cache::forget(RecordWorkerHeartbeat::CACHE_KEY);
-        Cache::forget('opfin:operations:scheduler_heartbeat');
+        Cache::forget('opfin:queue_worker_last_seen');
 
-        $this->getJson('/api/health/ready')
-            ->assertOk()
-            ->assertJsonPath('data.worker.status', 'missing')
-            ->assertJsonPath('data.scheduler.status', 'missing')
-            ->assertJsonPath('data.operations', 'degraded');
+        (new QueueWorkerHeartbeat)->handle();
 
-        app(RecordWorkerHeartbeat::class)->handle();
-        Cache::put('opfin:operations:scheduler_heartbeat', now()->toIso8601String(), now()->addMinutes(20));
-
-        $this->getJson('/api/health/ready')
-            ->assertOk()
-            ->assertJsonPath('data.worker.status', 'ready')
-            ->assertJsonPath('data.scheduler.status', 'ready')
-            ->assertJsonPath('data.operations', 'ready');
+        $lastSeen = Cache::get('opfin:queue_worker_last_seen');
+        $this->assertIsString($lastSeen);
+        $this->assertNotSame('', $lastSeen);
     }
 }

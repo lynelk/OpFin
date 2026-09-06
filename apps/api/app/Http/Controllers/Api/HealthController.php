@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class HealthController extends Controller
@@ -48,10 +49,7 @@ class HealthController extends Controller
             'status' => 'ok',
             'service' => 'opfin-backend',
             'database' => 'ready',
-            'queue' => (string) config('queue.default'),
-            'worker' => $workerHeartbeat,
-            'scheduler' => $schedulerHeartbeat,
-            'operations' => $operationsReady ? 'ready' : 'degraded',
+            'queue' => $this->queueReadiness(),
             'integration_readiness' => $this->integrations->report()['required_integrations_ready'] ? 'ready' : 'blocked',
         ]);
     }
@@ -71,33 +69,31 @@ class HealthController extends Controller
         return $this->ready();
     }
 
-    private function heartbeatStatus(mixed $value): array
+    private function queueReadiness(): array
     {
-        if (! is_string($value) || trim($value) === '') {
-            return [
-                'status' => 'missing',
-                'last_seen_at' => null,
-                'age_seconds' => null,
-            ];
+        $lastSeen = Cache::get('opfin:queue_worker_last_seen');
+        $ageSeconds = null;
+
+        if (is_string($lastSeen) && $lastSeen !== '') {
+            try {
+                $ageSeconds = (int) Carbon::parse($lastSeen)->diffInSeconds(now());
+            } catch (Throwable) {
+                $lastSeen = null;
+            }
         }
 
-        try {
-            $lastSeen = Carbon::parse($value);
-        } catch (Throwable) {
-            return [
-                'status' => 'invalid',
-                'last_seen_at' => null,
-                'age_seconds' => null,
-            ];
-        }
-
-        $ageSeconds = max(0, $lastSeen->diffInSeconds(now()));
-        $fresh = $lastSeen->greaterThanOrEqualTo(now()->subMinutes(self::HEARTBEAT_FRESH_MINUTES));
+        $status = match (true) {
+            $ageSeconds !== null && $ageSeconds <= 600 => 'ready',
+            $ageSeconds !== null => 'stale',
+            default => 'warming',
+        };
 
         return [
-            'status' => $fresh ? 'ready' : 'stale',
-            'last_seen_at' => $lastSeen->toIso8601String(),
-            'age_seconds' => $ageSeconds,
+            'driver' => (string) config('queue.default'),
+            'worker' => $status,
+            'last_seen_at' => $lastSeen,
+            'heartbeat_age_seconds' => $ageSeconds,
+            'backlog' => Schema::hasTable('jobs') ? DB::table('jobs')->count() : null,
         ];
     }
 }
