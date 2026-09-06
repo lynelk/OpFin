@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\RecordWorkerHeartbeat;
 use App\Services\ProductionIntegrationReadinessService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +15,8 @@ use Throwable;
 
 class HealthController extends Controller
 {
+    private const HEARTBEAT_FRESH_MINUTES = 12;
+
     public function __construct(private readonly ProductionIntegrationReadinessService $integrations) {}
 
     public function live(): JsonResponse
@@ -37,6 +40,10 @@ class HealthController extends Controller
                 'database' => 'unavailable',
             ]);
         }
+
+        $workerHeartbeat = $this->heartbeatStatus(Cache::get(RecordWorkerHeartbeat::CACHE_KEY));
+        $schedulerHeartbeat = $this->heartbeatStatus(Cache::get('opfin:operations:scheduler_heartbeat'));
+        $operationsReady = $workerHeartbeat['status'] === 'ready' && $schedulerHeartbeat['status'] === 'ready';
 
         return ApiResponse::success('Service is ready.', [
             'status' => 'ok',

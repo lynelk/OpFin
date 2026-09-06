@@ -57,7 +57,7 @@ class AutonomousOperationsService
             'observations' => $observations,
             'actions_executed' => $actions,
             'exceptions_created' => $exceptions,
-            'summary' => json_encode($summary),
+            'summary' => json_encode($summary, JSON_THROW_ON_ERROR),
             'completed_at' => now(),
             'updated_at' => now(),
         ]);
@@ -387,7 +387,7 @@ class AutonomousOperationsService
             'confidence' => $data['confidence'],
             'automation_tier' => $data['automation_tier'],
             'requires_human' => $data['requires_human'],
-            'context' => json_encode($data['context'] ?? []),
+            'context' => json_encode($data['context'] ?? [], JSON_THROW_ON_ERROR),
             'due_at' => $data['due_at'] ?? null,
             'autopilot_run_id' => $runId,
             'updated_at' => now(),
