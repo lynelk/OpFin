@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CapabilityController;
 use App\Http\Controllers\Api\CpayWebhookController;
@@ -42,6 +43,7 @@ Route::post('/webhooks/cpay', CpayWebhookController::class)->middleware('throttl
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::delete('/account', [AccountController::class, 'destroy']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
     Route::get('/capabilities', [CapabilityController::class, 'index']);
 
