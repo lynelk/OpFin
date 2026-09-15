@@ -50,6 +50,11 @@ class HealthController extends Controller
             'service' => 'opfin-backend',
             'database' => 'ready',
             'queue' => $this->queueReadiness(),
+            'operations' => [
+                'status' => $operationsReady ? 'ready' : 'warming',
+                'worker' => $workerHeartbeat,
+                'scheduler' => $schedulerHeartbeat,
+            ],
             'integration_readiness' => $this->integrations->report()['required_integrations_ready'] ? 'ready' : 'blocked',
         ]);
     }
@@ -67,6 +72,33 @@ class HealthController extends Controller
     public function show(): JsonResponse
     {
         return $this->ready();
+    }
+
+    private function heartbeatStatus(mixed $lastSeen): array
+    {
+        $ageSeconds = null;
+
+        if (is_string($lastSeen) && $lastSeen !== '') {
+            try {
+                $ageSeconds = (int) Carbon::parse($lastSeen)->diffInSeconds(now());
+            } catch (Throwable) {
+                $lastSeen = null;
+            }
+        } else {
+            $lastSeen = null;
+        }
+
+        $status = match (true) {
+            $ageSeconds !== null && $ageSeconds <= self::HEARTBEAT_FRESH_MINUTES * 60 => 'ready',
+            $ageSeconds !== null => 'stale',
+            default => 'warming',
+        };
+
+        return [
+            'status' => $status,
+            'last_seen_at' => $lastSeen,
+            'heartbeat_age_seconds' => $ageSeconds,
+        ];
     }
 
     private function queueReadiness(): array
