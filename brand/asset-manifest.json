@@ -39,7 +39,9 @@
     "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png": "58c164397d0e5b5457f302353b80b95c3867dfdf01b53fd1186de150c952d572",
     "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png": "a75fe1773a9584c9f97f6e638cf4a672b3cc15350163e1a12274c43011ede2c1",
     "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png": "dbb2a0d0683a5b8962852c5723e5930dbe70a11af50f4ac06cae9ca98823e915",
-    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": "53b0b1396243a8961c6076ef1597273ddd3df419d1613cf8031f4b4f78911e8b"
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": "53b0b1396243a8961c6076ef1597273ddd3df419d1613cf8031f4b4f78911e8b",
+    "distribution/google-play/assets/opfin-play-icon-512.png": "42b080d693a2d1192a4739da9d34c27db160f0fd7dcba070ce06c04c7d2f5dc5",
+    "distribution/google-play/assets/opfin-feature-graphic-1024x500.png": "e894a4433400100d015436d3216b243e3b1abe7df5b38bab1920f35656b1c666"
   },
   "extraction": {
     "cornerColour": [
