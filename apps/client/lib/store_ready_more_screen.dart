@@ -49,7 +49,7 @@ class StoreReadyMoreMobileScreen extends StatelessWidget {
         const Card(
           child: Padding(
             padding: EdgeInsets.all(14),
-            child: Text('Privacy policy: https://opfin-api-production.up.railway.app/privacy-policy'),
+            child: SelectableText('Privacy policy: https://opfin-production.up.railway.app/privacy-policy'),
           ),
         ),
         _MenuTile(
