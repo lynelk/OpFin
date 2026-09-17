@@ -13,10 +13,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  refresh-approved-lock:
+  prepare-reviewed-brand:
     if: github.repository == 'lynelk/OpFin' && github.ref == 'refs/heads/launch/play-store-v1-materials'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
@@ -40,24 +40,38 @@ jobs:
           grep ' node-v22.23.2-linux-x64.tar.xz$' SHASUMS256.txt | sha256sum --check --strict
           tar -xJf node-v22.23.2-linux-x64.tar.xz
           echo "$RUNNER_TEMP/node-v22.23.2-linux-x64/bin" >> "$GITHUB_PATH"
-      - name: Regenerate lock without executing dependency lifecycle scripts
+      - name: Install and audit reviewed asset tooling without lifecycle scripts
         run: |
           set -euo pipefail
           cd apps/web
-          node -e 'const p=require("./package.json"); if(p.overrides.sharp!=="0.35.4") process.exit(1)'
-          npm install --package-lock-only --ignore-scripts --legacy-peer-deps
-          node -e 'const l=require("./package-lock.json"); if(l.packages["node_modules/sharp"].version!=="0.35.4") process.exit(1)'
+          npm ci --ignore-scripts --legacy-peer-deps
           npm audit --audit-level=high
-      - name: Commit only the regenerated web lockfile
+      - name: Generate brand assets and migrate presentation overrides
+        run: |
+          set -euo pipefail
+          node scripts/prepare-brand-assets.mjs
+          python3 scripts/sync-brand.py
+          python3 scripts/migrate-brand-foundation.py
+          python3 scripts/sync-brand.py --check
+          python3 scripts/verify-security-controls.py
+      - name: Commit only reviewed brand and CI paths
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          unexpected=$(git diff --name-only | grep -v '^apps/web/package-lock.json$' || true)
-          test -z "$unexpected"
-          git add -- apps/web/package-lock.json
+          python3 - <<'PY'
+          import subprocess
+          allowed = ('.github/workflows/ci.yml', 'apps/client/lib/', 'apps/client/assets/brand/', 'apps/client/pubspec.yaml', 'apps/client/android/app/src/main/res/mipmap-', 'apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/', 'apps/web/src/app/', 'apps/web/src/components/', 'apps/web/public/brand/', 'brand/asset-manifest.json')
+          paths = subprocess.check_output(['git', 'diff', '--name-only', '-z']).split(b'\0') + subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard', '-z']).split(b'\0')
+          for raw in paths:
+              if raw and not raw.decode().startswith(allowed):
+                  raise SystemExit('Unexpected generated path: ' + raw.decode())
+          PY
+          git add -- .github/workflows/ci.yml apps/client/lib apps/client/assets/brand apps/client/pubspec.yaml apps/client/android/app/src/main/res apps/web/src/app apps/web/src/components apps/web/public/brand brand/asset-manifest.json
+          if test -d apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset; then git add -- apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset; fi
+          sh scripts/verify-repository-security.sh
           if ! git diff --cached --quiet; then
-            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'fix(security): lock patched sharp dependency and native binaries'
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'feat(brand): apply verified OpFin assets and shared colours across clients'
             AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
             echo "::add-mask::$AUTH"
             git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push origin HEAD:refs/heads/launch/play-store-v1-materials
