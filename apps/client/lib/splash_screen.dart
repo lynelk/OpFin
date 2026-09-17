@@ -1,6 +1,7 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:opfin/brand/brand_colors.dart';
+import 'package:opfin/brand/opfin_theme.dart';
 import 'package:opfin/home_screen.dart';
 import 'package:opfin/login_screen.dart';
 import 'package:opfin/onboarding_screen.dart';
@@ -15,94 +16,62 @@ class SplashScreen extends StatefulWidget {
 }
 
 class SplashScreenState extends State<SplashScreen> {
-  double _logoOpacity = 0.0;
-  double _taglineOpacity = 0.0;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _startAnimation();
-  }
-
-  void _startAnimation() {
-    Timer(const Duration(milliseconds: 500), () {
-      setState(() {
-        _logoOpacity = 1.0;
-      });
-
-      Timer(const Duration(milliseconds: 1000), () {
-        setState(() {
-          _taglineOpacity = 1.0;
-        });
-
-        Timer(const Duration(milliseconds: 2000), () {
-          _navigateToHome();
-        });
-      });
-    });
-  }
-
-  void _navigateToHome() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool("seenOnboarding") == true) {
-      final userId = await UserSession.getUserId();
-      final token = await UserSession.getAccessToken();
-      if (!mounted) return;
-      if (userId == null || token == null || token.isEmpty) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
-    } else {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-        );
-      }
-    }
+    _timer = Timer(const Duration(milliseconds: 600), _navigateToHome);
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedOpacity(
-              opacity: _logoOpacity,
-              duration: const Duration(milliseconds: 1000),
-              child: const Text(
-                'OpFin',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            AnimatedOpacity(
-              opacity: _taglineOpacity,
-              duration: const Duration(milliseconds: 1000),
-              child: const Text(
-                'Empowering Your Finances',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-          ],
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _navigateToHome() async {
+    Widget destination = const LoginScreen();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('seenOnboarding') != true) {
+        destination = const OnboardingScreen();
+      } else {
+        final userId = await UserSession.getUserId();
+        final token = await UserSession.getAccessToken();
+        if (userId != null && token != null && token.isNotEmpty) {
+          destination = const HomeScreen();
+        }
+      }
+    } catch (_) {
+      // A local-storage failure requires sign-in; it must not fabricate a session.
+      destination = const LoginScreen();
+    }
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => destination));
+  }
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+    backgroundColor: OpFinColors.ivory,
+    body: SafeArea(
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OpFinSymbol(size: 112),
+              SizedBox(height: 24),
+              Text('OpFin', style: TextStyle(fontFamily: 'Inter', color: OpFinColors.indigo, fontSize: 36, fontWeight: FontWeight.w700)),
+              SizedBox(height: 12),
+              Text('Your next step, clearer.', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Inter', color: OpFinColors.ink, fontSize: 16, height: 1.5)),
+              SizedBox(height: 32),
+              SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, semanticsLabel: 'Opening OpFin')),
+            ],
+          ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
