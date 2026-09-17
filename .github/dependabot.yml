@@ -3,25 +3,52 @@ updates:
   - package-ecosystem: composer
     directory: /apps/api
     schedule:
-      interval: weekly
+      interval: daily
+    assignees: [lynelk]
     open-pull-requests-limit: 5
+    groups:
+      compatible-updates:
+        patterns: ['*']
+        update-types: [minor, patch]
   - package-ecosystem: npm
     directory: /apps/api
     schedule:
-      interval: weekly
+      interval: daily
+    assignees: [lynelk]
     open-pull-requests-limit: 5
+    groups:
+      compatible-updates:
+        patterns: ['*']
+        update-types: [minor, patch]
   - package-ecosystem: npm
     directory: /apps/web
     schedule:
-      interval: weekly
+      interval: daily
+    assignees: [lynelk]
     open-pull-requests-limit: 5
+    groups:
+      compatible-updates:
+        patterns: ['*']
+        update-types: [minor, patch]
   - package-ecosystem: pub
     directory: /apps/client
     schedule:
+      interval: daily
+    assignees: [lynelk]
+    open-pull-requests-limit: 5
+    groups:
+      compatible-updates:
+        patterns: ['*']
+        update-types: [minor, patch]
+  - package-ecosystem: gradle
+    directory: /apps/client/android
+    schedule:
       interval: weekly
+    assignees: [lynelk]
     open-pull-requests-limit: 5
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
+    assignees: [lynelk]
     open-pull-requests-limit: 5

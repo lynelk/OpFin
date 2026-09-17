@@ -1,0 +1,61 @@
+{
+  "source": {
+    "source": "apps/client/assets/logo.png",
+    "sourceGitBlob": "5b440fbc74804b68a8d0ab12803a3185999157da",
+    "rule": "Derive resized and recoloured assets from the existing monogram, preserving its silhouette. No invented replacement mark. Interface app-name text is not represented as the supplied vector wordmark."
+  },
+  "fontSource": {
+    "repository": "rsms/inter",
+    "commit": "e3a3d4c57d5ecc01453a575621882a384c1995a3",
+    "licence": "SIL Open Font License 1.1"
+  },
+  "files": {
+    "apps/web/public/brand/InterVariable.woff2": "693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3",
+    "apps/web/public/brand/INTER-LICENSE.txt": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
+    "apps/client/assets/brand/InterVariable.ttf": "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf",
+    "apps/client/assets/brand/INTER-LICENSE.txt": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
+    "apps/web/public/brand/opfin-symbol.png": "831c2d0e7b3161715efca2c3b6a9c1b6b3cc983e52e8e6df066555a49ae2b719",
+    "apps/web/public/brand/opfin-symbol-reverse.png": "7712566897b3185b066bc75469a57bbdcf69ae7257c7d8d10e53e80c23725834",
+    "apps/client/assets/brand/opfin-symbol.png": "831c2d0e7b3161715efca2c3b6a9c1b6b3cc983e52e8e6df066555a49ae2b719",
+    "apps/client/assets/brand/opfin-symbol-reverse.png": "7712566897b3185b066bc75469a57bbdcf69ae7257c7d8d10e53e80c23725834",
+    "apps/client/assets/brand/opfin-app-icon.png": "9a931e9ef49520fc4278bd9f540db1afc6ea08e27020cc950b2d5c65cf5e6ad7",
+    "apps/web/src/app/icon.png": "3588ff0c200c5b28445a18252cd3ad6b66e74c156421a7cf75444d00dfb792bd",
+    "apps/client/android/app/src/main/res/mipmap-mdpi/ic_launcher.png": "8f7a6494ace6f2c44e664ff6dd12ab9bc5dbd3634b3c13a0c8f7c25da6dda886",
+    "apps/client/android/app/src/main/res/mipmap-hdpi/ic_launcher.png": "ac5bdf0e29509a3e20124addef43adb1afa3ca2e7f95d9e3eb74847b2681e133",
+    "apps/client/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": "158fdff1c1eedda064d9e423c6878e3397b370bcb9a6f052f6337b847c0a1286",
+    "apps/client/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": "932ec8ad1ccbcfc271be1ada4f40aea51ada7a9951157d36184bb86e916bcbcb",
+    "apps/client/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": "3588ff0c200c5b28445a18252cd3ad6b66e74c156421a7cf75444d00dfb792bd",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png": "44ac3e556126d2cc49b52429ab3fa4db388660810e15e8e0cde1f672f286ed60",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png": "bffcf59f4dacc1a53ccc6d0f376cf609e049c52d73d55516581494a77415eb82",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png": "19f3f502dbf190fea5446c0cb44780574cd60e8a8465b6572e53e468421a2115",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png": "4aff47022f5c97556a3a1212c18ecdb0c120c6ab88bc5ab703061d3858375d8e",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png": "6c54431b6ae46aefa76a6e82c48f74ea0a8fb4686739946bfa57fb5559c13f5b",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png": "779583e94179fc40066d7dc928ce10d5b45162244b5b89c8eecd20695157d02c",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png": "d992463168de6e50362aaf3ec2b82f746cefa5c86cf39a82ed53f6d01d193242",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png": "d992463168de6e50362aaf3ec2b82f746cefa5c86cf39a82ed53f6d01d193242",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png": "cfb8583770ef941dc124c50ec9a6e2c077a8feee41149bac9c292c2bcfb2b7d1",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png": "ac83133652c21d38eb092986ae0a560c6e2fb3e61b70b9ab1686e4b9a2d60ebb",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png": "44ac3e556126d2cc49b52429ab3fa4db388660810e15e8e0cde1f672f286ed60",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png": "58c164397d0e5b5457f302353b80b95c3867dfdf01b53fd1186de150c952d572",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png": "a75fe1773a9584c9f97f6e638cf4a672b3cc15350163e1a12274c43011ede2c1",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png": "dbb2a0d0683a5b8962852c5723e5930dbe70a11af50f4ac06cae9ca98823e915",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": "53b0b1396243a8961c6076ef1597273ddd3df419d1613cf8031f4b4f78911e8b",
+    "distribution/google-play/assets/opfin-play-icon-512.png": "42b080d693a2d1192a4739da9d34c27db160f0fd7dcba070ce06c04c7d2f5dc5",
+    "distribution/google-play/assets/opfin-feature-graphic-1024x500.png": "e894a4433400100d015436d3216b243e3b1abe7df5b38bab1920f35656b1c666"
+  },
+  "extraction": {
+    "cornerColour": [
+      0,
+      0,
+      209
+    ],
+    "sourceHasTransparency": false,
+    "wordmarkSeparated": true,
+    "bounds": {
+      "left": 291,
+      "top": 221,
+      "width": 186,
+      "height": 204
+    }
+  }
+}

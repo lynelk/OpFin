@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:opfin/models/loan_application.dart';
 
@@ -25,16 +26,16 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: OpFinColors.ink),
         title: const Text(
           'Review Application',
           style: TextStyle(
-            color: Colors.black,
+            color: OpFinColors.ink,
             fontWeight: FontWeight.bold,
             fontSize: 22,
           ),
         ),
-        foregroundColor: Colors.black,
+        foregroundColor: OpFinColors.ink,
       ),
       body: SafeArea(
         child: Padding(
@@ -47,7 +48,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  color: Colors.black,
+                  color: OpFinColors.ink,
                 ),
               ),
               const SizedBox(height: 8),
@@ -55,7 +56,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                 'This is your request for assessment. It is not a loan offer yet.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.black.withValues(alpha: 0.6),
+                  color: OpFinColors.ink.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 24),
@@ -64,7 +65,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.black12),
+                  border: Border.all(color: OpFinColors.line),
                 ),
                 child: Column(
                   children: [
@@ -104,7 +105,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                     SizedBox(height: 8),
                     Text(
                       'If you are eligible, OpFin will show you a formal offer with the interest rate and basis, all fees, the total amount to repay, repayment dates, and the repayment schedule before you can accept it.',
-                      style: TextStyle(height: 1.45, color: Colors.black87),
+                      style: TextStyle(height: 1.45, color: OpFinColors.ink),
                     ),
                   ],
                 ),
@@ -115,7 +116,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                 children: [
                   Checkbox(
                     value: _detailsConfirmed,
-                    activeColor: Colors.black,
+                    activeColor: OpFinColors.ink,
                     onChanged: (value) {
                       setState(() => _detailsConfirmed = value ?? false);
                     },
@@ -126,7 +127,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                       child: Text(
                         'I confirm that the information above is correct and I want to submit this application for assessment.',
                         style: TextStyle(
-                          color: Colors.black87,
+                          color: OpFinColors.ink,
                           fontSize: 14,
                           height: 1.4,
                         ),
@@ -143,7 +144,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: const BorderSide(color: Colors.black),
+                        side: const BorderSide(color: OpFinColors.ink),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -151,7 +152,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                       child: const Text(
                         'Edit',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: OpFinColors.ink,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -167,10 +168,10 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
                             }
                           : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: OpFinColors.indigo,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.black12,
-                        disabledForegroundColor: Colors.black38,
+                        disabledBackgroundColor: OpFinColors.line,
+                        disabledForegroundColor: OpFinColors.muted,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -208,7 +209,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.black.withValues(alpha: 0.6),
+                color: OpFinColors.ink.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -220,7 +221,7 @@ class _LoanConfirmationScreenState extends State<LoanConfirmationScreen> {
               style: TextStyle(
                 fontSize: isEmphasis ? 18 : 15,
                 fontWeight: isEmphasis ? FontWeight.w800 : FontWeight.w600,
-                color: Colors.black,
+                color: OpFinColors.ink,
               ),
             ),
           ),

@@ -25,7 +25,20 @@ flutter:
   uses-material-design: true
   assets:
     - assets/lottie/
+    - assets/brand/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/brand/InterVariable.ttf
+          weight: 400
+        - asset: assets/brand/InterVariable.ttf
+          weight: 500
+        - asset: assets/brand/InterVariable.ttf
+          weight: 600
+        - asset: assets/brand/InterVariable.ttf
+          weight: 700
 
 flutter_icons:
   android: true
-  image_path: "assets/logo.png"
+  image_path: "assets/brand/opfin-app-icon.png"

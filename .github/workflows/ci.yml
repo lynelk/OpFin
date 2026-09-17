@@ -3,47 +3,67 @@ name: OpFin Monorepo CI
 on:
   pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: opfin-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   layout:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Check out exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git init .
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --depth=1 origin "$GITHUB_SHA"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
           git checkout --detach FETCH_HEAD
       - run: sh scripts/verify-layout.sh
+      - run: python3 scripts/sync-brand.py --check
+      - run: python3 scripts/verify-security-controls.py
 
   repo-security:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Check out exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git init .
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --depth=1 origin "$GITHUB_SHA"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
           git checkout --detach FETCH_HEAD
       - name: Reject committed secrets and non-source artifacts
         run: sh scripts/verify-repository-security.sh
 
   api:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git init .
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --depth=2 origin "$GITHUB_SHA"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=2 origin "$GITHUB_SHA"
           git checkout --detach FETCH_HEAD
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
-            git fetch --depth=1 origin "$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
+            git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
           fi
       - name: Install PHP 8.2 without Xdebug
         run: |
@@ -58,6 +78,7 @@ jobs:
       - name: Test API
         run: |
           cd apps/api
+          composer audit --locked --no-interaction
           cp .env.example .env
           composer install --no-interaction --prefer-dist --no-progress
           php artisan key:generate
@@ -73,77 +94,113 @@ jobs:
             base="HEAD^"
           fi
           mapfile -t files < <(git diff --name-only --diff-filter=ACMR "$base"...HEAD -- apps/api | grep '\.php$' | sed 's#^apps/api/##' || true)
-          if [[ "${#files[@]}" -eq 0 ]]; then
-            echo "No changed PHP files to format-check."
-            exit 0
-          fi
+          if [[ "${#files[@]}" -eq 0 ]]; then exit 0; fi
           cd apps/api
           printf 'Checking %s changed PHP files\n' "${#files[@]}"
           ./vendor/bin/pint --test "${files[@]}"
 
   api-assets:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
       - name: Check out exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git init .
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --depth=1 origin "$GITHUB_SHA"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
           git checkout --detach FETCH_HEAD
-      - name: Install Node 22
+      - name: Install integrity-checked Node 22
         run: |
+          cd "$RUNNER_TEMP"
           curl -fsSLO https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.xz
-          tar -xJf node-v22.23.2-linux-x64.tar.xz -C "$RUNNER_TEMP"
+          curl -fsSLO https://nodejs.org/dist/v22.23.2/SHASUMS256.txt
+          grep ' node-v22.23.2-linux-x64.tar.xz$' SHASUMS256.txt | sha256sum --check --strict
+          tar -xJf node-v22.23.2-linux-x64.tar.xz
           echo "$RUNNER_TEMP/node-v22.23.2-linux-x64/bin" >> "$GITHUB_PATH"
-      - name: Build API assets
+      - name: Audit and build API assets
         run: |
           cd apps/api
-          npm ci
+          npm ci --ignore-scripts
+          npm audit --audit-level=high
+          npm rebuild
           npm run build
 
   web:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git init .
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --depth=1 origin "$GITHUB_SHA"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
           git checkout --detach FETCH_HEAD
-      - name: Install Node 22
+      - name: Install integrity-checked Node 22
         run: |
+          cd "$RUNNER_TEMP"
           curl -fsSLO https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.xz
-          tar -xJf node-v22.23.2-linux-x64.tar.xz -C "$RUNNER_TEMP"
+          curl -fsSLO https://nodejs.org/dist/v22.23.2/SHASUMS256.txt
+          grep ' node-v22.23.2-linux-x64.tar.xz$' SHASUMS256.txt | sha256sum --check --strict
+          tar -xJf node-v22.23.2-linux-x64.tar.xz
           echo "$RUNNER_TEMP/node-v22.23.2-linux-x64/bin" >> "$GITHUB_PATH"
-      - name: Test and build web
+      - name: Install and audit web dependencies
         run: |
           cd apps/web
-          npm ci --legacy-peer-deps
+          npm ci --ignore-scripts --legacy-peer-deps
           npm audit --audit-level=high
+          npm rebuild
+      - name: Typecheck and lint
+        run: |
+          cd apps/web
           npm run typecheck
           npm install --no-save --legacy-peer-deps typescript@npm:@typescript/typescript6@6.0.2
           npm run lint
-          npm ci --legacy-peer-deps
+          npm ci --ignore-scripts --legacy-peer-deps
+          npm rebuild
+      - name: Test and build production web
+        run: |
+          cd apps/web
           npm run test
-          NEXT_PUBLIC_OPFIN_API_URL=http://localhost:8000/api NEXT_PUBLIC_USE_MOCK_API=false OPFIN_ENABLE_DEMO_SHORTCUTS=false npm run build
+          NEXT_PUBLIC_OPFIN_API_URL=https://opfin-production.up.railway.app/api NEXT_PUBLIC_USE_MOCK_API=false OPFIN_ENABLE_DEMO_SHORTCUTS=false npm run build
           if NODE_ENV=production NEXT_PUBLIC_USE_MOCK_API=true node -e "import('./next.config.mjs')"; then exit 1; fi
           if NODE_ENV=production OPFIN_ENABLE_DEMO_SHORTCUTS=true node -e "import('./next.config.mjs')"; then exit 1; fi
+      - name: Verify live local production headers and brand assets
+        run: |
+          cd apps/web
+          NEXT_PUBLIC_OPFIN_API_URL=https://opfin-production.up.railway.app/api NEXT_PUBLIC_USE_MOCK_API=false OPFIN_ENABLE_DEMO_SHORTCUTS=false npm run start -- --port 3210 > /tmp/opfin-web-smoke.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          python3 ../../scripts/verify-web-response.py http://localhost:3210
 
   client-android:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Check out exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git init .
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --depth=1 origin "$GITHUB_SHA"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
           git checkout --detach FETCH_HEAD
       - name: Install Flutter 3.47.1
         run: |
           git clone --depth 1 --branch 3.47.1 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
-      - name: Test and build Android
+      - name: Audit, test and build Android
         run: |
+          python3 scripts/audit-pub.py
           cd apps/client
           flutter --version
           flutter pub get
@@ -154,12 +211,17 @@ jobs:
 
   client-ios:
     runs-on: macos-15
+    timeout-minutes: 30
     steps:
       - name: Check out exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git init .
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --depth=1 origin "$GITHUB_SHA"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
           git checkout --detach FETCH_HEAD
       - name: Select Xcode 26+
         run: |
@@ -181,12 +243,25 @@ jobs:
           flutter analyze
           flutter test
           flutter build ios --release --no-codesign --no-pub \
-            --dart-define=OPFIN_API_BASE_URL=https://opfin-api-production.up.railway.app/api \
+            --dart-define=OPFIN_API_BASE_URL=https://opfin-production.up.railway.app/api \
             --dart-define=OPFIN_APP_STORE_P2P_BORROWING_ENABLED=false
 
   release-gate:
+    if: always()
     needs: [layout, repo-security, api, api-assets, web, client-android, client-ios]
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - name: Record validated canonical SHA
-        run: echo "CANONICAL_OPFIN_SHA=$GITHUB_SHA"
+      - name: Require every release prerequisite to pass
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          jobs = json.loads(os.environ['JOB_RESULTS'])
+          failed = {name: job['result'] for name, job in jobs.items() if job['result'] != 'success'}
+          if failed:
+              print('Release blocked:', failed)
+              sys.exit(1)
+          print('CANONICAL_OPFIN_SHA=' + os.environ['GITHUB_SHA'])
+          PY

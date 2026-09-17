@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'loan_details_screen.dart';
 
@@ -20,9 +21,9 @@ class _LoanAmountScreenState extends State<LoanAmountScreen> {
         elevation: 0,
         title: const Text(
           "Apply for Loan",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: OpFinColors.ink, fontWeight: FontWeight.bold),
         ),
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: OpFinColors.ink),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -43,7 +44,7 @@ class _LoanAmountScreenState extends State<LoanAmountScreen> {
                 style: const TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: OpFinColors.ink,
                 ),
               ),
             ),
@@ -53,7 +54,7 @@ class _LoanAmountScreenState extends State<LoanAmountScreen> {
               min: 1000,
               max: 50000,
               divisions: 49,
-              activeColor: Colors.black,
+              activeColor: OpFinColors.ink,
               onChanged: (value) {
                 setState(() => _amount = value);
               },
@@ -72,7 +73,7 @@ class _LoanAmountScreenState extends State<LoanAmountScreen> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
+                  backgroundColor: OpFinColors.indigo,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: const Text("Continue"),

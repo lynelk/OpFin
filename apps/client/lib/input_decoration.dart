@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:flutter/material.dart';
 
 class InputDecorations {
@@ -9,16 +10,16 @@ class InputDecorations {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      prefixIcon: Icon(icon, color: Colors.black),
-      labelStyle: const TextStyle(color: Colors.black87),
-      hintStyle: const TextStyle(color: Colors.black45),
+      prefixIcon: Icon(icon, color: OpFinColors.ink),
+      labelStyle: const TextStyle(color: OpFinColors.ink),
+      hintStyle: const TextStyle(color: OpFinColors.muted),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.black26, width: 1.2),
+        borderSide: const BorderSide(color: OpFinColors.line, width: 1.2),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.black, width: 1.4),
+        borderSide: const BorderSide(color: OpFinColors.ink, width: 1.4),
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),

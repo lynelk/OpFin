@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -110,13 +111,13 @@ class RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 20),
                 const Text(
                   'Start your OpFin journey',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.black),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: OpFinColors.ink),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 10),
                 const Text(
                   'Create a secure account first. Identity, financial profile and product permissions are completed progressively when they are actually needed.',
-                  style: TextStyle(fontSize: 15, color: Colors.black54, height: 1.45),
+                  style: TextStyle(fontSize: 15, color: OpFinColors.muted, height: 1.45),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 30),
@@ -163,7 +164,7 @@ class RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
                 const Text(
                   'Use 12+ characters with uppercase, lowercase, a number and a symbol.',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(fontSize: 12, color: OpFinColors.muted),
                 ),
                 const SizedBox(height: 18),
                 TextFormField(
@@ -193,7 +194,7 @@ class RegisterScreenState extends State<RegisterScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _sendOtp,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: OpFinColors.indigo,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),

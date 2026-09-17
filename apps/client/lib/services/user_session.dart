@@ -12,7 +12,7 @@ class UserSession {
   static const _storage = FlutterSecureStorage(
     // flutter_secure_storage 11 uses its encrypted Android implementation by
     // default; the removed encryptedSharedPreferences flag must not be used.
-    aOptions: AndroidOptions(),
+    aOptions: AndroidOptions(migrateWithBackup: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.unlocked),
   );
 

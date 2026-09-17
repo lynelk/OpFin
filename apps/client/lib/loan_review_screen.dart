@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:flutter/material.dart';
 
 class LoanReviewScreen extends StatelessWidget {
@@ -21,9 +22,9 @@ class LoanReviewScreen extends StatelessWidget {
         elevation: 0,
         title: const Text(
           "Review Loan",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: OpFinColors.ink, fontWeight: FontWeight.bold),
         ),
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: OpFinColors.ink),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -41,7 +42,7 @@ class LoanReviewScreen extends StatelessWidget {
             const SizedBox(height: 40),
             const Text(
               "By continuing, you agree to the loan terms and conditions.",
-              style: TextStyle(fontSize: 14, color: Colors.black54),
+              style: TextStyle(fontSize: 14, color: OpFinColors.muted),
             ),
             const Spacer(),
             SizedBox(
@@ -54,7 +55,7 @@ class LoanReviewScreen extends StatelessWidget {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
+                  backgroundColor: OpFinColors.indigo,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: const Text("Submit Application"),
@@ -72,13 +73,13 @@ class LoanReviewScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black26),
+        border: Border.all(color: OpFinColors.line),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: const TextStyle(fontSize: 16, color: Colors.black54)),
+              style: const TextStyle(fontSize: 16, color: OpFinColors.muted)),
           Text(value,
               style:
                   const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),

@@ -1,3 +1,4 @@
+import { OpFinSymbol } from "@/components/OpFinSymbol";
 import Link from "next/link";
 
 const pillars = [
@@ -20,7 +21,7 @@ export default function HomePage() {
     <main className="marketing-shell">
       <header className="marketing-nav">
         <Link className="marketing-brand" href="/" aria-label="OpFin home">
-          <span className="marketing-brand-mark">O</span>
+          <span className="marketing-brand-mark"><OpFinSymbol /></span>
           <span>OpFin</span>
         </Link>
         <nav className="marketing-nav-links" aria-label="Primary">
@@ -38,7 +39,7 @@ export default function HomePage() {
       <section className="marketing-hero" id="individuals">
         <div className="marketing-hero-copy">
           <p className="marketing-eyebrow">YOUR FINANCIAL PROGRESS, CONNECTED</p>
-          <h1>One place to move your money forward.</h1>
+          <h1>Your next step, clearer.</h1>
           <p className="marketing-lead">Understand your money, build savings, access responsible credit, protect what matters and grow your future with a financial platform that gets smarter as you progress.</p>
           <div className="marketing-hero-actions">
             <Link className="button marketing-primary marketing-large" href="/login">Get started</Link>
@@ -51,7 +52,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="marketing-product-stage" aria-label="OpFin product preview">
+        <div className="marketing-product-stage" aria-label="Illustrative OpFin product preview, not a production screenshot">
+          <p className="marketing-preview-disclosure">Illustrative preview. Services depend on eligibility and availability.</p>
           <div className="marketing-orbit marketing-orbit-one" />
           <div className="marketing-orbit marketing-orbit-two" />
           <div className="marketing-phone">
@@ -190,9 +192,10 @@ export default function HomePage() {
       </section>
 
       <footer className="marketing-footer">
-        <div className="marketing-brand"><span className="marketing-brand-mark">O</span><span>OpFin</span></div>
+        <div className="marketing-brand"><span className="marketing-brand-mark"><OpFinSymbol /></span><span>OpFin</span></div>
         <p>Financial wellbeing, access and progression in one connected platform.</p>
         <div><Link href="/login">Sign in</Link><a href="#individuals">Individuals</a><a href="#employers">Employers</a><a href="#partners">Partners</a></div>
+      <div className="marketing-legal-links"><a href="https://opfin-production.up.railway.app/privacy-policy">Privacy policy</a><Link href="/account/delete">Delete account</Link></div>
       </footer>
     </main>
   );

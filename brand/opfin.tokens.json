@@ -1,0 +1,31 @@
+{
+  "name": "OpFin",
+  "version": "2.1-implementation",
+  "tagline": "Your next step, clearer.",
+  "decision": "15 September 2026: retain and refine the existing OpFin monogram; adopt Indigo, Apricot and Warm Ivory. Do not substitute the Open Path or Pipiya marks.",
+  "typography": { "family": "Inter", "fallback": "Arial", "bodySize": 16, "labelSize": 14, "minimumTouchTarget": 48 },
+  "colours": {
+    "indigo": "#353B78",
+    "indigoStrong": "#29305F",
+    "apricot": "#F2B38D",
+    "ivory": "#FAF8F2",
+    "periwinkle": "#E8EAF6",
+    "ink": "#202436",
+    "muted": "#555D72",
+    "line": "#D7DAE8",
+    "white": "#FFFFFF",
+    "success": "#116B4E",
+    "warning": "#865210",
+    "danger": "#AA2636"
+  },
+  "logo": {
+    "source": "apps/client/assets/logo.png",
+    "sourceGitBlob": "5b440fbc74804b68a8d0ab12803a3185999157da",
+    "rule": "Derive resized and recoloured assets from the existing monogram, preserving its silhouette. No invented replacement mark. Interface app-name text is not represented as the supplied vector wordmark."
+  },
+  "fontSource": {
+    "repository": "rsms/inter",
+    "commit": "e3a3d4c57d5ecc01453a575621882a384c1995a3",
+    "licence": "SIL Open Font License 1.1"
+  }
+}

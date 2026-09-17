@@ -1,3 +1,4 @@
+import { OpFinSymbol } from "./OpFinSymbol";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { logoutAction } from "@/app/actions";
@@ -21,7 +22,7 @@ export async function AppShell({ children }: Readonly<{ children: ReactNode }>) 
     <div className="app-shell">
       <aside className="sidebar">
         <Link className="brand" href="/dashboard" aria-label="OpFin home">
-          <span className="brand-mark">OF</span>
+          <span className="brand-mark"><OpFinSymbol reverse /></span>
           <span>OpFin</span>
         </Link>
         {groups.map(([group, title]) => {
@@ -47,7 +48,7 @@ export async function AppShell({ children }: Readonly<{ children: ReactNode }>) 
             <p className="muted">{session.role === "customer" ? "Your OpFin account" : `Role: ${session.role}`}</p>
           </div>
           <form action={logoutAction}>
-            <button className="button secondary" type="submit">Switch role</button>
+            <button className="button secondary" type="submit">Sign out</button>
           </form>
         </header>
         <div className="content">{children}</div>
