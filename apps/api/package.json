@@ -3,7 +3,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "audit": "npm audit --audit-level=high",
+        "prebuild": "npm run audit"
     },
     "devDependencies": {
         "@popperjs/core": "^2.11.6",
