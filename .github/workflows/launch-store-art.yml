@@ -1,4 +1,4 @@
-name: Prepare matching store artwork
+name: Patch reviewed API dependency
 on:
   push:
     branches: [launch/play-store-v1-materials]
@@ -6,10 +6,10 @@ on:
 permissions:
   contents: read
 jobs:
-  store-art:
+  patch-lock:
     if: github.repository == 'lynelk/OpFin' && github.ref == 'refs/heads/launch/play-store-v1-materials'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     permissions:
       contents: write
     steps:
@@ -24,30 +24,50 @@ jobs:
           echo "::add-mask::$AUTH"
           git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
           git checkout -b launch/play-store-v1-materials FETCH_HEAD
-      - name: Install renderer from signed operating-system packages
+      - name: Install integrity-checked Node
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y imagemagick
-      - name: Render approved brand layouts and verify dimensions
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -fsSLO https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.xz
+          curl -fsSLO https://nodejs.org/dist/v22.23.2/SHASUMS256.txt
+          grep ' node-v22.23.2-linux-x64.tar.xz$' SHASUMS256.txt | sha256sum --check --strict
+          tar -xJf node-v22.23.2-linux-x64.tar.xz
+          echo "$RUNNER_TEMP/node-v22.23.2-linux-x64/bin" >> "$GITHUB_PATH"
+      - name: Update picomatch within existing dependency ranges and audit
+        working-directory: apps/api
         run: |
-          bash scripts/build-play-store-assets.sh
-          test "$(identify -format '%wx%h' distribution/google-play/assets/opfin-play-icon-512.png)" = 512x512
-          test "$(identify -format '%wx%h' distribution/google-play/assets/opfin-feature-graphic-1024x500.png)" = 1024x500
-      - name: Commit only store artwork and provenance
+          set -euo pipefail
+          npm update picomatch --package-lock-only --ignore-scripts
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          const matches = Object.entries(lock.packages).filter(([name]) => name.endsWith('/picomatch'));
+          if (!matches.length) throw new Error('No picomatch dependency was inspected');
+          const floors = { 2: [2,3,2], 3: [3,0,2], 4: [4,0,4] };
+          for (const [name, pkg] of matches) {
+            const v = pkg.version.split('.').map(Number), floor = floors[v[0]];
+            if (!floor || v.some(Number.isNaN) || (v[1] < floor[1] || (v[1] === floor[1] && v[2] < floor[2]))) throw new Error('Unreviewed picomatch version: ' + pkg.version);
+            console.log(name + ': ' + pkg.version);
+          }
+          JS
+          npm ci --ignore-scripts
+          npm audit --audit-level=high
+          npm rebuild
+          npm run build
+      - name: Commit only the patched API lockfile
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import subprocess
-          allowed = {'distribution/google-play/assets/opfin-play-icon-512.png', 'distribution/google-play/assets/opfin-feature-graphic-1024x500.png', 'brand/asset-manifest.json'}
           changed = set(subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines())
-          if not changed <= allowed: raise SystemExit('Unexpected generated changes')
+          if not changed <= {'apps/api/package-lock.json'}: raise SystemExit('Unexpected dependency patch changes')
           PY
-          git add -- distribution/google-play/assets brand/asset-manifest.json
+          git add -- apps/api/package-lock.json
           sh scripts/verify-repository-security.sh
           if ! git diff --cached --quiet; then
-            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'feat(brand): align Play icon and feature graphic with mobile and web'
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'fix(security): update vulnerable picomatch in the API asset lockfile'
             AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
             echo "::add-mask::$AUTH"
             git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push origin HEAD:refs/heads/launch/play-store-v1-materials
