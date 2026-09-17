@@ -73,7 +73,7 @@ class _CreditOffersScreenState extends State<CreditOffersScreen> {
             children: [
               const Text('Review every cost before accepting', style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              const Text('For iOS-originated personal-loan applications, OpFin will not generate an offer that requires full repayment in 60 days or less or exceeds a 36% equivalent maximum APR including fees.'),
+              const Text('Mobile-store personal-loan applications cannot require full repayment in 60 days or less. Standard OpFin mobile terms begin at 90 days where an eligible product is available. Every offer shows its equivalent APR, fees and final repayment date.'),
               const SizedBox(height: 18),
               if (offers.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No credit offers are ready yet.'))),
               ...offers.map((offer) => Card(

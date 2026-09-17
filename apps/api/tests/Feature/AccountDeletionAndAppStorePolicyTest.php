@@ -79,9 +79,14 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
     }
 
-    public function test_app_store_policy_rejects_short_personal_loan_terms(): void
+    public function test_mobile_store_policy_defines_safe_personal_loan_boundaries(): void
     {
         $this->assertSame(61, AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS);
+        $this->assertSame(90, AppStoreCreditPolicy::PREFERRED_FULL_REPAYMENT_DAYS);
         $this->assertSame(36.0, AppStoreCreditPolicy::MAX_APR_PERCENT);
+        $this->assertTrue(app(AppStoreCreditPolicy::class)->isStoreChannel('android'));
+        $this->assertTrue(app(AppStoreCreditPolicy::class)->isStoreChannel('play_store'));
+        $this->assertTrue(app(AppStoreCreditPolicy::class)->isStoreChannel('app_store'));
+        $this->assertFalse(app(AppStoreCreditPolicy::class)->isStoreChannel('web'));
     }
 }

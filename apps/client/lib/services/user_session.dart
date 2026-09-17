@@ -10,7 +10,9 @@ class UserSession {
   // This is the flutter_secure_storage option intended for foreground-only
   // access to sensitive session material.
   static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    // flutter_secure_storage 11 uses its encrypted Android implementation by
+    // default; the removed encryptedSharedPreferences flag must not be used.
+    aOptions: AndroidOptions(),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.unlocked),
   );
 

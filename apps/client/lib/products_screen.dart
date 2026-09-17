@@ -52,7 +52,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         body: jsonEncode({
           'amount_minor': amount,
           'reason': purpose,
-          'distribution_channel': Platform.isIOS ? 'app_store' : 'android',
+          'distribution_channel': Platform.isIOS ? 'app_store' : 'play_store',
         }),
       );
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -104,7 +104,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               padding: const EdgeInsets.all(16),
               child: Text(Platform.isIOS
                   ? 'iOS requests are restricted to App Store-compliant personal-loan terms. Before acceptance, OpFin shows the amount received, every fee, total repayment, equivalent maximum APR and payment due terms.'
-                  : 'After assessment, OpFin shows the responsible provider, amount received, every fee, interest, total repayment and repayment dates before you can accept anything.'),
+                  : 'Google Play requests use terms of at least 61 days; standard OpFin mobile terms begin at 90 days where an eligible product is available. Before acceptance, OpFin shows the provider, amount received, every fee, interest, total repayment and repayment dates.'),
             ),
           ),
           const SizedBox(height: 14),

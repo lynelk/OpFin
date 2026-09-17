@@ -54,7 +54,7 @@ class ProductionLoanApplicationController extends Controller
             'amount_minor' => 'nullable|required_without:amount|integer|min:1',
             'amount' => 'nullable|required_without:amount_minor|integer|min:1',
             'reason' => 'required|string|max:255',
-            'distribution_channel' => ['nullable', Rule::in(['web', 'android', 'app_store'])],
+            'distribution_channel' => ['nullable', Rule::in(['web', 'android', 'app_store', 'play_store'])],
         ]);
 
         if ($validator->fails()) {
@@ -107,13 +107,16 @@ class ProductionLoanApplicationController extends Controller
             $term = LoanProductTerm::findOrFail($validated['loan_product_term_id']);
             $institutionId = (int) $validated['institution_id'];
         } else {
-            $minimumDuration = $distributionChannel === 'app_store' ? AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS : 1;
+            $storeChannel = in_array($distributionChannel, AppStoreCreditPolicy::STORE_CHANNELS, true);
+            $minimumDuration = $storeChannel ? AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS : 1;
             $product = LoanProduct::query()
                 ->where('status', 'Active')
                 ->whereNotNull('institution_id')
                 ->with(['terms' => fn ($query) => $query
                     ->where('status', 'Active')
                     ->where('duration', '>=', $minimumDuration)
+                    ->when($storeChannel, fn ($termQuery) => $termQuery
+                        ->orderByRaw('CASE WHEN duration >= ? THEN 0 ELSE 1 END', [AppStoreCreditPolicy::PREFERRED_FULL_REPAYMENT_DAYS]))
                     ->orderBy('duration')
                     ->orderBy('id')])
                 ->orderBy('id')
@@ -122,11 +125,11 @@ class ProductionLoanApplicationController extends Controller
 
             if (! $product) {
                 return ApiResponse::error(
-                    $distributionChannel === 'app_store'
-                        ? 'No App Store-compliant credit route is currently available. No application or payout has been created.'
+                    $storeChannel
+                        ? 'No mobile-store-compliant credit route is currently available. No application or payout has been created.'
                         : 'No active credit route is currently available for this customer. Your request has not been submitted or paid out.',
                     409,
-                    ['code' => [$distributionChannel === 'app_store' ? 'NO_APP_STORE_COMPLIANT_CREDIT_ROUTE' : 'NO_ELIGIBLE_CREDIT_ROUTE']],
+                    ['code' => [$storeChannel ? 'NO_STORE_COMPLIANT_CREDIT_ROUTE' : 'NO_ELIGIBLE_CREDIT_ROUTE']],
                 );
             }
 
@@ -134,8 +137,8 @@ class ProductionLoanApplicationController extends Controller
             $institutionId = (int) $product->institution_id;
         }
 
-        if ($distributionChannel === 'app_store' && (int) $term->duration < AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS) {
-            return ApiResponse::error('This credit term cannot be offered through the iOS App Store because full repayment would be due in 60 days or less.', 422, ['code' => ['APP_STORE_TERM_TOO_SHORT']]);
+        if (in_array($distributionChannel, AppStoreCreditPolicy::STORE_CHANNELS, true) && (int) $term->duration < AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS) {
+            return ApiResponse::error('This credit term cannot be offered through a mobile app store because full repayment would be due in 60 days or less.', 422, ['code' => ['STORE_TERM_TOO_SHORT']]);
         }
 
         if ((int) $term->loan_product_id !== (int) $product->id) {

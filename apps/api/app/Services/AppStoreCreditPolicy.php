@@ -7,13 +7,18 @@ use InvalidArgumentException;
 
 class AppStoreCreditPolicy
 {
+    /** `android` remains protected for clients released before `play_store` was introduced. */
+    public const STORE_CHANNELS = ['android', 'app_store', 'play_store'];
+
     public const MAX_APR_PERCENT = 36.0;
 
     public const MIN_FULL_REPAYMENT_DAYS = 61;
 
+    public const PREFERRED_FULL_REPAYMENT_DAYS = 90;
+
     public function validateOffer(LoanApplication $application, array $pricing): array
     {
-        if (($application->distribution_channel ?? 'web') !== 'app_store') {
+        if (! $this->isStoreChannel((string) ($application->distribution_channel ?? 'web'))) {
             return [];
         }
 
@@ -22,12 +27,12 @@ class AppStoreCreditPolicy
         $decision = $application->creditDecision;
 
         if (! $term || ! $decision || $decision->approved_amount_minor <= 0) {
-            throw new InvalidArgumentException('An approved credit decision and product term are required before App Store loan compliance can be evaluated.');
+            throw new InvalidArgumentException('An approved credit decision and product term are required before mobile-store loan compliance can be evaluated.');
         }
 
         $durationDays = (int) $term->duration;
         if ($durationDays < self::MIN_FULL_REPAYMENT_DAYS) {
-            throw new InvalidArgumentException('This credit product cannot be offered through the iOS App Store because full repayment would be required in 60 days or less.');
+            throw new InvalidArgumentException('This credit product cannot be offered through a mobile app store because full repayment would be required in 60 days or less.');
         }
 
         $principal = (int) $decision->approved_amount_minor;
@@ -41,12 +46,12 @@ class AppStoreCreditPolicy
         $totalRepayment = $principal + $interest + ($feeTreatment === 'financed' ? $fees : 0);
 
         if ($netDisbursement <= 0) {
-            throw new InvalidArgumentException('The disclosed amount received must be positive before App Store loan compliance can be evaluated.');
+            throw new InvalidArgumentException('The disclosed amount received must be positive before mobile-store loan compliance can be evaluated.');
         }
 
         $financeCharge = $totalRepayment - $netDisbursement;
         $equivalentApr = ($financeCharge / $netDisbursement) * (365 / $durationDays) * 100;
-        if ($equivalentApr > self::MAX_APR_PERCENT + 0.000001) {
+        if (($application->distribution_channel ?? 'web') === 'app_store' && $equivalentApr > self::MAX_APR_PERCENT + 0.000001) {
             throw new InvalidArgumentException('This credit product cannot be offered through the iOS App Store because its equivalent maximum APR, including fees, exceeds 36%.');
         }
 
@@ -54,8 +59,14 @@ class AppStoreCreditPolicy
             'equivalent_maximum_apr_percent' => round($equivalentApr, 6),
             'first_payment_due_days_after_disbursement' => $this->frequencyDays((string) $term->repayment_frequency),
             'full_repayment_due_days_after_disbursement' => $durationDays,
-            'app_store_policy_version' => 'apple-personal-loan-v1',
+            'mobile_store_policy_version' => 'personal-loan-store-v2',
+            'distribution_channel' => (string) $application->distribution_channel,
         ];
+    }
+
+    public function isStoreChannel(string $channel): bool
+    {
+        return in_array($channel, self::STORE_CHANNELS, true);
     }
 
     private function cycleDays(string $cycle): int

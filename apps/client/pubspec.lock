@@ -127,7 +127,7 @@ packages:
     source: hosted
     version: "6.0.0"
   flutter_secure_storage:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_secure_storage
       sha256: "15e8c8fe269fdf7d469b23008ab3df521c8b826ed345820532364c31bdebace6"
