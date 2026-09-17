@@ -7,9 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Non-sensitive display fields (name, role, credit info) stay in SharedPreferences.
 class UserSession {
   // `unlocked` restricts keychain access to periods when the device is unlocked.
-  // AndroidOptions uses the package's authenticated encryption defaults.
-  // Backup protection supports recovery if an existing cipher migration stops.
+  // This is the flutter_secure_storage option intended for foreground-only
+  // access to sensitive session material.
   static const _storage = FlutterSecureStorage(
+    // flutter_secure_storage 11 uses its encrypted Android implementation by
+    // default; the removed encryptedSharedPreferences flag must not be used.
     aOptions: AndroidOptions(migrateWithBackup: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.unlocked),
   );

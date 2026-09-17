@@ -37,7 +37,7 @@ def hasReleaseSigning = releaseSigningKeys.every { key ->
 def isCiBuild = System.getenv('CI') == 'true'
 
 android {
-    namespace = "org.rotaryo.opfin"
+    namespace = "co.opfin.app"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -51,7 +51,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "org.rotaryo.opfin"
+        applicationId = "co.opfin.app"
         minSdkVersion flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutterVersionCode.toInteger()
