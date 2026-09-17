@@ -9,7 +9,7 @@ jobs:
   store-art:
     if: github.repository == 'lynelk/OpFin' && github.ref == 'refs/heads/launch/play-store-v1-materials'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
@@ -24,6 +24,10 @@ jobs:
           echo "::add-mask::$AUTH"
           git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
           git checkout -b launch/play-store-v1-materials FETCH_HEAD
+      - name: Install renderer from signed operating-system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y imagemagick
       - name: Render approved brand layouts and verify dimensions
         run: |
           bash scripts/build-play-store-assets.sh
