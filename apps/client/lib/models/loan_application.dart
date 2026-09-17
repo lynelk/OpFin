@@ -5,6 +5,7 @@ class LoanApplication {
   final int? institutionId;
   final double amount;
   final String reason;
+  final String distributionChannel;
 
   LoanApplication({
     required this.userId,
@@ -13,6 +14,7 @@ class LoanApplication {
     this.institutionId,
     required this.amount,
     required this.reason,
+    required this.distributionChannel,
   });
 
   Map<String, dynamic> toJson() {
@@ -23,6 +25,7 @@ class LoanApplication {
       "institution_id": institutionId,
       "amount": amount,
       "reason": reason,
+      "distribution_channel": distributionChannel,
     };
   }
 }

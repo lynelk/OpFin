@@ -236,6 +236,7 @@ class ProductTermsPageState extends State<ProductTermsPage> {
       final data = jsonDecode(response.body);
       List<ProductTerm> productTerms = (data['data'] as List)
           .map((item) => ProductTerm.fromJson(item))
+          .where((term) => term.duration >= 61)
           .toList();
       return productTerms;
     } else {

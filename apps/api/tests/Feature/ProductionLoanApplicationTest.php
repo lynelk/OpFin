@@ -70,6 +70,58 @@ class ProductionLoanApplicationTest extends TestCase
         $this->assertDatabaseCount('mobile_money_transactions', 0);
     }
 
+    public function test_google_play_request_rejects_an_explicit_term_due_in_60_days_or_less(): void
+    {
+        [$user, $institution, $product, $term] = $this->eligibleCustomer();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/credit/applications', [
+            'loan_product_id' => $product->id,
+            'loan_product_term_id' => $term->id,
+            'institution_id' => $institution->id,
+            'amount_minor' => 150000,
+            'reason' => 'Education expense',
+            'distribution_channel' => 'play_store',
+        ])->assertUnprocessable()
+            ->assertJsonPath('errors.code.0', 'STORE_TERM_TOO_SHORT');
+
+        $this->assertDatabaseCount('loan_applications', 0);
+    }
+
+    public function test_google_play_request_prefers_a_90_day_term_and_never_routes_to_a_short_term(): void
+    {
+        [$user, $institution, $product] = $this->eligibleCustomer();
+        $sixtyOneDayTerm = LoanProductTerm::create([
+            'loan_product_id' => $product->id,
+            'interest_rate' => 5,
+            'interest_type' => 'Flat',
+            'interest_cycle' => 'Monthly',
+            'repayment_frequency' => 'Monthly',
+            'duration' => 61,
+            'status' => 'Active',
+        ]);
+        $ninetyDayTerm = LoanProductTerm::create([
+            'loan_product_id' => $product->id,
+            'interest_rate' => 5,
+            'interest_type' => 'Flat',
+            'interest_cycle' => 'Monthly',
+            'repayment_frequency' => 'Monthly',
+            'duration' => 90,
+            'status' => 'Active',
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/credit/applications', [
+            'amount_minor' => 175000,
+            'reason' => 'School fees',
+            'distribution_channel' => 'play_store',
+        ])->assertCreated()
+            ->assertJsonPath('data.application.loan_product_term_id', $ninetyDayTerm->id)
+            ->assertJsonPath('data.application.distribution_channel', 'play_store');
+
+        $this->assertNotSame($sixtyOneDayTerm->id, $ninetyDayTerm->id);
+    }
+
     public function test_partial_product_selection_is_rejected_instead_of_guessing_missing_product_configuration(): void
     {
         [$user, , $product] = $this->eligibleCustomer();

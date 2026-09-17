@@ -1,7 +1,7 @@
 name: opfin
 description: "OpFin financial wellbeing, responsible credit, savings and peer-lending platform."
 publish_to: "none"
-version: 1.0.0+16
+version: 1.0.0+17
 
 environment:
   sdk: ">=3.4.4 <4.0.0"
