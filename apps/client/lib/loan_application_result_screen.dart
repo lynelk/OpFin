@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:opfin/home_screen.dart';
 
@@ -29,14 +30,14 @@ class LoanApplicationResultScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: success ? Colors.black : Colors.grey,
+                    color: success ? OpFinColors.ink : Colors.grey,
                     width: 2,
                   ),
                 ),
                 child: Icon(
                   success ? Icons.check_circle_outline : Icons.error_outline,
                   size: 48,
-                  color: success ? Colors.black : Colors.grey,
+                  color: success ? OpFinColors.ink : Colors.grey,
                 ),
               ),
 
@@ -48,7 +49,7 @@ class LoanApplicationResultScreen extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  color: Colors.black,
+                  color: OpFinColors.ink,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -74,7 +75,7 @@ class LoanApplicationResultScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.black12),
+                  border: Border.all(color: OpFinColors.line),
                 ),
                 child: Text(
                   success
@@ -82,7 +83,7 @@ class LoanApplicationResultScreen extends StatelessWidget {
                       : "Please review your details and try again. If the problem persists, contact support.",
                   style: const TextStyle(
                     fontSize: 14,
-                    color: Colors.black,
+                    color: OpFinColors.ink,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -104,7 +105,7 @@ class LoanApplicationResultScreen extends StatelessWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
+                    backgroundColor: OpFinColors.indigo,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -132,7 +133,7 @@ class LoanApplicationResultScreen extends StatelessWidget {
                   child: const Text(
                     "Edit Application",
                     style: TextStyle(
-                      color: Colors.black,
+                      color: OpFinColors.ink,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

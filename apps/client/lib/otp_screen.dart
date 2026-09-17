@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -203,14 +204,14 @@ class OtpScreenState extends State<OtpScreen> {
                   const SizedBox(height: 25),
                   const Text(
                     'Verify your phone',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.black),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: OpFinColors.ink),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'We sent a 6-digit code to\n${widget.phone}. Enter it below to continue securely.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16, color: Colors.black54),
+                    style: const TextStyle(fontSize: 16, color: OpFinColors.muted),
                   ),
                   const SizedBox(height: 40),
                   TextFormField(
@@ -222,7 +223,7 @@ class OtpScreenState extends State<OtpScreen> {
                       hint: '6 digits',
                       icon: Icons.lock_rounded,
                     ),
-                    style: const TextStyle(color: Colors.black),
+                    style: const TextStyle(color: OpFinColors.ink),
                     validator: (value) {
                       final code = value?.trim() ?? '';
                       if (!RegExp(r'^\d{6}$').hasMatch(code)) {
@@ -236,13 +237,13 @@ class OtpScreenState extends State<OtpScreen> {
                     _countdown > 0 ? 'Code expires in $_countdown seconds' : 'This code has expired',
                     style: TextStyle(
                       fontSize: 14,
-                      color: _countdown > 0 ? Colors.black54 : Colors.red,
+                      color: _countdown > 0 ? OpFinColors.muted : Colors.red,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 30),
                   _isLoading
-                      ? const CircularProgressIndicator(color: Colors.black)
+                      ? const CircularProgressIndicator(color: OpFinColors.ink)
                       : SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -252,7 +253,7 @@ class OtpScreenState extends State<OtpScreen> {
                                   }
                                 : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
+                              backgroundColor: OpFinColors.indigo,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

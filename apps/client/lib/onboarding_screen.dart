@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:opfin/register_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -75,7 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(page.icon, size: 120, color: Colors.black),
+                        Icon(page.icon, size: 120, color: OpFinColors.ink),
                         const SizedBox(height: 40),
                         Text(
                           page.title,
@@ -110,7 +111,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   height: 10,
                   width: _currentIndex == i ? 28 : 10,
                   decoration: BoxDecoration(
-                    color: _currentIndex == i ? Colors.black : Colors.grey,
+                    color: _currentIndex == i ? OpFinColors.ink : Colors.grey,
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
@@ -125,7 +126,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   onPressed: _next,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.black,
+                    backgroundColor: OpFinColors.indigo,
                   ),
                   child: Text(
                     _currentIndex == pages.length - 1 ? 'Get Started' : 'Next',

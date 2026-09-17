@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:flutter/material.dart';
 
 class FaqsScreen extends StatelessWidget {
@@ -63,16 +64,16 @@ class FaqsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: OpFinColors.ink),
         title: const Text(
           "FAQs",
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: OpFinColors.ink,
           ),
         ),
         centerTitle: false,
-        foregroundColor: Colors.black,
+        foregroundColor: OpFinColors.ink,
       ),
       body: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -94,8 +95,8 @@ class FaqsScreen extends StatelessWidget {
                 splashColor: Colors.transparent,
                 highlightColor: Colors.transparent,
                 expansionTileTheme: const ExpansionTileThemeData(
-                  iconColor: Colors.black,
-                  collapsedIconColor: Colors.black,
+                  iconColor: OpFinColors.ink,
+                  collapsedIconColor: OpFinColors.ink,
                 ),
               ),
               child: ExpansionTile(
@@ -106,7 +107,7 @@ class FaqsScreen extends StatelessWidget {
                 title: Text(
                   faq['question']!,
                   style: const TextStyle(
-                    color: Colors.black,
+                    color: OpFinColors.ink,
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
                   ),
@@ -115,7 +116,7 @@ class FaqsScreen extends StatelessWidget {
                   Text(
                     faq['answer']!,
                     style: const TextStyle(
-                      color: Colors.black87,
+                      color: OpFinColors.ink,
                       fontSize: 15,
                       height: 1.4,
                     ),

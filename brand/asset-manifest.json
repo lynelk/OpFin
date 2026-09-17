@@ -1,0 +1,58 @@
+{
+  "source": {
+    "source": "apps/client/assets/logo.png",
+    "sourceGitBlob": "5b440fbc74804b68a8d0ab12803a3185999157da",
+    "rule": "Derive resized and recoloured assets from the existing monogram, preserving its silhouette. No invented replacement mark. Interface app-name text is not represented as the supplied vector wordmark."
+  },
+  "fontSource": {
+    "repository": "rsms/inter",
+    "commit": "e3a3d4c57d5ecc01453a575621882a384c1995a3",
+    "licence": "SIL Open Font License 1.1"
+  },
+  "files": {
+    "apps/web/public/brand/InterVariable.woff2": "693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3",
+    "apps/web/public/brand/INTER-LICENSE.txt": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
+    "apps/client/assets/brand/InterVariable.ttf": "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf",
+    "apps/client/assets/brand/INTER-LICENSE.txt": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
+    "apps/web/public/brand/opfin-symbol.png": "46228cbd061180358ff05c65f2b30ed823bedf96fe9eba5d749c9053be6f2ed5",
+    "apps/web/public/brand/opfin-symbol-reverse.png": "e6f1c6c332c0a5b3d09a5f81be3ff64574e9ece6eb586273b0883596e1a918ac",
+    "apps/client/assets/brand/opfin-symbol.png": "46228cbd061180358ff05c65f2b30ed823bedf96fe9eba5d749c9053be6f2ed5",
+    "apps/client/assets/brand/opfin-symbol-reverse.png": "e6f1c6c332c0a5b3d09a5f81be3ff64574e9ece6eb586273b0883596e1a918ac",
+    "apps/client/assets/brand/opfin-app-icon.png": "6b33b580625dfbec6c02a68035404be57e4591b53c3898d4fdb2e38193d94b8c",
+    "apps/web/src/app/icon.png": "69e8368259225c015d7c07f5abf9b1c7aaac29bb183172b04e552032e363bcc5",
+    "apps/client/android/app/src/main/res/mipmap-mdpi/ic_launcher.png": "644c99f9e26c3342b05b90da06953040e31c43a695f8e7f3d7aa0646500f4b7a",
+    "apps/client/android/app/src/main/res/mipmap-hdpi/ic_launcher.png": "f4f901a06b254f0051f7f93a4d7541025c24bf6085b4888a6d9e3a5ba8ab441a",
+    "apps/client/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": "3bd806871fd4de686344bac1ad9f94e3d34b52a9de857436654526c6f959dbdf",
+    "apps/client/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": "cc57f9ece39eb97802d4db991904c83e4b26a1a78f687b3bdb1062c457db1a20",
+    "apps/client/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": "69e8368259225c015d7c07f5abf9b1c7aaac29bb183172b04e552032e363bcc5",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png": "522e74cfdaf7d94ca8b9ed9f7319d988c20b6c6675603cbbe0cbed020bcc89b2",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png": "bdb01f5dc09aea3336e720e3422eb17f20d935eaf4fdbc8bb1cb4430a7e81673",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png": "0918d0ca77a4662ddbfc3ad9f9d84436589709bd45ed02270af59d4828fde2b3",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png": "2861a25d374f90e336c9743a17b0560f783a61765c6b85012def8a2589ab9b9b",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png": "5f0e531449159392054fbd0b1bee959510852d2ffadebb70113d083d2dc74673",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png": "46d054c850b23b56a81b1900c56c2b70b3249f3d508a21edebb5e294669e11e0",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png": "2871956571f7c046565a28f63808b0e28c34a0550289d82d80e4b35d94ef356d",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png": "2871956571f7c046565a28f63808b0e28c34a0550289d82d80e4b35d94ef356d",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png": "1db914930ed1f717f02b8be0136dad8eaf066f6299533122e69a4008cc7a1a5a",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png": "c5b8bbb673c10d20d65b7500a2fd34ceedfc61781ee5b64eea24ca5832caf6a3",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png": "522e74cfdaf7d94ca8b9ed9f7319d988c20b6c6675603cbbe0cbed020bcc89b2",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png": "726055da592dbf164d13d1a209d6cd4b9e75558bb306138b55a608a36487a67e",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png": "cb349069c3302249dc3ae937b9ed577cc34d732bb9ad8babd4050a82ee3d31b0",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png": "7f688ad11d18fe5f45e4b58d9e19f3f1fab26c8623c223f0d802c96191856fd7",
+    "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": "396970e91adbdbb31beb5261847f4f9b277f13ed86321df688e98ce1db14295a"
+  },
+  "extraction": {
+    "cornerColour": [
+      0,
+      0,
+      209
+    ],
+    "sourceHasTransparency": false,
+    "bounds": {
+      "left": 251,
+      "top": 221,
+      "width": 266,
+      "height": 326
+    }
+  }
+}

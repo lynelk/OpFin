@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -52,16 +53,16 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
           appBar: AppBar(
             backgroundColor: Colors.white,
             elevation: 0,
-            iconTheme: const IconThemeData(color: Colors.black),
+            iconTheme: const IconThemeData(color: OpFinColors.ink),
             title: const Text(
               'Apply for a Loan',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: OpFinColors.ink,
                 fontSize: 22,
               ),
             ),
-            foregroundColor: Colors.black,
+            foregroundColor: OpFinColors.ink,
           ),
           body: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -75,11 +76,11 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       width: 70,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black, width: 2),
+                        border: Border.all(color: OpFinColors.ink, width: 2),
                       ),
                       child: const Icon(
                         Icons.assignment,
-                        color: Colors.black,
+                        color: OpFinColors.ink,
                         size: 36,
                       ),
                     ),
@@ -90,14 +91,14 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 22,
-                      color: Colors.black,
+                      color: OpFinColors.ink,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Provide the required information to continue with your loan request.',
                     style: TextStyle(
-                      color: Colors.black.withValues(alpha: 0.6),
+                      color: OpFinColors.ink.withValues(alpha: 0.6),
                       fontSize: 14,
                     ),
                   ),
@@ -107,7 +108,7 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     decoration: BoxDecoration(
                       color: Colors.grey[50],
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.black12),
+                      border: Border.all(color: OpFinColors.line),
                     ),
                     child: Column(
                       children: [
@@ -115,10 +116,10 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
                             labelText: 'Loan Amount',
-                            labelStyle: const TextStyle(color: Colors.black),
+                            labelStyle: const TextStyle(color: OpFinColors.ink),
                             prefixIcon: const Icon(
                               Icons.payments_outlined,
-                              color: Colors.black,
+                              color: OpFinColors.ink,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -129,16 +130,16 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
                           validator: (value) => value == null || value.isEmpty
                               ? 'Please enter loan amount'
                               : null,
-                          style: const TextStyle(color: Colors.black),
+                          style: const TextStyle(color: OpFinColors.ink),
                         ),
                         const SizedBox(height: 30),
                         DropdownButtonFormField<String>(
                           decoration: InputDecoration(
                             labelText: 'Reason for Loan',
-                            labelStyle: const TextStyle(color: Colors.black),
+                            labelStyle: const TextStyle(color: OpFinColors.ink),
                             prefixIcon: const Icon(
                               Icons.category_outlined,
-                              color: Colors.black,
+                              color: OpFinColors.ink,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -154,7 +155,7 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
                                   value: reason,
                                   child: Text(
                                     reason,
-                                    style: const TextStyle(color: Colors.black),
+                                    style: const TextStyle(color: OpFinColors.ink),
                                   ),
                                 ),
                               )
@@ -162,7 +163,7 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
                           validator: (value) => value == null || value.isEmpty
                               ? 'Please select a reason'
                               : null,
-                          style: const TextStyle(color: Colors.black),
+                          style: const TextStyle(color: OpFinColors.ink),
                           dropdownColor: Colors.white,
                         ),
                       ],
@@ -174,7 +175,7 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
                     child: ElevatedButton(
                       onPressed: _submitting ? null : _goToConfirmation,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: OpFinColors.indigo,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -198,9 +199,9 @@ class LoanApplicationScreenState extends State<LoanApplicationScreen> {
         ),
         if (_submitting)
           Container(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: OpFinColors.ink.withValues(alpha: 0.3),
             child: const Center(
-              child: CircularProgressIndicator(color: Colors.black),
+              child: CircularProgressIndicator(color: OpFinColors.ink),
             ),
           ),
       ],

@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
@@ -180,16 +181,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: OpFinColors.ink),
         title: const Text(
           "Profile",
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: OpFinColors.ink,
           ),
         ),
         centerTitle: false,
-        foregroundColor: Colors.black,
+        foregroundColor: OpFinColors.ink,
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32),
@@ -204,7 +205,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Text(
                         entry.key,
                         style: const TextStyle(
-                          color: Colors.black,
+                          color: OpFinColors.ink,
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
@@ -223,7 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Text(
                           entry.value.isNotEmpty ? entry.value : '-',
                           style: const TextStyle(
-                            color: Colors.black,
+                            color: OpFinColors.ink,
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
@@ -242,7 +243,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text(
                     'Enter NIN',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: OpFinColors.ink,
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                     ),
@@ -270,7 +271,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: ElevatedButton(
                     onPressed: validateNin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: OpFinColors.indigo,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -293,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: ElevatedButton(
                   onPressed: _logout,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
+                    backgroundColor: OpFinColors.indigo,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

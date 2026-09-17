@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -46,24 +47,24 @@ class LoanApplicationsScreenState extends State<LoanApplicationsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: OpFinColors.ink),
         title: const Text(
           'Loan Applications',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: OpFinColors.ink,
             fontSize: 22,
           ),
         ),
         centerTitle: false,
-        foregroundColor: Colors.black,
+        foregroundColor: OpFinColors.ink,
       ),
       body: FutureBuilder<List<dynamic>>(
         future: fetchLoanApplications(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.black),
+              child: CircularProgressIndicator(color: OpFinColors.ink),
             );
           }
 
@@ -71,7 +72,7 @@ class LoanApplicationsScreenState extends State<LoanApplicationsScreen> {
             return Center(
               child: Text(
                 "Error: ${snapshot.error}",
-                style: const TextStyle(color: Colors.black),
+                style: const TextStyle(color: OpFinColors.ink),
               ),
             );
           }
@@ -80,7 +81,7 @@ class LoanApplicationsScreenState extends State<LoanApplicationsScreen> {
             return const Center(
               child: Text(
                 "No loan applications found.",
-                style: TextStyle(color: Colors.black),
+                style: TextStyle(color: OpFinColors.ink),
               ),
             );
           }
@@ -108,10 +109,10 @@ class LoanApplicationsScreenState extends State<LoanApplicationsScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.black12),
+                  border: Border.all(color: OpFinColors.line),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: .05),
+                      color: OpFinColors.ink.withValues(alpha: .05),
                       blurRadius: 6,
                       offset: const Offset(0, 3),
                     ),
@@ -129,7 +130,7 @@ class LoanApplicationsScreenState extends State<LoanApplicationsScreen> {
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
-                            color: Colors.black,
+                            color: OpFinColors.ink,
                           ),
                         ),
                         Text(status),
@@ -169,7 +170,7 @@ class LoanApplicationsScreenState extends State<LoanApplicationsScreen> {
                         alignment: Alignment.centerRight,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
+                            backgroundColor: OpFinColors.indigo,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                                 vertical: 12, horizontal: 16),
@@ -217,13 +218,13 @@ class LoanApplicationsScreenState extends State<LoanApplicationsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, color: Colors.black, size: 20),
+          Icon(icon, color: OpFinColors.ink, size: 20),
           const SizedBox(width: 10),
           Text(
             "$label:",
             style: const TextStyle(
               fontWeight: FontWeight.w600,
-              color: Colors.black,
+              color: OpFinColors.ink,
             ),
           ),
           const SizedBox(width: 6),
@@ -233,7 +234,7 @@ class LoanApplicationsScreenState extends State<LoanApplicationsScreen> {
               textAlign: TextAlign.end,
               style: const TextStyle(
                 // fontWeight: FontWeight.w700,
-                color: Colors.black,
+                color: OpFinColors.ink,
               ),
             ),
           ),

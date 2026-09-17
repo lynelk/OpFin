@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -34,23 +35,23 @@ class ProductTermsPageState extends State<ProductTermsPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: OpFinColors.ink),
         title: Text(
           "${widget.productName} Terms",
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: OpFinColors.ink,
             fontSize: 22,
           ),
         ),
-        foregroundColor: Colors.black,
+        foregroundColor: OpFinColors.ink,
       ),
       body: FutureBuilder<List<ProductTerm>>(
         future: futureProductTerms,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.black),
+              child: CircularProgressIndicator(color: OpFinColors.ink),
             );
           }
 
@@ -58,7 +59,7 @@ class ProductTermsPageState extends State<ProductTermsPage> {
             return Center(
               child: Text(
                 "Error: ${snapshot.error}",
-                style: const TextStyle(color: Colors.black),
+                style: const TextStyle(color: OpFinColors.ink),
               ),
             );
           }
@@ -67,7 +68,7 @@ class ProductTermsPageState extends State<ProductTermsPage> {
             return const Center(
               child: Text(
                 "No terms available for this product",
-                style: TextStyle(color: Colors.black),
+                style: TextStyle(color: OpFinColors.ink),
               ),
             );
           }
@@ -100,10 +101,10 @@ class ProductTermsPageState extends State<ProductTermsPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.black12),
+                      border: Border.all(color: OpFinColors.line),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: .05),
+                          color: OpFinColors.ink.withValues(alpha: .05),
                           blurRadius: 6,
                           offset: const Offset(0, 3),
                         ),
@@ -121,10 +122,10 @@ class ProductTermsPageState extends State<ProductTermsPage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border:
-                                    Border.all(color: Colors.black, width: 2),
+                                    Border.all(color: OpFinColors.ink, width: 2),
                               ),
                               child: const Icon(Icons.info_outline,
-                                  color: Colors.black),
+                                  color: OpFinColors.ink),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -133,7 +134,7 @@ class ProductTermsPageState extends State<ProductTermsPage> {
                                 style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.black,
+                                  color: OpFinColors.ink,
                                 ),
                               ),
                             ),
@@ -170,7 +171,7 @@ class ProductTermsPageState extends State<ProductTermsPage> {
                               );
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
+                              backgroundColor: OpFinColors.indigo,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10)),
@@ -206,14 +207,14 @@ class ProductTermsPageState extends State<ProductTermsPage> {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 14, color: Colors.black54),
+            style: const TextStyle(fontSize: 14, color: OpFinColors.muted),
           ),
           Text(
             value,
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Colors.black,
+              color: OpFinColors.ink,
             ),
           ),
         ],

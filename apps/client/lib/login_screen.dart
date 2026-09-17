@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -150,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
-                    color: Colors.black,
+                    color: OpFinColors.ink,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -161,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   "Login to continue accessing your loan services.",
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.black54,
+                    color: OpFinColors.muted,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -177,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     hint: "0700460055",
                     icon: Icons.phone_rounded,
                   ),
-                  style: const TextStyle(color: Colors.black),
+                  style: const TextStyle(color: OpFinColors.ink),
                 ),
 
                 const SizedBox(height: 25),
@@ -191,20 +192,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     hint: "•••••••••••",
                     icon: Icons.lock_rounded,
                   ),
-                  style: const TextStyle(color: Colors.black),
+                  style: const TextStyle(color: OpFinColors.ink),
                 ),
 
                 const SizedBox(height: 35),
 
                 // Login Button
                 _isLoading
-                    ? const CircularProgressIndicator(color: Colors.black)
+                    ? const CircularProgressIndicator(color: OpFinColors.ink)
                     : SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: _login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
+                            backgroundColor: OpFinColors.indigo,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -234,7 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text(
                       "Forgot password?",
                       style: TextStyle(
-                        color: Colors.black54,
+                        color: OpFinColors.muted,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
@@ -246,18 +247,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 Row(
                   children: [
-                    Expanded(child: Divider(color: Colors.black26)),
+                    Expanded(child: Divider(color: OpFinColors.line)),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 10),
                       child: Text(
                         "OR",
                         style: TextStyle(
-                          color: Colors.black45,
+                          color: OpFinColors.muted,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    Expanded(child: Divider(color: Colors.black26)),
+                    Expanded(child: Divider(color: OpFinColors.line)),
                   ],
                 ),
 
@@ -275,7 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     text: const TextSpan(
                       text: "Don’t have an account? ",
                       style: TextStyle(
-                        color: Colors.black87,
+                        color: OpFinColors.ink,
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                       ),
@@ -283,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextSpan(
                           text: "Register",
                           style: TextStyle(
-                            color: Colors.black,
+                            color: OpFinColors.ink,
                             fontWeight: FontWeight.w800,
                             decoration: TextDecoration.underline,
                           ),

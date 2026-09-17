@@ -1,10 +1,11 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:flutter/material.dart';
 
 class ButtonStyles {
   /// A reusable elevated button style for consistent design.
   static ButtonStyle customButtonStyle() {
     return ElevatedButton.styleFrom(
-      backgroundColor: Colors.black, // Button background color
+      backgroundColor: OpFinColors.indigo, // Button background color
       foregroundColor: Colors.white, // Text color
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       shape: RoundedRectangleBorder(
@@ -21,7 +22,7 @@ class ButtonStyles {
   /// A reusable Text Button style for consistent design.
   static ButtonStyle customTextButtonStyle() {
     return TextButton.styleFrom(
-      foregroundColor: Colors.black, // Text color
+      foregroundColor: OpFinColors.ink, // Text color
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       textStyle: const TextStyle(
         fontSize: 14.0,

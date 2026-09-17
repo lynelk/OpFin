@@ -1,3 +1,4 @@
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:opfin/constants.dart';
@@ -70,8 +71,8 @@ class LoanRepaymentScreenState extends State<LoanRepaymentScreen> {
         ),
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        iconTheme: const IconThemeData(color: Colors.black),
-        foregroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: OpFinColors.ink),
+        foregroundColor: OpFinColors.ink,
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -141,7 +142,7 @@ class LoanRepaymentScreenState extends State<LoanRepaymentScreen> {
                         width: double.infinity,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
+                            backgroundColor: OpFinColors.indigo,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             textStyle: const TextStyle(
