@@ -1,0 +1,51 @@
+name: Prepare matching store artwork
+on:
+  push:
+    branches: [launch/play-store-v1-materials]
+    paths: [.github/workflows/launch-store-art.yml]
+permissions:
+  contents: read
+jobs:
+  store-art:
+    if: github.repository == 'lynelk/OpFin' && github.ref == 'refs/heads/launch/play-store-v1-materials'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Check out exact launch source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
+          git checkout -b launch/play-store-v1-materials FETCH_HEAD
+      - name: Render approved brand layouts and verify dimensions
+        run: |
+          bash scripts/build-play-store-assets.sh
+          test "$(identify -format '%wx%h' distribution/google-play/assets/opfin-play-icon-512.png)" = 512x512
+          test "$(identify -format '%wx%h' distribution/google-play/assets/opfin-feature-graphic-1024x500.png)" = 1024x500
+      - name: Commit only store artwork and provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess
+          allowed = {'distribution/google-play/assets/opfin-play-icon-512.png', 'distribution/google-play/assets/opfin-feature-graphic-1024x500.png', 'brand/asset-manifest.json'}
+          changed = set(subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines())
+          if not changed <= allowed: raise SystemExit('Unexpected generated changes')
+          PY
+          git add -- distribution/google-play/assets brand/asset-manifest.json
+          sh scripts/verify-repository-security.sh
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'feat(brand): align Play icon and feature graphic with mobile and web'
+            AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+            echo "::add-mask::$AUTH"
+            git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push origin HEAD:refs/heads/launch/play-store-v1-materials
+          fi
+          git rev-parse HEAD
