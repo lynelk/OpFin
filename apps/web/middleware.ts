@@ -10,7 +10,7 @@ const protectedPrefixes = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const production = process.env.NODE_ENV === "production";
-  const nonce = btoa(crypto.randomUUID());
+  const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
   const policy = contentSecurityPolicy(nonce, production, process.env.NEXT_PUBLIC_OPFIN_API_URL);
   const requestHeaders = new Headers(request.headers);
   // Never trust a nonce or policy supplied by a caller.
@@ -37,7 +37,6 @@ export function middleware(request: NextRequest) {
   }
 
   response.headers.set("Content-Security-Policy", policy);
-  // Nonces must not be reused from cached HTML. Static assets are excluded below.
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   for (const [key, value] of Object.entries(securityHeaders(production))) response.headers.set(key, value);
   return response;
