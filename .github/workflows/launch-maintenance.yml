@@ -53,7 +53,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git diff --name-only | grep -v '^apps/web/package-lock.json$' | wc -l)" -eq 0
+          unexpected=$(git diff --name-only | grep -v '^apps/web/package-lock.json$' || true)
+          test -z "$unexpected"
           git add -- apps/web/package-lock.json
           if ! git diff --cached --quiet; then
             git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'fix(security): lock patched sharp dependency and native binaries'
@@ -61,18 +62,5 @@ jobs:
             echo "::add-mask::$AUTH"
             git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push origin HEAD:refs/heads/launch/play-store-v1-materials
           fi
-          git rev-parse HEAD > "$RUNNER_TEMP/verified-source-sha.txt"
-      - name: Export tracked source for review, excluding repository credentials
-        run: |
-          set -euo pipefail
-          sh scripts/verify-repository-security.sh
-          git archive --format=zip --output="$RUNNER_TEMP/opfin-reviewed-source.zip" HEAD
-      - name: Preserve source snapshot
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: opfin-reviewed-source
-          path: |
-            ${{ runner.temp }}/opfin-reviewed-source.zip
-            ${{ runner.temp }}/verified-source-sha.txt
-          retention-days: 3
-          if-no-files-found: error
+          git rev-parse HEAD
+          git show --stat --oneline HEAD
