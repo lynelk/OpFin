@@ -16,6 +16,12 @@ const reportOptions = [
   ["fia_suspicious_activity_register", "FIA suspicious activity candidate register"],
   ["pdpo_annual_compliance", "PDPO annual privacy compliance"],
   ["umra_digital_credit_supervision", "UMRA digital credit supervision"],
+  ["umra_books_and_records", "UMRA books and records"],
+  ["umra_credit_information_exchange", "UMRA credit information exchange"],
+  ["umra_npl_recovery", "UMRA NPL recovery ceilings"],
+  ["umra_transaction_receipts", "UMRA transaction receipts register"],
+  ["umra_term_variations", "UMRA credit-term variations register"],
+  ["umra_guarantor_controls", "UMRA guarantor controls register"],
   ["consumer_protection_complaints", "UMRA consumer protection complaints"],
   ["payment_integrity_oversight", "BoU payment integrity oversight"]
 ] as const;
