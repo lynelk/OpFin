@@ -60,7 +60,7 @@ Generated files remain in `.build/`, not in a second hand-maintained contract tr
 
 The `Documentation quality` workflow runs on pull requests, pushes to `main`, manual dispatch and a daily schedule. It uses read-only repository permissions, no production secrets and a disposable testing configuration. On pull requests it compares the exact base and candidate commits. For a push it compares the event's previous commit with the new head, including multi-commit pushes.
 
-The workflow exports the route reference, reports coverage gaps, builds the portal and retains a commit-labelled artefact. Check both the job result and coverage report. Existing unrelated link defects remain visible in PR output; full scheduled/manual audits report them as failures until repaired.
+The workflow exports the route reference, reports coverage gaps, builds the portal and publishes commit-labelled evidence in its summary and logs. The summary provides source links for the documentation inventory and the full generated route table. It follows the repository's action-free pattern: there is no external upload action or hosted HTML artefact. Reproduce the portal locally with `make docs-build` at the recorded commit. Check both the job result and coverage report. Existing unrelated link defects remain visible in PR output; full scheduled/manual audits report them as failures until repaired.
 
 Repository administrators must make `documentation` a required check to prevent bypass. That protection must be verified separately. Daily checks detect problems; they do not edit business explanations or promise automatic accuracy.
 

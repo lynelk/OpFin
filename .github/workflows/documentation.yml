@@ -81,14 +81,24 @@ jobs:
               summary.write(str(len(result['narrative_uncovered'])) + ' operations need additional narrative coverage.\n\n')
               summary.write('Registration environment: testing. This is not a production or complete-schema certificate.\n')
           PY
-      - name: Retain commit-labelled documentation evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: opfin-docs-${{ github.sha }}
-          path: |
-            .build/docs/
-            .build/api/api-routes.json
-            .build/api/API_ROUTE_REFERENCE.md
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
+      - name: Publish source evidence in the workflow summary
+        shell: bash
+        run: |
+          python3 - <<'PYDOC'
+          import json, os
+          from pathlib import Path
+          from urllib.parse import quote
+          api = json.loads(Path('.build/api/api-routes.json').read_text())
+          inventory = json.loads(Path('.build/docs/documentation-inventory.json').read_text())
+          print('OPFIN_API_EXPORT=' + json.dumps(api, separators=(',', ':')))
+          print('OPFIN_DOCUMENTATION_INVENTORY=' + json.dumps(inventory, separators=(',', ':')))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('\n## Browse documentation at this commit\n\n')
+              for doc in inventory['documents']:
+                  if doc.get('generated'):
+                      continue
+                  url = 'https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '/blob/' + api['source_commit'] + '/' + quote(doc['path'], safe='/')
+                  summary.write('- [' + doc['path'] + '](' + url + ')' + (' (historical)' if doc['historical'] else '') + '\n')
+              summary.write('\n' + Path('.build/api/API_ROUTE_REFERENCE.md').read_text())
+              summary.write('\nThe offline portal is reproducible with `make docs-build` at this commit. This workflow uses no external actions and does not upload a hosted HTML artefact.\n')
+          PYDOC
