@@ -10,7 +10,6 @@ use App\Services\CustomerCreditProfileService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class CustomerPhoneController extends Controller
@@ -47,7 +46,10 @@ class CustomerPhoneController extends Controller
             && $otp->verified_at
             && $otp->verification_token_hash
             && $otp->verified_at->gte(now()->subMinutes(10))
-            && hash_equals($otp->verification_token_hash, hash('sha256', (string) $request->input('verification_token')));
+            && hash_equals(
+                $otp->verification_token_hash,
+                hash('sha256', (string) $request->input('verification_token')),
+            );
 
         if (! $valid) {
             return ApiResponse::error('Verify this phone with the OTP sent to it before adding it.', 422);
