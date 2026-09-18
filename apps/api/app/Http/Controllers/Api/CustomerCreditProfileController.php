@@ -59,6 +59,7 @@ class CustomerCreditProfileController extends Controller
                 'interest_rate_percent' => (float) $term->interest_rate,
                 'interest_cycle' => (string) $term->interest_cycle,
                 'interest_type' => (string) $term->interest_type,
+                'guarantors_required' => min(2, max(0, (int) ($term->guarantors_required ?? 0))),
             ]))
             ->sortBy('duration_days')
             ->values();
