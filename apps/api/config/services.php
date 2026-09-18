@@ -109,5 +109,9 @@ return [
     ],
     'opfin' => [
         'enable_demo_routes' => env('OPFIN_ENABLE_DEMO_ROUTES', false),
+        'web_url' => env('OPFIN_WEB_URL'),
+    ],
+    'ussd' => [
+        'shared_secret' => env('USSD_SHARED_SECRET'),
     ],
 ];

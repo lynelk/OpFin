@@ -21,6 +21,7 @@ class LoanRepaymentController extends Controller
             'amount_minor' => 'nullable|required_without:amount|integer|min:1',
             'amount' => 'nullable|required_without:amount_minor|integer|min:1',
             'idempotency_key' => 'nullable|string|max:255',
+            'wallet_id' => 'nullable|integer|exists:customer_wallets,id',
         ]);
 
         if ($validator->fails()) {
@@ -47,6 +48,7 @@ class LoanRepaymentController extends Controller
                 user: $request->user(),
                 amountMinor: $amountMinor,
                 idempotencyKey: $idempotencyKey,
+                walletId: $request->integer('wallet_id') ?: null,
             );
         } catch (InvalidArgumentException $exception) {
             return ApiResponse::error($exception->getMessage(), 409);

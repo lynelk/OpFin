@@ -12,7 +12,10 @@ use Illuminate\Support\Str;
 
 class WhatsAppJourneyService
 {
-    public function __construct(private readonly SmsService $smsService) {}
+    public function __construct(
+        private readonly SmsService $smsService,
+        private readonly CustomerCreditProfileService $profiles,
+    ) {}
 
     public function handle(string $phone, string $body, ?string $providerMessageId = null): array
     {
@@ -49,7 +52,7 @@ class WhatsAppJourneyService
         if (preg_match('/^(HELP|MENU)$/i', $normalized)) {
             return $this->respond(
                 $conversation->id,
-                'You can securely use: STATUS, KYC, CONSENTS, GRANT CREDIT CONSENT, REVOKE CREDIT CONSENT, SUPPORT <message>, and LOGOUT. Money movement, offer acceptance and other high-impact actions require step-up confirmation in OpFin.',
+                'You can use: STATUS, LIMIT, PROFILE, KYC, BORROW <amount>, REPAY, CONSENTS, GRANT CREDIT CONSENT, REVOKE CREDIT CONSENT, SUPPORT <message>, and LOGOUT. We never ask you to send your OpFin PIN in WhatsApp.',
                 'verified'
             );
         }
@@ -59,6 +62,58 @@ class WhatsAppJourneyService
             $openSupport = DB::table('support_cases')->where('customer_id', $user->id)->whereNotIn('status', ['resolved', 'closed'])->count();
 
             return $this->respond($conversation->id, "OpFin status: KYC {$kyc}. Open support cases: {$openSupport}.", 'verified');
+        }
+
+        if (strcasecmp($normalized, 'LIMIT') === 0) {
+            $state = $this->profiles->status($user);
+            $profile = $state['profile'];
+            if (! $profile || $profile->status === 'pending') {
+                return $this->respond($conversation->id, 'Your limit is not ready yet. Next step: '.$state['next_action']['label'].'.', 'verified');
+            }
+
+            return $this->respond(
+                $conversation->id,
+                'Your OpFin Score is '.round((float) $profile->composite_score).'/100. Available loan limit: UGX '.number_format((int) $profile->available_to_borrow_minor).'.',
+                'verified'
+            );
+        }
+
+        if (strcasecmp($normalized, 'PROFILE') === 0) {
+            $state = $this->profiles->status($user);
+            return $this->respond($conversation->id, 'Next step: '.$state['next_action']['label'].'. A second phone is optional.', 'verified');
+        }
+
+        if (preg_match('/^BORROW(?:\\s+(\\d+))?$/i', $normalized, $matches)) {
+            $state = $this->profiles->status($user);
+            $profile = $state['profile'];
+            if (! $profile || $profile->available_to_borrow_minor <= 0) {
+                return $this->respond($conversation->id, 'There is no amount available to borrow right now. Next step: '.$state['next_action']['label'].'.', 'verified');
+            }
+            $amount = isset($matches[1]) ? (int) $matches[1] : 0;
+            if ($amount > 0 && $amount > $profile->available_to_borrow_minor) {
+                return $this->respond($conversation->id, 'Choose an amount up to UGX '.number_format((int) $profile->available_to_borrow_minor).'.', 'verified');
+            }
+            $web = rtrim((string) config('services.opfin.web_url'), '/');
+            $link = $web !== '' ? $web.'/loans/apply'.($amount > 0 ? '?amount='.$amount.'&source=whatsapp' : '?source=whatsapp') : null;
+            return $this->respond(
+                $conversation->id,
+                'Available: UGX '.number_format((int) $profile->available_to_borrow_minor).'. '.($link ? 'Continue securely: '.$link : 'Continue in the OpFin app to review costs and confirm.'),
+                'step_up_required'
+            );
+        }
+
+        if (strcasecmp($normalized, 'REPAY') === 0) {
+            $state = $this->profiles->status($user);
+            $profile = $state['profile'];
+            if (! $profile || $profile->total_outstanding_minor <= 0) {
+                return $this->respond($conversation->id, 'You have no outstanding OpFin loan.', 'verified');
+            }
+            $web = rtrim((string) config('services.opfin.web_url'), '/');
+            return $this->respond(
+                $conversation->id,
+                'Outstanding: UGX '.number_format((int) $profile->total_outstanding_minor).'. Amount due now: UGX '.number_format((int) $profile->amount_due_minor).'. '.($web !== '' ? 'Continue securely: '.$web.'/loans/account?source=whatsapp' : 'Continue in the OpFin app to repay.'),
+                'step_up_required'
+            );
         }
 
         if (strcasecmp($normalized, 'KYC') === 0) {

@@ -11,6 +11,14 @@ class UssdController extends Controller
 {
     public function __invoke(Request $request, UssdJourneyService $journey): Response
     {
+        $configuredSecret = trim((string) config('services.ussd.shared_secret'));
+        if ($configuredSecret !== '') {
+            $provided = (string) $request->header('X-OpFin-Ussd-Secret');
+            if ($provided === '' || ! hash_equals($configuredSecret, $provided)) {
+                return response('END Service unavailable.', 401)->header('Content-Type', 'text/plain; charset=UTF-8');
+            }
+        }
+
         $sessionId = (string) ($request->input('sessionId') ?? $request->input('session_id') ?? '');
         $phone = (string) ($request->input('phoneNumber') ?? $request->input('phone') ?? '');
         $text = (string) ($request->input('text') ?? '');
