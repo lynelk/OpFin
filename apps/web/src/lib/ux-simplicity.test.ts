@@ -35,7 +35,7 @@ describe("launch customer journey simplicity", () => {
     const legacyAmount = source("../../../client/lib/loan_amount_screen.dart");
     const legacyDetails = source("../../../client/lib/loan_details_screen.dart");
 
-    expect(application).toContain("/credit/profile");
+    expect(application).toContain("CreditProfileApi.load()");
     expect(application).toContain("/credit/options");
     expect(application).toContain("Available limit");
     expect(application).toContain("Amount due");

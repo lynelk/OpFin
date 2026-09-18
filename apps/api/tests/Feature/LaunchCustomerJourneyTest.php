@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ConsentRecord;
+use App\Models\CrbReport;
 use App\Models\CreditProfile;
 use App\Models\CreditScoreComponent;
 use App\Models\KycCase;
@@ -129,6 +130,16 @@ class LaunchCustomerJourneyTest extends TestCase
             'phone_verified_at' => now(),
         ]);
         $this->verifiedIdentityAndConsent($user);
+
+        CrbReport::create([
+            'user_id' => $user->id,
+            'provider' => 'test-crb',
+            'status' => CrbReport::STATUS_CLEAR,
+            'score' => 80,
+            'requested_at' => now(),
+            'received_at' => now(),
+            'expires_at' => now()->addDays(30),
+        ]);
 
         CreditScoreComponent::create([
             'user_id' => $user->id,
