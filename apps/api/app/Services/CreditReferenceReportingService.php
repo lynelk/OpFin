@@ -56,7 +56,14 @@ class CreditReferenceReportingService
         $provider = trim((string) config('services.credit_reference_reporting.provider', 'configured_credit_reference'));
 
         if ($url === '') {
-            return ['submitted' => 0, 'failed' => 0, 'pending' => DB::table('credit_information_reports')->where('status', 'pending')->count(), 'provider_configured' => false];
+            return [
+                'submitted' => 0,
+                'failed' => 0,
+                'pending' => DB::table('credit_information_reports')
+                    ->whereIn('status', ['pending', 'failed', 'blocked_consent', 'blocked_data_quality'])
+                    ->count(),
+                'provider_configured' => false,
+            ];
         }
 
         $submitted = 0;
