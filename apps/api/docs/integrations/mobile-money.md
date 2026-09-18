@@ -139,3 +139,16 @@ Before real customer funds move, retain evidence that:
 5. duplicate request, mismatched idempotency replay, stale callback, duplicate event, terminal regression, refund/reversal and reconciliation exception tests pass;
 6. successful disbursement and repayment events produce the expected product state and balanced immutable accounting exactly once;
 7. monitoring, integrity audit, incident response and restore procedures are operational.
+
+
+## Post-finality receipt and reporting side effects
+
+After a disbursement or repayment reaches verified provider finality and the financial database transaction commits:
+
+1. OpFin issues/records the transaction receipt;
+2. notification delivery may be queued;
+3. the relevant credit-information event may be queued for outbound reporting.
+
+These side effects must not happen before commit. A rollback must not leave behind a customer receipt or bureau event for an economic transaction that never became authoritative.
+
+Notification/reporting failure does not silently rewrite the financial transaction; it remains a visible operational exception/retry state.
