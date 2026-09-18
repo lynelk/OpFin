@@ -106,3 +106,79 @@ When a customer reports they cannot read, hear, see, manipulate the device or co
 ## Incident principles
 
 Preserve evidence with least access, contain the affected path, rotate compromised credentials, reconcile financial state, communicate using verified facts, and record remediation. Public issue trackers must not contain customer identity/financial evidence.
+
+
+## UMRA credit-information reporting
+
+Use the **UMRA Control Desk** before treating outbound CRB reporting as healthy.
+
+1. Review pending, failed, submitted, positive and negative counts.
+2. Open failed records and distinguish incomplete borrower/account data from provider transport failures.
+3. Never edit a payload to make it pass silently. Correct source-of-truth customer/loan data and stage a new evidence-hashed submission.
+4. Confirm active `credit_reporting` consent exists before retrying.
+5. Retain provider reference, reporting date, payload hash and retry history.
+6. The hourly reporting command also stages a current portfolio snapshot; event-driven disbursement, repayment, clearance, reversal and NPL records remain independently idempotent.
+
+## UMRA NPL recovery controls
+
+When a loan becomes overdue past its contractual due date:
+
+1. Run/inspect the NPL control.
+2. Confirm `principal_at_npl_minor` is the snapshot from NPL onset.
+3. Review default-penalty, recoverable-interest and total-recovery ceilings.
+4. Do not override a blocked collection merely to clear an operations queue.
+5. If Compliance determines a regulator-approved interpretation differs from the configured formula, change the policy through reviewed source/configuration and preserve the old evidence, rather than editing historical controls.
+6. The NPL control must remain reconcilable to schedule and successful provider collections.
+
+## UMRA transaction receipts
+
+- A receipt means the underlying provider transaction is successful.
+- The in-app receipt is immediate evidence after finality.
+- SMS is an acknowledgement channel, not the accounting source of truth.
+- A queued SMS must not be described as delivered.
+- Receipt payload hash and provider reference should be used when investigating customer disputes.
+
+## UMRA complaints
+
+All customer support cases currently enter the UMRA consumer-complaint register.
+
+- SLA due date is 30 days from receipt.
+- Operations should prioritise cases approaching the SLA.
+- Resolve/close only with a customer-facing resolution summary.
+- If a case is still open after SLA, do not alter the original received/due timestamps; record the actual later resolution and investigate the breach.
+- Complaint outcomes feed the UMRA books-and-records report.
+
+## Guarantor verification
+
+- Never ask the borrower for contact-list permission.
+- Customer deliberately types the guarantor number.
+- OpFin sends a guarantor-specific consent message.
+- The guarantor should share the one-time code only if they agree.
+- Maximum two guarantor contacts per application.
+- Decisioning remains paused if the configured required count is not electronically verified.
+- If a guarantor disputes consent, preserve the verification evidence and open a complaint/investigation case.
+
+## Credit-term changes
+
+Accepted loan offers are immutable.
+
+- A proposed change is recorded as a separate variation.
+- Customer consent is required for all variations.
+- Interest-rate variations additionally require prior UMRA approval evidence.
+- The generic Admin route deliberately refuses to mutate active loan economics even after consent. Any future executor must version the schedule/contract, preserve the original and receive separate compliance review.
+- Existing product-catalogue rate edits also require prior UMRA approval reference/evidence hash.
+
+## UMRA books and records
+
+Use **Admin → Compliance reports** to generate the requested evidence period.
+
+Recommended sequence:
+
+1. Generate the applicable UMRA profile.
+2. Resolve validation failures from source data.
+3. Review the evidence hash.
+4. Have a different authorised officer perform maker-checker approval where the report is for submission.
+5. Export JSON for complete machine-readable evidence or CSV for inspection/reconciliation.
+6. Retain the report ID, period, regulator, payload hash, generated/approved officers and external submission reference outside the mutable user interface.
+
+The internal evidence pack is not a substitute for any specific UMRA return template or submission channel prescribed separately.
