@@ -17,8 +17,19 @@ class LoanProductTerm extends Model
         'repayment_frequency',
         'duration',
         'guarantors_required',
+        'umra_interest_approval_reference',
+        'umra_interest_approval_document_hash',
+        'umra_interest_approved_at',
         'status',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'guarantors_required' => 'integer',
+            'umra_interest_approved_at' => 'datetime',
+        ];
+    }
 
     public function product()
     {
