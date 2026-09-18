@@ -14,7 +14,18 @@ use Illuminate\Support\Str;
 
 class WhatsAppJourneyService
 {
-    public function __construct(private readonly SmsService $smsService, private readonly CustomerCreditProfileService $profiles, private readonly IdentityVerificationService $identityVerification) {}
+    private readonly SmsService $smsService;
+
+    private readonly CustomerCreditProfileService $profiles;
+
+    private readonly IdentityVerificationService $identityVerification;
+
+    public function __construct(SmsService $smsService, CustomerCreditProfileService $profiles, IdentityVerificationService $identityVerification)
+    {
+        $this->smsService = $smsService;
+        $this->profiles = $profiles;
+        $this->identityVerification = $identityVerification;
+    }
 
     public function handle(string $phone, string $body, ?string $providerMessageId = null): array
     {
