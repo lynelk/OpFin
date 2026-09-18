@@ -1,72 +1,73 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-function source(path: string): string {
-  return readFileSync(resolve(process.cwd(), path), "utf8");
+function source(relativeFromThisFile: string): string {
+  return readFileSync(
+    fileURLToPath(new URL(relativeFromThisFile, import.meta.url)),
+    "utf8",
+  );
 }
 
-describe("OpFin simplicity contract", () => {
-  it("keeps conventional credit application customer-led instead of configuration-led", () => {
-    const page = source("src/app/(portal)/loans/apply/page.tsx");
-    expect(page).toContain("How much do you need?");
-    expect(page).toContain("What do you need it for?");
-    expect(page).not.toContain('name="loan_product_id"');
-    expect(page).not.toContain('name="institution_id"');
-    expect(page).not.toContain('name="loan_product_term_id"');
+describe("launch customer journey simplicity", () => {
+  it("keeps primary mobile navigation focused", () => {
+    const home = source("../../../client/lib/home_screen.dart");
+
+    expect(home).toContain("label:'Home'");
+    expect(home).toContain("label:'Borrow'");
+    expect(home).toContain("label:'Activity'");
+    expect(home).toContain("label:'More'");
+    expect(home).not.toContain("label:'Save'");
+    expect(home).not.toContain("label:'Grow'");
   });
 
-  it("keeps mobile credit on the same universal request", () => {
-    const mobileCredit = source("../client/lib/products_screen.dart");
-    expect(mobileCredit).toContain("How much do you need? (UGX)");
-    expect(mobileCredit).toContain("What do you need it for?");
-    expect(mobileCredit).toContain("/credit/applications");
-    expect(mobileCredit).not.toContain("/products");
-    expect(mobileCredit).not.toContain("ProductTermsPage");
+  it("puts customer state before product catalogue complexity", () => {
+    const home = source("../../../client/lib/home_screen.dart");
+
+    expect(home).toContain("Amount due");
+    expect(home).toContain("Available loan limit");
+    expect(home).toContain("OpFin Score");
+    expect(home).toContain("Add another phone (optional)");
   });
 
-  it("keeps peer-borrower governance fields out of the customer form", () => {
-    const page = source("src/app/(portal)/peer-lending/borrow/page.tsx");
-    expect(page).toContain("How much do you need?");
-    expect(page).toContain("What is the money for?");
-    expect(page).toContain("How long do you need?");
-    for (const internalField of ["lender_of_record", "loss_allocation", "custody", "expected_return_percent", "risk_grade"]) {
-      expect(page).not.toContain(`name="${internalField}"`);
-    }
+  it("uses one server-authoritative loan application journey", () => {
+    const application = source("../../../client/lib/loan_application_screen.dart");
+    const legacyAmount = source("../../../client/lib/loan_amount_screen.dart");
+    const legacyDetails = source("../../../client/lib/loan_details_screen.dart");
+
+    expect(application).toContain("/credit/profile");
+    expect(application).toContain("/credit/options");
+    expect(application).toContain("Available limit");
+    expect(application).toContain("Amount due");
+    expect(application).toContain("You will see every cost before accepting a loan");
+
+    expect(legacyAmount).toContain("LoanApplicationScreen");
+    expect(legacyDetails).toContain("LoanApplicationScreen");
+    expect(legacyAmount).not.toContain("max: 50000");
+    expect(legacyDetails).not.toContain("14 days");
+    expect(legacyDetails).not.toContain("30 days");
   });
 
-  it("puts investor decision information before internal settlement detail", () => {
-    const page = source("src/app/(portal)/peer-lending/page.tsx");
-    expect(page).toContain("Expected return");
-    expect(page).toContain("Risk");
-    expect(page).toContain("Term");
-    expect(page).toContain("Repayment");
-    expect(page).toContain("funded");
-    expect(page).toContain("Risk & full marketplace disclosures");
+  it("keeps onboarding short and accessibility visible", () => {
+    const onboarding = source("../../../client/lib/onboarding_screen.dart");
+    const accessibility = source("../../../client/lib/accessibility_screen.dart");
+    const kyc = source("../../../client/lib/kyc_setup_screen.dart");
+
+    expect(onboarding).toContain("Skip");
+    expect(onboarding).toContain("Know what matters");
+    expect(accessibility).toContain("VoiceOver");
+    expect(accessibility).toContain("TalkBack");
+    expect(accessibility).toContain("Larger text");
+    expect(kyc).toContain("I need help with this step");
+    expect(kyc).toContain("Request assistance");
   });
 
-  it("makes connected financial life a hub instead of a mega-form", () => {
-    const page = source("src/app/(portal)/ecosystem/page.tsx");
-    expect(page).toContain("Each task has its own focused journey");
-    expect(page).not.toContain("<form");
-  });
+  it("never asks for broad media or SMS permissions in Android manifest", () => {
+    const manifest = source("../../../client/android/app/src/main/AndroidManifest.xml");
 
-  it("keeps peer-lending legal and risk configuration in operations", () => {
-    const page = source("src/app/(portal)/admin/long-range/page.tsx");
-    expect(page).toContain("Responsible lender of record");
-    expect(page).toContain("Expected return (%)");
-    expect(page).toContain("Risk grade");
-    expect(page).toContain("Loss treatment");
-    expect(page).toContain("Custody / settlement");
-  });
-
-  it("keeps web and Flutter on the same five-part customer mental model", () => {
-    const mobile = source("../client/lib/home_screen.dart");
-    for (const label of ["Home", "Borrow", "Save", "Grow", "More"]) {
-      expect(mobile).toContain(`label: '${label}'`);
-    }
-    expect(mobile).not.toContain("label: 'Connected'");
-    expect(mobile).not.toContain("label: 'Profile'");
-    expect(mobile).not.toContain("label: 'Help'");
+    expect(manifest).toContain("android.permission.CAMERA");
+    expect(manifest).not.toContain("READ_SMS");
+    expect(manifest).not.toContain("READ_MEDIA_IMAGES");
+    expect(manifest).not.toContain("READ_EXTERNAL_STORAGE");
   });
 });
