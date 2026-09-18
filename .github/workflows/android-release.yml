@@ -5,6 +5,8 @@ on:
   push:
     tags:
       - "android-v*"
+    branches:
+      - "release/android-*"
 
 permissions:
   contents: read
@@ -15,7 +17,7 @@ concurrency:
 
 jobs:
   signed-aab:
-    name: Build signed Play bundle
+    name: Build signed Play bundle and test APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: google-play-production
@@ -24,17 +26,31 @@ jobs:
         working-directory: apps/client
     steps:
       - name: Check out exact commit
-        working-directory: .
-        run: |
-          git init .
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --depth=1 origin "$GITHUB_SHA"
-          git checkout --detach FETCH_HEAD
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: Install Flutter 3.47.1
+      - name: Require protected release configuration
+        working-directory: .
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          OPFIN_API_BASE_URL: ${{ secrets.OPFIN_API_BASE_URL }}
         run: |
-          git clone --depth 1 --branch 3.47.1 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
-          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          python3 - <<'PY'
+          import os
+          names = ('ANDROID_KEYSTORE_BASE64', 'ANDROID_KEY_ALIAS',
+                   'ANDROID_KEY_PASSWORD', 'ANDROID_KEYSTORE_PASSWORD',
+                   'OPFIN_API_BASE_URL')
+          missing = [name for name in names if not os.environ.get(name)]
+          if missing:
+              print('::error::Configure google-play-production secrets: ' + ', '.join(missing))
+              raise SystemExit(1)
+          print('Protected signing inputs are present; no debug signing is permitted.')
+          PY
 
       - name: Restore protected upload key
         env:
@@ -43,48 +59,155 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          test -n "$ANDROID_KEYSTORE_BASE64"
-          test -n "$ANDROID_KEY_ALIAS"
-          test -n "$ANDROID_KEY_PASSWORD"
-          test -n "$ANDROID_KEYSTORE_PASSWORD"
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
-          chmod 600 android/upload-keystore.jks
-          {
-            printf 'storeFile=../upload-keystore.jks\n'
-            printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
-            printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
-            printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
-          } > android/key.properties
-          chmod 600 android/key.properties
+          umask 077
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          key = Path(os.environ['RUNNER_TEMP']) / 'opfin-upload-keystore.jks'
+          key.write_bytes(base64.b64decode(''.join(os.environ['ANDROID_KEYSTORE_BASE64'].split()), validate=True))
+          key.chmod(0o600)
+          # Java Properties escapes preserve spaces, Unicode and password punctuation.
+          def prop(value):
+              raw = value.encode('utf-16-be')
+              return ''.join('\\u' + raw[i:i+2].hex() for i in range(0, len(raw), 2))
+          values = {'storeFile': str(key),
+                    'storePassword': os.environ['ANDROID_KEYSTORE_PASSWORD'],
+                    'keyAlias': os.environ['ANDROID_KEY_ALIAS'],
+                    'keyPassword': os.environ['ANDROID_KEY_PASSWORD']}
+          properties = Path('android/key.properties')
+          properties.write_text(''.join(name + '=' + prop(value) + '\n' for name, value in values.items()), encoding='ascii')
+          properties.chmod(0o600)
+          PY
+          keytool -exportcert -rfc \
+            -keystore "$RUNNER_TEMP/opfin-upload-keystore.jks" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" \
+            > "$RUNNER_TEMP/opfin-upload-certificate.pem"
+          openssl x509 -in "$RUNNER_TEMP/opfin-upload-certificate.pem" -checkend 0 -noout
+          if openssl x509 -in "$RUNNER_TEMP/opfin-upload-certificate.pem" -noout -subject | grep -Eiq 'CN[[:space:]]*=[[:space:]]*Android Debug'; then
+            echo '::error::An Android debug certificate cannot sign an OpFin release.'
+            exit 1
+          fi
 
-      - name: Test and build signed app bundle
+      - name: Install Flutter 3.47.1
+        run: |
+          git clone --depth 1 --branch 3.47.1 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Test and build signed app bundle and APK
         env:
           OPFIN_API_BASE_URL: ${{ secrets.OPFIN_API_BASE_URL }}
-        run: bash tool/build_release.sh android
+        run: |
+          bash tool/build_release.sh android
+          CI=false flutter build apk --release --no-pub \
+            "--dart-define=OPFIN_API_BASE_URL=${OPFIN_API_BASE_URL%/}" \
+            --dart-define=OPFIN_APP_STORE_P2P_BORROWING_ENABLED=false
 
-      - name: Verify release identity and checksum
+      - name: Install integrity-checked bundletool
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar \
+            -o "$RUNNER_TEMP/bundletool.jar"
+          echo "a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29  $RUNNER_TEMP/bundletool.jar" | sha256sum --check --strict
+
+      - name: Verify signatures, identity and release metadata
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           bundle='build/app/outputs/bundle/release/app-release.aab'
-          test -s "$bundle"
-          jarsigner -verify -strict -certs "$bundle"
-          apkanalyzer manifest application-id "$bundle" | grep -Fx 'co.opfin.app'
-          sha256sum "$bundle" | tee build/app/outputs/bundle/release/app-release.aab.sha256
+          apk='build/app/outputs/flutter-apk/app-release.apk'
+          test -s "$bundle" && test -s "$apk"
+          # Trust the configured upload certificate, not the public web-PKI truststore.
+          jarsigner -verify -strict \
+            -keystore "$RUNNER_TEMP/opfin-upload-keystore.jks" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD "$bundle" "$ANDROID_KEY_ALIAS"
+          java -jar "$RUNNER_TEMP/bundletool.jar" validate --bundle="$bundle"
+          java -jar "$RUNNER_TEMP/bundletool.jar" dump manifest --bundle="$bundle" --module=base \
+            > "$RUNNER_TEMP/opfin-bundle-manifest.xml"
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$sdk"
+          build_tools=$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          test -x "$build_tools/apksigner" && test -x "$build_tools/aapt2"
+          "$build_tools/apksigner" verify --verbose --print-certs "$apk" | tee "$RUNNER_TEMP/opfin-apk-signature.txt"
+          "$build_tools/aapt2" dump badging "$apk" > "$RUNNER_TEMP/opfin-apk-badging.txt"
+          openssl x509 -in "$RUNNER_TEMP/opfin-upload-certificate.pem" -noout -fingerprint -sha256 \
+            > "$RUNNER_TEMP/opfin-upload-fingerprint.txt"
+          python3 - <<'PY'
+          import hashlib, json, os, re, shutil
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          temp = Path(os.environ['RUNNER_TEMP'])
+          ns = '{http://schemas.android.com/apk/res/android}'
+          manifest = ET.parse(temp / 'opfin-bundle-manifest.xml').getroot()
+          version = re.search(r'^version:\s*([^\s+]+)\+(\d+)\s*$', Path('pubspec.yaml').read_text(), re.M)
+          if not version:
+              raise SystemExit('pubspec.yaml must declare a version name and version code.')
+          name, code = version.groups()
+          expected = ('co.opfin.app', name, code)
+          actual = (manifest.get('package'), manifest.get(ns + 'versionName'), manifest.get(ns + 'versionCode'))
+          if actual != expected:
+              raise SystemExit(f'AAB identity mismatch: {actual!r} != {expected!r}')
+          application = manifest.find('application')
+          if application is None or application.get(ns + 'debuggable', 'false') != 'false':
+              raise SystemExit('The AAB must be non-debuggable.')
+          sdk = manifest.find('uses-sdk')
+          if sdk is None or int(sdk.get(ns + 'targetSdkVersion', '0')) < 36:
+              raise SystemExit('The AAB must target Android API 36 or newer.')
+          badging = (temp / 'opfin-apk-badging.txt').read_text()
+          match = re.search(r"^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging, re.M)
+          if not match or (match[1], match[3], match[2]) != expected or re.search(r'^application-debuggable', badging, re.M):
+              raise SystemExit('APK package, version or debuggability does not match the AAB.')
+          fingerprint = (temp / 'opfin-upload-fingerprint.txt').read_text().strip().split('=', 1)[1].replace(':', '').lower()
+          signers = re.findall(r'^Signer #\d+ certificate SHA-256 digest:\s*([0-9a-fA-F]+)', (temp / 'opfin-apk-signature.txt').read_text(), re.M)
+          if len(signers) != 1 or signers[0].lower() != fingerprint:
+              raise SystemExit('APK signer does not match the protected upload certificate.')
+          output = Path('build/release-delivery')
+          output.mkdir(parents=True, exist_ok=True)
+          files = []
+          for source, suffix in [('build/app/outputs/bundle/release/app-release.aab', 'aab'),
+                                 ('build/app/outputs/flutter-apk/app-release.apk', 'apk')]:
+              target = output / f'OpFin-{name}-{code}.{suffix}'
+              shutil.copyfile(source, target)
+              files.append({'name': target.name, 'bytes': target.stat().st_size,
+                            'sha256': hashlib.sha256(target.read_bytes()).hexdigest()})
+          (output / 'SHA256SUMS.txt').write_text(''.join(f"{f['sha256']}  {f['name']}\n" for f in files))
+          shutil.copyfile(temp / 'opfin-upload-certificate.pem', output / 'upload-certificate.pem')
+          metadata = {'package': expected[0], 'version_name': name, 'version_code': int(code),
+                      'source_commit': os.environ['GITHUB_SHA'], 'source_ref': os.environ['GITHUB_REF'],
+                      'workflow_run': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+                      'upload_certificate_sha256': fingerprint,
+                      'play_console_certificate_match': 'Not checked: compare with the Play Console upload certificate.',
+                      'files': files}
+          (output / 'release-info.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          (output / 'README.txt').write_text(
+              f'OpFin {name} (version code {code})\n\n'
+              f'Upload OpFin-{name}-{code}.aab to Google Play Console. The APK is for direct device testing.\n'
+              'Before upload, confirm that the upload certificate matches the one registered in Play Console.\n'
+              'For a first release, configure Play App Signing using the intended upload key.\n'
+              'No private signing key or password is included. This workflow does not publish or roll out the app.\n')
+          print(json.dumps(metadata, indent=2))
+          PY
 
-      - name: Upload controlled release artifact
+      - name: Upload controlled release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: opfin-google-play-${{ github.sha }}
+          name: opfin-android-${{ github.sha }}
           path: |
-            apps/client/build/app/outputs/bundle/release/app-release.aab
-            apps/client/build/app/outputs/bundle/release/app-release.aab.sha256
+            apps/client/build/release-delivery/*.aab
+            apps/client/build/release-delivery/*.apk
+            apps/client/build/release-delivery/SHA256SUMS.txt
+            apps/client/build/release-delivery/release-info.json
+            apps/client/build/release-delivery/upload-certificate.pem
+            apps/client/build/release-delivery/README.txt
           if-no-files-found: error
           retention-days: 14
 
       - name: Remove signing material
         if: always()
+        working-directory: .
         run: |
           if command -v shred >/dev/null; then
-            shred -u android/key.properties android/upload-keystore.jks 2>/dev/null || true
+            shred -u apps/client/android/key.properties "$RUNNER_TEMP/opfin-upload-keystore.jks" 2>/dev/null || true
           else
-            rm -f android/key.properties android/upload-keystore.jks
+            rm -f apps/client/android/key.properties "$RUNNER_TEMP/opfin-upload-keystore.jks"
           fi
