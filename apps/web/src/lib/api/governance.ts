@@ -106,6 +106,8 @@ async function request<T>(path: string, token?: string, init: RequestInit = {}):
 export const governanceApi = {
   dashboard: (token?: string) => request<GovernanceDashboard>("/admin/governance/dashboard", token),
   reports: (token?: string) => request<{ profiles: Record<string, string>; reports: RegulatoryReport[] }>("/admin/governance/regulatory-reports", token),
+  report: (reportId: number, token?: string) =>
+    request<{ report: RegulatoryReport & { payload: Record<string, unknown>; validation_results: Record<string, unknown> } }>(`/admin/governance/regulatory-reports/${reportId}`, token),
   generateReport: (payload: { report_type: string; period_start: string; period_end: string }, token?: string) =>
     request<{ report: RegulatoryReport }>("/admin/governance/regulatory-reports", token, { method: "POST", body: JSON.stringify(payload) }),
   approveReport: (reportId: number, token?: string) =>
