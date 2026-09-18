@@ -13,17 +13,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Collect tracked source for documentation review
+      - name: Check out exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p /tmp/opfin-docs-audit
-          git archive --format=zip HEAD -o /tmp/opfin-docs-audit/source.zip
-          git ls-files '*.md' '*.mdx' '*.yaml' '*.yml' '*openapi*' '*swagger*' > /tmp/opfin-docs-audit/documentation-inventory.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: opfin-documentation-audit
-          path: /tmp/opfin-docs-audit/
-          retention-days: 1
-          if-no-files-found: error
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+      - name: Inventory documentation and developer entry points
+        run: |
+          git ls-files '*.md' '*.mdx' '*openapi*' '*swagger*'
+          printf '\n--- Developer entry points ---\n'
+          for path in Makefile apps/api/README.md apps/api/AGENTS.md apps/web/README.md apps/web/package.json apps/client/README.md apps/client/AGENTS.md packages/contracts/README.md; do
+            if test -f "$path"; then printf '\n--- %s ---\n' "$path"; cat "$path"; fi
+          done
