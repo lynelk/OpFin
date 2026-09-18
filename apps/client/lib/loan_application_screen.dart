@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/credit_offers_screen.dart';
+import 'package:opfin/guarantors_screen.dart';
 import 'package:opfin/loan_application_result_screen.dart';
 import 'package:opfin/services/credit_profile_api.dart';
 import 'package:opfin/services/user_session.dart';
@@ -168,6 +169,12 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               _ReviewRow(
                   'Repayment period', '${_n(option['duration_days'])} days'),
               _ReviewRow('Purpose', _reason!),
+              if (_n(option['guarantors_required']) > 0)
+                _ReviewRow(
+                  'Guarantors',
+                  _n(option['guarantors_required']).toString() +
+                      ' electronically verified contact(s)',
+                ),
               const SizedBox(height: 12),
               const Text(
                 'This is a request, not yet a loan. If approved, OpFin will show the exact amount you receive, interest, fees, APR where required, total repayment and payment dates before you accept.',
@@ -223,6 +230,18 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const CreditOffersScreen()),
+        );
+      } else if (next == 'guarantors_required') {
+        final application =
+            (data['application'] as Map?)?.cast<String, dynamic>() ?? {};
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GuarantorsScreen(
+              applicationId: _n(application['id']),
+              requiredCount: _n(data['guarantors_required']),
+            ),
+          ),
         );
       } else {
         Navigator.pushReplacement(
