@@ -32,8 +32,8 @@ Before submitting or updating the Google Play Data safety form:
 1. Confirm the public deletion URL loads successfully in a logged-out browser.
 2. Confirm the page names OpFin and prominently offers account deletion.
 3. Confirm the web sign-in flow returns to `/account/delete` and does not send the user back to the Android app.
-4. Confirm a test customer can complete `DELETE /api/account` with the correct password and `DELETE` confirmation.
-5. Confirm the same endpoint rejects an incorrect password.
+4. Confirm a test customer can complete `DELETE /api/account` with the correct 6-digit PIN (or legacy password for a migrated account) and `DELETE` confirmation.
+5. Confirm the same endpoint rejects an incorrect PIN or legacy password.
 6. Confirm accounts with active obligations receive a recorded pending-deletion case instead of silent deactivation.
 7. Confirm retained-data disclosures remain consistent with the current privacy policy and actual backend behaviour.
 
