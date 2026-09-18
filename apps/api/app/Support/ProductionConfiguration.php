@@ -29,5 +29,30 @@ class ProductionConfiguration
         if (($config['enable_demo_routes'] ?? false) === true) {
             throw new RuntimeException('OPFIN_ENABLE_DEMO_ROUTES=true is not allowed in production.');
         }
+
+        $communityFinanceMode = strtolower(trim((string) ($config['community_finance_mode'] ?? 'dormant')));
+        if ($communityFinanceMode === 'live') {
+            throw new RuntimeException(
+                'OPFIN_COMMUNITY_FINANCE_MODE=live is blocked in production until the Community Finance activation runbook is approved and executed.'
+            );
+        }
+
+        if (($config['community_finance_live_enabled'] ?? false) === true) {
+            throw new RuntimeException(
+                'OPFIN_COMMUNITY_FINANCE_LIVE_ENABLED=true is blocked in production until the Community Finance activation runbook is approved and executed.'
+            );
+        }
+
+        if (($config['sacco_core_enabled'] ?? false) === true) {
+            throw new RuntimeException(
+                'OPFIN_SACCO_CORE_ENABLED=true is blocked in production until the Member Cooperative Core activation runbook is approved and executed.'
+            );
+        }
+
+        if (($config['community_finance_public_routes_enabled'] ?? false) === true) {
+            throw new RuntimeException(
+                'OPFIN_COMMUNITY_FINANCE_PUBLIC_ROUTES_ENABLED=true is blocked in production until public member terms, disclosures and support readiness are approved.'
+            );
+        }
     }
 }
