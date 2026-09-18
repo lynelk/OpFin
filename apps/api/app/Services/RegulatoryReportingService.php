@@ -204,7 +204,12 @@ class RegulatoryReportingService
             'declined' => (clone $decisions)->where('status', CreditDecision::STATUS_DECLINED)->count(),
             'kyc_cases' => KycCase::whereBetween('created_at', [$start, $end])->count(),
             'credit_consent_records' => ConsentRecord::whereBetween('created_at', [$start, $end])
-                ->whereIn('purpose', [ConsentRecord::PURPOSE_CREDIT_PROCESSING, 'crb_pull', 'credit_assessment'])->count(),
+                ->whereIn('purpose', [
+                    ConsentRecord::PURPOSE_CREDIT_PROCESSING,
+                    ConsentRecord::PURPOSE_CREDIT_INFORMATION_REPORTING,
+                    'crb_pull',
+                    'credit_assessment',
+                ])->count(),
             'consumer_complaints' => SupportCase::whereBetween('created_at', [$start, $end])
                 ->whereIn('category', ['complaint', 'collections', 'credit'])->count(),
             'control_evidence' => [
