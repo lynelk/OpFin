@@ -315,7 +315,8 @@ export async function updateSupportCaseAction(formData: FormData) {
     await opfinApi.updateSupportCase(Number(value(formData, "case_id")), {
       status: value(formData, "status"),
       priority: value(formData, "priority"),
-      note: value(formData, "note")
+      note: value(formData, "note"),
+      resolution_summary: value(formData, "resolution_summary")
     }, token);
   } catch (error) {
     if (error instanceof OpfinApiError) {
