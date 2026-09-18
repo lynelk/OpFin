@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\CustomerWallet;
 use App\Models\Loan;
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
 
 class UssdJourneyService
 {
@@ -38,12 +37,13 @@ class UssdJourneyService
     {
         $state = $this->profiles->status($user);
         $profile = $state['profile'];
+
         if (! $profile || $profile->status === 'pending') {
             return $this->end('Your limit is not ready. '.$state['next_action']['label'].'.');
         }
 
         return $this->end(
-            'Score: '.round((float) $profile->composite_score)."/100\nAvailable: UGX ".number_format((int) $profile->available_to_borrow_minor)
+            'Score: '.round((float) $profile->composite_score)."/100\nAvailable: UGX ".number_format((int) $profile->available_to_borrow_minor),
         );
     }
 
@@ -51,12 +51,13 @@ class UssdJourneyService
     {
         $state = $this->profiles->status($user);
         $profile = $state['profile'];
+
         if (! $profile || $profile->available_to_borrow_minor <= 0) {
             return $this->end('No amount is available to borrow now. '.$state['next_action']['label'].'.');
         }
 
         return $this->end(
-            'Available: UGX '.number_format((int) $profile->available_to_borrow_minor).'. For your security, finish the loan request in the OpFin app or secure WhatsApp link.'
+            'Available: UGX '.number_format((int) $profile->available_to_borrow_minor).'. For your security, finish the loan request in the OpFin app or secure WhatsApp link.',
         );
     }
 
@@ -64,6 +65,7 @@ class UssdJourneyService
     {
         $state = $this->profiles->status($user);
         $profile = $state['profile'];
+
         if (! $profile || $profile->total_outstanding_minor <= 0) {
             return $this->end('You have no outstanding OpFin loan.');
         }
@@ -76,7 +78,9 @@ class UssdJourneyService
         return $this->end(
             'Outstanding: UGX '.number_format((int) $profile->total_outstanding_minor).
             '. Amount due now: UGX '.number_format((int) $profile->amount_due_minor).
-            ($wallet ? '. Repayment wallet: '.substr($wallet->msisdn, -4) : '. Add a repayment wallet in OpFin.')
+            ($wallet
+                ? '. Repayment wallet: '.substr($wallet->msisdn, -4)
+                : '. Add a repayment wallet in OpFin.'),
         );
     }
 
@@ -92,13 +96,16 @@ class UssdJourneyService
             return $this->end('You have no active OpFin loan.');
         }
 
-        return $this->end('Loan status: '.$loan->status.'. Outstanding: UGX '.number_format((int) $loan->outstanding_balance).'.');
+        return $this->end(
+            'Loan status: '.$loan->status.'. Outstanding: UGX '.number_format((int) $loan->outstanding_balance).'.',
+        );
     }
 
     private function profile(User $user): array
     {
         $state = $this->profiles->status($user);
         $next = $state['next_action'];
+
         if ($next['code'] === 'VERIFY_IDENTITY') {
             return $this->end('Complete National ID photos and selfie in the OpFin app or WhatsApp. USSD cannot take photos.');
         }
