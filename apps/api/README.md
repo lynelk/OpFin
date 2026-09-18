@@ -1,132 +1,132 @@
 # OpFin Backend
 
-OpFin is a Uganda-first financial platform backend built on Laravel 11 and PHP 8.2. It provides the governed product and relationship layer for borrowing, savings, protection, financial wellbeing, linked accounts, community finance, asset finance, participatory finance and partner distribution. External money movement is executed through CPay; OpFin remains authoritative for product decisions, obligations, schedules, customer state and product accounting.
+OpFin is the server-authoritative financial and customer-state layer for the Uganda-first OpFin platform. The launch borrower experience is deliberately simple even though the backend retains governed identity, scoring, affordability, offer, payment, accounting, reconciliation and audit controls.
+
+## Launch borrower contract
+
+The launch path is:
+
+`Phone → OTP → names → 6-digit PIN → identity verification → credit profile/limit → loan request → formal offer → verified-wallet disbursement → repayment`
+
+The same customer state is consumed by the Flutter app, WhatsApp and USSD. A second phone is optional.
+
+Read `../../docs/LAUNCH_CUSTOMER_JOURNEY.md` and `docs/api/current-endpoints.md` before changing authentication, KYC, score/limit, loan, wallet or repayment behaviour.
 
 ## Production invariants
 
-The backend is designed around explicit financial invariants rather than controller-side arithmetic:
+- Money is stored/transferred as integer minor units. UGX uses exponent `0`.
+- CPay is the production collection/payout boundary unless architecture is explicitly changed and revalidated.
+- Provider acknowledgement is not product/accounting finality.
+- Financial requests are idempotent where a retry could duplicate an economic event.
+- Ledger postings are append-only, positive-integer and debit/credit balanced.
+- Reconciliation never invents balancing entries.
+- KYC verification requires attributable evidence/results. Provider unavailability or inconclusive checks remain pending/review.
+- CRB, MNO, approved third-party and internal score components remain attributable and decomposable. Missing provider data is not replaced with a fabricated score.
+- A profile credit limit is a risk-based maximum exposure signal, not a promise of approval.
+- Automatic approval requires the current KYC/consent/CRB/profile gates **and** verified affordability information within the configured debt-service threshold.
+- Credit limit is profile-level. Linking multiple phones/wallets never multiplies exposure.
+- Wallet selection is server-authorised and restricted to the authenticated customer's verified wallets.
+- Pending payout/collection must not be presented as completed money movement.
+- Legacy loan origination is compatibility-only. New lending uses the production decision → offer → provider finality → schedule → ledger → reconciliation path.
 
-- Money is stored and transferred as integer minor units. UGX currently uses minor-unit exponent `0`.
-- CPay is the only production collection/payout boundary. The mock adapter is test/local only.
-- An idempotency key is bound to one canonical money instruction. Reuse with a different provider, direction, amount, currency, party, source or reference is rejected.
-- Provider success is not equivalent to product settlement until the relevant product service applies the verified finality event.
-- Provider refunds/reversals normalize to the terminal `reversed` state. A clean unrepaid credit-disbursement reversal is corrected through an append-only reversal ledger transaction; repayment activity blocks automatic rewriting and creates an operations exception.
-- Every production credit disbursement must have exactly one immutable disbursement ledger posting. Missing expected postings are critical financial-integrity findings.
-- Every ledger transaction must contain positive integer entries and total debits must equal total credits.
-- Reconciliation never manufactures balancing entries. Differences remain exceptions until resolved with provider and source evidence.
-- Production credit uses exact integer schedules. Remainders are allocated deterministically to the final instalment.
-- Production affordability applies the configured debt-service-ratio control: `estimated_monthly_obligation_minor / verified_monthly_income_minor * 100`, with `OPFIN_MAX_DSR_PERCENT=35` by default.
-- Legacy loan origination is compatibility-only. New production lending must use the production decision → offer → CPay finality → exact schedule → ledger path.
+## Customer identity and authentication
 
-## Credit economics
+New mobile customers:
 
-Production credit currently requires flat-interest product terms so pricing and disclosures are reproducible.
+1. request OTP for their phone;
+2. verify OTP;
+3. provide first name, optional other name and last name;
+4. create/confirm a six-digit PIN;
+5. receive an authenticated session and continue directly to Home.
 
-For a term with configured rate `r`, rate-cycle days `c`, duration `d` and principal `P`:
+Weak repeated/sequential PINs are rejected. Login attempts are rate-limited. Legacy password input remains a migration compatibility path only.
+
+Android OTP auto-fill uses SMS Retriever/app-signature support and does not require broad SMS-reading permission.
+
+## KYC
+
+Required launch evidence:
+
+- 14-character NIN;
+- National ID front;
+- National ID back;
+- photo of the customer holding the National ID.
+
+The configured identity adapter records NIN validity, liveness, face match and NIN/phone linkage. KYC evidence is private and production must use `KYC_FILESYSTEM_DISK` pointing to persistent private/object storage.
+
+Assisted/PWD verification may change the interaction method but not the identity-assurance standard. Support/helpers must never request a customer's PIN or OTP.
+
+## Credit profile and decisioning
+
+`CustomerCreditProfileService` aggregates:
+
+- verified identity/consent;
+- CRB component;
+- MNO component where configured;
+- approved third-party component where configured;
+- internal behaviour component;
+- current exposure;
+- amount due / total outstanding / next due date;
+- profile credit limit and available-to-borrow amount;
+- next customer action.
+
+`AffordabilityService` separately enforces verified monthly income/obligation and the configured debt-service ratio. Missing verified affordability data refers a request instead of inventing capacity.
+
+Default score weights and limit bands are configuration, not permanent product promises. Changes require Product/Risk/Compliance approval, test updates and documentation changes.
+
+## Lending economics
+
+Production credit uses the configured loan product/term and offer snapshot. For flat-interest terms:
 
 ```text
-term_rate_percent = r / c * d
-interest_minor = round(P * term_rate_percent / 100)
+term_rate_percent = configured_rate / cycle_days * duration_days
+interest_minor = round(principal_minor * term_rate_percent / 100)
 ```
 
 Financed fees:
 
 ```text
-net_disbursement_minor = P
-total_repayment_minor = P + interest_minor + fees_minor
+net_disbursement_minor = principal_minor
+total_repayment_minor = principal_minor + interest_minor + fees_minor
 ```
 
 Deducted fees:
 
 ```text
-net_disbursement_minor = P - fees_minor
-total_repayment_minor = P + interest_minor
+net_disbursement_minor = principal_minor - fees_minor
+total_repayment_minor = principal_minor + interest_minor
 ```
 
-A deducted-fee disbursement posts the complete economic event:
+Formal offer acceptance is bound to the immutable disclosure hash. The mobile app may select only an authenticated customer's verified payout wallet.
 
-```text
-Dr Loan receivable             principal
-Cr Provider disbursement cash  net cash paid
-Cr Credit-fee clearing         deducted fees
-```
+## Repayment
 
-The posting is rejected unless `net cash paid + deducted fees = principal`.
+Repayment initiation:
 
-Repayments allocate oldest due first using the versioned policy `oldest-due-interest-fees-principal-v1`. The full collected amount must be consumed exactly.
+- requires a positive amount within the current outstanding obligation;
+- carries an idempotency key;
+- may select only a verified repayment wallet owned by the authenticated user;
+- remains pending until provider success;
+- allocates oldest due first using the versioned production policy;
+- posts immutable accounting only after verified finality.
 
-## Long-range financial controls
+## Cross-channel rules
 
-Participatory finance reserves approved target capacity while a commitment awaits step-up. Reservation creation locks the listing and calculates:
+### WhatsApp
 
-```text
-unreserved_capacity = target - settled_funding - active_reserved_commitments
-```
+Production webhook signatures are verified. Short-lived sessions are OTP-backed. LIMIT/PROFILE/KYC are supported, including guided NIN → ID front → ID back → selfie-with-ID capture. High-impact BORROW/REPAY actions use secure authenticated hand-off. PINs are never collected in chat.
 
-A new commitment cannot exceed that amount. Failed/reversed provider collections release their reservation. Settlement revalidates the locked listing and cannot overfund it.
+### USSD
 
-Asset finance enforces:
+USSD reads the same borrower state but does not capture KYC images or PINs. Production requires aggregator callback authentication/secret and external short-code provisioning.
 
-```text
-0 <= deposit < asset_price
-maximum_finance = asset_price - deposit
-0 < approved_finance <= maximum_finance
-```
+## Accessibility
 
-Deposit collection requires an approved request, exact approved deposit amount, fresh OTP step-up and CPay finality.
-
-Savings balances distinguish collected money from partner-confirmed custody:
-
-```text
-confirmed_balance = confirmed_contributions - paid_withdrawals
-available_balance = confirmed_balance - reserved_withdrawals
-```
-
-## Financial integrity audit
-
-`php artisan opfin:integrity-audit` verifies both arithmetic balance and event completeness. It checks, among other controls:
-
-- ledger debit/credit equality;
-- orphan ledger entries and duplicate immutable references;
-- successful/unreconciled payment exceptions and duplicate provider references;
-- successful production disbursements missing their expected ledger posting;
-- reversed production disbursements missing append-only reversal accounting;
-- false long-range settlement without provider finality;
-- participatory funded-vs-settled mismatches and over-reservation;
-- referral reward ledger mismatches;
-- asset-finance price/deposit/approved-finance inconsistencies.
-
-The production scheduler runs this audit repeatedly. A ledger is not considered financially sound merely because the entries that happen to exist balance.
-
-## Local setup
-
-Requirements:
-
-- PHP 8.2+
-- Composer
-- SQLite for tests or PostgreSQL for production parity
-- Node.js/npm only for Laravel asset work
-
-```bash
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-php artisan db:seed
-php artisan serve
-```
-
-Run quality gates:
-
-```bash
-php artisan test
-./vendor/bin/pint --test
-composer audit
-```
+Customer interfaces must preserve simple language, logical screen-reader order, text scaling, reduced motion and practical touch targets. Assisted identity verification is supported without creating a lower-assurance account type.
 
 ## Important environment variables
 
-Core runtime:
+Core:
 
 ```text
 APP_ENV
@@ -137,12 +137,30 @@ APP_TIMEZONE
 DB_CONNECTION
 QUEUE_CONNECTION
 CACHE_STORE
-SESSION_DRIVER
 SANCTUM_TOKEN_EXPIRY
 CORS_ALLOWED_ORIGINS
 ```
 
-Production financial controls:
+Credit / identity:
+
+```text
+CRB_URL
+CRB_CLIENT_ID
+CRB_CLIENT_SECRET
+IDENTITY_VERIFICATION_URL
+IDENTITY_VERIFICATION_TOKEN
+KYC_FILESYSTEM_DISK
+MNO_SCORING_URL
+MNO_SCORING_TOKEN
+THIRD_PARTY_SCORING_URL
+THIRD_PARTY_SCORING_TOKEN
+OPFIN_MAX_DSR_PERCENT
+OPFIN_MIN_LIMIT_COVERAGE_PERCENT
+OPFIN_CREDIT_MODEL_VERSION
+OPFIN_AUTO_DECISION_POLICY_VERSION
+```
+
+Money movement:
 
 ```text
 MOBILE_MONEY_PROVIDER=cpay
@@ -157,46 +175,47 @@ CPAY_ENVIRONMENT=production
 CPAY_COUNTRY=UG
 CPAY_CURRENCY=UGX
 CPAY_MINOR_UNIT_EXPONENT=0
-OPFIN_MAX_DSR_PERCENT=35
-OPFIN_ENABLE_LEGACY_LOAN_ORIGINATION=false
 ```
 
-OTP/SMS, WhatsApp, CRB, KYC and partner-specific integrations require their own production credentials. Missing external credentials must keep affected capabilities fail-closed; no fake secrets belong in source or deployment configuration.
-
-## Architecture boundaries
-
-**OpFin owns:** identity and consent state, credit decisions, pricing snapshots, disclosures, product obligations, schedules, savings/protection state, financial wellbeing, product ledgers, audit evidence and operational exceptions.
-
-**CPay owns:** execution of collections/payouts and provider-side payment/finality evidence.
-
-A production money-changing path must therefore follow:
+Assisted channels:
 
 ```text
-authenticated product instruction
-→ canonical idempotent intent
-→ step-up where required
-→ CPay execution
-→ verified provider finality
-→ product state transition
-→ immutable accounting
-→ reconciliation
-→ integrity audit
+WHATSAPP_BASE_URL
+WHATSAPP_PHONE_NUMBER_ID
+WHATSAPP_ACCESS_TOKEN
+WHATSAPP_APP_SECRET
+WHATSAPP_VERIFY_TOKEN
+OPFIN_WEB_URL
+USSD_SHARED_SECRET
 ```
 
-## Demo and legacy surfaces
+Missing external credentials keep the affected capability unavailable/pending. Never insert fake production credentials or provider results.
 
-`/api/demo/*` is intentionally mock-labelled and is not a production financial rail. Older account, transaction, journal and web/Blade surfaces remain only where required for historical compatibility. New financial implementation must not depend on those legacy paths when an integer-minor-unit production service exists.
+## Local verification
 
-Do not treat old demo arithmetic, seed data, legacy journal balances or direct provider-era code as production source of truth.
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan test
+./vendor/bin/pint --test
+composer audit
+```
+
+For repository release, use the root CI/security/deployment gates as documented in `SECURITY.md` and `AGENTS.md`.
 
 ## Documentation
 
-Start with:
+Current sources of truth:
 
-- `AGENTS.md` for engineering rules and financial invariants.
-- `docs/integrations/mobile-money.md` for CPay, callbacks, idempotency and reconciliation.
-- `docs/api/frontend-backend-contract.md` for client/server contracts.
-- `docs/audit/backend-checkpoint.md` for historical findings and remediation status.
-- `docs/architecture/` for architecture records.
+- root `README.md`
+- root `AGENTS.md`
+- root `SECURITY.md`
+- `../../docs/LAUNCH_CUSTOMER_JOURNEY.md`
+- `docs/README.md`
+- `docs/api/current-endpoints.md`
+- `docs/api/frontend-backend-contract.md`
+- `docs/operations/production-readiness-checklist.md`
 
-The root README is the current high-level source of truth. Historical audit documents should be read as dated evidence, not as a description of the current production state.
+Dated audit/checkpoint files remain historical evidence and must not override newer code/current-contract documentation.
