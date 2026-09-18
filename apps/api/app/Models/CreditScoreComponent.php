@@ -7,8 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class CreditScoreComponent extends Model
 {
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_READY = 'ready';
+
     public const STATUS_ERROR = 'error';
+
     public const STATUS_UNAVAILABLE = 'unavailable';
 
     protected $fillable = [
