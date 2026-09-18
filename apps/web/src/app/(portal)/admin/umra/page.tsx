@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  applyTermVariationAction,
   evaluateNplAction,
   proposeTermVariationAction,
   recordUmraApprovalAction,
@@ -183,11 +182,11 @@ export default async function UmraControlDesk({
                     </form>
                   ) : null}
                   {!variation.customer_consented_at ? <p className="muted">Waiting for customer consent.</p> : null}
-                  {variation.customer_consented_at && (!variation.requires_umra_approval || variation.umra_approved_at) && !variation.applied_at ? (
-                    <form action={applyTermVariationAction}>
-                      <input type="hidden" name="variation_id" value={variation.id} />
-                      <button className="button" type="submit">Mark variation effective</button>
-                    </form>
+                  {variation.customer_consented_at ? (
+                    <StateNotice
+                      state="success"
+                      message="Customer consent is recorded. The original loan economics remain immutable until a separately controlled versioned amendment executor is used."
+                    />
                   ) : null}
                 </article>
               ))}
