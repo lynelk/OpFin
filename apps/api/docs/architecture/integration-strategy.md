@@ -46,7 +46,22 @@ Rules:
 - Final success requires verified provider status.
 - Duplicate callbacks must not duplicate ledger postings.
 
-## CRB and KYC
+## Credit reference, CRB and KYC
+
+Inbound credit scoring/CRB retrieval and outbound credit-information reporting are separate integration purposes.
+
+Outbound reporting must retain:
+
+- dedicated customer reporting consent;
+- complete verified identity;
+- event/payload hash and idempotency;
+- due date;
+- attempts/failure reason;
+- provider reference.
+
+The configured `CREDIT_REFERENCE_REPORTING_*` adapter must be certified against the applicable authorised mechanism before live use.
+
+### CRB/KYC
 
 Required controls:
 
@@ -113,3 +128,12 @@ Track:
 - Reconciliation differences.
 - Failed jobs by provider.
 
+
+
+## Transaction acknowledgement integrations
+
+Receipt creation belongs to OpFin's post-finality product state. SMS/email/channel delivery is a notification side effect; a notification failure must not roll back an otherwise valid receipt/economic transaction.
+
+## Regulatory integrations
+
+Regulatory reports are generated internally as validated evidence packs. External regulator submission remains a separately authorised operational act unless a future certified integration explicitly implements it.
