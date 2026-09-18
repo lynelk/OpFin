@@ -43,3 +43,18 @@
 - Customers with disabilities may use assisted identity verification. A trusted helper may help position a device or enter non-secret information, but PINs and OTPs remain private to the customer.
 - Accessibility assistance must not weaken KYC, consent, credit or financial-control standards and must not create a separate lower-assurance account type.
 - Never advertise a provider-gated or regulator-gated capability as live.
+
+
+## Documentation discipline
+
+Documentation is part of the implementation, not a post-release chore.
+
+- Current documentation starts at `docs/README.md`.
+- Every public/API/customer/admin workflow change must update the relevant current docs in the same PR.
+- Route changes must update `apps/api/docs/api/current-endpoints.md`.
+- Client contract changes must update `apps/api/docs/api/frontend-backend-contract.md` and the affected component README/journey guide.
+- New operational/regulatory controls must update the operational runbook, readiness/UAT evidence and `docs/UMRA_DIGITAL_LENDING_CONTROLS.md` where applicable.
+- Use `python3 scripts/search-docs.py "<term>"` and `python3 scripts/search-api.py "<term>"` for discovery.
+- Dated audit/demo/checkpoint files remain historical evidence and do not override current docs.
+- CI runs `scripts/verify-documentation-drift.py`; do not bypass it by weakening the check.
+- Training manuals, staff guides and customer help content should be derived from `docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md` plus current application labels/contracts.
