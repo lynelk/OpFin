@@ -3,22 +3,31 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CreditDecision;
 use App\Models\CreditTermVariation;
 use App\Models\Loan;
 use App\Models\LoanApplication;
+use App\Models\LoanGuarantor;
 use App\Models\TransactionReceipt;
+use App\Services\AppStoreCreditPolicy;
 use App\Services\CreditTermVariationService;
 use App\Services\GuarantorService;
+use App\Services\ProductionCreditDecisionService;
+use App\Services\ProductionCreditOfferService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use InvalidArgumentException;
 
 class CustomerComplianceController extends Controller
 {
     public function __construct(
         private readonly GuarantorService $guarantors,
         private readonly CreditTermVariationService $variations,
+        private readonly ProductionCreditDecisionService $decisionService,
+        private readonly ProductionCreditOfferService $offerService,
+        private readonly AppStoreCreditPolicy $appStorePolicy,
     ) {}
 
     public function receipts(Request $request): JsonResponse
@@ -71,9 +80,28 @@ class CustomerComplianceController extends Controller
             return ApiResponse::error($exception->getMessage(), 409);
         }
 
+        $application->loadMissing('loanProductTerm');
+        $required = min(2, max(0, (int) ($application->loanProductTerm?->guarantors_required ?? 0)));
+        $verified = LoanGuarantor::query()
+            ->where('loan_application_id', $application->id)
+            ->where('status', LoanGuarantor::STATUS_VERIFIED)
+            ->whereNotNull('verified_at')
+            ->whereNotNull('consented_at')
+            ->count();
+
+        $progression = $verified >= $required
+            ? $this->progressApplication($application->fresh(), $request)
+            : [
+                'next_state' => 'guarantors_required',
+                'guarantors_required' => $required,
+                'guarantors_verified' => $verified,
+                'guarantors_remaining' => max(0, $required - $verified),
+            ];
+
         return ApiResponse::success('Guarantor contact verified and recorded.', [
             'guarantor' => $guarantor,
             'maximum_guarantor_contacts' => 2,
+            ...$progression,
         ], 201);
     }
 
@@ -123,6 +151,67 @@ class CustomerComplianceController extends Controller
         }
 
         return ApiResponse::success('Credit-term variation consent recorded.', ['variation' => $updated]);
+    }
+
+    private function progressApplication(LoanApplication $application, Request $request): array
+    {
+        $decision = $this->decisionService->decide($application, null);
+        $application->update([
+            'status' => match ($decision->status) {
+                CreditDecision::STATUS_APPROVED => 'Approved',
+                CreditDecision::STATUS_DECLINED => 'Declined',
+                default => 'Referred',
+            },
+            'approved_at' => $decision->status === CreditDecision::STATUS_APPROVED ? now() : null,
+        ]);
+
+        $offer = null;
+        $nextState = match ($decision->status) {
+            CreditDecision::STATUS_APPROVED => 'offer_ready',
+            CreditDecision::STATUS_DECLINED => 'declined',
+            default => 'assessment',
+        };
+
+        if ($decision->status === CreditDecision::STATUS_APPROVED) {
+            $amountMinor = (int) $application->amount;
+            $pricing = [
+                'access_fee_minor' => (int) round(
+                    $amountMinor * ((float) config('opfin.credit.default_pricing.access_fee_percent', 0) / 100),
+                ),
+                'disbursement_fee_minor' => (int) config('opfin.credit.default_pricing.disbursement_fee_minor', 0),
+                'fee_treatment' => (string) config('opfin.credit.default_pricing.fee_treatment', 'financed'),
+                'expires_in_minutes' => (int) config('opfin.credit.default_pricing.expires_in_minutes', 1440),
+            ];
+
+            try {
+                $appStoreDisclosure = $this->appStorePolicy->validateOffer($application->fresh(), $pricing);
+                $offer = $this->offerService->createOffer($application->fresh(), $request->user(), $pricing);
+
+                if ($appStoreDisclosure !== []) {
+                    $offer->forceFill([
+                        'pricing_snapshot' => array_merge($offer->pricing_snapshot ?? [], $appStoreDisclosure),
+                        'disclosure_snapshot' => array_merge($offer->disclosure_snapshot ?? [], $appStoreDisclosure),
+                    ])->save();
+                    $offer = $offer->fresh();
+                }
+            } catch (InvalidArgumentException $exception) {
+                $application->update(['status' => 'Referred']);
+                $nextState = 'assessment';
+                report($exception);
+            }
+        }
+
+        return [
+            'next_state' => $nextState,
+            'decision' => $decision,
+            'offer' => $offer,
+            'guarantors_required' => min(2, max(0, (int) ($application->loanProductTerm?->guarantors_required ?? 0))),
+            'guarantors_verified' => LoanGuarantor::query()
+                ->where('loan_application_id', $application->id)
+                ->where('status', LoanGuarantor::STATUS_VERIFIED)
+                ->count(),
+            'guarantors_remaining' => 0,
+        ];
     }
 
     private function variationHash(CreditTermVariation $variation): string
