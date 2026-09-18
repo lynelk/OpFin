@@ -17,7 +17,20 @@ class LoanProductTerm extends Model
         'repayment_frequency',
         'duration',
         'status',
+        'default_interest_rate',
+        'default_interest_cycle',
+        'umra_interest_approval_reference',
+        'umra_interest_approved_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'interest_rate' => 'decimal:6',
+            'default_interest_rate' => 'decimal:6',
+            'umra_interest_approved_at' => 'datetime',
+        ];
+    }
 
     public function product()
     {
