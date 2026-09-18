@@ -223,3 +223,92 @@ Savings, investments, peer lending, SACCO/community capital, insurance and asset
 ## 15. Source-of-truth APIs
 
 Key current endpoints are documented in `apps/api/docs/api/current-endpoints.md`. Customer clients must use API-returned profile, options, offers, wallets and payment state rather than maintaining independent lending rules.
+
+
+## 16. UMRA credit-information exchange
+
+Accepting a loan offer records a separate, versioned **credit-reporting consent** tied to the exact offer/disclosure hash. Credit-processing/scoring consent alone is not used as evidence for outbound reporting.
+
+After disbursement, repayment, clearance, reversal and non-performing events, OpFin stages positive or negative credit information in the outbound reporting register. The register validates required customer/account information, stores an evidence hash and idempotency key, records provider references and retries failed submissions without fabricating success.
+
+A scheduled portfolio snapshot supplements event-driven updates. Production activation still requires the certified applicable credit-reference reporting endpoint/schema.
+
+## 17. Guarantor-backed products
+
+A product term may require **0, 1 or 2** guarantors.
+
+- OpFin never reads the borrower's contact list.
+- The borrower deliberately enters a guarantor phone number.
+- The guarantor receives a loan-specific consent message.
+- Sharing the one-time code is electronic confirmation of the request.
+- A credit application that requires guarantors pauses at **Awaiting Guarantors**.
+- Decisioning resumes automatically only after the configured number of verified contacts exists.
+- A third guarantor contact is rejected.
+
+## 18. Provider-confirmed transaction receipts
+
+Successful disbursements and repayments produce one immutable in-app receipt containing:
+
+- OpFin receipt reference;
+- transaction type;
+- amount and currency;
+- provider/provider reference;
+- loan reference where applicable;
+- provider-confirmed completion time; and
+- SHA-256 evidence hash.
+
+An SMS acknowledgement is also queued where a phone is available. **Queued SMS is not recorded as delivered** unless delivery evidence exists. Pending payment/disbursement requests do not receive a successful receipt.
+
+## 19. Complaints
+
+Every customer support/complaint case receives:
+
+- a case number;
+- regulatory category;
+- **30-day SLA due date**;
+- complete case history; and
+- mandatory customer-facing resolution summary before resolve/close.
+
+The complaint procedure and target resolution time are part of the pre-acceptance loan disclosure.
+
+## 20. NPL/default-interest recovery controls
+
+When a loan first becomes non-performing, OpFin snapshots the principal owing and tracks:
+
+- initial contractual interest;
+- configured default-penalty ceiling;
+- recoverable-interest ceiling;
+- total recoverable cap; and
+- recoveries made after NPL classification.
+
+The Uganda control can operate in **track** or **enforce** mode; launch default is **enforce**. In enforce mode collection initiation above the remaining tracked cap is rejected. Hourly evaluation also stages negative credit-information updates.
+
+The exact calculation implemented from the January 2024 guideline wording remains subject to compliance/legal confirmation if UMRA issues further interpretation.
+
+## 21. Credit-term variations
+
+The accepted offer and disclosure hash are immutable.
+
+A proposed variation:
+
+1. is recorded separately with exact proposed changes and reason;
+2. requires explicit customer consent;
+3. if it changes the interest rate, requires a prior UMRA approval reference and SHA-256 evidence hash before the customer can accept; and
+4. cannot be silently written over the original loan.
+
+Generic automatic mutation of live-loan economics is deliberately disabled. An actual economic amendment requires a separately controlled, versioned amendment executor. Product-catalogue interest-rate changes also require prior UMRA approval evidence.
+
+## 22. UMRA books and records
+
+The Admin portal provides an **UMRA Control Desk** and dedicated reports for:
+
+- digital-credit supervision;
+- books and records;
+- positive/negative credit-information exchange;
+- NPL recovery controls;
+- transaction receipts;
+- credit-term variations;
+- guarantor controls; and
+- consumer complaints.
+
+Generated reports are validation checked, evidence hashed, maker-checker controlled and exportable as JSON or CSV.
