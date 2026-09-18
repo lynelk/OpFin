@@ -38,7 +38,7 @@ FORBIDDEN_CURRENT_PHRASES = {
 def git_changes(base: str | None) -> set[str]:
     if not base:
         return set()
-    cmd = ["git", "diff", "--name-only", f"{base}...HEAD"]
+    cmd = ["git", "diff", "--name-only", base, "HEAD"]
     completed = subprocess.run(cmd, cwd=ROOT, check=True, capture_output=True, text=True)
     return {line.strip() for line in completed.stdout.splitlines() if line.strip()}
 
