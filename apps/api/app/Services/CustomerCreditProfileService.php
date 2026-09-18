@@ -198,8 +198,19 @@ class CustomerCreditProfileService
             ->where('status', ConsentRecord::STATUS_GRANTED)
             ->exists();
 
+        $activeLoan = Loan::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])
+            ->latest()
+            ->first();
+
         return [
             'profile' => $profile,
+            'active_loan' => $activeLoan ? [
+                'id' => $activeLoan->id,
+                'status' => $activeLoan->status,
+                'outstanding_minor' => (int) $activeLoan->outstanding_balance,
+            ] : null,
             'setup' => [
                 'primary_phone_verified' => $user->phone_verified_at !== null,
                 'secondary_phone_verified' => $secondary,

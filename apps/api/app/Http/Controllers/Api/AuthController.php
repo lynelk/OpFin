@@ -106,6 +106,9 @@ class AuthController extends Controller
             if ($pin === '' && $legacyPassword === '') {
                 return ApiResponse::error('Create a 6-digit PIN.', 422, ['pin' => ['PIN is required.']]);
             }
+            if ($pin !== '' && $this->weakPin($pin)) {
+                return ApiResponse::error('Choose a less predictable 6-digit PIN.', 422, ['pin' => ['Avoid repeated or sequential numbers.']]);
+            }
             if ($pin !== '' && $pin !== (string) $request->input('pin_confirmation')) {
                 return ApiResponse::error('PIN confirmation does not match.', 422, ['pin_confirmation' => ['PINs do not match.']]);
             }
@@ -220,6 +223,9 @@ class AuthController extends Controller
         if ($credential === '') {
             return ApiResponse::error('Create a new 6-digit PIN.', 422, ['pin' => ['PIN is required.']]);
         }
+        if ($request->filled('pin') && $this->weakPin((string) $request->input('pin'))) {
+            return ApiResponse::error('Choose a less predictable 6-digit PIN.', 422, ['pin' => ['Avoid repeated or sequential numbers.']]);
+        }
         if ($request->filled('password')) {
             $legacyValidator = Validator::make($request->all(), [
                 'password' => ['required', 'confirmed', $this->passwordRule()],
@@ -261,6 +267,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'phone' => 'required|string|max:32',
+            'app_signature' => 'nullable|string|max:32',
         ]);
 
         if ($validator->fails()) {
@@ -281,7 +288,12 @@ class AuthController extends Controller
             ]
         );
 
-        $this->smsService->queueSms($request->phone, 'OpFin: Your OTP code is '.$otp.'. It expires in 5 minutes.');
+        $signature = preg_replace('/\s+/', '', (string) $request->input('app_signature'));
+        $message = 'OpFin: Your OTP code is '.$otp.'. It expires in 5 minutes.';
+        if ($signature !== '') {
+            $message .= "\n".$signature;
+        }
+        $this->smsService->queueSms($request->phone, $message);
 
         return ApiResponse::success('OTP generated successfully', [
             'expires_at' => $expiresAt->toIso8601String(),
@@ -328,6 +340,12 @@ class AuthController extends Controller
             'verification_token' => $verificationToken,
             'verification_expires_at' => now()->addMinutes(10)->toIso8601String(),
         ]);
+    }
+
+    private function weakPin(string $pin): bool
+    {
+        return preg_match('/^(\d)\1{5}$/', $pin) === 1
+            || in_array($pin, ['012345', '123456', '234567', '345678', '456789', '987654', '876543', '765432', '654321', '543210'], true);
     }
 
     private function passwordRule(): Password

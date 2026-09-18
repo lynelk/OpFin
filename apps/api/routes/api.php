@@ -58,6 +58,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::patch('/wallets/{wallet}/default', [CustomerWalletController::class, 'setDefault']);
     Route::get('/credit/profile', [CustomerCreditProfileController::class, 'show']);
     Route::post('/credit/profile/refresh', [CustomerCreditProfileController::class, 'refresh']);
+    Route::get('/credit/options', [CustomerCreditProfileController::class, 'options']);
     Route::patch('/accessibility-preferences', [CustomerCreditProfileController::class, 'accessibility']);
 
     Route::get('/security-centre', [V5P0PlatformController::class, 'security']);
