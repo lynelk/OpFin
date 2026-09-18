@@ -104,6 +104,51 @@ export default async function LoanOfferPage({ searchParams }: { searchParams?: P
           </table>
         </section>
 
+        <div className="grid grid-2">
+          <section className="panel">
+            <h2>How your loan cost is calculated</h2>
+            <dl className="detail-list">
+              <div><dt>Configured interest rate</dt><dd>{disclosure.interest?.configured_rate_percent ?? offer.interest_rate_percent}% {disclosure.interest?.cycle ?? offer.interest_cycle}, {disclosure.interest?.type ?? offer.interest_type}</dd></div>
+              {disclosure.interest?.term_rate_percent != null ? <div><dt>Rate for this loan term</dt><dd>{disclosure.interest.term_rate_percent}%</dd></div> : null}
+              {disclosure.fees?.access_fee_minor != null ? <div><dt>Access fee</dt><dd>{formatUgx(disclosure.fees.access_fee_minor)}</dd></div> : null}
+              {disclosure.fees?.disbursement_fee_minor != null ? <div><dt>Disbursement fee</dt><dd>{formatUgx(disclosure.fees.disbursement_fee_minor)}</dd></div> : null}
+              {disclosure.fees?.fee_treatment ? <div><dt>Fee treatment</dt><dd>{disclosure.fees.fee_treatment}</dd></div> : null}
+              {disclosure.repayment_timing?.first_payment_due_days_after_disbursement != null ? <div><dt>First payment</dt><dd>{disclosure.repayment_timing.first_payment_due_days_after_disbursement} days after confirmed disbursement</dd></div> : null}
+              {disclosure.repayment_timing?.final_payment_due_days_after_disbursement != null ? <div><dt>Final payment</dt><dd>{disclosure.repayment_timing.final_payment_due_days_after_disbursement} days after confirmed disbursement</dd></div> : null}
+            </dl>
+            {disclosure.interest?.calculation ? <p className="muted">{disclosure.interest.calculation}</p> : null}
+            {disclosure.fees?.access_fee_calculation ? <p className="muted">{disclosure.fees.access_fee_calculation}</p> : null}
+            {disclosure.fees?.disbursement_fee_calculation ? <p className="muted">{disclosure.fees.disbursement_fee_calculation}</p> : null}
+          </section>
+
+          <section className="panel">
+            <h2>Your protections and notices</h2>
+            {disclosure.complaints ? (
+              <>
+                <h3>Complaints</h3>
+                <p>{disclosure.complaints.process}</p>
+                <p className="muted">
+                  Target resolution: {disclosure.complaints.resolution_sla_days ?? 30} days. {disclosure.complaints.channel ?? ""}
+                  {disclosure.complaints.phone ? <> · {disclosure.complaints.phone}</> : null}
+                  {disclosure.complaints.email ? <> · {disclosure.complaints.email}</> : null}
+                </p>
+              </>
+            ) : null}
+            {disclosure.credit_information_exchange?.notice ? <><h3>Credit information reporting</h3><p>{disclosure.credit_information_exchange.notice}</p></> : null}
+            {disclosure.guarantors?.notice ? <><h3>Guarantors</h3><p>{disclosure.guarantors.notice} Maximum contacts: {disclosure.guarantors.maximum_contacts ?? 2}.</p></> : null}
+            {disclosure.term_variation?.notice ? <><h3>Changes to your terms</h3><p>{disclosure.term_variation.notice}</p></> : null}
+            {disclosure.provider_identity ? (
+              <>
+                <h3>Provider identity</h3>
+                <p>
+                  {disclosure.provider_identity.licensed_entity_name ?? "Licensed provider to be confirmed"} · {disclosure.provider_identity.regulator ?? "UMRA"}
+                  {disclosure.provider_identity.business_address ? <> · {disclosure.provider_identity.business_address}</> : null}
+                </p>
+              </>
+            ) : null}
+          </section>
+        </div>
+
         {canAccept ? (
           <section className="panel">
             <h2>Acceptance</h2>
@@ -115,7 +160,7 @@ export default async function LoanOfferPage({ searchParams }: { searchParams?: P
               <input type="hidden" name="disclosure_hash" value={disclosureHash} />
               <label className="consent-check">
                 <input type="checkbox" name="accept_disclosures" required />
-                <span>I have reviewed and accept this exact offer, including the amount received, interest, fees, total repayment, duration and repayment frequency.</span>
+                <span>I have reviewed and accept this exact offer, including the amount received, interest and its calculation, fees and penalties, total cost, payment timing, complaints procedure, credit-information reporting notice and the rules governing any future term variation.</span>
               </label>
               <button className="button" type="submit">Accept offer and request disbursement</button>
             </form>
