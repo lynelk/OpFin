@@ -36,6 +36,7 @@ class CreditReferenceReportingService
                 'provider' => config('services.credit_reference_reporting.provider'),
                 'payload' => $canonical,
                 'due_at' => now()->addDays((int) config('opfin.regulatory.credit_reporting_due_days', 30)),
+                'failure_reason' => $complete ? null : 'Complete verified customer identity is required before external credit reporting.',
                 'updated_at' => now(),
                 'created_at' => now(),
             ],
