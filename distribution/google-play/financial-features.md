@@ -50,3 +50,15 @@ A displayed profile credit limit is not a guarantee of loan approval.
 - `[ ]` Accessibility/PWD assistance path operational.
 
 Do not use screenshots or reviewer credentials that expose a prohibited short-term product, fabricated approval, real person's KYC evidence or unlicensed provider.
+
+
+## Additional digital-credit evidence
+
+Before production submission verify:
+
+- the applicable authorised credit-reference provider/schema and its contract/certification;
+- explicit electronic customer consent for positive/negative credit-information reporting;
+- complaint procedure/contact information shown with the offer;
+- default-interest/NPL policy controls and evidence;
+- transaction receipt/instant acknowledgement path;
+- direct rate edits blocked and prior UMRA approval evidence required for interest-rate changes.
