@@ -1,107 +1,42 @@
-# Production Gap Assessment
+# Web production gap assessment
 
-Date: 2026-05-22
+Updated: 18 September 2026
 
-Scope: OpFin-FE as a replacement frontend for the current live OpFin solution.
+The May 2026 “investor-demo scaffold” assessment is superseded.
 
-## Bottom line
+## Current position
 
-The current Next.js frontend is not production-ready as a replacement system. It is a useful investor-demo and integration scaffold, but major customer, admin, support, accessibility, responsive, validation, and operational flows remain incomplete or mock-backed.
+The Next.js web application now supports production-shaped customer and admin workflows backed by the current Laravel API, including borrower state, KYC/consent, formal offers, loan accounts, support/complaints, governance and regulatory evidence.
 
-## Implemented screens
+The primary remaining gaps are external activation and operational proof, not missing web scaffolding.
 
-- Login.
-- Admin login.
-- Customer dashboard.
-- KYC status.
-- Consent management.
-- Loan application.
-- Loan decision result.
-- Loan offer.
-- Loan account.
-- Repayment schedule.
-- Admin dashboard placeholder.
-- Admin credit review.
-- Admin audit trail.
-- Employer portal placeholder.
-- Savings placeholder.
-- Insurance placeholder.
-- Investments placeholder.
+## Implemented web/admin areas
 
-## Fully functional by code inspection
+- phone/PIN account access and protected portal;
+- customer borrower-state views;
+- KYC/consent;
+- loan application/decision/offer/account;
+- exact formal offer disclosures and credit-reporting consent;
+- support/complaint entry;
+- admin credit review;
+- reconciliation and ledger review;
+- support/complaint SLA;
+- Compliance Centre with UMRA control metrics;
+- regulatory report generation/register/detail;
+- current production mock/demo guards.
 
-- Environment-based API client using `NEXT_PUBLIC_OPFIN_API_URL`.
-- Mock fallback controlled by explicit `NEXT_PUBLIC_USE_MOCK_API=true`.
-- Login server action that stores HTTP-only token/role/name cookies.
-- Protected route middleware for portal routes.
-- Role-aware navigation groups.
-- Customer investor-demo screens wired to backend `/api/demo/*` endpoints when mock mode is disabled.
-- Admin credit review and audit trail wired to the backend investor snapshot endpoint.
-- Generic loading, empty, and error notices.
+## Remaining external/operational gates
 
-## Partially implemented
+- production legal/lender/UMRA identity;
+- identity/bureau/affordability/CPay provider activation;
+- official complaint contacts;
+- production monitoring/backups/restore evidence;
+- real-device/accessibility UAT;
+- signed store/reviewer evidence;
+- final operational/regulatory sign-off.
 
-- Customer flows: demo credit journey exists; production repayment, support, profile-management, statements, KYC recovery, and payment exception flows are incomplete.
-- Admin flows: demo snapshot and placeholders exist; production operations console is missing.
-- Error states: generic status handling exists; field-level validation and recovery flows are incomplete.
-- Protected routes: middleware now requires an `opfin_access_token` cookie before allowing protected pages.
-- API integration: real backend mode exists; mock mode is opt-in with `NEXT_PUBLIC_USE_MOCK_API=true`.
-- Form validation: mostly HTML required fields and server redirect messages.
-- Accessibility: basic labels exist; no full audit was run.
-- Mobile responsiveness: CSS exists; no browser/device verification was run.
+## Production rule
 
-## Mocked, sandbox-only, or placeholders
+Do not enable mock API or demo shortcuts in production. Do not represent a capability as live when its external provider/regulatory gate is not active.
 
-- All data when `NEXT_PUBLIC_USE_MOCK_API=true`.
-- `/api/mock-login` when `OPFIN_ENABLE_DEMO_SHORTCUTS=true` outside production.
-- Sandbox customer/admin shortcut links.
-- Investor-demo decisioning labels and data.
-- Investor-demo consent labels and data.
-- Mock mobile money disbursement display.
-- Admin dashboard placeholder.
-- Employer portal placeholder.
-- Savings placeholder.
-- Insurance placeholder.
-- Investments placeholder.
-- Any production CRB, KYC provider, live mobile money, support, and compliance workflows.
-
-## Missing for production replacement
-
-- Customer registration/account recovery if replacement scope requires it.
-- Full provider-backed KYC submission/review/retry flow beyond the new `/api/kyc/*` screen integration.
-- Full production consent policy-version UX beyond the new `/api/consents` screen integration.
-- Production loan application state tracking.
-- Manual review/referral screens.
-- Offer disclosure and acceptance evidence UX.
-- Real repayment collection and payment-status screens.
-- Customer statement and transaction history.
-- Support console.
-- Operational reconciliation views.
-- Compliance reporting views.
-- Production dashboard metrics.
-- Fine-grained field validation.
-- Accessibility and mobile audits.
-- CI/deployment enforcement that prevents production builds from enabling mock routes or fixtures.
-
-## Verification attempted
-
-| Command | Result |
-| --- | --- |
-| `git diff --check` | Passed with warning on pre-existing dirty `opfin-frontend/lib/otp_screen.dart`. |
-| `npm --version` | Blocked: `npm` not recognized. |
-| `npm run typecheck` | Blocked: `npm` not recognized. |
-| `npm run lint` | Blocked: `npm` not recognized. |
-| `npm run test` | Blocked: `npm` not recognized. |
-| `npm run build` | Blocked: `npm` not recognized. |
-
-## Production decision
-
-Do not use this frontend as the production replacement yet. Use it as a foundation for the replacement build after backend production contracts are finalized and the frontend toolchain can run repeatable checks.
-
-## Guardrails added after assessment
-
-- Mock API mode now requires `NEXT_PUBLIC_USE_MOCK_API=true`; missing API base URL fails closed instead of silently loading fixtures.
-- Protected frontend routes now require `opfin_access_token`; role cookies alone no longer pass the session guard.
-- `/api/mock-login` returns 404 in production and unless `OPFIN_ENABLE_DEMO_SHORTCUTS=true`.
-- Login and admin-login sandbox shortcut links are hidden unless `OPFIN_ENABLE_DEMO_SHORTCUTS=true` outside production.
-- Next.js production builds now fail if `NEXT_PUBLIC_USE_MOCK_API=true` or `OPFIN_ENABLE_DEMO_SHORTCUTS=true`.
+For current blockers use `blockers-and-risks.md`; for API contracts use `../../../../apps/api/docs/api/current-endpoints.md`.
