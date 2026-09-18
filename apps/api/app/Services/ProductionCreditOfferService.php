@@ -303,8 +303,10 @@ class ProductionCreditOfferService
                 }
                 $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $existing, $offer);
                 $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
-                $this->receipts->issue($lockedTransaction->fresh(), 'loan_disbursement');
-                $this->creditReporting->queueLoanEvent($existing->fresh(), 'origination');
+                DB::afterCommit(function () use ($lockedTransaction, $existing) {
+                    $this->receipts->issue(MobileMoneyTransaction::findOrFail($lockedTransaction->id), 'loan_disbursement');
+                    $this->creditReporting->queueLoanEvent(Loan::findOrFail($existing->id), 'origination');
+                });
 
                 return $existing;
             }
@@ -350,8 +352,10 @@ class ProductionCreditOfferService
                 'provider_reference' => $lockedTransaction->provider_reference,
                 'ledger_reference' => 'loan.disbursement:credit-offer:'.$offer->offer_reference,
             ]);
-            $this->receipts->issue($lockedTransaction->fresh(), 'loan_disbursement');
-            $this->creditReporting->queueLoanEvent($loan->fresh(), 'origination');
+            DB::afterCommit(function () use ($lockedTransaction, $loan) {
+                $this->receipts->issue(MobileMoneyTransaction::findOrFail($lockedTransaction->id), 'loan_disbursement');
+                $this->creditReporting->queueLoanEvent(Loan::findOrFail($loan->id), 'origination');
+            });
 
             return $loan;
         });
@@ -416,8 +420,10 @@ class ProductionCreditOfferService
                 'mobile_money_transaction_id' => $lockedTransaction->id,
                 'provider_reference' => $lockedTransaction->provider_reference,
             ]);
-            $this->receipts->issue($lockedTransaction->fresh(), 'disbursement_reversal');
-            $this->creditReporting->queueLoanEvent($loan->fresh(), 'correction');
+            DB::afterCommit(function () use ($lockedTransaction, $loan) {
+                $this->receipts->issue(MobileMoneyTransaction::findOrFail($lockedTransaction->id), 'disbursement_reversal');
+                $this->creditReporting->queueLoanEvent(Loan::findOrFail($loan->id), 'correction');
+            });
 
             return $loan->fresh();
         });
