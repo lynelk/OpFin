@@ -66,12 +66,12 @@ class GuarantorService
                 'status' => LoanGuarantor::STATUS_VERIFIED,
                 'verification_method' => 'otp',
                 'verification_reference' => hash('sha256', $phone.'|'.$otp->verified_at->toIso8601String()),
-                'consent_evidence' => [
+                'consent_evidence' => array_merge($existing?->consent_evidence ?? [], [
                     'method' => 'electronic_otp',
                     'confirmed' => true,
                     'confirmed_at' => now()->toIso8601String(),
-                    'notice' => 'Guarantor contact was deliberately supplied and electronically verified; no contact-list access was used.',
-                ],
+                    'notice' => 'Guarantor contact was deliberately supplied, received a guarantor-specific consent notice and was electronically verified; no contact-list access was used.',
+                ]),
                 'verified_at' => now(),
                 'consented_at' => now(),
             ]);
