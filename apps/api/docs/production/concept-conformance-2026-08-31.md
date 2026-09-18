@@ -1,7 +1,7 @@
 # OpFin Concept Conformance Review
 
 Date: 2026-08-31
-Source of truth: OpFin Updated Concept Note v2 and OpFin + CPay Build Specification v5.
+Source of truth: OpFin Updated Concept Note v2 and OpFin + CPay Build Specification v5. Updated for launch journey alignment on 18 September 2026.
 
 ## Verdict
 
@@ -9,7 +9,7 @@ The architecture and primary customer proposition are implemented, but the compl
 
 The production-ready customer mental model is retained as:
 
-**Home | Borrow | Save | Grow | More**
+**Home | Borrow | Activity | More**
 
 OpFin owns customer identity, product logic, eligibility, consent, financial intelligence and journeys. CPay/Cito remains the canonical money-movement, provider execution and reconciliation layer.
 
@@ -67,7 +67,7 @@ Rules:
 - never expose provider/internal state names where plain-language status is sufficient;
 - show estimates as estimates, never as confirmed cash;
 - keep KYC and consent contextual rather than permanent navigation concepts;
-- preserve Home, Borrow, Save, Grow and More as the only permanent customer navigation areas.
+- preserve Home, Borrow, Activity and More as the only permanent customer navigation areas.
 
 ## Next implementation sequence
 
