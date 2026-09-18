@@ -46,7 +46,7 @@ class UmraDigitalLendingControlsTest extends TestCase
         $this->assertNotNull($case->regulatory_due_at);
         $this->assertSame(
             30,
-            now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($case->regulatory_due_at)->startOfDay()),
+            (int) now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($case->regulatory_due_at)->startOfDay()),
         );
     }
 
