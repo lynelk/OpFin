@@ -14,20 +14,20 @@ class AccountDeleteScreen extends StatefulWidget {
 }
 
 class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
-  final _password = TextEditingController();
+  final _pin = TextEditingController();
   final _confirmation = TextEditingController();
   bool _submitting = false;
 
   @override
   void dispose() {
-    _password.dispose();
+    _pin.dispose();
     _confirmation.dispose();
     super.dispose();
   }
 
   Future<void> _deleteAccount() async {
-    if (_password.text.isEmpty || _confirmation.text.trim() != 'DELETE') {
-      _message('Enter your current password and type DELETE exactly.');
+    if (_pin.text.isEmpty || _confirmation.text.trim() != 'DELETE') {
+      _message('Enter your current PIN and type DELETE exactly.');
       return;
     }
 
@@ -42,7 +42,7 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({'password': _password.text, 'confirmation': 'DELETE'}),
+        body: jsonEncode({'pin': _pin.text, 'confirmation': 'DELETE'}),
       );
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       if ((response.statusCode != 200 && response.statusCode != 202) || decoded['success'] != true) {
@@ -99,10 +99,9 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
           ),
           const SizedBox(height: 16),
           TextField(
-            controller: _password,
+            controller: _pin,
             obscureText: true,
-            autofillHints: const [AutofillHints.password],
-            decoration: const InputDecoration(labelText: 'Current password', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(labelText: 'Current 6-digit PIN', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 14),
           TextField(

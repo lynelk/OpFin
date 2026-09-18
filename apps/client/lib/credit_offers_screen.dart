@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:opfin/constants.dart';
+import 'package:opfin/services/credit_profile_api.dart';
 import 'package:opfin/services/user_session.dart';
 
 class CreditOffersScreen extends StatefulWidget {
@@ -105,6 +106,23 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
   bool _accepted = false;
   bool _submitting = false;
   final _money = NumberFormat('#,##0', 'en_US');
+  late Future<List<Map<String, dynamic>>> _wallets;
+  int? _walletId;
+
+  @override
+  void initState() {
+    super.initState();
+    _wallets = CreditProfileApi.wallets().then((items) {
+      if (items.isNotEmpty && _walletId == null) {
+        final defaults = items
+            .where((item) => item['is_default_disbursement'] == true)
+            .toList();
+        _walletId = _amount(
+            (defaults.isNotEmpty ? defaults.first : items.first)['id']);
+      }
+      return items;
+    });
+  }
 
   int _amount(dynamic value) => value is num ? value.toInt() : int.tryParse('$value') ?? 0;
   String _ugx(dynamic value) => 'UGX ${_money.format(_amount(value))}';
@@ -122,7 +140,7 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
       final response = await http.post(
         Uri.parse('$apiUrl/credit/offers/${widget.offer['id']}/accept'),
         headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json', 'Content-Type': 'application/json'},
-        body: jsonEncode({'accept_disclosures': true, 'disclosure_hash': widget.disclosureHash}),
+        body: jsonEncode({'accept_disclosures': true, 'disclosure_hash': widget.disclosureHash, 'wallet_id': _walletId}),
       );
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode < 200 || response.statusCode >= 300 || decoded['success'] != true) throw Exception(decoded['message'] ?? 'Unable to accept offer.');
@@ -157,13 +175,55 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
         if (firstDue != null) _row('First payment due', '$firstDue days after successful disbursement'),
         if (finalDue != null) _row('Full repayment due', '$finalDue days after successful disbursement'),
         const SizedBox(height: 12),
+        FutureBuilder<List<Map<String, dynamic>>>(
+          future: _wallets,
+          builder: (context, snapshot) {
+            final wallets = snapshot.data ?? const <Map<String, dynamic>>[];
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: LinearProgressIndicator(),
+              );
+            }
+            if (wallets.isEmpty) {
+              return const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(14),
+                  child: Text('Add and verify a wallet before accepting this offer.'),
+                ),
+              );
+            }
+            return DropdownButtonFormField<int>(
+              key: ValueKey(_walletId),
+              initialValue: _walletId,
+              decoration: const InputDecoration(
+                labelText: 'Receive money on',
+                border: OutlineInputBorder(),
+              ),
+              items: wallets.map((wallet) {
+                final msisdn = wallet['msisdn']?.toString() ?? '';
+                final masked = msisdn.length > 4
+                    ? '•••• ${msisdn.substring(msisdn.length - 4)}'
+                    : msisdn;
+                return DropdownMenuItem(
+                  value: _amount(wallet['id']),
+                  child: Text('${wallet['provider'] ?? 'Mobile money'} · $masked'),
+                );
+              }).toList(),
+              onChanged: _submitting
+                  ? null
+                  : (value) => setState(() => _walletId = value),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
         CheckboxListTile(
           contentPadding: EdgeInsets.zero,
           value: _accepted,
           onChanged: (value) => setState(() => _accepted = value == true),
           title: const Text('I have reviewed and accept the amount received, interest, fees, APR where applicable, total repayment, due terms and repayment frequency.'),
         ),
-        FilledButton(onPressed: !_accepted || _submitting || offer['status'] != 'offered' ? null : _accept, child: Text(_submitting ? 'Submitting…' : 'Accept offer and request disbursement')),
+        FilledButton(onPressed: !_accepted || _walletId == null || _submitting || offer['status'] != 'offered' ? null : _accept, child: Text(_submitting ? 'Submitting…' : 'Accept offer and request disbursement')),
       ]),
     );
   }

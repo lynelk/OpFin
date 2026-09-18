@@ -34,11 +34,13 @@ class ExperiencePlatformTest extends TestCase
         $this->assertSame(64, strlen($token));
 
         $this->postJson('/api/register', [
-            'name' => 'Verified Customer',
+            'first_name' => 'Verified',
+            'last_name' => 'Customer',
             'phone' => '256700111222',
             'verification_token' => $token,
-            'password' => 'Secure!Password123',
-            'password_confirmation' => 'Secure!Password123',
+            'pin' => '482951',
+            'pin_confirmation' => '482951',
+            'terms_accepted' => true,
         ])->assertCreated()->assertJsonPath('success', true);
 
         $this->assertNotNull(User::where('phone', '256700111222')->firstOrFail()->phone_verified_at);

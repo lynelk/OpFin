@@ -1,127 +1,74 @@
-# Testing Strategy
+# Testing strategy
 
-## Testing Goals
+The launch release uses layered tests because financial correctness cannot be established by a single happy-path UI test.
 
-Testing must protect money, identity, authorization, consent, and provider workflows. The backend should not rely on manual testing for financial correctness.
+## 1. API feature tests
 
-## Test Layers
+Cover:
 
-### Unit Tests
+- phone OTP and verification-token lifecycle;
+- phone-first names + six-digit PIN registration;
+- legacy password compatibility during migration;
+- weak PIN and brute-force controls;
+- KYC requirement for ID front/back/selfie;
+- consent grant/revoke;
+- optional second phone;
+- profile component/coverage/limit computation;
+- amount-above-limit rejection;
+- application decision/offer state;
+- disclosure-hash acceptance;
+- verified-wallet ownership;
+- idempotent repayment;
+- provider finality/reconciliation/reversal;
+- WhatsApp signature/session/media KYC;
+- USSD state/menu and callback authentication;
+- support/assisted identity case.
 
-Use for:
+## 2. Flutter tests
 
-- Money calculations.
-- Interest and fee calculations.
-- State transition rules.
-- Provider response parsers.
-- Value objects.
-- Permission helper logic.
+Cover:
 
-### Feature Tests
+- short skippable onboarding;
+- phone/OTP/PIN navigation;
+- profile state rendering;
+- amount due vs available-limit priority;
+- limit-aware application form;
+- pending-repayment wording;
+- large-text layout and semantics for critical controls.
 
-Use for:
+Compile Android/iOS release targets on the exact candidate.
 
-- API endpoints.
-- Authentication and token lifecycle.
-- Authorization policies.
-- Validation failures.
-- Loan application flows.
-- Repayment and disbursement initiation.
-- Admin web actions.
+## 3. Accessibility and low-literacy UAT
 
-### Integration Tests
+Automated semantics checks are not enough. On real devices test:
 
-Use sandbox/fake adapters for:
+- Android TalkBack and iOS VoiceOver;
+- 125%+ and OS maximum practical text size;
+- reduced motion;
+- one-handed/large tap targets;
+- customer who reads slowly or needs a helper;
+- PWD-assisted KYC request;
+- no secret-sharing required for assistance;
+- plain-language error recovery.
 
-- Airtel.
-- MTN.
-- CRB/KYC.
-- SMS.
-- Future insurance, investment, employer providers.
+## 4. Cross-channel behavioural tests
 
-Do not hit live providers in CI.
+The same seeded customer must get consistent score/limit/due state from App/API, WhatsApp LIMIT/PROFILE and USSD My limit/My loan.
 
-### Migration Tests
+WhatsApp/USSD must never create an alternative financial ledger or decision engine.
 
-Use for:
+## 5. Production-readiness tests
 
-- Fresh database migration.
-- Important rollback paths where safe.
-- Constraints and indexes.
-- Backfill jobs.
+Before release:
 
-## Required Test Cases
+- migrations on PostgreSQL;
+- private KYC object-storage write/read and access controls;
+- configured identity/CRB/MNO/third-party adapters;
+- payment-provider sandbox/certification flow;
+- signed webhook tests;
+- backup restore;
+- exact release CI/security/deployment gates;
+- signed candidate on physical Android devices;
+- no broad SMS/media permissions introduced.
 
-Authentication:
-
-- Login success/failure.
-- Token issuance.
-- Logout revocation.
-- Password reset revokes old tokens.
-- OTP expiry and attempt limits.
-
-Authorization:
-
-- Member cannot access another member's data.
-- Institution admin cannot access another institution.
-- OpFin admin can perform allowed operations.
-- Unauthorized users cannot mutate financial state.
-
-Financial:
-
-- Loan application state transitions.
-- Disbursement creates expected internal transaction.
-- Repayment creates expected internal transaction.
-- Duplicate callback does not double-post.
-- Ledger entries balance.
-- Reversals preserve history.
-
-Provider:
-
-- Invalid callback signature rejected.
-- Stale callback rejected.
-- Unknown provider reference handled safely.
-- Provider timeout leaves pending/reviewable state.
-
-Compliance:
-
-- Consent is required for KYC/CRB.
-- Audit event is emitted for financial/admin/KYC changes.
-- Sensitive fields are redacted.
-
-## Commands
-
-Run when available:
-
-```bash
-composer install
-php artisan test
-./vendor/bin/pint --test
-npm ci
-npm run build
-composer audit
-npm audit
-```
-
-If local tooling is missing, record the exact command and error.
-
-## CI Requirements
-
-CI should run:
-
-- Composer install.
-- PHPUnit tests.
-- Laravel Pint.
-- Composer audit.
-- NPM install.
-- Vite build.
-- NPM audit where practical.
-- Secret scanning.
-
-## Test Data Rules
-
-- Use factories, not production-like personal data.
-- Use fake phone numbers and fake NINs.
-- Never commit real provider payloads unless fully redacted.
-- Fixtures must be clearly named as test data.
-
+Real financial tests require authorised test accounts and amounts. Do not create unauthorised customer obligations to prove a release.

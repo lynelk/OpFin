@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\CreditProfile;
+use App\Models\CustomerPhoneNumber;
+use App\Models\CustomerWallet;
 use App\Models\User;
 use App\Services\AppStoreCreditPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,6 +36,66 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         $this->assertSoftDeleted('users', ['id' => $user->id]);
         $this->assertDatabaseMissing('users', ['id' => $user->id, 'national_id' => 'CM123456789012']);
         $this->assertDatabaseHas('audit_logs', ['event' => 'account.deletion.completed', 'actor_id' => $user->id]);
+    }
+
+    public function test_pin_deletion_purges_active_phone_wallet_and_credit_profile_context(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_CUSTOMER,
+            'phone' => '256700222111',
+            'phone_verified_at' => now(),
+            'password' => Hash::make('482951'),
+            'first_name' => 'Amina',
+            'last_name' => 'Kato',
+            'accessibility_preferences' => ['large_text' => true],
+        ]);
+
+        $phone = CustomerPhoneNumber::create([
+            'user_id' => $user->id,
+            'phone' => $user->phone,
+            'kind' => 'primary',
+            'verified_at' => now(),
+        ]);
+
+        CustomerWallet::create([
+            'user_id' => $user->id,
+            'phone_number_id' => $phone->id,
+            'provider' => 'mobile_money',
+            'msisdn' => $user->phone,
+            'status' => 'active',
+            'is_default_disbursement' => true,
+            'is_default_repayment' => true,
+            'verified_at' => now(),
+        ]);
+
+        CreditProfile::create([
+            'user_id' => $user->id,
+            'status' => CreditProfile::STATUS_PENDING,
+            'coverage_percent' => 0,
+            'credit_limit_minor' => 0,
+            'current_exposure_minor' => 0,
+            'available_to_borrow_minor' => 0,
+            'amount_due_minor' => 0,
+            'total_outstanding_minor' => 0,
+            'model_version' => 'test',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->deleteJson('/api/account', [
+            'pin' => '482951',
+            'confirmation' => 'DELETE',
+        ])->assertOk()
+            ->assertJsonPath('data.deletion_status', 'completed');
+
+        $this->assertDatabaseMissing('customer_phone_numbers', ['user_id' => $user->id]);
+        $this->assertDatabaseMissing('customer_wallets', ['user_id' => $user->id]);
+        $this->assertDatabaseMissing('credit_profiles', ['user_id' => $user->id]);
+
+        $deleted = User::withTrashed()->findOrFail($user->id);
+        $this->assertNull($deleted->first_name);
+        $this->assertNull($deleted->last_name);
+        $this->assertNull($deleted->accessibility_preferences);
     }
 
     public function test_deletion_request_stays_open_when_peer_finance_obligations_exist(): void

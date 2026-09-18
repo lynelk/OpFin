@@ -8,6 +8,7 @@ use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -52,7 +53,7 @@ class FrontEndAlignmentTest extends TestCase
             ->assertJsonPath('data.user.date_of_birth', '1990-01-15');
     }
 
-    // GET /profile → Profile (data.user must include national_id, date_of_birth, nin_status)
+    // GET /profile → Profile (NIN is masked; raw NIN is not exposed)
     public function test_profile_response_includes_national_id_date_of_birth_nin_status(): void
     {
         $user = User::factory()->create([
@@ -69,12 +70,13 @@ class FrontEndAlignmentTest extends TestCase
                 'success',
                 'message',
                 'data' => [
-                    'user' => ['id', 'name', 'phone', 'role', 'national_id', 'date_of_birth', 'nin_status', 'institution_id'],
+                    'user' => ['id', 'name', 'phone', 'role', 'national_id_masked', 'date_of_birth', 'nin_status', 'institution_id'],
                     'permissions',
                 ],
             ])
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.user.national_id', 'CM87654321')
+            ->assertJsonMissingPath('data.user.national_id')
+            ->assertJsonPath('data.user.national_id_masked', 'CM****4321')
             ->assertJsonPath('data.user.date_of_birth', '1985-06-20')
             ->assertJsonPath('data.user.nin_status', 'PENDING');
     }
@@ -215,14 +217,23 @@ class FrontEndAlignmentTest extends TestCase
         $user = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
         Sanctum::actingAs($user);
 
-        $this->postJson('/api/kyc/cases', [
-            'national_id' => 'CM1234567890',
-            'provider' => 'manual',
-        ])
+        $this->post('/api/kyc/cases', [
+            'national_id' => 'CM123456789012',
+            'national_id_front' => $this->fakeImage('front.png'),
+            'national_id_back' => $this->fakeImage('back.png'),
+            'selfie_with_id' => $this->fakeImage('selfie.png'),
+            'capture_channel' => 'app',
+        ], ['Accept' => 'application/json'])
             ->assertStatus(201)
-            ->assertJsonStructure(['success', 'message', 'data' => ['kyc_case' => ['id', 'national_id', 'status']]])
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => [
+                    'kyc_case' => ['id', 'status', 'evidence_complete', 'checks'],
+                ],
+            ])
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.kyc_case.national_id', 'CM1234567890');
+            ->assertJsonPath('data.kyc_case.evidence_complete', true);
     }
 
     // GET /consents → { consents: ConsentRecord[] } inside data
@@ -327,6 +338,15 @@ class FrontEndAlignmentTest extends TestCase
         $this->getJson('/api/kyc/status')->assertStatus(401);
         $this->getJson('/api/consents')->assertStatus(401);
         $this->getJson('/api/products')->assertStatus(401);
+    }
+
+    private function fakeImage(string $name): UploadedFile
+    {
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQOQAAAAASUVORK5CYII='
+        );
+
+        return UploadedFile::fake()->createWithContent($name, $png);
     }
 
     private function createCustomerWithApplication(): array

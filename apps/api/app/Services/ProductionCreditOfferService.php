@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CreditDecision;
 use App\Models\CreditOffer;
 use App\Models\CreditRepaymentScheduleItem;
+use App\Models\CustomerWallet;
 use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\MobileMoneyTransaction;
@@ -178,6 +179,23 @@ class ProductionCreditOfferService
             return $locked->fresh();
         });
 
+        $walletId = isset($acceptanceMetadata['wallet_id']) ? (int) $acceptanceMetadata['wallet_id'] : null;
+        $walletQuery = CustomerWallet::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->whereNotNull('verified_at');
+
+        $wallet = $walletId
+            ? (clone $walletQuery)->whereKey($walletId)->first()
+            : (clone $walletQuery)->where('is_default_disbursement', true)->first();
+
+        if ($walletId && ! $wallet) {
+            throw new InvalidArgumentException('Choose a verified wallet that belongs to your OpFin profile.');
+        }
+
+        $wallet ??= (clone $walletQuery)->orderByDesc('is_default_disbursement')->first();
+        $disbursementPhone = $wallet?->msisdn ?? $user->phone;
+
         $existing = MobileMoneyTransaction::query()->where('credit_offer_id', $offer->id)
             ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)->latest()->first();
         $transaction = $existing ?: $this->mobileMoney->disburse([
@@ -186,7 +204,7 @@ class ProductionCreditOfferService
             'institution_id' => $offer->institution_id,
             'amount_minor' => $offer->net_disbursement_minor,
             'currency' => $offer->currency,
-            'phone' => $user->phone,
+            'phone' => $disbursementPhone,
             'idempotency_key' => "credit-offer:{$offer->id}:disbursement:v{$offer->version}",
             'internal_reference' => $offer->offer_reference,
             'description' => 'OpFin credit offer disbursement',

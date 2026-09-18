@@ -1,26 +1,53 @@
 # OpFin
 
-Canonical monorepo candidate for the complete OpFin platform.
+OpFin is the canonical monorepo for the OpFin personal-finance platform. The launch customer experience is intentionally simple even though identity, credit, ledger, reconciliation and provider controls remain sophisticated behind it.
 
-## Imported source
+## Launch borrower journey
 
-- Backend: `lynelk/OpFin-BE@fda182cc2d3d741c5f9b462e5d80d5caea6e594a`
-- Frontend/mobile: `lynelk/OpFin-FE@1ef9a0e9a4766ba802afc97f9b91f366620d053a`
-- Generated: 2026-09-04
+The supported launch journey is:
 
-Both source histories are retained as parents in this Git graph. The old repositories remain the historical record until the new `lynelk/OpFin` repository is created, validated and cut over.
+`Phone → OTP → names → 6-digit PIN → Home → identity verification → credit profile → available limit → loan request → formal offer → verified-wallet disbursement → repayment`.
+
+Key product rules:
+
+- A second phone is optional.
+- KYC captures NIN, National ID front and back, and a photo of the customer holding the ID.
+- CRB, MNO, approved third-party and internal behaviour inputs remain separate score components and feed a decomposable OpFin Composite Score.
+- The customer sees the composite score, understandable explanations, available loan limit, amount due and next payment date. Internal probability-of-default values remain internal.
+- Limits are profile-level, not multiplied by wallets or phone numbers.
+- App, WhatsApp and USSD use the same server-authoritative profile and financial state.
+- High-impact financial actions require authenticated confirmation; a PIN is never requested in WhatsApp or USSD.
+- Launch mobile navigation is `Home | Borrow | Activity | More`; non-launch products remain capability-gated rather than crowding the primary experience.
+- Accessibility is part of the core journey: large text, screen readers, reduced motion, simple language and assisted identity verification are supported without lowering assurance.
+
+See `docs/LAUNCH_CUSTOMER_JOURNEY.md` for the complete cross-channel contract.
 
 ## Layout
 
-- `apps/api`: Laravel API, queue worker and scheduler source.
-- `apps/web`: Next.js web experience.
-- `apps/client`: Flutter Android, iOS, Huawei and desktop client.
+- `apps/api`: Laravel API, queue worker, scheduler and financial-domain source.
+- `apps/web`: Next.js web/customer and operational experience.
+- `apps/client`: Flutter Android/iOS client.
 - `packages/contracts`: shared API-contract home.
 - `infrastructure/railway`: Railway service-boundary documentation.
-- `docs`: cross-platform architecture and migration evidence.
+- `docs`: current cross-platform launch, architecture, security and migration documentation.
+
+The historical source imports remain in Git history. This repository is the current working source of truth.
+
+## Financial and security boundaries
+
+- `apps/api` owns identity, consent, eligibility, decisioning, obligations, provider finality, ledger posting and reconciliation.
+- CPay is the production money-movement boundary unless deliberately changed and revalidated.
+- Provider acknowledgement is not financial finality.
+- External scoring/KYC sources may be unavailable; OpFin records that state instead of inventing data.
+- KYC evidence belongs on private persistent/object storage in production.
+- Store-distributed personal-loan terms retain the repository's 61-day minimum full-repayment rule and preference for eligible 90-day-plus routes.
+
+Read `SECURITY.md`, `AGENTS.md` and `apps/api/docs/README.md` before changing authentication, KYC, credit, money movement or customer-facing financial state.
 
 ## Local verification
 
+Run the affected project gates or the aggregate suite:
+
 `make api-test`, `make web-test`, `make client-test` or `make test`.
 
-Each application remains independently buildable and deployable. Repository consolidation does not combine runtimes, secrets or failure domains.
+The exact release commit must also pass the repository release gate, security gate and deployment contract. A passing build is not proof that provider credentials, store publication, real-device accessibility or production operations are activated.

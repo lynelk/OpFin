@@ -25,6 +25,21 @@ class LoanApplication extends Model
         'cancelled_at',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'user_id' => 'integer',
+            'loan_product_id' => 'integer',
+            'loan_product_term_id' => 'integer',
+            'institution_id' => 'integer',
+            'amount' => 'integer',
+            'disbursed_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'rejected_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+        ];
+    }
+
     protected static function boot()
     {
         parent::boot();

@@ -12,7 +12,7 @@ function value(formData: FormData, key: string): string {
 }
 
 export async function deleteAccountAction(formData: FormData) {
-  const password = value(formData, "password");
+  const pin = value(formData, "pin");
   const confirmation = value(formData, "confirmation");
   if (confirmation !== "DELETE") {
     redirect("/account/delete?error=validation&message=Type%20DELETE%20to%20confirm%20account%20deletion.");
@@ -21,7 +21,7 @@ export async function deleteAccountAction(formData: FormData) {
   const token = await getAccessToken();
   let result: AccountDeletionResult;
   try {
-    result = await deleteAccount(password, token);
+    result = await deleteAccount(pin, token);
   } catch (error) {
     if (error instanceof OpfinApiError) {
       const params = new URLSearchParams({ error: error.kind, message: error.message });

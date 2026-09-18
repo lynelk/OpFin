@@ -1,8 +1,9 @@
 {
   "repository": "lynelk/OpFin",
-  "status": "canonical_validated",
-  "generated_at": "2026-09-04",
-  "source": {
+  "status": "launch_candidate",
+  "updated_at": "2026-09-18",
+  "canonical_branch": "main",
+  "historical_sources": {
     "backend": {
       "repository": "lynelk/OpFin-BE",
       "commit": "fda182cc2d3d741c5f9b462e5d80d5caea6e594a"
@@ -17,10 +18,29 @@
     "web": "apps/web",
     "client": "apps/client"
   },
-  "canonical_validation": {
-    "workflow_run": 33917468702,
-    "validated_head": "ee1e7864690a47e10235db67988bbfbfb3485ee2",
-    "result": "success"
+  "launch_contract": {
+    "customer_journey": "docs/LAUNCH_CUSTOMER_JOURNEY.md",
+    "google_play_pack": "distribution/google-play",
+    "security": "SECURITY.md",
+    "engineering_rules": "AGENTS.md"
   },
-  "production_cutover": false
+  "required_release_validation": [
+    "OpFin Monorepo CI",
+    "OpFin security monitoring",
+    "Deployment contract"
+  ],
+  "external_activation_gates": [
+    "legal lender/provider and licence evidence",
+    "identity-verification provider credentials/certification",
+    "CRB/MNO/approved third-party scoring credentials where used",
+    "verified affordability data source for automatic approval",
+    "CPay production certification/credentials",
+    "private persistent KYC storage",
+    "USSD short-code/aggregator provisioning when launched",
+    "WhatsApp production credentials when launched",
+    "real-device accessibility and PWD-assisted-KYC UAT",
+    "store declarations and signed release publication"
+  ],
+  "production_cutover": false,
+  "notes": "The exact release SHA is established by the passing workflow run and signed artifact record rather than hard-coded into this manifest, so a documentation-only update cannot make a stale SHA appear current."
 }

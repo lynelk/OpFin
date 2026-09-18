@@ -1,84 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:opfin/account_delete_screen.dart';
-import 'package:opfin/connected_financial_life_screen.dart';
+import 'package:opfin/accessibility_screen.dart';
 import 'package:opfin/faq_screen.dart';
-import 'package:opfin/financial_hubs.dart';
-import 'package:opfin/peer_lending_screen.dart';
 import 'package:opfin/profile_screen.dart';
+import 'package:opfin/wallets_screen.dart';
 
-class StoreReadyMoreMobileScreen extends StatelessWidget {
+class StoreReadyMoreMobileScreen extends StatelessWidget{
   const StoreReadyMoreMobileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Text('More', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text('Account controls and occasional tasks live here so everyday financial journeys stay focused.'),
-        const SizedBox(height: 20),
-        _MenuTile(
-          icon: Icons.hub_outlined,
-          title: 'Connected financial life',
-          subtitle: 'Accounts, household, business and community context.',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConnectedFinancialLifeScreen())),
-        ),
-        _MenuTile(
-          icon: Icons.person_outline,
-          title: 'Profile & security',
-          subtitle: 'Review your account and identity information.',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
-        ),
-        if (appStorePeerLendingEnabled)
-          _MenuTile(
-            icon: Icons.handshake_outlined,
-            title: 'Peer lending',
-            subtitle: 'Review independently governed marketplace opportunities.',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PeerLendingScreen())),
-          ),
-        _MenuTile(
-          icon: Icons.help_outline,
-          title: 'Help & support',
-          subtitle: 'Find answers and support guidance.',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FaqsScreen())),
-        ),
-        const SizedBox(height: 20),
-        const Text('Privacy & account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Card(
-          child: Padding(
-            padding: EdgeInsets.all(14),
-            child: SelectableText('Privacy policy: https://opfin-production.up.railway.app/privacy-policy'),
-          ),
-        ),
-        _MenuTile(
-          icon: Icons.delete_outline,
-          title: 'Delete account',
-          subtitle: 'Delete your OpFin account in-app and review regulated retention before confirming.',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountDeleteScreen())),
-        ),
-      ],
-    );
-  }
+  @override Widget build(BuildContext context)=>ListView(
+    padding:const EdgeInsets.all(20),children:[
+      const Text('More',style:TextStyle(fontSize:27,fontWeight:FontWeight.w800)),
+      const SizedBox(height:8),
+      const Text('Account, help and privacy. Extra financial products stay out of the way until they are ready for you.'),
+      const SizedBox(height:20),
+      _Tile(Icons.person_outline,'Profile & security','Identity, phones and sign-in.',
+        ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfileScreen()))),
+      _Tile(Icons.account_balance_wallet_outlined,'Wallets','Choose where payouts and repayments happen.',
+        ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WalletsScreen()))),
+      _Tile(Icons.accessibility_new,'Accessibility','Larger text, simple wording and reduced movement.',
+        ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccessibilityScreen()))),
+      _Tile(Icons.help_outline,'Help & support','Get help without sharing your PIN or OTP.',
+        ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const FaqsScreen()))),
+      const SizedBox(height:18),
+      const Text('Privacy & account',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),
+      const Card(child:Padding(padding:EdgeInsets.all(14),
+        child:SelectableText('Privacy policy: https://opfin-production.up.railway.app/privacy-policy'))),
+      _Tile(Icons.delete_outline,'Delete account','Close your account and review required record retention.',
+        ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccountDeleteScreen()))),
+    ]);
 }
 
-class _MenuTile extends StatelessWidget {
-  const _MenuTile({required this.icon, required this.title, required this.subtitle, required this.onTap});
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Card(
-        child: ListTile(
-          leading: Icon(icon),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text(subtitle),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: onTap,
-        ),
-      );
+class _Tile extends StatelessWidget{
+  const _Tile(this.icon,this.title,this.subtitle,this.tap);
+  final IconData icon;final String title,subtitle;final VoidCallback tap;
+  @override Widget build(BuildContext context)=>Card(child:ListTile(
+    minVerticalPadding:12,leading:Icon(icon),
+    title:Text(title,style:const TextStyle(fontWeight:FontWeight.w700)),
+    subtitle:Text(subtitle),trailing:const Icon(Icons.chevron_right),onTap:tap));
 }

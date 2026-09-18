@@ -1,33 +1,52 @@
 # Financial features declaration and evidence
 
+Updated: 18 September 2026
+
 ## Declare accurately in Play Console
 
 - Personal loans: **Yes**.
-- Loan facilitator or direct lender: select the legally correct role for the launch entity and product.
-- Savings, investments, insurance or peer finance: declare only capabilities enabled in the submitted production build and supported by the named regulated provider.
-- Money transfer/payment features: describe CPay's role accurately; do not imply OpFin itself is a licensed payment-system operator unless supported by evidence.
+- Loan facilitator or direct lender: select the legally correct role for the launch entity/product.
+- Savings, investments, insurance, peer finance, SACCO/community capital or asset finance: declare only if enabled in the submitted build and supported by the actual regulated/provider arrangement.
+- Money movement: describe CPay's role accurately; do not imply OpFin itself is a licensed payment-system operator without evidence.
 
 ## Personal-loan disclosures
 
-The store listing and in-app offer must disclose:
+The store listing and in-app offer must disclose the legally required terms for the actual launch product, including:
 
-- minimum repayment period: at least 61 days;
-- standard mobile starting term: 90 days where eligible inventory exists;
+- minimum repayment period: more than 60 days;
+- standard mobile routing preference: 90 days or longer where eligible inventory exists;
 - maximum repayment period: `[CONFIRM FROM APPROVED PRODUCT CATALOGUE]`;
-- maximum APR, calculated with all mandatory finance charges: `[CONFIRM FROM APPROVED PRODUCT CATALOGUE]`;
-- a representative example showing principal, amount received, interest, every fee, total repayment, frequency and final due date; and
-- lender/legal provider name and relationship to OpFin.
+- maximum fee-inclusive APR: `[CONFIRM FROM APPROVED PRODUCT CATALOGUE]`;
+- representative example showing principal, amount received, interest, mandatory fees, total repayment, frequency and final due date; and
+- lender/legal provider identity and relationship to OpFin.
+
+The current app retrieves eligible repayment options from the API rather than maintaining hard-coded customer terms.
+
+## Decisioning evidence
+
+Before submission verify and retain evidence for:
+
+- identity-verification provider and KYC process;
+- licensed CRB relationship and customer consent;
+- MNO/third-party scoring sources actually used in production;
+- score-component provenance and expiry;
+- affordability source supplying verified income/obligation information;
+- approved score/limit policy;
+- configured debt-service threshold;
+- manual-review/referral pathway when mandatory data is unavailable.
+
+A displayed profile credit limit is not a guarantee of loan approval.
 
 ## Evidence required before submission
 
 - `[ ]` Legal entity registration documents.
 - `[ ]` UMRA/other applicable lender licence or written basis for operating under a named licensed lender.
-- `[ ]` Signed agreement with each lender/provider displayed in the app.
+- `[ ]` Signed agreement with each lender/provider represented in the app.
 - `[ ]` Product approval confirming every Play-distributed loan has full repayment later than 60 days.
 - `[ ]` Approved pricing table and independently checked APR examples.
-- `[ ]` Public privacy policy matching actual production collection and sharing.
+- `[ ]` Public privacy policy matching KYC images, scoring sources, wallet/payment processing and retention.
 - `[ ]` Production support and complaints contacts.
-- `[ ]` Data-controller/processor and CRB consent wording reviewed for Uganda.
+- `[ ]` Data-controller/processor, CRB and identity-processing wording reviewed for Uganda.
+- `[ ]` Accessibility/PWD assistance path operational.
 
-Do not use screenshots or review credentials that expose a short-term term, demo approval or unlicensed provider.
-
+Do not use screenshots or reviewer credentials that expose a prohibited short-term product, fabricated approval, real person's KYC evidence or unlicensed provider.

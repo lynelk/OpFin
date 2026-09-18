@@ -15,6 +15,7 @@ use App\Models\LoanProductTerm;
 use App\Models\MobileMoneyTransaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -27,13 +28,16 @@ class ProductionReadinessApiTest extends TestCase
         $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
         Sanctum::actingAs($customer);
 
-        $caseId = $this->postJson('/api/kyc/cases', [
-            'national_id' => 'CM1234567890',
-            'provider' => 'manual',
-            'evidence' => ['document_type' => 'national_id'],
-        ])
+        $caseId = $this->post('/api/kyc/cases', [
+            'national_id' => 'CM123456789012',
+            'national_id_front' => $this->fakeImage('front.png'),
+            'national_id_back' => $this->fakeImage('back.png'),
+            'selfie_with_id' => $this->fakeImage('selfie.png'),
+            'capture_channel' => 'app',
+        ], ['Accept' => 'application/json'])
             ->assertCreated()
             ->assertJsonPath('data.kyc_case.status', KycCase::STATUS_PENDING_REVIEW)
+            ->assertJsonPath('data.kyc_case.evidence_complete', true)
             ->json('data.kyc_case.id');
 
         Sanctum::actingAs(User::factory()->create(['role' => User::ROLE_OPERATIONS]));
@@ -222,6 +226,15 @@ class ProductionReadinessApiTest extends TestCase
             ->assertJsonCount(2, 'data.ledger_transactions.0.entries');
     }
 
+    private function fakeImage(string $name): UploadedFile
+    {
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQOQAAAAASUVORK5CYII='
+        );
+
+        return UploadedFile::fake()->createWithContent($name, $png);
+    }
+
     private function createApplicationWithKycAndConsent(): array
     {
         $institution = Institution::create([
@@ -240,7 +253,7 @@ class ProductionReadinessApiTest extends TestCase
         KycCase::create([
             'user_id' => $customer->id,
             'provider' => 'manual',
-            'national_id' => 'CM1234567890',
+            'national_id' => 'CM123456789012',
             'status' => KycCase::STATUS_VERIFIED,
             'submitted_at' => now(),
             'reviewed_at' => now(),

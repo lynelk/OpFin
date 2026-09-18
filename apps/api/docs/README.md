@@ -1,55 +1,42 @@
-# OpFin Backend Documentation
+# OpFin API Documentation
 
-This index distinguishes current operational specifications from dated audit and implementation history. The repository accumulated many checkpoints while the platform changed quickly; leaving them all equally authoritative would be a surprisingly efficient way to reintroduce old defects.
+**Purpose:** current developer and operations documentation for the OpFin API  
+**Last regenerated:** 18 September 2026  
+**Scope:** `apps/api` plus the customer-facing contracts consumed by Flutter, web, WhatsApp and USSD
 
-## Current sources of truth
+## Start here
 
-Read these first for current production behavior:
+### Developers
 
-1. `../README.md` — platform boundary, current formulas, accounting invariants, deployment configuration and production flow.
-2. `../AGENTS.md` — engineering rules, release gates and non-negotiable financial invariants.
-3. `production/financial-controls-review.md` — current money, ledger, idempotency, reversal, credit, P2P and asset-finance controls.
-4. `integrations/mobile-money.md` — current CPay contract, callback, status normalization, idempotency and reconciliation behavior.
-5. `api/frontend-backend-contract.md` — current client/server API contract where implemented endpoints are documented.
+Read in this order:
 
-When a dated audit document conflicts with one of those files, the current source-of-truth documents win unless a newer code change has made them stale.
+1. `../../README.md` – repository and verification commands
+2. `../../../docs/LAUNCH_CUSTOMER_JOURNEY.md` – launch product contract
+3. `architecture/system-overview.md`
+4. `architecture/api-design.md`
+5. `architecture/security-and-compliance.md`
+6. `architecture/testing-strategy.md`
+7. `api/current-endpoints.md`
+8. `api/frontend-backend-contract.md`
 
-## Documentation classes
+### Testers and operations
 
-### `api/`
+Use:
 
-API and frontend/backend contracts. These are implementation-facing and should be kept synchronized with routes, validation rules, response schemas and authorization behavior.
+- `uat/customer-uat-scenarios.md`
+- `operations/production-readiness-checklist.md`
+- `../../../SECURITY.md`
 
-### `architecture/`
+## Current launch contract
 
-Architecture decisions and structural records. ADR-style documents are historical decisions by design. Do not rewrite history; add a superseding decision when architecture changes materially.
+The customer account and lending path is:
 
-### `audit/`
+`Phone → OTP → names → 6-digit PIN → identity → credit profile → limit → request → offer → verified-wallet disbursement → repayment`.
 
-Point-in-time audits, checkpoints, gap lists and remediation plans. These are historical evidence, not automatically current product truth. Their filenames and internal dates should be respected when interpreting findings.
+The same API profile state drives mobile, WhatsApp and USSD. A second phone is optional. KYC requires NIN, ID front/back and a photo holding the ID. External source absence is recorded honestly rather than replaced with synthetic data.
 
-### `demo/`
+Accessibility is part of the contract: simple language, screen-reader semantics, text scaling, reduced motion and assisted verification must remain compatible with the same security/KYC controls.
 
-Demo-only or investor-demo documentation. Demo arithmetic and mock provider behavior must never be treated as production financial rules.
+## Documentation rule
 
-### `integrations/`
-
-External integration contracts. Production money movement must follow `integrations/mobile-money.md` and remain CPay-only unless the architecture is deliberately changed and recertified.
-
-### `production/`
-
-Operations, cutover, backup, incident, monitoring and readiness material. `production/financial-controls-review.md` is the current financial-control specification. Other dated plans should be interpreted in their stated timeframe and updated when they are active runbooks rather than historical records.
-
-### `security/`
-
-Security controls and security review material. Credentials and secrets must never be embedded in documentation.
-
-### `uat/`
-
-User-acceptance and release-test evidence. These documents prove what was tested at a point in time; they do not override current code or current production-control documentation.
-
-## Documentation maintenance rule
-
-Any pull request that changes a financial formula, state transition, money movement, accounting entry, provider contract, authentication/step-up rule, reconciliation behavior or production environment requirement must update the applicable current documentation in the same pull request.
-
-Historical audits should normally be preserved rather than rewritten. If a historical finding is remediated, update or add a current remediation record and link it from the source-of-truth documentation instead of pretending the original audit never happened.
+Documentation changes with the code. If an endpoint, financial state, authentication step, scoring source, customer label or release control changes, update the relevant document in the same pull request. Stale financial documentation is a defect.

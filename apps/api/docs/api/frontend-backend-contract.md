@@ -1,279 +1,120 @@
-# Frontend/Backend Contract
+# Frontend–backend contract
 
-Date: 2026-05-22
+This document defines what mobile/web/WhatsApp/USSD clients may assume about the current OpFin API.
 
-This document records the API contract currently consumed by OpFin-FE for the investor-demo vertical slice.
+## 1. One server-authoritative customer state
 
-## Base URL and authentication
+Clients do not calculate their own credit limit, amount due, exposure, score or payment finality.
 
-Frontend environment:
+Use:
 
-```env
-NEXT_PUBLIC_OPFIN_API_URL=http://localhost:8000/api
-NEXT_PUBLIC_USE_MOCK_API=false
-```
+- `GET /api/credit/profile` for customer financial state and next action;
+- `GET /api/credit/options` for eligible repayment terms;
+- `GET /api/wallets` for verified payout/repayment choices;
+- offer endpoints for pricing/disclosures;
+- repayment/provider status for finality.
 
-Authentication:
+The App, WhatsApp and USSD should therefore remain consistent even when the customer switches channels.
 
-- Login returns `access_token`, `token_type`, and `user`.
-- Authenticated requests send `Authorization: Bearer <token>`.
-- Frontend stores the token in the `opfin_access_token` HTTP-only cookie through server actions.
+## 2. Authentication contract
 
-## Response envelope
+New registration:
 
-Successful demo responses:
+1. `POST /api/generate-otp`
+2. `POST /api/verify-otp`
+3. collect first/optional other/last names and six-digit PIN
+4. `POST /api/register`
+5. save returned bearer token securely and open Home
 
-```json
-{
-  "success": true,
-  "message": "Investor demo dashboard loaded.",
-  "data": {}
-}
-```
+Do not force the customer back to login after registration.
 
-Demo validation or access errors:
+Android may send `app_signature` to `generate-otp` for SMS Retriever auto-fill. Manual OTP entry always remains possible.
 
-```json
-{
-  "success": false,
-  "message": "Validation failed.",
-  "errors": {
-    "amount": ["The amount field is required."]
-  }
-}
-```
+Login uses `phone + pin`. Legacy `password` remains accepted temporarily for migrated accounts.
 
-## Required endpoints
+Never send PINs into analytics, logs, WhatsApp or USSD.
 
-### Login
+## 3. Progressive setup
 
-`POST /api/login`
+After login, clients call `GET /api/credit/profile`.
 
-Request:
+Use `data.next_action.code` rather than duplicating state rules. Current examples:
 
-```json
-{
-  "phone": "256700000001",
-  "password": "password"
-}
-```
+- `VERIFY_PHONE`
+- `VERIFY_IDENTITY`
+- `GRANT_CREDIT_CONSENT`
+- `CALCULATE_PROFILE`
+- `REPAY`
+- `BORROW`
+- `VIEW_PROFILE`
 
-Response data:
+Second phone is explicitly optional.
 
-```json
-{
-  "access_token": "token",
-  "token_type": "Bearer",
-  "user": {
-    "id": 1,
-    "name": "Demo Customer",
-    "phone": "256700000001",
-    "role": "customer",
-    "national_id": "CM000000001",
-    "date_of_birth": "1990-01-01",
-    "nin_status": "verified"
-  }
-}
-```
+## 4. KYC
 
-### Profile
+Mobile submits multipart KYC to `POST /api/kyc/cases`. Required evidence is NIN + National ID front/back + selfie holding ID.
 
-`GET /api/profile`
+The client may display sanitised check states returned by `/api/kyc/status`, but must not expect raw evidence paths/provider payloads.
 
-Response data:
+If disability or another access need prevents ordinary camera completion, create a support case for assisted identity verification. Do not lower identity controls and do not ask a helper to handle PIN/OTP.
 
-```json
-{
-  "user": {
-    "id": 1,
-    "name": "Demo Customer",
-    "phone": "256700000001",
-    "role": "customer",
-    "national_id": "CM000000001",
-    "date_of_birth": "1990-01-01",
-    "nin_status": "verified"
-  },
-  "permissions": []
-}
-```
+## 5. Score and limit presentation
 
-### Demo dashboard
+Primary UI may show:
 
-`GET /api/demo/dashboard`
+- OpFin Composite Score /100
+- plain-language band
+- available-to-borrow amount
+- amount due
+- total outstanding
+- next due date
+- plain-language explanations
 
-Response data:
+Detailed component breakdown is progressive disclosure. Do not show internal probability-of-default values as a primary customer metric.
 
-```json
-{
-  "mock_integrations": ["affordability", "decisioning", "mobile_money_disbursement"],
-  "profile": {},
-  "kyc": {
-    "status": "verified",
-    "national_id": "CM000000001",
-    "date_of_birth": "1990-01-01",
-    "mock_integration": false
-  },
-  "consent": null,
-  "latest_application": null
-}
-```
+A missing score is **pending/not ready**, never zero.
 
-### Consent
+## 6. Loan request
 
-`POST /api/demo/consent`
+The mobile Loan Application page displays both `available_to_borrow_minor` and `amount_due_minor`.
 
-Response data:
+Amount is bounded by the server profile. Eligible terms come from `/api/credit/options`. Do not restore hard-coded 14/30/60-day or fixed-limit client rules.
 
-```json
-{
-  "mock_integration": true,
-  "status": "granted",
-  "consent": {
-    "purpose": "credit_processing",
-    "status": "granted"
-  }
-}
-```
+The request is not an offer and does not move money.
 
-`DELETE /api/demo/consent`
+## 7. Offer
 
-Response data uses the same shape with `status: revoked`.
+The offer endpoint is the pricing source of truth. Display the supplied amount received, interest, fees, total repayment, duration/frequency and store-policy disclosure values.
 
-### Loan application
+Accept using the exact `disclosure_hash` and a verified `wallet_id`.
 
-`POST /api/demo/loan-applications`
+Do not say "disbursed" until provider success is confirmed.
 
-Request:
+## 8. Repayment
 
-```json
-{
-  "loan_product_id": 1,
-  "loan_product_term_id": 1,
-  "institution_id": 1,
-  "amount": 250000,
-  "reason": "School fees"
-}
-```
+Every initiated repayment has an idempotency key and verified wallet ID.
 
-Response data:
+A 202 response means **collection request accepted**. Show wording such as "Payment request sent; confirm on your phone" until provider finality updates the loan.
 
-```json
-{
-  "application": {
-    "id": 1,
-    "amount": 250000,
-    "status": "approved"
-  },
-  "decision": {
-    "id": 1,
-    "status": "approved",
-    "requested_amount_minor": 250000,
-    "approved_amount_minor": 250000,
-    "monthly_income_minor": 1200000,
-    "estimated_monthly_obligation_minor": 92500,
-    "reason_codes": ["KYC_VERIFIED", "CONSENT_GRANTED"],
-    "decision_summary": "Approved by mock affordability rules for investor demo only."
-  },
-  "offer": {
-    "id": 1,
-    "status": "pending_acceptance",
-    "principal_amount_minor": 250000,
-    "total_repayment_minor": 277500,
-    "duration_days": 30,
-    "interest_rate": "11.00",
-    "interest_type": "flat",
-    "repayment_frequency": "monthly"
-  }
-}
-```
+## 9. Error handling
 
-### Decision and offer lookup
+Customers should see safe, actionable messages:
 
-`GET /api/demo/loan-applications/{application}/decision`
+- what happened;
+- what they can do next;
+- no stack traces, raw provider errors or secrets.
 
-Response data:
+Retryable network failure must not cause duplicate loan/repayment actions. Use backend idempotency/finality contracts.
 
-```json
-{
-  "mock_integration": true,
-  "decision": {}
-}
-```
+## 10. Accessibility
 
-`GET /api/demo/loan-applications/{application}/offer`
+Clients must:
 
-Response data:
-
-```json
-{
-  "mock_integration": true,
-  "offer": {}
-}
-```
-
-### Offer acceptance
-
-`POST /api/demo/loan-offers/{offer}/accept`
-
-Response data:
-
-```json
-{
-  "offer": {
-    "id": 1,
-    "status": "accepted"
-  },
-  "loan": {
-    "id": 1,
-    "status": "Disbursed",
-    "schedules": []
-  },
-  "mobile_money": {
-    "id": 1,
-    "provider": "mock",
-    "status": "completed",
-    "direction": "disbursement",
-    "amount_minor": 250000,
-    "reconciliation_status": "matched"
-  },
-  "ledger_entries": [],
-  "repayment_schedule": []
-}
-```
-
-### Admin investor snapshot
-
-`GET /api/demo/admin/investor-snapshot`
-
-Allowed roles: `platform_admin`, `operations`, `support`.
-
-Response data:
-
-```json
-{
-  "customers": [],
-  "applications": [],
-  "decisions": [],
-  "offers": [],
-  "loans": [],
-  "ledger_entries": [],
-  "repayment_schedules": [],
-  "mobile_money": [],
-  "audit_trail": []
-}
-```
-
-## Supporting reference-data endpoints
-
-These endpoints are used by the loan application form:
-
-- `GET /api/products`
-- `GET /api/institutions`
-- `GET /api/product-terms/{product}`
-
-## Known contract gaps
-
-- Legacy endpoints may not use the standard envelope consistently.
-- No dedicated API endpoint currently exposes failed mock payment simulation for the frontend.
-- Referred/manual review decision state is not part of the current demo decisioning contract.
-- Production KYC, CRB, mobile money, insurance, savings, investments, and compliance reporting contracts are not yet live.
+- preserve logical reading/focus order;
+- label controls for TalkBack/VoiceOver;
+- honour device text size;
+- offer large-text/reduced-motion preferences;
+- use icon + text for primary actions;
+- avoid colour-only status;
+- keep touch targets accessible;
+- keep the primary screen simple and reveal technical detail only on request.

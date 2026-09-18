@@ -36,16 +36,32 @@ class WhatsAppWebhookController extends Controller
 
         $processed = 0;
         foreach ($this->extractMessages($request->all()) as $message) {
-            $result = $this->journeys->handle($message['phone'], $message['body'], $message['provider_message_id']);
             try {
+                if ($message['type'] === 'image') {
+                    $media = $this->gateway->downloadMedia($message['media_id']);
+                    $result = $this->journeys->handleImage(
+                        $message['phone'],
+                        $media['bytes'],
+                        $media['mime_type'],
+                        $message['provider_message_id'],
+                    );
+                } else {
+                    $result = $this->journeys->handle(
+                        $message['phone'],
+                        $message['body'],
+                        $message['provider_message_id'],
+                    );
+                }
+
                 $this->gateway->sendText($message['phone'], (string) $result['reply']);
+                $processed++;
             } catch (\Throwable $e) {
-                Log::error('WhatsApp outbound delivery failed.', [
+                Log::error('WhatsApp journey processing failed.', [
                     'provider_message_id' => $message['provider_message_id'],
+                    'type' => $message['type'],
                     'error' => $e->getMessage(),
                 ]);
             }
-            $processed++;
         }
 
         return response()->json(['ok' => true, 'processed' => $processed]);
@@ -74,14 +90,37 @@ class WhatsAppWebhookController extends Controller
         foreach ($payload['entry'] ?? [] as $entry) {
             foreach ($entry['changes'] ?? [] as $change) {
                 foreach ($change['value']['messages'] ?? [] as $message) {
-                    if (($message['type'] ?? null) !== 'text') {
+                    $phone = (string) ($message['from'] ?? '');
+                    $id = (string) ($message['id'] ?? '');
+                    $type = (string) ($message['type'] ?? '');
+                    if ($phone === '' || $id === '') {
                         continue;
                     }
-                    $phone = (string) ($message['from'] ?? '');
-                    $body = (string) ($message['text']['body'] ?? '');
-                    $id = (string) ($message['id'] ?? '');
-                    if ($phone !== '' && $body !== '' && $id !== '') {
-                        $messages[] = ['phone' => $phone, 'body' => $body, 'provider_message_id' => $id];
+
+                    if ($type === 'text') {
+                        $body = (string) ($message['text']['body'] ?? '');
+                        if ($body !== '') {
+                            $messages[] = [
+                                'type' => 'text',
+                                'phone' => $phone,
+                                'body' => $body,
+                                'media_id' => null,
+                                'provider_message_id' => $id,
+                            ];
+                        }
+                    }
+
+                    if ($type === 'image') {
+                        $mediaId = (string) ($message['image']['id'] ?? '');
+                        if ($mediaId !== '') {
+                            $messages[] = [
+                                'type' => 'image',
+                                'phone' => $phone,
+                                'body' => '',
+                                'media_id' => $mediaId,
+                                'provider_message_id' => $id,
+                            ];
+                        }
                     }
                 }
             }

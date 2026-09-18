@@ -53,8 +53,8 @@ export default async function AccountDeletePage({ searchParams }: Readonly<{ sea
           <h2>Confirm deletion</h2>
           <form action={deleteAccountAction} className="form-grid">
             <div className="field">
-              <label htmlFor="password">Current password</label>
-              <input id="password" name="password" type="password" autoComplete="current-password" required />
+              <label htmlFor="pin">Current 6-digit PIN</label>
+              <input id="pin" name="pin" type="password" inputMode="numeric" autoComplete="current-password" minLength={6} maxLength={6} required />
             </div>
             <div className="field">
               <label htmlFor="confirmation">Type DELETE to confirm</label>

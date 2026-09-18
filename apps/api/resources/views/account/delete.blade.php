@@ -33,8 +33,8 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="password" class="form-label">Current Password</label>
-                                <input type="password" class="form-control" id="password" name="password" required>
+                                <label for="pin" class="form-label">Current 6-digit PIN</label>
+                                <input type="password" inputmode="numeric" minlength="6" maxlength="6" class="form-control" id="pin" name="pin" required>
                             </div>
 
                             <div class="mb-4">

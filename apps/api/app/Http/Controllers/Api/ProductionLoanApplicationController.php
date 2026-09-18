@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ConsentRecord;
+use App\Models\CreditDecision;
+use App\Models\CreditProfile;
 use App\Models\KycCase;
 use App\Models\Loan;
 use App\Models\LoanApplication;
@@ -11,16 +13,24 @@ use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
 use App\Services\AppStoreCreditPolicy;
 use App\Services\AuditLogger;
+use App\Services\ProductionCreditDecisionService;
+use App\Services\ProductionCreditOfferService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 
 class ProductionLoanApplicationController extends Controller
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly ProductionCreditDecisionService $decisionService,
+        private readonly ProductionCreditOfferService $offerService,
+        private readonly AppStoreCreditPolicy $appStorePolicy,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -54,7 +64,7 @@ class ProductionLoanApplicationController extends Controller
             'amount_minor' => 'nullable|required_without:amount|integer|min:1',
             'amount' => 'nullable|required_without:amount_minor|integer|min:1',
             'reason' => 'required|string|max:255',
-            'distribution_channel' => ['nullable', Rule::in(['web', 'android', 'app_store', 'play_store'])],
+            'distribution_channel' => ['nullable', Rule::in(['web', 'android', 'app_store', 'play_store', 'whatsapp', 'ussd'])],
         ]);
 
         if ($validator->fails()) {
@@ -76,7 +86,7 @@ class ProductionLoanApplicationController extends Controller
             ->first();
 
         if (! $kyc) {
-            return ApiResponse::error('Verified KYC is required before a credit application can be submitted.', 409, ['code' => ['KYC_VERIFICATION_REQUIRED']]);
+            return ApiResponse::error('Verify your identity before requesting a loan.', 409, ['code' => ['KYC_VERIFICATION_REQUIRED']]);
         }
 
         $consent = ConsentRecord::query()
@@ -87,7 +97,15 @@ class ProductionLoanApplicationController extends Controller
             ->first();
 
         if (! $consent) {
-            return ApiResponse::error('Active credit-processing consent is required before a credit application can be submitted.', 409, ['code' => ['CREDIT_CONSENT_REQUIRED']]);
+            return ApiResponse::error('Allow OpFin to check your credit information before requesting a loan.', 409, ['code' => ['CREDIT_CONSENT_REQUIRED']]);
+        }
+
+        $profile = CreditProfile::query()->where('user_id', $user->id)->first();
+        if ($profile && $profile->available_to_borrow_minor > 0 && $amountMinor > $profile->available_to_borrow_minor) {
+            return ApiResponse::error('Choose an amount within your available loan limit.', 422, [
+                'amount_minor' => ['AMOUNT_EXCEEDS_AVAILABLE_LIMIT'],
+                'available_to_borrow_minor' => [$profile->available_to_borrow_minor],
+            ]);
         }
 
         $selection = collect([
@@ -126,8 +144,8 @@ class ProductionLoanApplicationController extends Controller
             if (! $product) {
                 return ApiResponse::error(
                     $storeChannel
-                        ? 'No mobile-store-compliant credit route is currently available. No application or payout has been created.'
-                        : 'No active credit route is currently available for this customer. Your request has not been submitted or paid out.',
+                        ? 'No mobile-store-compliant credit route is currently available.'
+                        : 'No active credit route is currently available for you.',
                     409,
                     ['code' => [$storeChannel ? 'NO_STORE_COMPLIANT_CREDIT_ROUTE' : 'NO_ELIGIBLE_CREDIT_ROUTE']],
                 );
@@ -138,7 +156,7 @@ class ProductionLoanApplicationController extends Controller
         }
 
         if (in_array($distributionChannel, AppStoreCreditPolicy::STORE_CHANNELS, true) && (int) $term->duration < AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS) {
-            return ApiResponse::error('This credit term cannot be offered through a mobile app store because full repayment would be due in 60 days or less.', 422, ['code' => ['STORE_TERM_TOO_SHORT']]);
+            return ApiResponse::error('This term cannot be offered in the mobile app because full repayment would be due in 60 days or less.', 422, ['code' => ['STORE_TERM_TOO_SHORT']]);
         }
 
         if ((int) $term->loan_product_id !== (int) $product->id) {
@@ -149,12 +167,12 @@ class ProductionLoanApplicationController extends Controller
             return ApiResponse::error('The selected institution is not eligible for this credit product.', 422, ['institution_id' => ['PRODUCT_INSTITUTION_MISMATCH']]);
         }
 
-        if (Loan::query()->where('user_id', $user->id)->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected'])->exists()) {
-            return ApiResponse::error('An active loan must be resolved before another credit application can be submitted.', 409, ['code' => ['ACTIVE_LOAN_EXISTS']]);
+        if (Loan::query()->where('user_id', $user->id)->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])->exists()) {
+            return ApiResponse::error('Repay your active loan before requesting another one.', 409, ['code' => ['ACTIVE_LOAN_EXISTS']]);
         }
 
         if (LoanApplication::query()->where('user_id', $user->id)->whereIn('status', ['Pending', 'Under Review', 'Referred'])->exists()) {
-            return ApiResponse::error('You already have a credit application being assessed.', 409, ['code' => ['APPLICATION_ALREADY_IN_PROGRESS']]);
+            return ApiResponse::error('You already have a loan request being checked.', 409, ['code' => ['APPLICATION_ALREADY_IN_PROGRESS']]);
         }
 
         $application = DB::transaction(function () use ($user, $product, $term, $institutionId, $amountMinor, $distributionChannel, $validated) {
@@ -177,14 +195,57 @@ class ProductionLoanApplicationController extends Controller
             'consent_id' => $consent->id,
             'routing_mode' => $routingMode,
             'distribution_channel' => $distributionChannel,
-            'loan_product_id' => $product->id,
-            'loan_product_term_id' => $term->id,
-            'institution_id' => $institutionId,
         ], $request);
 
-        return ApiResponse::success('Credit application submitted for assessment.', [
-            'application' => $application->load(['loanProduct', 'loanProductTerm', 'institution']),
-            'next_state' => 'assessment',
+        $decision = null;
+        $offer = null;
+        $nextState = 'assessment';
+
+        if ($profile) {
+            $decision = $this->decisionService->decide($application, null);
+            $application->update([
+                'status' => match ($decision->status) {
+                    CreditDecision::STATUS_APPROVED => 'Approved',
+                    CreditDecision::STATUS_DECLINED => 'Declined',
+                    default => 'Referred',
+                },
+                'approved_at' => $decision->status === CreditDecision::STATUS_APPROVED ? now() : null,
+            ]);
+
+            if ($decision->status === CreditDecision::STATUS_APPROVED) {
+                $pricing = [
+                    'access_fee_minor' => (int) round($amountMinor * ((float) config('opfin.credit.default_pricing.access_fee_percent', 0) / 100)),
+                    'disbursement_fee_minor' => (int) config('opfin.credit.default_pricing.disbursement_fee_minor', 0),
+                    'fee_treatment' => (string) config('opfin.credit.default_pricing.fee_treatment', 'financed'),
+                    'expires_in_minutes' => (int) config('opfin.credit.default_pricing.expires_in_minutes', 1440),
+                ];
+
+                try {
+                    $appStoreDisclosure = $this->appStorePolicy->validateOffer($application->fresh(), $pricing);
+                    $offer = $this->offerService->createOffer($application->fresh(), $user, $pricing);
+                    if ($appStoreDisclosure !== []) {
+                        $offer->forceFill([
+                            'pricing_snapshot' => array_merge($offer->pricing_snapshot ?? [], $appStoreDisclosure),
+                            'disclosure_snapshot' => array_merge($offer->disclosure_snapshot ?? [], $appStoreDisclosure),
+                        ])->save();
+                        $offer = $offer->fresh();
+                    }
+                    $nextState = 'offer_ready';
+                } catch (InvalidArgumentException $exception) {
+                    $application->update(['status' => 'Referred']);
+                    $nextState = 'assessment';
+                    report($exception);
+                }
+            } elseif ($decision->status === CreditDecision::STATUS_DECLINED) {
+                $nextState = 'declined';
+            }
+        }
+
+        return ApiResponse::success('Loan request submitted.', [
+            'application' => $application->fresh()->load(['loanProduct', 'loanProductTerm', 'institution']),
+            'decision' => $decision,
+            'offer' => $offer,
+            'next_state' => $nextState,
             'routing_mode' => $routingMode,
         ], 201);
     }

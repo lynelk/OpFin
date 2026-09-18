@@ -4,7 +4,10 @@ use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CapabilityController;
 use App\Http\Controllers\Api\CpayWebhookController;
+use App\Http\Controllers\Api\CustomerCreditProfileController;
+use App\Http\Controllers\Api\CustomerPhoneController;
 use App\Http\Controllers\Api\CustomerSupportController;
+use App\Http\Controllers\Api\CustomerWalletController;
 use App\Http\Controllers\Api\FinancialWellbeingController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\HealthController;
@@ -26,7 +29,9 @@ use App\Http\Controllers\Api\SaveProtectionOperationsController;
 use App\Http\Controllers\Api\SaveProtectionWorkQueueController;
 use App\Http\Controllers\Api\SavingsController;
 use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\UssdController;
 use App\Http\Controllers\Api\V5P0PlatformController;
+use App\Http\Controllers\Api\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'show']);
@@ -40,12 +45,24 @@ Route::middleware('throttle:auth')->group(function () {
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
 });
 Route::post('/webhooks/cpay', CpayWebhookController::class)->middleware('throttle:webhooks')->name('webhooks.cpay');
+Route::post('/ussd', UssdController::class)->middleware('throttle:webhooks')->name('ussd.callback');
+Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->middleware('throttle:webhooks')->name('webhooks.whatsapp.verify');
+Route::post('/webhooks/whatsapp', WhatsAppWebhookController::class)->middleware('throttle:webhooks')->name('webhooks.whatsapp');
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::delete('/account', [AccountController::class, 'destroy']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
     Route::get('/capabilities', [CapabilityController::class, 'index']);
+    Route::get('/phone-numbers', [CustomerPhoneController::class, 'index']);
+    Route::post('/phone-numbers/secondary', [CustomerPhoneController::class, 'verifySecondary']);
+    Route::get('/wallets', [CustomerWalletController::class, 'index']);
+    Route::post('/wallets', [CustomerWalletController::class, 'store']);
+    Route::patch('/wallets/{wallet}/default', [CustomerWalletController::class, 'setDefault']);
+    Route::get('/credit/profile', [CustomerCreditProfileController::class, 'show']);
+    Route::post('/credit/profile/refresh', [CustomerCreditProfileController::class, 'refresh']);
+    Route::get('/credit/options', [CustomerCreditProfileController::class, 'options']);
+    Route::patch('/accessibility-preferences', [CustomerCreditProfileController::class, 'accessibility']);
 
     Route::get('/security-centre', [V5P0PlatformController::class, 'security']);
     Route::patch('/security-centre', [V5P0PlatformController::class, 'updateSecurity']);

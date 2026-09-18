@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CreditRepaymentScheduleItem;
+use App\Models\CustomerWallet;
 use App\Models\LedgerTransaction;
 use App\Models\Loan;
 use App\Models\MobileMoneyTransaction;
@@ -28,6 +29,7 @@ class ProductionRepaymentService
         User $user,
         int $amountMinor,
         string $idempotencyKey,
+        ?int $walletId = null,
     ): MobileMoneyTransaction {
         if ((int) $loan->user_id !== (int) $user->id) {
             throw new InvalidArgumentException('This loan does not belong to the authenticated customer.');
@@ -79,6 +81,21 @@ class ProductionRepaymentService
             return $locked;
         });
 
+        $walletQuery = CustomerWallet::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->whereNotNull('verified_at');
+        $wallet = $walletId
+            ? (clone $walletQuery)->whereKey($walletId)->first()
+            : (clone $walletQuery)->where('is_default_repayment', true)->first();
+
+        if ($walletId && ! $wallet) {
+            throw new InvalidArgumentException('Choose a verified repayment wallet that belongs to your OpFin profile.');
+        }
+
+        $wallet ??= (clone $walletQuery)->orderByDesc('is_default_repayment')->first();
+        $collectionPhone = $wallet?->msisdn ?? $user->phone;
+
         $reference = $this->repaymentReference($idempotencyKey);
         $legacyTransaction = Transaction::query()->firstOrCreate(
             ['reference' => $reference],
@@ -89,7 +106,7 @@ class ProductionRepaymentService
                 'loan_id' => $lockedLoan->id,
                 'type' => 'Repayment',
                 'amount' => $amountMinor,
-                'phone' => $user->phone,
+                'phone' => $collectionPhone,
                 'status' => 'Pending',
             ],
         );
@@ -102,7 +119,7 @@ class ProductionRepaymentService
                 'institution_id' => $lockedLoan->institution_id,
                 'amount_minor' => $amountMinor,
                 'currency' => (string) config('services.mobile_money.currency', 'UGX'),
-                'phone' => $user->phone,
+                'phone' => $collectionPhone,
                 'idempotency_key' => $idempotencyKey,
                 'internal_reference' => $reference,
                 'description' => 'OpFin loan repayment',
@@ -120,6 +137,7 @@ class ProductionRepaymentService
             'legacy_transaction_id' => $legacyTransaction->id,
             'amount_minor' => $amountMinor,
             'idempotency_key' => $idempotencyKey,
+            'wallet_id' => $wallet?->id,
         ]);
 
         return $mobileMoney->fresh();

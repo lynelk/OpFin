@@ -5,18 +5,23 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Otp;
 use App\Models\User;
+use App\Services\CustomerCreditProfileService;
 use App\Services\SmsService;
 use App\Support\ApiResponse;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
-    public function __construct(protected SmsService $smsService) {}
+    public function __construct(
+        protected SmsService $smsService,
+        private readonly CustomerCreditProfileService $profiles,
+    ) {}
 
     public function showDeleteForm()
     {
@@ -26,14 +31,16 @@ class AuthController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $request->validate([
+            $data = $request->validate([
                 'phone' => ['required'],
-                'password' => ['required'],
+                'pin' => ['nullable', 'required_without:password', 'string'],
+                'password' => ['nullable', 'required_without:pin', 'string'],
                 'confirmation' => ['required', 'in:DELETE'],
             ]);
 
+            $credential = (string) ($data['pin'] ?? $data['password']);
             $user = User::where('phone', $request->phone)->first();
-            if (! $user || ! Hash::check($request->password, $user->password)) {
+            if (! $user || ! Hash::check($credential, $user->password)) {
                 return redirect()->back()->with('error', 'User details provided are invalid');
             }
 
@@ -55,6 +62,9 @@ class AuthController extends Controller
             'email' => 'deleted-'.$user->id.'@deleted.example',
             'phone' => 'deleted-'.$user->id,
             'name' => 'Deleted User',
+            'first_name' => null,
+            'other_name' => null,
+            'last_name' => null,
         ])->save();
     }
 
@@ -62,14 +72,55 @@ class AuthController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'phone' => 'required|string|unique:users,phone',
+                'first_name' => 'nullable|string|max:80',
+                'other_name' => 'nullable|string|max:80',
+                'last_name' => 'nullable|string|max:80',
+                'name' => 'nullable|string|max:255',
+                'phone' => 'required|string|max:32|unique:users,phone',
                 'verification_token' => 'required|string|size:64',
-                'password' => ['required', 'string', 'confirmed', $this->passwordRule()],
+                'pin' => ['nullable', 'string', 'regex:/^\d{6}$/'],
+                'pin_confirmation' => 'nullable|string|same:pin',
+                'password' => ['nullable', 'string'],
+                'password_confirmation' => 'nullable|string|same:password',
+                'terms_accepted' => 'nullable|accepted',
+                'preferred_language' => 'nullable|string|max:16',
+                'accessibility_preferences' => 'nullable|array',
             ]);
 
             if ($validator->fails()) {
                 return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
+            }
+
+            $first = trim((string) $request->input('first_name'));
+            $other = trim((string) $request->input('other_name'));
+            $last = trim((string) $request->input('last_name'));
+            $legacyName = trim((string) $request->input('name'));
+
+            if (($first === '' || $last === '') && $legacyName === '') {
+                return ApiResponse::error('First name and last name are required.', 422, [
+                    'first_name' => ['Enter your first name.'],
+                    'last_name' => ['Enter your last name.'],
+                ]);
+            }
+
+            $pin = (string) $request->input('pin');
+            $legacyPassword = (string) $request->input('password');
+            if ($pin === '' && $legacyPassword === '') {
+                return ApiResponse::error('Create a 6-digit PIN.', 422, ['pin' => ['PIN is required.']]);
+            }
+            if ($pin !== '' && $this->weakPin($pin)) {
+                return ApiResponse::error('Choose a less predictable 6-digit PIN.', 422, ['pin' => ['Avoid repeated or sequential numbers.']]);
+            }
+            if ($pin !== '' && $pin !== (string) $request->input('pin_confirmation')) {
+                return ApiResponse::error('PIN confirmation does not match.', 422, ['pin_confirmation' => ['PINs do not match.']]);
+            }
+            if ($legacyPassword !== '') {
+                $legacyValidator = Validator::make($request->all(), [
+                    'password' => ['required', 'confirmed', $this->passwordRule()],
+                ]);
+                if ($legacyValidator->fails()) {
+                    return ApiResponse::error('Validation failed.', 422, $legacyValidator->errors()->toArray());
+                }
             }
 
             $otpRecord = Otp::where('phone', $request->phone)->first();
@@ -77,22 +128,33 @@ class AuthController extends Controller
                 return ApiResponse::error('Phone verification is required before registration.', 422);
             }
 
+            $name = $legacyName !== ''
+                ? $legacyName
+                : trim(implode(' ', array_filter([$first, $other, $last])));
+
             $user = User::create([
-                'name' => $request->name,
+                'name' => $name,
+                'first_name' => $first !== '' ? $first : null,
+                'other_name' => $other !== '' ? $other : null,
+                'last_name' => $last !== '' ? $last : null,
                 'phone' => $request->phone,
                 'phone_verified_at' => now(),
                 'role' => User::ROLE_CUSTOMER,
-                'password' => Hash::make($request->password),
+                'password' => Hash::make($pin !== '' ? $pin : $legacyPassword),
+                'preferred_language' => $request->input('preferred_language', 'en'),
+                'accessibility_preferences' => $request->input('accessibility_preferences'),
             ]);
 
             $otpRecord?->delete();
+            $this->profiles->ensurePrimaryPhone($user);
+            $this->profiles->refresh($user, false);
             $token = $this->createAccessToken($user);
 
             return ApiResponse::success('Registration successful', [
                 'access_token' => $token,
                 'token_type' => 'Bearer',
                 'user' => $this->authUserPayload($user),
-                'credit_score' => $user->creditScore(),
+                'credit_profile' => $this->profiles->status($user),
             ], 201);
         } catch (Exception $e) {
             report($e);
@@ -105,26 +167,43 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'phone' => 'required|string',
-            'password' => 'required|string',
+            'pin' => ['nullable', 'string', 'regex:/^\d{6}$/'],
+            'password' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
-        $user = User::where('phone', $request->phone)->first();
-
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            return ApiResponse::error('Invalid credentials', 401);
+        $credential = (string) ($request->input('pin') ?: $request->input('password'));
+        if ($credential === '') {
+            return ApiResponse::error('Enter your 6-digit PIN.', 422, ['pin' => ['PIN is required.']]);
         }
 
+        $key = 'opfin-login:'.sha1((string) $request->phone.'|'.(string) $request->ip());
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            return ApiResponse::error('Too many sign-in attempts. Try again shortly or reset your PIN.', 429, [
+                'retry_after_seconds' => RateLimiter::availableIn($key),
+            ]);
+        }
+
+        $user = User::where('phone', $request->phone)->first();
+
+        if (! $user || ! Hash::check($credential, $user->password)) {
+            RateLimiter::hit($key, 600);
+
+            return ApiResponse::error('Phone number or PIN is incorrect.', 401);
+        }
+
+        RateLimiter::clear($key);
+        $this->profiles->ensurePrimaryPhone($user);
         $token = $this->createAccessToken($user);
 
         return ApiResponse::success('Login successful', [
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => $this->authUserPayload($user),
-            'credit_score' => $user->creditScore(),
+            'credit_profile' => $this->profiles->status($user),
         ]);
     }
 
@@ -133,10 +212,29 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'phone' => 'required|string',
             'otp' => 'required|string|size:6',
-            'password' => ['required', 'string', 'confirmed', $this->passwordRule()],
+            'pin' => ['nullable', 'string', 'regex:/^\d{6}$/'],
+            'pin_confirmation' => 'nullable|string|same:pin',
+            'password' => 'nullable|string',
+            'password_confirmation' => 'nullable|string|same:password',
         ]);
         if ($validator->fails()) {
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
+        }
+
+        $credential = (string) ($request->input('pin') ?: $request->input('password'));
+        if ($credential === '') {
+            return ApiResponse::error('Create a new 6-digit PIN.', 422, ['pin' => ['PIN is required.']]);
+        }
+        if ($request->filled('pin') && $this->weakPin((string) $request->input('pin'))) {
+            return ApiResponse::error('Choose a less predictable 6-digit PIN.', 422, ['pin' => ['Avoid repeated or sequential numbers.']]);
+        }
+        if ($request->filled('password')) {
+            $legacyValidator = Validator::make($request->all(), [
+                'password' => ['required', 'confirmed', $this->passwordRule()],
+            ]);
+            if ($legacyValidator->fails()) {
+                return ApiResponse::error('Validation failed.', 422, $legacyValidator->errors()->toArray());
+            }
         }
 
         $user = User::where('phone', $request->phone)->first();
@@ -149,15 +247,15 @@ class AuthController extends Controller
             return ApiResponse::error('Invalid or expired OTP', 400);
         }
 
-        $user->password = Hash::make($request->password);
+        $user->password = Hash::make($credential);
         if ($user->save()) {
             $otpRecord?->delete();
             $user->tokens()->delete();
 
-            return ApiResponse::success('Password has been reset successfully.');
+            return ApiResponse::success('PIN has been reset successfully.');
         }
 
-        return ApiResponse::error('Failed to reset password.', 500);
+        return ApiResponse::error('Failed to reset PIN.', 500);
     }
 
     public function logout(Request $request)
@@ -170,7 +268,8 @@ class AuthController extends Controller
     public function generateOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone' => 'required|string',
+            'phone' => 'required|string|max:32',
+            'app_signature' => 'nullable|string|max:32',
         ]);
 
         if ($validator->fails()) {
@@ -191,7 +290,12 @@ class AuthController extends Controller
             ]
         );
 
-        $this->smsService->queueSms($request->phone, 'OpFin: Your OTP code is '.$otp.'. It expires in 5 minutes.');
+        $signature = preg_replace('/\s+/', '', (string) $request->input('app_signature'));
+        $message = 'OpFin: Your OTP code is '.$otp.'. It expires in 5 minutes.';
+        if ($signature !== '') {
+            $message .= "\n".$signature;
+        }
+        $this->smsService->queueSms($request->phone, $message);
 
         return ApiResponse::success('OTP generated successfully', [
             'expires_at' => $expiresAt->toIso8601String(),
@@ -238,6 +342,12 @@ class AuthController extends Controller
             'verification_token' => $verificationToken,
             'verification_expires_at' => now()->addMinutes(10)->toIso8601String(),
         ]);
+    }
+
+    private function weakPin(string $pin): bool
+    {
+        return preg_match('/^(\d)\1{5}$/', $pin) === 1
+            || in_array($pin, ['012345', '123456', '234567', '345678', '456789', '987654', '876543', '765432', '654321', '543210'], true);
     }
 
     private function passwordRule(): Password
@@ -290,8 +400,6 @@ class AuthController extends Controller
             return Hash::check($otp, $stored);
         }
 
-        // Transitional compatibility for OTP rows created before hashed OTP storage was introduced.
-        // Legacy values are short-lived, consumed on success, and all newly generated codes are hashed.
         return hash_equals($stored, $otp);
     }
 
@@ -300,12 +408,17 @@ class AuthController extends Controller
         return [
             'id' => $user->id,
             'name' => $user->name,
+            'first_name' => $user->first_name,
+            'other_name' => $user->other_name,
+            'last_name' => $user->last_name,
             'phone' => $user->phone,
             'phone_verified_at' => $user->phone_verified_at,
             'role' => $user->role,
             'nin_status' => $user->nin_status,
             'national_id' => $user->national_id,
             'date_of_birth' => $user->date_of_birth,
+            'preferred_language' => $user->preferred_language,
+            'accessibility_preferences' => $user->accessibility_preferences,
         ];
     }
 }

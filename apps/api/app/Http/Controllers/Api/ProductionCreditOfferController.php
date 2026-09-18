@@ -108,6 +108,7 @@ class ProductionCreditOfferController extends Controller
         $validator = Validator::make($request->all(), [
             'accept_disclosures' => 'required|accepted',
             'disclosure_hash' => 'required|string|size:64',
+            'wallet_id' => 'nullable|integer|exists:customer_wallets,id',
         ]);
 
         if ($validator->fails()) {
@@ -128,6 +129,7 @@ class ProductionCreditOfferController extends Controller
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
                 'accepted_at' => now()->toISOString(),
+                'wallet_id' => $request->integer('wallet_id') ?: null,
             ]);
         } catch (InvalidArgumentException $exception) {
             return ApiResponse::error($exception->getMessage(), 409);

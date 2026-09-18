@@ -1,273 +1,116 @@
-import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
-import 'package:opfin/constants.dart';
-import 'package:opfin/input_decoration.dart';
-import 'package:opfin/otp_screen.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:opfin/constants.dart';
+import 'package:opfin/otp_screen.dart';
+import 'package:sms_autofill/sms_autofill.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
-
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final TextEditingController _phoneController = TextEditingController();
+  final _phone = TextEditingController();
+  final _pin = TextEditingController();
+  final _confirm = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _loading = false;
 
-  final _passwordController = TextEditingController();
+  String _normalise(String value) {
+    final p = value.trim().replaceAll(' ', '');
+    if (p.startsWith('+256')) return p.substring(1);
+    if (p.startsWith('256')) return p;
+    return '256${p.substring(1)}';
+  }
 
-  final _passwordConfirmationController = TextEditingController();
-
-  bool _isLoading = false;
-
-  Future<void> _sendOtp() async {
-    String phone = _phoneController.text.trim();
-
-    final password = _passwordController.text.trim();
-    final passwordConfirmation = _passwordConfirmationController.text.trim();
-    if (phone.isEmpty || password.isEmpty || passwordConfirmation.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
-      return;
-    }
-    if (!RegExp(r'^0\d{9}$').hasMatch(phone)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Enter a valid 10-digit phone number starting with 0')),
-      );
-      return;
-    }
-    if (password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Password must be at least 8 characters long')),
-      );
-      return;
-    }
-    if (password != passwordConfirmation) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password and confirmation do not match')),
-      );
-      return;
-    }
-    phone = '256${phone.substring(1)}';
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _send() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
     try {
-      final response = await http.post(
-        Uri.parse('$apiUrl/generate-otp'),
-        body: {'phone': phone},
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success']) {
-          // Navigate to OTP Screen
-          if (!mounted) return;
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OtpScreen(
-                phone: phone,
-                password: _passwordController.text.trim(),
-                passwordConfirmation:
-                    _passwordConfirmationController.text.trim(),
-              ),
-            ),
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data['message'] ?? 'Failed to send OTP')),
-          );
-        }
-      } else {
-        if (!mounted) return;
+      String signature = '';
+      if (Platform.isAndroid) {
+        signature = await SmsAutoFill().getAppSignature;
+      }
+      final response = await http.post(Uri.parse('$apiUrl/generate-otp'), body: {
+        'phone': _normalise(_phone.text),
+        if (signature.isNotEmpty) 'app_signature': signature,
+      });
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode != 200 || decoded['success'] != true) {
+        throw Exception(decoded['message']?.toString() ?? 'Unable to send code.');
+      }
+      if (!mounted) {
+        return;
+      }
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => OtpScreen(
+          phone: _normalise(_phone.text), resetPin: _pin.text)));
+    } catch (error) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An error occurred. Try again later.')),
+          SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
         );
       }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A network error occurred. Please try again.')),
-      );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 26.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 40),
-
-                // Animation
-                SizedBox(
-                  height: 140,
-                  child: Lottie.asset(
-                    'assets/lottie/forgot_password.json',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // Title
-                const Text(
-                  "Forgot Password",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: OpFinColors.ink,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 8),
-
-                const Text(
-                  "Enter your phone number and new password to receive an OTP.",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: OpFinColors.muted,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 40),
-
-                // Phone Input
-                TextField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecorations().inputStyle(
-                    label: "Phone Number",
-                    hint: "0700460055",
-                    icon: Icons.phone_rounded,
-                  ),
-                  style: const TextStyle(color: OpFinColors.ink),
-                ),
-
-                const SizedBox(height: 25),
-
-                // New Password
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecorations().inputStyle(
-                    label: "New Password",
-                    hint: "•••••••••••",
-                    icon: Icons.lock_rounded,
-                  ),
-                  style: const TextStyle(color: OpFinColors.ink),
-                ),
-
-                const SizedBox(height: 25),
-
-                // Confirm New Password
-                TextField(
-                  controller: _passwordConfirmationController,
-                  obscureText: true,
-                  decoration: InputDecorations().inputStyle(
-                    label: "Confirm New Password",
-                    hint: "•••••••••••",
-                    icon: Icons.lock_rounded,
-                  ),
-                  style: const TextStyle(color: OpFinColors.ink),
-                ),
-
-                const SizedBox(height: 35),
-
-                // Reset Button
-                _isLoading
-                    ? const CircularProgressIndicator(color: OpFinColors.ink)
-                    : SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _sendOtp,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: OpFinColors.indigo,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          child: const Text("Reset Password"),
-                        ),
-                      ),
-
-                const SizedBox(height: 30),
-
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: OpFinColors.line)),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        "OR",
-                        style: TextStyle(
-                          color: OpFinColors.muted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: OpFinColors.line)),
-                  ],
-                ),
-
-                const SizedBox(height: 30),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: RichText(
-                    text: const TextSpan(
-                      text: "Remembered your password? ",
-                      style: TextStyle(
-                        color: OpFinColors.ink,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: "Login",
-                          style: TextStyle(
-                            color: OpFinColors.ink,
-                            fontWeight: FontWeight.w800,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
-        ),
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Reset PIN')),
+    body: SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          const Text('Create a new PIN',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          const Text('We will confirm your phone before changing your PIN.'),
+          const SizedBox(height: 24),
+          Form(key: _formKey, child: Column(children: [
+            TextFormField(
+              controller: _phone,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Phone number'),
+              validator: (value) {
+                final v=value?.trim().replaceAll(' ','')??'';
+                return RegExp(r'^(0\d{9}|256\d{9}|\+256\d{9})$').hasMatch(v)
+                  ? null : 'Enter a valid phone number';
+              }),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _pin,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              maxLength: 6,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: 'New 6-digit PIN'),
+              validator: (v)=>RegExp(r'^\d{6}$').hasMatch(v??'')?null:'Enter 6 digits'),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _confirm,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              maxLength: 6,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: 'Confirm new PIN'),
+              validator: (v)=>v==_pin.text?null:'PINs do not match'),
+            const SizedBox(height: 24),
+            SizedBox(width: double.infinity,height:52,child:FilledButton(
+              onPressed:_loading?null:_send,
+              child:_loading?const CircularProgressIndicator(strokeWidth:2)
+                :const Text('Send verification code'))),
+          ])),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }

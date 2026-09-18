@@ -15,13 +15,16 @@ class AccountController extends Controller
     public function destroy(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'password' => ['required', 'string'],
+            'pin' => ['nullable', 'required_without:password', 'string'],
+            'password' => ['nullable', 'required_without:pin', 'string'],
             'confirmation' => ['required', 'in:DELETE'],
         ]);
 
+        $credential = (string) ($data['pin'] ?? $data['password']);
+
         $result = $this->deletion->deleteOrRequest(
             $request->user(),
-            (string) $data['password'],
+            $credential,
             $request,
         );
 

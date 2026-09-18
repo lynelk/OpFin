@@ -1,190 +1,234 @@
-import 'package:opfin/brand/brand_colors.dart';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:opfin/constants.dart';
-import 'package:opfin/home_screen.dart';
-import 'package:opfin/services/user_session.dart';
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:opfin/brand/brand_colors.dart';
+import 'package:opfin/constants.dart';
+import 'package:opfin/services/credit_profile_api.dart';
+import 'package:opfin/services/user_session.dart';
+
 class LoanRepaymentScreen extends StatefulWidget {
+  const LoanRepaymentScreen({
+    super.key,
+    required this.loanId,
+    required this.repaymentAmount,
+  });
+
   final int loanId;
   final int repaymentAmount;
 
-  const LoanRepaymentScreen(
-      {super.key, required this.loanId, required this.repaymentAmount});
-
   @override
-  LoanRepaymentScreenState createState() => LoanRepaymentScreenState();
+  State<LoanRepaymentScreen> createState() => _LoanRepaymentScreenState();
 }
 
-class LoanRepaymentScreenState extends State<LoanRepaymentScreen> {
+class _LoanRepaymentScreenState extends State<LoanRepaymentScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _amountController = TextEditingController();
+  final _amount = TextEditingController();
+  final _money = NumberFormat('#,##0', 'en_US');
+  late Future<List<Map<String, dynamic>>> _wallets;
+  int? _walletId;
   bool _loading = false;
-  String? _message;
-  bool _success = false;
+  String? _statusMessage;
 
-  Future<void> _repayLoan() async {
+  @override
+  void initState() {
+    super.initState();
+    _amount.text = widget.repaymentAmount.toString();
+    _wallets = CreditProfileApi.wallets().then((items) {
+      if (_walletId == null && items.isNotEmpty) {
+        final defaults =
+            items.where((item) => item['is_default_repayment'] == true).toList();
+        _walletId =
+            _n((defaults.isNotEmpty ? defaults.first : items.first)['id']);
+      }
+      return items;
+    });
+  }
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
+
+  int _n(dynamic value) =>
+      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+
+  String _mask(String value) =>
+      value.length <= 4 ? value : '•••• ${value.substring(value.length - 4)}';
+
+  Future<void> _repay() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_walletId == null) {
+      _message('Choose a verified repayment wallet.');
+      return;
+    }
+
+    final amount = int.parse(_amount.text.trim().replaceAll(',', ''));
+    final idempotency =
+        'app-repayment:${widget.loanId}:${DateTime.now().microsecondsSinceEpoch}';
+
     setState(() {
       _loading = true;
-      _message = null;
-      _success = false;
+      _statusMessage = null;
     });
-    final amount = int.parse(_amountController.text);
-    final token = await UserSession.getAccessToken();
-    final response = await http.post(
-      Uri.parse('$apiUrl/loans/${widget.loanId}/repay'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'amount': amount}),
-    );
-    setState(() {
-      _loading = false;
-      final data = jsonDecode(response.body);
-      _success = data['success'] ?? false;
-      _message = data['message'] ?? 'Unexpected response';
-    });
-    if (_success) {
-      // Show success message for 2 seconds
-      await Future.delayed(const Duration(seconds: 2));
 
-      Navigator.pushAndRemoveUntil(
-        // ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-        (route) => false, // removes all previous routes
+    try {
+      final token = await UserSession.getAccessToken();
+      final response = await http.post(
+        Uri.parse('$apiUrl/loans/${widget.loanId}/repay'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotency,
+        },
+        body: jsonEncode({
+          'amount_minor': amount,
+          'wallet_id': _walletId,
+          'idempotency_key': idempotency,
+        }),
       );
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode < 200 ||
+          response.statusCode >= 300 ||
+          decoded['success'] != true) {
+        throw Exception(
+            decoded['message']?.toString() ?? 'Unable to start repayment.');
+      }
+
+      final data =
+          (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+      final status = data['status']?.toString() ?? 'pending';
+      setState(() {
+        _statusMessage = status == 'successful'
+            ? 'Payment confirmed. Your balance will refresh now.'
+            : 'A payment request was sent to your wallet. Confirm it on your phone. Your OpFin balance updates only after the payment provider confirms success.';
+      });
+    } catch (error) {
+      _message(error.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _message(String value) {
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(value)));
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Repay Loan',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        iconTheme: const IconThemeData(color: OpFinColors.ink),
-        foregroundColor: OpFinColors.ink,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(Icons.payments, size: 48, color: theme.primaryColor),
-                const SizedBox(height: 16),
-                Text(
-                  'Loan Repayment',
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Expected Repayment',
-                  style: theme.textTheme.bodySmall,
-                ),
-                Text(
-                  'UGX ${widget.repaymentAmount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: theme.primaryColor,
-                    fontWeight: FontWeight.bold,
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Repay loan')),
+        body: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _wallets,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text(snapshot.error.toString()));
+            }
+            final wallets = snapshot.data ?? const [];
+            return SafeArea(
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'How much will you repay?',
+                      style:
+                          TextStyle(fontSize: 25, fontWeight: FontWeight.w800),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _amountController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'Amount to Pay',
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Text(
-                        'UGX',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.grey[700],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Outstanding: UGX ${_money.format(widget.repaymentAmount)}',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 24),
+                  Form(
+                    key: _formKey,
+                    child: TextFormField(
+                      controller: _amount,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Repayment amount',
+                        prefixText: 'UGX ',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        final entered =
+                            int.tryParse((value ?? '').replaceAll(',', '')) ?? 0;
+                        if (entered <= 0) return 'Enter an amount greater than zero';
+                        if (entered > widget.repaymentAmount) {
+                          return 'You cannot repay more than the outstanding amount';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  DropdownButtonFormField<int>(
+                    key: ValueKey(_walletId),
+                    initialValue: _walletId,
+                    decoration: const InputDecoration(
+                      labelText: 'Pay from',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: wallets
+                        .map(
+                          (wallet) => DropdownMenuItem(
+                            value: _n(wallet['id']),
+                            child: Text(
+                              '${wallet['provider'] ?? 'Mobile money'} · ${_mask(wallet['msisdn']?.toString() ?? '')}',
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged:
+                        _loading ? null : (value) => setState(() => _walletId = value),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'OpFin will send a collection request. A request is not a completed repayment until the provider confirms it.',
+                    style: TextStyle(color: OpFinColors.muted),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    height: 54,
+                    child: FilledButton(
+                      onPressed: _loading ? null : _repay,
+                      child: _loading
+                          ? const CircularProgressIndicator(strokeWidth: 2)
+                          : const Text('Send payment request'),
+                    ),
+                  ),
+                  if (_statusMessage != null) ...[
+                    const SizedBox(height: 20),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline),
+                            const SizedBox(width: 10),
+                            Expanded(child: Text(_statusMessage!)),
+                          ],
                         ),
                       ),
                     ),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Enter amount';
-                    final entered = int.tryParse(value);
-                    if (entered == null) return 'Enter a valid number';
-                    if (entered <= 0) return 'Amount must be positive';
-                    if (entered > widget.repaymentAmount) {
-                      return 'Cannot pay more than expected';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 32),
-                _loading
-                    ? const CircularProgressIndicator()
-                    : SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: OpFinColors.indigo,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            textStyle: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              _repayLoan();
-                            }
-                          },
-                          child: const Text('Repay'),
-                        ),
-                      ),
-                if (_message != null) ...[
-                  const SizedBox(height: 28),
-                  Row(
-                    children: [
-                      Icon(
-                        _success ? Icons.check_circle : Icons.error,
-                        color: _success ? Colors.green : Colors.red,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _message!,
-                          style: TextStyle(
-                            color: _success ? Colors.green : Colors.red,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ]
-              ],
-            ),
-          ),
+                  ],
+                ],
+              ),
+            );
+          },
         ),
-      ),
-    );
-  }
+      );
 }

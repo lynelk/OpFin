@@ -14,6 +14,8 @@ dependencies:
   lottie: ^3.5.1
   shared_preferences: ^2.5.5
   flutter_secure_storage: ^11.0.0
+  image_picker: ^1.1.2
+  sms_autofill: ^2.5.0
 
 dev_dependencies:
   flutter_test:
