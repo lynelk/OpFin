@@ -35,18 +35,26 @@ class UmraNplCapService
 
         $initialInterest = (int) $offer->interest_amount_minor;
         $defaultInterestCap = intdiv($initialInterest, 2);
-        $interestRecoveryCap = $principalOutstanding;
+        $principalAtNpl = (int) ($loan->principal_at_npl_minor ?? $principalOutstanding);
         $contractualPlusDefault = min(
-            $interestRecoveryCap,
+            $principalAtNpl,
             $interestOutstanding + min((int) $loan->default_interest_accrued_minor, $defaultInterestCap),
         );
 
+        CreditRepaymentScheduleItem::query()
+            ->where('loan_id', $loan->id)
+            ->where('due_date', '<', now()->toDateString())
+            ->where('total_outstanding_minor', '>', 0)
+            ->whereNotIn('status', [CreditRepaymentScheduleItem::STATUS_PAID, CreditRepaymentScheduleItem::STATUS_VOIDED])
+            ->update(['status' => CreditRepaymentScheduleItem::STATUS_OVERDUE, 'updated_at' => now()]);
+
         $loan->forceFill([
+            'status' => strcasecmp((string) $loan->status, 'Active') === 0 ? 'Non-Performing' : $loan->status,
             'non_performing_at' => $loan->non_performing_at ?? now(),
-            'principal_at_npl_minor' => $loan->principal_at_npl_minor ?? $principalOutstanding,
+            'principal_at_npl_minor' => $principalAtNpl,
             'initial_interest_minor' => $loan->initial_interest_minor ?? $initialInterest,
             'default_interest_cap_minor' => $defaultInterestCap,
-            'npl_recovery_cap_minor' => $principalOutstanding + $contractualPlusDefault,
+            'npl_recovery_cap_minor' => $principalAtNpl + $contractualPlusDefault,
             'npl_policy_checked_at' => now(),
         ])->save();
 
