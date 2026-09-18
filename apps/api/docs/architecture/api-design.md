@@ -1,125 +1,72 @@
-# API Design
+# API design
 
-## API Principles
+## API style
 
-- APIs are contracts. Changes must be backward-compatible unless versioned.
-- Validate every request before domain logic.
-- Authorize every protected action after authentication and before mutation.
-- Derive actor identity from Sanctum, not from request payload.
-- Return consistent JSON response shapes.
-- Avoid leaking internal exception details.
+The OpFin API is JSON-first for application clients, with multipart upload only where required for private identity evidence. Financial and identity state is server-authoritative.
+
+## Response envelope
+
+Success:
+
+```json
+{"success": true, "message": "Result", "data": {}}
+```
+
+Failure:
+
+```json
+{"success": false, "message": "Safe explanation", "errors": {}}
+```
+
+HTTP status remains authoritative.
 
 ## Authentication
 
-Use Laravel Sanctum for mobile/API access.
+The launch account journey is phone verification followed by a six-digit PIN. OTP generation/verification is throttled and PIN login is rate-limited. The register response includes a bearer token so the customer can continue without a redundant second login.
 
-Expected patterns:
+Legacy password fields remain compatibility inputs only; new clients must use the PIN contract.
 
-- Public endpoints: login, registration, OTP initiation/verification, password reset, provider callbacks.
-- Protected endpoints: user profile, financial products, applications, loans, repayments, KYC, consent, reports.
-- Admin endpoints: protected by Sanctum or web session plus policy/role checks.
+## Customer state aggregation
 
-Token rules:
+`CustomerCreditProfileService` is the main borrower-state aggregator. It joins:
 
-- Issue tokens only after successful authentication or verified OTP flow.
-- Revoke current token on logout.
-- Revoke all tokens after password reset or suspected account compromise.
-- Never pass tokens in query strings.
+- verified identity;
+- active credit consent;
+- CRB/MNO/third-party/internal score components;
+- profile credit limit;
+- current exposure;
+- due/outstanding schedule state;
+- optional second phone;
+- active loan;
+- next customer action.
 
-## Versioning
+Clients should not reproduce this logic.
 
-Introduce `/api/v1` before expanding beyond the current mobile app surface. Keep current routes stable while moving new work into versioned route groups.
+## External adapters
 
-Versioned route groups should define:
+`ExternalScoringService` connects configured CRB/MNO/third-party sources. Each source has explicit status, score, weight, reason codes, received/expiry timestamps and reference where available.
 
-- Middleware.
-- Rate limits.
-- Response format.
-- Deprecation policy.
+`IdentityVerificationService` connects the configured identity provider and records NIN, liveness, face-match and NIN/phone-link outcomes.
 
-## Request Validation
+Unavailable adapters produce unavailable/error/pending states. They do not generate synthetic success.
 
-Use form request classes for new endpoints when validation is more than trivial.
+## Wallets and money movement
 
-Validate:
+Verified phone numbers can map to customer wallets. Defaults are separate for disbursement and repayment. Limit remains profile-level.
 
-- Amounts as integer minor units.
-- Currency.
-- Phone number format.
-- Dates and date order.
-- Product and term IDs.
-- Status enums.
-- Provider payload shape.
-- Consent purpose and version.
+Offer acceptance and repayment may select a verified wallet ID. Backend ownership checks prevent use of another customer's wallet. Provider finality, ledger and reconciliation remain separate from API acknowledgement.
 
-Never accept:
+## Cross-channel entry points
 
-- Role changes from unprivileged clients.
-- User/institution ownership from mobile clients without policy checks.
-- Provider status as final truth without verification.
-
-## Response Format
-
-Recommended success shape:
-
-```json
-{
-  "success": true,
-  "message": "Human-readable summary",
-  "data": {}
-}
-```
-
-Recommended error shape:
-
-```json
-{
-  "success": false,
-  "message": "Human-readable summary",
-  "errors": {}
-}
-```
-
-For list endpoints:
-
-- Use Laravel pagination.
-- Include `data`, `links`, and `meta`.
-- Avoid returning unbounded collections for mobile flows.
+- Flutter/web use authenticated REST.
+- WhatsApp webhook validates Meta signatures; text and KYC image messages enter `WhatsAppJourneyService`.
+- USSD callback uses the same profile service and can require an aggregator shared secret.
+- Image/regulated commitment steps are handed to an authenticated/high-assurance path rather than approximated in USSD.
 
 ## Idempotency
 
-Required for:
+Repayment initiation requires an idempotency key. Offer/disbursement code retains its existing offer/version/idempotency controls. Retries must never create a second economic event.
 
-- Loan application submission.
-- Repayment initiation.
-- Disbursement initiation.
-- Provider callbacks.
-- Employer payroll deductions.
-- Investment or insurance order placement.
+## Privacy
 
-Use idempotency keys where client retry can create duplicate financial actions. Store key, actor, route/action, request hash, response summary, and expiry.
-
-## Rate Limiting
-
-Add route-specific limits for:
-
-- Login.
-- OTP generation.
-- OTP verification.
-- Password reset.
-- KYC/CRB checks.
-- Loan application submission.
-- Repayment initiation.
-- Provider callbacks.
-- Compliance exports.
-
-## Provider Callback APIs
-
-Provider callbacks must:
-
-- Authenticate provider payloads using provider-native signatures, shared secrets, or status verification calls.
-- Store callback events before processing.
-- Be idempotent.
-- Reject stale or replayed payloads.
-- Avoid returning internal details.
-
+NIN is masked in normal profile responses. Private KYC image paths and raw provider evidence are not customer-facing fields. Production evidence storage is configurable and should be persistent/private.

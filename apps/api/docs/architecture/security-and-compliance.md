@@ -1,105 +1,63 @@
-# Security and Compliance
+# Security and compliance architecture
 
-## Security Goals
+This document complements the root `SECURITY.md`.
 
-- Protect user funds, identity data, credit data, provider credentials, and operational access.
-- Make every financial action attributable and reviewable.
-- Prevent unauthorized cross-user or cross-institution access.
-- Fail safely when providers or background workers misbehave.
+## Identity and authentication
 
-## Authentication and Authorization
+- Phone ownership is established by OTP.
+- New mobile customers use a six-digit PIN after phone verification.
+- OTPs and PINs are secrets; never request them through WhatsApp, USSD support or staff-assisted KYC.
+- Authentication attempts are throttled/rate-limited.
+- Session tokens remain in secure client storage.
 
-- Use Sanctum for API tokens.
-- Use web session auth for admin portal unless moved to an API-driven frontend.
-- Use policies/gates for object-level authorization.
-- Test denied access as heavily as successful access.
-- Keep role definitions centralized.
+## Identity evidence
 
-Required roles:
+KYC requires NIN, National ID front/back and selfie-with-ID. Automatic identity verification records independent liveness, face-match and NIN/phone-link outcomes.
 
-- Member.
-- Employer user.
-- Institution admin.
-- OpFin admin.
-- Super admin.
-- Compliance officer.
-- Support/operations user with limited permissions.
+Production KYC evidence must use private persistent/object storage. Paths/evidence do not belong in normal customer responses/logs.
 
-## Data Protection
+Assisted accessibility routes change the interaction, not the assurance requirement.
 
-Sensitive data includes:
+## Consent and scoring
 
-- Phone numbers.
-- NIN.
-- Date of birth.
-- Credit score data.
-- Loan details.
-- Transaction references.
-- Provider payloads.
-- OTPs.
-- Access tokens.
-- Employer/payroll data.
-- Insurance and investment records.
+Credit-processing consent is explicit, versioned and revocable. The credit profile records CRB, MNO, third-party and internal components separately.
 
-Rules:
+No source may be silently substituted when unavailable. Composite coverage is visible to decisioning. Positive automated limits require configured minimum coverage and required core components.
 
-- Redact logs.
-- Encrypt secrets.
-- Hash OTPs in new code.
-- Do not expose provider payloads to clients.
-- Limit admin access by role and purpose.
+## Lending and affordability
 
-## Compliance Controls
+Customer requests are bounded by server-authoritative available limit. Mobile-store term restrictions remain enforced server-side.
 
-Required evidence:
+Automatic decisioning only approves within a current eligible profile and current CRB/KYC/consent gates. Other cases refer/decline rather than bypass control.
 
-- User consent version and timestamp.
-- KYC/CRB request purpose.
-- Actor for every admin action.
-- Before/after change records for sensitive fields.
-- Financial state transition history.
-- Provider callback/event history.
-- Report generation history.
+Formal offer disclosures are snapshotted and accepted by hash before disbursement.
 
-## Operational Security
+## Money movement
 
-- Production `APP_DEBUG` must be false.
-- CORS must be explicit.
-- Secrets must come from environment/secret manager.
-- Provider sandbox and live credentials must be separated.
-- Failed jobs must be monitored.
-- Queue retries must be idempotent.
-- Backups must be tested.
+Verified-wallet ownership is checked server-side. Repayment initiation is idempotent. Provider acknowledgement is not accounting finality; successful provider state, ledger posting and reconciliation control economic state.
 
-## Provider Security
+## Channel security
 
-For each provider:
+### WhatsApp
 
-- Separate sandbox and production config.
-- Verify callback authenticity.
-- Store callback events.
-- Reconcile internal and external status.
-- Do not trust client-submitted provider references.
-- Rotate credentials on schedule and after incidents.
+- production webhook requires a valid Meta signature;
+- session is OTP-backed and short lived;
+- inbound provider message IDs are deduplicated;
+- identity media is downloaded from provider APIs into private KYC storage;
+- PIN is never accepted/requested in chat;
+- regulated/high-impact actions use secure hand-offs.
 
-## Compliance Reporting
+### USSD
 
-Compliance reports must:
+- production should configure callback authentication/shared secret or provider-native equivalent;
+- no KYC photos or PIN capture;
+- core menus read the same customer profile state;
+- financial commitment moves to authenticated confirmation.
 
-- Be permissioned.
-- Be audit logged.
-- Be reproducible.
-- Avoid exposing more personal data than required.
-- Include report parameters, actor, timestamp, and source data cutoff.
+## Accessibility
 
-## Incident Response
+Security UX must remain understandable with TalkBack/VoiceOver, text scaling, simple wording and reduced motion. A PWD or low-literacy customer must not be forced to disclose credentials to obtain assistance.
 
-Security incidents must preserve evidence:
+## Data minimisation
 
-- Freeze related logs.
-- Preserve provider callback payloads.
-- Record timeline.
-- Revoke affected tokens.
-- Rotate affected secrets.
-- Mark suspicious financial records for review.
-
+Only collect evidence required for the stated purpose. Customer screens should expose understandable outcome/reason information, not raw provider payloads or internal probability-of-default telemetry.
