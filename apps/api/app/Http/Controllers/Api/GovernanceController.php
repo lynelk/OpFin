@@ -66,6 +66,22 @@ class GovernanceController extends Controller
         ]);
     }
 
+    public function report(int $report): JsonResponse
+    {
+        $record = DB::table('regulatory_report_runs')->where('id', $report)->first();
+        if (! $record) {
+            return ApiResponse::error('Regulatory report not found.', 404);
+        }
+
+        return ApiResponse::success('Regulatory report loaded.', [
+            'report' => [
+                ...((array) $record),
+                'payload' => json_decode((string) $record->payload, true),
+                'validation_results' => json_decode((string) $record->validation_results, true),
+            ],
+        ]);
+    }
+
     public function generateReport(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
