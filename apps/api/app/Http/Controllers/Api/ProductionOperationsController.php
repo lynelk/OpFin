@@ -147,6 +147,8 @@ class ProductionOperationsController extends Controller
             'created_by' => $request->user()->id,
             'status' => 'open',
             'priority' => $request->input('priority', 'normal'),
+            'regulatory_category' => 'umra_consumer_complaint',
+            'sla_due_at' => now()->addDays(30),
         ]);
 
         $this->auditLogger->record('support.case.created', $request->user(), $case, ['category' => $case->category], $request);
@@ -166,17 +168,24 @@ class ProductionOperationsController extends Controller
             'assigned_to' => 'nullable|exists:users,id',
             'priority' => 'nullable|string|max:32',
             'note' => 'nullable|string|max:4000',
+            'resolution_summary' => 'nullable|string|max:4000',
         ]);
 
         if ($validator->fails()) {
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
+        $closing = in_array($request->input('status'), [SupportCase::STATUS_RESOLVED, SupportCase::STATUS_CLOSED], true);
+        if ($closing && ! $request->filled('resolution_summary')) {
+            return ApiResponse::error('A customer-facing resolution summary is required before a complaint can be resolved or closed.', 422);
+        }
+
         $case->update([
             'status' => $request->input('status'),
             'assigned_to' => $request->input('assigned_to', $case->assigned_to),
             'priority' => $request->input('priority', $case->priority),
-            'resolved_at' => in_array($request->input('status'), [SupportCase::STATUS_RESOLVED, SupportCase::STATUS_CLOSED], true) ? now() : null,
+            'resolution_summary' => $request->input('resolution_summary', $case->resolution_summary),
+            'resolved_at' => $closing ? now() : null,
         ]);
 
         if ($request->filled('note')) {
