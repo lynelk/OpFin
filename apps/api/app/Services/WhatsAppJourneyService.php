@@ -232,7 +232,8 @@ class WhatsAppJourneyService
         string $bytes,
         string $mimeType,
         ?string $providerMessageId = null,
-    ): array {
+    ): array
+    {
         $conversation = $this->conversation($phone);
 
         if ($providerMessageId && DB::table('whatsapp_messages')->where('provider_message_id', $providerMessageId)->exists()) {
