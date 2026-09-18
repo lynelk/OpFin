@@ -43,3 +43,19 @@
 - Customers with disabilities may use assisted identity verification. A trusted helper may help position a device or enter non-secret information, but PINs and OTPs remain private to the customer.
 - Accessibility assistance must not weaken KYC, consent, credit or financial-control standards and must not create a separate lower-assurance account type.
 - Never advertise a provider-gated or regulator-gated capability as live.
+
+
+## Uganda / UMRA digital-lending invariants
+
+- Outbound positive/negative credit information requires its own active, offer-bound `credit_reporting` consent. Credit-scoring consent is not a substitute.
+- Every outbound CRB record must be complete, attributable, evidence-hashed, idempotent and auditable. Missing required borrower/account fields fail visibly.
+- A provider transport acknowledgement is not proof of accurate credit reporting; retain provider reference and submission status.
+- Loan offers must disclose principal/amount received, interest method, fees, total cost, repayment timing, complaint procedure, credit-information notice and term-change protections before acceptance.
+- Provider-confirmed disbursement/repayment creates exactly one immutable transaction receipt. Pending requests never receive successful receipts.
+- Customer complaints carry a 30-day regulatory SLA and cannot be resolved/closed without a customer-facing resolution summary.
+- UMRA NPL controls freeze principal owing at NPL onset. Do not lower historical regulatory caps by overwriting that snapshot. In enforce mode collection above the remaining cap is rejected.
+- Product terms may require only 0, 1 or 2 guarantor contacts. OpFin must not read the borrower contact list; each guarantor must receive a specific electronic consent request and be verified.
+- Accepted loan offers remain immutable. Any proposed term variation is a separate record requiring customer consent. Interest-rate variations additionally require prior UMRA approval evidence.
+- Generic automatic mutation of accepted live-loan economics is fail-closed until a separately reviewed versioned amendment executor exists.
+- Editing the interest rate on an existing catalogue term requires prior UMRA approval reference and evidence hash.
+- UMRA books/registers must be generated from source-of-truth loan, payment, receipt, complaint, CRB, NPL, guarantor and variation records. Never hand-edit an exported report to make it reconcile.
