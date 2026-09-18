@@ -115,3 +115,29 @@ This checklist applies to the launch borrower journey. Source-code completion is
 - [ ] Independent security test scheduled/completed according to release policy.
 
 Production sign-off requires Product, Compliance, Finance, Operations, Support, Engineering and accessibility/PWD review for the exact candidate.
+
+
+## UMRA credit and consumer-protection activation
+
+- [ ] Licensed entity legal name configured and verified.
+- [ ] Registered/trading name confirmed.
+- [ ] UMRA licence/reference configured and independently verified.
+- [ ] Physical business address configured and displayed in digital disclosures.
+- [ ] Official complaints email, telephone and URL configured/tested.
+- [ ] Complaint 30-day clock appears in customer/admin records.
+- [ ] Applicable authorised credit-reference reporting provider/endpoint/schema certified.
+- [ ] Positive and negative test reports pass provider validation using authorised fixtures.
+- [ ] Missing reporting consent blocks external bureau transmission.
+- [ ] Incomplete identity/data quality blocks external bureau transmission.
+- [ ] NPL scan identifies an overdue controlled loan correctly.
+- [ ] Default-interest ceiling/recovery-cap test produces no breach under normal policy.
+- [ ] Per-loan enforcement control is restricted to authorised admin/operations roles and audited.
+- [ ] Successful disbursement and repayment create exactly one e-receipt after finality.
+- [ ] SMS/other instant acknowledgement path tested.
+- [ ] Guarantor flow limits contacts to two and independent confirmation/rejection works.
+- [ ] Contact-list permission is absent.
+- [ ] Direct interest-rate editing is blocked.
+- [ ] Maker-checker term change works.
+- [ ] Interest-rate change cannot apply without recorded prior UMRA approval evidence.
+- [ ] UMRA books/records, credit exchange, NPL, receipts, complaints and term/guarantor reports generate and validate.
+- [ ] Compliance officer reviews report drill-down and approval workflow.
