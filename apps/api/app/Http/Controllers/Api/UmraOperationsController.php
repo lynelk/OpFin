@@ -139,15 +139,14 @@ class UmraOperationsController extends Controller
 
     public function applyVariation(CreditTermVariation $variation): JsonResponse
     {
-        try {
-            $variation = $this->variations->markApplied($variation);
-        } catch (\InvalidArgumentException $exception) {
-            return ApiResponse::error($exception->getMessage(), 409);
-        }
-
-        return ApiResponse::success(
-            'Governed term variation marked effective. Original accepted offer remains immutable for audit.',
-            ['variation' => $variation],
+        return ApiResponse::error(
+            'Automatic mutation of an accepted live-loan contract is disabled. The variation may be recorded and consented, but changing the economic schedule requires a separately controlled, versioned amendment executor.',
+            409,
+            [
+                'variation_status' => [$variation->status],
+                'customer_consented_at' => [$variation->customer_consented_at?->toIso8601String()],
+                'umra_approved_at' => [$variation->umra_approved_at?->toIso8601String()],
+            ],
         );
     }
 }
