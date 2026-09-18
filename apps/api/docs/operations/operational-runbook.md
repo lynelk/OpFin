@@ -106,3 +106,73 @@ When a customer reports they cannot read, hear, see, manipulate the device or co
 ## Incident principles
 
 Preserve evidence with least access, contain the affected path, rotate compromised credentials, reconcile financial state, communicate using verified facts, and record remediation. Public issue trackers must not contain customer identity/financial evidence.
+
+
+## UMRA daily controls
+
+### Credit-information exchange
+
+Check the Admin Compliance Centre / credit-reporting register for:
+
+- pending;
+- blocked consent;
+- blocked data quality;
+- failed;
+- overdue;
+- submitted.
+
+Never manually mark a failed/blocked item submitted. Resolve the underlying consent/data/provider issue and allow the governed process to retry or create a corrected event.
+
+### Complaints
+
+Every complaint has a regulatory due date. Operations should:
+
+1. record meaningful first response;
+2. maintain ownership/notes;
+3. monitor cases within five days of deadline;
+4. escalate unresolved cases before the deadline;
+5. close only with resolution evidence.
+
+### NPL/default interest
+
+The scheduled control scan marks overdue schedules and records NPL control values.
+
+When reviewing default-interest accrual, confirm:
+
+- principal at NPL;
+- initial disclosed interest;
+- default-interest ceiling;
+- accrued amount;
+- recovery-cap evidence;
+- enforcement status.
+
+Do not use the enforcement toggle to disguise an overcharge or bypass policy. Any exception requires documented authorised reasoning and remains visible in reports.
+
+### Receipts
+
+Receipts are generated after provider-confirmed financial finality and commit. If a customer lacks a receipt:
+
+1. verify provider finality;
+2. verify ledger/product posting;
+3. inspect transaction receipt record;
+4. re-run/repair through controlled operations only if economic state is already correct.
+
+Never issue a final receipt for a pending or rolled-back transaction.
+
+### Credit-term changes
+
+Do not edit interest rates directly.
+
+Use the governed term-change register:
+
+1. maker raises proposed change/reason;
+2. independent checker reviews;
+3. interest-rate change requires recorded prior UMRA approval reference/date;
+4. apply to future offers only through the governed workflow;
+5. existing accepted offers remain unchanged.
+
+### Regulatory books/reports
+
+Generate evidence packs from the Compliance Centre. Inspect validation evidence and payload/register detail before approval/submission.
+
+The system generates evidence; the responsible regulated officer remains accountable for external filing.
