@@ -33,9 +33,9 @@ return new class extends Migration
 
         Schema::create('community_finance_memberships', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('community_finance_programme_id')->constrained('community_finance_programmes')->restrictOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('employer_institution_id')->nullable()->constrained('institutions')->nullOnDelete();
+            $table->unsignedBigInteger('community_finance_programme_id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('employer_institution_id')->nullable();
             $table->string('member_number')->nullable();
             $table->string('status')->default('draft')->index();
             $table->string('member_role')->default('member');
@@ -49,15 +49,21 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            $table->unique(['community_finance_programme_id', 'user_id'], 'cf_memberships_programme_user_unique');
-            $table->unique(['community_finance_programme_id', 'member_number'], 'cf_memberships_programme_member_unique');
+            $table->unique(['community_finance_programme_id', 'user_id'], 'cfm_programme_user_unique');
+            $table->unique(['community_finance_programme_id', 'member_number'], 'cfm_programme_member_unique');
+            $table->index('community_finance_programme_id', 'cfm_programme_idx');
+            $table->index('user_id', 'cfm_user_idx');
+            $table->index('employer_institution_id', 'cfm_employer_idx');
+            $table->foreign('community_finance_programme_id', 'cfm_programme_fk')->references('id')->on('community_finance_programmes')->restrictOnDelete();
+            $table->foreign('user_id', 'cfm_user_fk')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('employer_institution_id', 'cfm_employer_fk')->references('id')->on('institutions')->nullOnDelete();
         });
 
         Schema::create('community_finance_ledger_accounts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('community_finance_programme_id')->constrained('community_finance_programmes')->restrictOnDelete();
-            $table->foreignId('community_finance_membership_id')->nullable()->constrained('community_finance_memberships')->nullOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('community_finance_programme_id');
+            $table->unsignedBigInteger('community_finance_membership_id')->nullable();
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->string('account_code');
             $table->string('account_type')->index();
             $table->char('currency', 3)->default('UGX');
@@ -66,15 +72,21 @@ return new class extends Migration
             $table->json('restrictions')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            $table->unique(['community_finance_programme_id', 'account_code'], 'cf_ledger_accounts_programme_code_unique');
+            $table->unique(['community_finance_programme_id', 'account_code'], 'cfla_programme_code_unique');
+            $table->index('community_finance_programme_id', 'cfla_programme_idx');
+            $table->index('community_finance_membership_id', 'cfla_membership_idx');
+            $table->index('user_id', 'cfla_user_idx');
+            $table->foreign('community_finance_programme_id', 'cfla_programme_fk')->references('id')->on('community_finance_programmes')->restrictOnDelete();
+            $table->foreign('community_finance_membership_id', 'cfla_membership_fk')->references('id')->on('community_finance_memberships')->nullOnDelete();
+            $table->foreign('user_id', 'cfla_user_fk')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('community_finance_ledger_entries', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('community_finance_programme_id')->constrained('community_finance_programmes')->restrictOnDelete();
-            $table->foreignId('community_finance_ledger_account_id')->constrained('community_finance_ledger_accounts')->restrictOnDelete();
-            $table->foreignId('community_finance_membership_id')->nullable()->constrained('community_finance_memberships')->nullOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('community_finance_programme_id');
+            $table->unsignedBigInteger('community_finance_ledger_account_id');
+            $table->unsignedBigInteger('community_finance_membership_id')->nullable();
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->string('entry_type')->index();
             $table->string('direction')->index();
             $table->unsignedBigInteger('amount_minor');
@@ -86,17 +98,25 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->timestamp('posted_at')->nullable();
             $table->timestamps();
-            $table->unique(['community_finance_programme_id', 'idempotency_key'], 'cf_ledger_entries_programme_idempotency_unique');
-            $table->index(['source_type', 'source_id'], 'cf_ledger_entries_source_index');
+            $table->unique(['community_finance_programme_id', 'idempotency_key'], 'cfle_programme_idem_unique');
+            $table->index(['source_type', 'source_id'], 'cfle_source_idx');
+            $table->index('community_finance_programme_id', 'cfle_programme_idx');
+            $table->index('community_finance_ledger_account_id', 'cfle_account_idx');
+            $table->index('community_finance_membership_id', 'cfle_membership_idx');
+            $table->index('user_id', 'cfle_user_idx');
+            $table->foreign('community_finance_programme_id', 'cfle_programme_fk')->references('id')->on('community_finance_programmes')->restrictOnDelete();
+            $table->foreign('community_finance_ledger_account_id', 'cfle_account_fk')->references('id')->on('community_finance_ledger_accounts')->restrictOnDelete();
+            $table->foreign('community_finance_membership_id', 'cfle_membership_fk')->references('id')->on('community_finance_memberships')->nullOnDelete();
+            $table->foreign('user_id', 'cfle_user_fk')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('community_finance_facilities', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('community_finance_programme_id')->constrained('community_finance_programmes')->restrictOnDelete();
-            $table->foreignId('community_finance_membership_id')->nullable()->constrained('community_finance_memberships')->nullOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('employer_institution_id')->nullable()->constrained('institutions')->nullOnDelete();
-            $table->foreignId('credit_decision_id')->nullable()->constrained('credit_decisions')->nullOnDelete();
+            $table->unsignedBigInteger('community_finance_programme_id');
+            $table->unsignedBigInteger('community_finance_membership_id')->nullable();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('employer_institution_id')->nullable();
+            $table->unsignedBigInteger('credit_decision_id')->nullable();
             $table->string('facility_type')->index();
             $table->string('public_product_name');
             $table->string('status')->default('draft')->index();
@@ -114,13 +134,23 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();
+            $table->index('community_finance_programme_id', 'cff_programme_idx');
+            $table->index('community_finance_membership_id', 'cff_membership_idx');
+            $table->index('user_id', 'cff_user_idx');
+            $table->index('employer_institution_id', 'cff_employer_idx');
+            $table->index('credit_decision_id', 'cff_decision_idx');
+            $table->foreign('community_finance_programme_id', 'cff_programme_fk')->references('id')->on('community_finance_programmes')->restrictOnDelete();
+            $table->foreign('community_finance_membership_id', 'cff_membership_fk')->references('id')->on('community_finance_memberships')->nullOnDelete();
+            $table->foreign('user_id', 'cff_user_fk')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('employer_institution_id', 'cff_employer_fk')->references('id')->on('institutions')->nullOnDelete();
+            $table->foreign('credit_decision_id', 'cff_decision_fk')->references('id')->on('credit_decisions')->nullOnDelete();
         });
 
         Schema::create('community_finance_guarantees', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('community_finance_facility_id')->constrained('community_finance_facilities')->restrictOnDelete();
-            $table->foreignId('guarantor_membership_id')->nullable()->constrained('community_finance_memberships')->nullOnDelete();
-            $table->foreignId('guarantor_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('community_finance_facility_id');
+            $table->unsignedBigInteger('guarantor_membership_id')->nullable();
+            $table->unsignedBigInteger('guarantor_user_id')->nullable();
             $table->string('status')->default('requested')->index();
             $table->unsignedBigInteger('guarantee_amount_minor')->default(0);
             $table->string('consent_reference')->nullable();
@@ -129,13 +159,19 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();
+            $table->index('community_finance_facility_id', 'cfg_facility_idx');
+            $table->index('guarantor_membership_id', 'cfg_member_idx');
+            $table->index('guarantor_user_id', 'cfg_user_idx');
+            $table->foreign('community_finance_facility_id', 'cfg_facility_fk')->references('id')->on('community_finance_facilities')->restrictOnDelete();
+            $table->foreign('guarantor_membership_id', 'cfg_member_fk')->references('id')->on('community_finance_memberships')->nullOnDelete();
+            $table->foreign('guarantor_user_id', 'cfg_user_fk')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('community_finance_scorecards', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('community_finance_programme_id')->nullable()->constrained('community_finance_programmes')->nullOnDelete();
-            $table->foreignId('community_finance_membership_id')->nullable()->constrained('community_finance_memberships')->nullOnDelete();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('community_finance_programme_id')->nullable();
+            $table->unsignedBigInteger('community_finance_membership_id')->nullable();
             $table->string('score_name')->default('Member Growth Score');
             $table->unsignedTinyInteger('composite_score')->nullable();
             $table->string('band')->nullable();
@@ -147,14 +183,19 @@ return new class extends Migration
             $table->timestamp('generated_at');
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
-            $table->index(['user_id', 'generated_at'], 'cf_scorecards_user_generated_index');
+            $table->index(['user_id', 'generated_at'], 'cfs_user_generated_idx');
+            $table->index('community_finance_programme_id', 'cfs_programme_idx');
+            $table->index('community_finance_membership_id', 'cfs_membership_idx');
+            $table->foreign('user_id', 'cfs_user_fk')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('community_finance_programme_id', 'cfs_programme_fk')->references('id')->on('community_finance_programmes')->nullOnDelete();
+            $table->foreign('community_finance_membership_id', 'cfs_membership_fk')->references('id')->on('community_finance_memberships')->nullOnDelete();
         });
 
         Schema::create('community_finance_partner_plans', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('community_finance_programme_id')->nullable()->constrained('community_finance_programmes')->nullOnDelete();
-            $table->foreignId('community_finance_membership_id')->nullable()->constrained('community_finance_memberships')->nullOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('community_finance_programme_id')->nullable();
+            $table->unsignedBigInteger('community_finance_membership_id')->nullable();
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->string('plan_type')->index();
             $table->string('public_product_name');
             $table->string('provider_name')->nullable();
@@ -172,6 +213,12 @@ return new class extends Migration
             $table->timestamp('closed_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
+            $table->index('community_finance_programme_id', 'cfp_programme_idx');
+            $table->index('community_finance_membership_id', 'cfp_membership_idx');
+            $table->index('user_id', 'cfp_user_idx');
+            $table->foreign('community_finance_programme_id', 'cfp_programme_fk')->references('id')->on('community_finance_programmes')->nullOnDelete();
+            $table->foreign('community_finance_membership_id', 'cfp_membership_fk')->references('id')->on('community_finance_memberships')->nullOnDelete();
+            $table->foreign('user_id', 'cfp_user_fk')->references('id')->on('users')->nullOnDelete();
         });
     }
 
