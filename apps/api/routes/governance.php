@@ -10,6 +10,7 @@ Route::post('/webhooks/whatsapp', WhatsAppWebhookController::class)->middleware(
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations,support'])->prefix('admin/governance')->group(function () {
     Route::get('/dashboard', [GovernanceController::class, 'dashboard']);
     Route::get('/regulatory-reports', [GovernanceController::class, 'reports']);
+    Route::get('/regulatory-reports/{report}', [GovernanceController::class, 'report']);
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->prefix('admin/governance')->group(function () {
