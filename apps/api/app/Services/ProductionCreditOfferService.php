@@ -21,6 +21,9 @@ class ProductionCreditOfferService
         private readonly MobileMoneyService $mobileMoney,
         private readonly ProductionLoanLedgerService $loanLedger,
         private readonly AuditLogger $auditLogger,
+        private readonly LoanDisclosureService $disclosures,
+        private readonly TransactionReceiptService $receipts,
+        private readonly CreditReferenceReportingService $creditReporting,
     ) {}
 
     public function createOffer(LoanApplication $application, User $actor, array $pricing): CreditOffer
@@ -125,17 +128,22 @@ class ProductionCreditOfferService
                     'disbursement_fee_minor' => $disbursementFeeMinor,
                     'fee_treatment' => $feeTreatment,
                 ],
-                'disclosure_snapshot' => [
-                    'currency' => (string) config('services.mobile_money.currency', 'UGX'),
-                    'principal_amount_minor' => $principalMinor,
-                    'interest_amount_minor' => $interestMinor,
-                    'fees_minor' => $feesMinor,
-                    'net_disbursement_minor' => $netDisbursementMinor,
-                    'total_repayment_minor' => $totalRepaymentMinor,
-                    'duration_days' => $durationDays,
-                    'repayment_frequency' => (string) $term->repayment_frequency,
-                    'fee_treatment' => $feeTreatment,
-                ],
+                'disclosure_snapshot' => $this->disclosures->build(
+                    $application,
+                    $principalMinor,
+                    $interestMinor,
+                    $accessFeeMinor,
+                    $disbursementFeeMinor,
+                    $totalRepaymentMinor,
+                    $netDisbursementMinor,
+                    $durationDays,
+                    $ratePercent,
+                    $termRatePercent,
+                    (string) $term->interest_cycle,
+                    (string) $term->interest_type,
+                    (string) $term->repayment_frequency,
+                    $feeTreatment,
+                ),
                 'offered_at' => $offeredAt,
                 'expires_at' => $offeredAt->copy()->addMinutes($expiresInMinutes),
             ]);
@@ -246,6 +254,12 @@ class ProductionCreditOfferService
                 }
                 $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $existing, $offer);
                 $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                $this->receipts->issue($lockedTransaction->fresh());
+                $this->creditReporting->stageLoan(
+                    $existing,
+                    'loan_disbursed',
+                    (string) ($lockedTransaction->provider_reference ?: $lockedTransaction->id),
+                );
 
                 return $existing;
             }
@@ -288,6 +302,13 @@ class ProductionCreditOfferService
                 'provider_reference' => $lockedTransaction->provider_reference,
                 'ledger_reference' => 'loan.disbursement:credit-offer:'.$offer->offer_reference,
             ]);
+
+            $this->receipts->issue($lockedTransaction->fresh());
+            $this->creditReporting->stageLoan(
+                $loan,
+                'loan_disbursed',
+                (string) ($lockedTransaction->provider_reference ?: $lockedTransaction->id),
+            );
 
             return $loan;
         });
@@ -352,6 +373,11 @@ class ProductionCreditOfferService
                 'mobile_money_transaction_id' => $lockedTransaction->id,
                 'provider_reference' => $lockedTransaction->provider_reference,
             ]);
+            $this->creditReporting->stageLoan(
+                $loan->fresh(),
+                'disbursement_reversed',
+                (string) ($lockedTransaction->provider_reference ?: $lockedTransaction->id),
+            );
 
             return $loan->fresh();
         });
