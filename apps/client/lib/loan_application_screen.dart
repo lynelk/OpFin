@@ -396,9 +396,17 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                 if (selected != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Payments: ${selected['repayment_frequency'] ?? 'As scheduled'}',
+                    'Payments: ' +
+                        (selected['repayment_frequency'] ?? 'As scheduled').toString(),
                     style: const TextStyle(color: OpFinColors.muted),
                   ),
+                  if (_n(selected['guarantors_required']) > 0)
+                    Text(
+                      'This product requires ' +
+                          _n(selected['guarantors_required']).toString() +
+                          ' electronically verified guarantor contact(s). OpFin will not read your contacts.',
+                      style: const TextStyle(color: OpFinColors.muted),
+                    ),
                 ],
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
