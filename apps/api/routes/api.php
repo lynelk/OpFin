@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\SavingsController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\V5P0PlatformController;
 use App\Http\Controllers\Api\UssdController;
+use App\Http\Controllers\Api\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'show']);
@@ -45,6 +46,8 @@ Route::middleware('throttle:auth')->group(function () {
 });
 Route::post('/webhooks/cpay', CpayWebhookController::class)->middleware('throttle:webhooks')->name('webhooks.cpay');
 Route::post('/ussd', UssdController::class)->middleware('throttle:webhooks')->name('ussd.callback');
+Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->middleware('throttle:webhooks')->name('webhooks.whatsapp.verify');
+Route::post('/webhooks/whatsapp', WhatsAppWebhookController::class)->middleware('throttle:webhooks')->name('webhooks.whatsapp');
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
