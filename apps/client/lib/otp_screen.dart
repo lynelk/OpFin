@@ -42,7 +42,9 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
 
   void _tick() {
     Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       if (_countdown > 0) { setState(() => _countdown--); _tick(); }
       else { setState(() => _resend = true); }
     });
@@ -62,7 +64,9 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
       if (widget.registration) {
         final token = ((decoded['data'] as Map?)?['verification_token'])?.toString();
         if (token == null || token.isEmpty) throw Exception('Phone verification failed.');
-        if (!mounted) return;
+        if (!mounted) {
+        return;
+      }
         Navigator.pushReplacement(context, MaterialPageRoute(
           builder: (_) => CompleteRegistrationScreen(
             phone: widget.phone, verificationToken: token)));
@@ -77,7 +81,9 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
         if (reset.statusCode != 200 || body['success'] != true) {
           throw Exception(body['message']?.toString() ?? 'Unable to reset PIN.');
         }
-        if (!mounted) return;
+        if (!mounted) {
+        return;
+      }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Your new PIN is ready.')));
         Navigator.pushAndRemoveUntil(
@@ -85,8 +91,11 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
       }
     } catch (error) {
       _autoSubmitted = false;
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -106,8 +115,11 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
       });
       listenForCode(); _tick();
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
