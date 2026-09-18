@@ -13,7 +13,7 @@ This strategy describes the final move from the current live system to the new O
 - [ ] Parallel run has passed acceptance thresholds.
 - [ ] Backend tests, migrations, lint/format/static checks pass.
 - [ ] Frontend tests, typecheck, lint, and build pass.
-- [ ] MTN/Airtel provider sandbox or certification evidence is complete.
+- [ ] CPay/payment-provider sandbox or certification evidence is complete.
 - [ ] KYC and CRB provider integrations are approved.
 - [ ] Ledger/trial balance reconciliation is signed off.
 - [ ] Compliance reports are approved.
@@ -59,7 +59,7 @@ During freeze:
 
 ### Provider callbacks
 
-- Switch MTN/Airtel callback URLs only during the approved window.
+- Switch CPay/payment-provider callback routing only during the approved window.
 - Confirm webhook signature validation and replay protection are enabled.
 - Send provider test callbacks where available.
 - Monitor callback receipt, response codes, and reconciliation status.
@@ -122,5 +122,5 @@ Run a hypercare period after cutover with:
 - Finance reconciliation owner.
 - Compliance owner.
 - Support lead.
-- Provider contact path for MTN/Airtel/KYC/CRB.
+- Provider contact path for CPay/KYC/credit-reference.
 - Hourly checks during the first day, then daily checks until stable.

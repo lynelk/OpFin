@@ -126,7 +126,7 @@ Do not replace unavailable external data with made-up score values.
 | GET | `/api/credit/applications/{application}` | Application/decision/offer state |
 | GET | `/api/credit/offers` | Customer offers |
 | GET | `/api/credit/offers/{offer}` | Full disclosure and disclosure hash |
-| POST | `/api/credit/offers/{offer}/accept` | Accept exact disclosures and choose verified payout wallet |
+| POST | `/api/credit/offers/{offer}/accept` | Accept exact disclosures, separately consent to credit-information reporting, and choose verified payout wallet |
 
 Application payload:
 
@@ -148,12 +148,13 @@ Offer acceptance:
 ```json
 {
   "accept_disclosures": true,
+  "credit_reporting_consent": true,
   "disclosure_hash": "<64-char hash>",
   "wallet_id": 12
 }
 ```
 
-A successful acceptance may return `disbursement_pending`; it must not be presented as provider-confirmed money until finality is received.
+A successful acceptance records a separate versioned `credit_information_reporting` consent and may return `disbursement_pending`; it must not be presented as provider-confirmed money until finality is received.
 
 ## 7. Repayment
 
@@ -202,3 +203,33 @@ USSD supports status/limit/borrow/repay/loan/profile-help menus but hands image/
 Existing admin KYC review, CRB ingestion, credit decision approval, offer generation, payment refresh and reconciliation endpoints remain role-gated. Manual approval is a controlled fallback when automatic profile decisioning cannot safely approve.
 
 Demo routes remain disabled unless explicitly enabled in configuration/testing.
+
+
+## 11. UMRA digital-lending controls
+
+Customer:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/receipts` | Customer transaction/e-receipt history |
+| GET | `/api/receipts/{receipt}` | Customer-owned receipt detail |
+| GET | `/api/credit/applications/{application}/guarantors` | List guarantor confirmations |
+| POST | `/api/credit/applications/{application}/guarantors` | Add one of maximum two manually-entered guarantors |
+| POST | `/api/guarantors/confirm` | Independent guarantor confirm/reject response |
+
+Admin/operations:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/admin/umra/credit-reporting` | Credit-information exchange register/status |
+| POST | `/api/admin/umra/credit-reporting/submit` | Submit eligible pending outbound reports |
+| POST | `/api/admin/umra/loans/{loan}/evaluate-npl` | Evaluate/update UMRA NPL controls |
+| POST | `/api/admin/umra/loans/{loan}/default-interest` | Accrue default interest within configured cap |
+| PATCH | `/api/admin/umra/loans/{loan}/npl-enforcement` | Explicitly enable/disable per-loan cap enforcement while retaining tracking |
+| GET | `/api/admin/umra/term-changes` | Credit-term governance register |
+| POST | `/api/admin/umra/product-terms/{term}/changes` | Submit governed term change |
+| POST | `/api/admin/umra/term-changes/{change}/approve` | Maker-checker approval; interest change requires prior UMRA evidence |
+| POST | `/api/admin/umra/term-changes/{change}/apply` | Apply approved change to future offers |
+| GET | `/api/admin/governance/regulatory-reports/{report}` | Inspect generated report/books payload and validation evidence |
+
+Offer acceptance now additionally records explicit electronic consent for complete positive/negative credit-information reporting.

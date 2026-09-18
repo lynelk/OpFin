@@ -37,6 +37,24 @@ class GovernanceController extends Controller
                 'open_breach_incidents' => DB::table('data_breach_incidents')->whereNotIn('status', ['resolved', 'closed'])->count(),
                 'unnotified_breach_incidents' => DB::table('data_breach_incidents')->whereNull('notified_pdpo_at')->count(),
             ],
+            'umra' => [
+                'credit_reports_pending' => DB::table('credit_information_reports')->where('status', 'pending')->count(),
+                'credit_reports_failed' => DB::table('credit_information_reports')->where('status', 'failed')->count(),
+                'credit_reports_overdue' => DB::table('credit_information_reports')
+                    ->whereIn('status', ['pending', 'failed'])
+                    ->where('due_at', '<', now())
+                    ->count(),
+                'npl_count' => DB::table('loans')->whereNotNull('non_performing_at')->count(),
+                'npl_cap_breaches' => DB::table('loans')
+                    ->whereNotNull('default_interest_cap_minor')
+                    ->whereColumn('default_interest_accrued_minor', '>', 'default_interest_cap_minor')
+                    ->count(),
+                'complaints_open' => DB::table('support_cases')->whereNotIn('status', ['resolved', 'closed'])->count(),
+                'complaints_sla_breached' => DB::table('support_cases')->where('sla_breached', true)->count(),
+                'receipts_issued' => DB::table('transaction_receipts')->count(),
+                'pending_guarantor_confirmations' => DB::table('guarantor_contacts')->where('status', 'pending')->count(),
+                'term_changes_pending' => DB::table('credit_term_change_requests')->whereIn('status', ['draft', 'pending_approval'])->count(),
+            ],
         ]);
     }
 
@@ -45,6 +63,22 @@ class GovernanceController extends Controller
         return ApiResponse::success('Regulatory reports loaded.', [
             'profiles' => RegulatoryReportingService::PROFILES,
             'reports' => DB::table('regulatory_report_runs')->latest('id')->limit(100)->get(),
+        ]);
+    }
+
+    public function report(int $report): JsonResponse
+    {
+        $record = DB::table('regulatory_report_runs')->where('id', $report)->first();
+        if (! $record) {
+            return ApiResponse::error('Regulatory report not found.', 404);
+        }
+
+        return ApiResponse::success('Regulatory report loaded.', [
+            'report' => [
+                ...((array) $record),
+                'payload' => json_decode((string) $record->payload, true),
+                'validation_results' => json_decode((string) $record->validation_results, true),
+            ],
         ]);
     }
 

@@ -131,3 +131,17 @@ If a command cannot run, report the exact failure. Never call an unexecuted chec
 - CI must be green before merge.
 - A financial release is not complete until deployment is healthy and the relevant reconciliation/integrity jobs execute successfully in production.
 - Never conceal an unresolved financial-integrity exception with a compensating entry created solely to silence a check.
+
+
+## API documentation discipline
+
+A backend change is incomplete until its public/operational contract is documented.
+
+- Route changes: update `docs/api/current-endpoints.md`.
+- Client-facing request/response changes: update `docs/api/frontend-backend-contract.md`.
+- New API task groups: update `docs/api/API_QUICK_REFERENCE.md`.
+- New regulatory/operational controls: update the relevant architecture, operations and UAT docs.
+- Environment/provider changes: update `.env.example` and the relevant integration/readiness guide.
+- Search registered routes with `python3 ../../scripts/search-api.py "<term>"`.
+- Search API documentation with `python3 ../../scripts/search-docs.py "<term>" --api`.
+- Historical audit/checkpoint documents must remain dated and must not be cited as the current API contract.

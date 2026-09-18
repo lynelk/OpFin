@@ -43,6 +43,15 @@ class CustomerSupportController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
+        $complaintDays = (int) config('opfin.regulatory.complaint_resolution_days', 30);
+        $procedure = [
+            'resolution_target_days' => $complaintDays,
+            'complaints_email' => config('opfin.regulatory.complaints_email'),
+            'complaints_phone' => config('opfin.regulatory.complaints_phone'),
+            'complaints_url' => config('opfin.regulatory.complaints_url'),
+            'escalation' => 'Unresolved complaints remain recorded and may be escalated through the applicable regulatory process.',
+        ];
+
         $case = SupportCase::create([
             'customer_id' => $request->user()->id,
             'created_by' => $request->user()->id,
@@ -52,6 +61,8 @@ class CustomerSupportController extends Controller
             'priority' => 'normal',
             'subject' => $request->input('subject'),
             'description' => $request->input('description'),
+            'regulatory_due_at' => now()->addDays($complaintDays),
+            'complaint_procedure_snapshot' => $procedure,
         ]);
 
         $this->auditLogger->record('support.case.customer_created', $request->user(), $case, [
@@ -62,6 +73,7 @@ class CustomerSupportController extends Controller
 
         return ApiResponse::success('Support case created.', [
             'support_case' => $case,
+            'complaints_procedure' => $procedure,
         ], 201);
     }
 }

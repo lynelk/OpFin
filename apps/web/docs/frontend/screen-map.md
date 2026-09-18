@@ -1,101 +1,58 @@
-# OpFin Frontend Screen Map
+# OpFin web screen map
 
-## Repository Status
+Updated: 18 September 2026
 
-The repository already had a Flutter mobile application in `opfin-frontend/`, but it did not contain a proper Next.js + TypeScript web frontend for the customer, admin, employer, and investor-demo surfaces requested for OpFin.
+The exact Next.js router is authoritative. This file describes product areas, not every route filename.
 
-A new Next.js App Router scaffold has been added at the repository root. The existing Flutter app remains untouched.
+## Customer
 
-## Current Web Routes
+- login / account access;
+- dashboard/Home borrower state;
+- KYC and consent;
+- loan application;
+- decision/status;
+- formal offer review/acceptance;
+- active loan/account/schedule;
+- support/complaints;
+- profile/privacy/deletion;
+- selected wellbeing/connected-finance surfaces where activated.
 
-Authentication:
+Formal offer review includes cost/default/complaint disclosures and separate credit-information reporting consent.
 
-- `/login`: backend phone/password login form with sandbox customer shortcut.
-- `/admin-login`: backend phone/password admin login form with sandbox admin/operations shortcuts.
-- `/api/mock-login`: local-only route that sets a mock role cookie.
+## Admin / operations
 
-Customer:
+- operational dashboard;
+- credit review;
+- reconciliation;
+- immutable ledger;
+- support/complaints with regulatory due/SLA state;
+- compliance centre;
+- regulatory report/evidence-pack detail;
+- governance/security/audit;
+- product/workflow administration.
 
-- `/dashboard`: customer dashboard with KYC status, balance, and applications summary.
-- `/kyc`: KYC/NIN status screen using the profile contract.
-- `/consent`: sandbox consent create/revoke state because backend consent records are not implemented.
-- `/loans/apply`: loan application form wired to products, institutions, product terms, and application submission.
-- `/loans/decision`: decision display derived from documented application status because no formal decision API exists yet.
-- `/loans/offer`: sandbox-labelled offer placeholder because the backend offer module is missing.
-- `/loans/schedule`: sandbox-labelled repayment schedule because no schedule API route is documented.
-- `/loans/account`: loan account screen using known application and loan fields.
+The Compliance Centre now covers UMRA credit-information exchange, books/records, NPL/default-interest controls, transaction receipts, complaints and term/guarantor controls.
 
-Admin and operations:
+## Product-gated areas
 
-- `/admin/dashboard`: admin dashboard placeholder.
-- `/admin/credit-review`: sandbox queue using known loan application fields, with status update wired to the documented admin endpoint.
-- `/admin/reconciliation`: mobile-money reconciliation runs and exception intake.
-- `/admin/ledger`: read-only immutable production ledger transaction list.
-- `/admin/support`: support case intake, list, and update workflow.
-- `/admin/compliance`: compliance report record and export workflow.
-- `/admin/audit-trail`: sandbox-labelled audit trail placeholder using audit event concepts from the backend audit log.
+Savings, protection, investments, employer, community/SACCO, asset finance and participatory finance may have implemented surfaces but remain external-provider/regulatory gated unless activated.
 
-Employer and future modules:
+They should not be promoted into primary borrower navigation merely because routes exist.
 
-- `/employer`: employer portal placeholder.
-- `/savings`: savings placeholder.
-- `/insurance`: insurance placeholder.
-- `/investments`: investment placeholder.
+## Authentication
 
-## Route Protection
+Current customer sign-in is phone + six-digit PIN. New registration verifies phone by OTP before names/PIN.
 
-`middleware.ts` protects:
+## Route/API discovery
 
-- customer routes
-- loan routes
-- admin routes
-- employer route
-- future module routes
+```bash
+cd apps/web
+find src/app -name 'page.tsx' | sort
 
-Access is currently mock-cookie based:
+cd ../..
+python3 scripts/search-api.py "credit"
+```
 
-- customer routes: any mock role
-- admin routes: `platform_admin`, `operations`, `support`
-- employer route: `platform_admin`, `employer_admin`
+## Documentation rule
 
-Backend login stores `opfin_access_token`, `opfin_role`, and `opfin_name` cookies for server-rendered API calls and role-aware navigation. Sandbox login sets the same cookie shape with generated local session IDs for demo flow, and the switch-role action clears session cookies before returning to `/login`.
-
-## Navigation
-
-Navigation is role-aware through `src/lib/navigation.ts` and `src/lib/auth/session.ts`.
-
-Groups:
-
-- Customer
-- Future modules
-- Operations
-- Employer
-
-## Screen Contract Policy
-
-Screens use mock data only where the backend API documentation already exposes comparable fields. Missing backend modules remain placeholders and do not invent request/response shapes.
-
-Known backend-backed areas:
-
-- login
-- profile
-- products
-- institutions
-- product terms
-- loan applications
-- loan application submission
-- loan application status update
-- loan balance
-
-Placeholder areas:
-
-- consent management
-- affordability and decision results
-- loan offers
-- repayment schedules
-- employer portal
-- savings
-- insurance
-- investments
-- admin dashboard metrics
-- audit trail API listing
+When a workflow changes materially, update this map or the corresponding current product/API guide in the same PR.

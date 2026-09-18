@@ -1,5 +1,24 @@
-# Shared contracts
+# OpFin shared contracts
 
-This directory is the canonical home for OpenAPI documents, JSON schemas, generated TypeScript clients, generated Dart clients and compatibility tests.
+This directory is the home for shared API/schema artefacts and compatibility tooling.
 
-The initial migration deliberately does not invent a replacement API contract. Existing API behaviour remains authoritative until the contract-generation work is completed and validated against both clients.
+## Current authority
+
+The registered Laravel API and its tests remain authoritative for runtime behaviour. Human-readable client contracts live in:
+
+- `apps/api/docs/api/API_QUICK_REFERENCE.md`
+- `apps/api/docs/api/current-endpoints.md`
+- `apps/api/docs/api/frontend-backend-contract.md`
+
+Use:
+
+```bash
+python3 scripts/search-api.py "credit"
+cd apps/api && php artisan route:list --json
+```
+
+## Contract direction
+
+Shared OpenAPI/JSON Schema/generated-client artefacts may be added here when they are generated from or mechanically validated against the authoritative API. Do not hand-maintain a second competing specification.
+
+Any generated TypeScript/Dart clients must carry provenance/version information and must fail CI when their source contract drifts.

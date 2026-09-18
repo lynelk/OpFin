@@ -22,25 +22,35 @@
     "customer_journey": "docs/LAUNCH_CUSTOMER_JOURNEY.md",
     "google_play_pack": "distribution/google-play",
     "security": "SECURITY.md",
-    "engineering_rules": "AGENTS.md"
+    "engineering_rules": "AGENTS.md",
+    "documentation_hub": "docs/README.md",
+    "developer_start": "docs/DEVELOPER_START_HERE.md",
+    "training_foundation": "docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md",
+    "umra_controls": "docs/UMRA_DIGITAL_LENDING_CONTROLS.md",
+    "api_quick_reference": "apps/api/docs/api/API_QUICK_REFERENCE.md"
   },
   "required_release_validation": [
     "OpFin Monorepo CI",
     "OpFin security monitoring",
-    "Deployment contract"
+    "Deployment contract",
+    "Documentation drift check"
   ],
   "external_activation_gates": [
     "legal lender/provider and licence evidence",
+    "registered/trading name, UMRA licence/reference and physical business address",
+    "official complaints email/telephone/URL and staffed complaint-resolution process",
     "identity-verification provider credentials/certification",
     "CRB/MNO/approved third-party scoring credentials where used",
+    "applicable authorised credit-reference reporting endpoint/schema/credentials/certification",
     "verified affordability data source for automatic approval",
     "CPay production certification/credentials",
     "private persistent KYC storage",
     "USSD short-code/aggregator provisioning when launched",
     "WhatsApp production credentials when launched",
     "real-device accessibility and PWD-assisted-KYC UAT",
-    "store declarations and signed release publication"
+    "store declarations and signed release publication",
+    "backup/restore, monitoring, reconciliation and incident-response evidence"
   ],
   "production_cutover": false,
-  "notes": "The exact release SHA is established by the passing workflow run and signed artifact record rather than hard-coded into this manifest, so a documentation-only update cannot make a stale SHA appear current."
+  "notes": "The exact release SHA is established by the passing workflow run and deployed service evidence rather than hard-coded here. Current documentation is maintained under docs/README.md and checked for drift in CI."
 }

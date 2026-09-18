@@ -63,6 +63,16 @@ No Critical/High defect may remain open at launch.
 | CUST-53 | Account | Delete account | Required regulated retention explained; eligible deletion works |
 | CUST-54 | Permissions | Android manifest/runtime | Camera only for KYC; no broad SMS/gallery/storage permissions |
 | CUST-55 | Cross-channel | App vs WhatsApp vs USSD same customer | Score, limit, due and loan state are consistent |
+| CUST-56 | Offer | Review detailed pricing | Interest method/calculation, fee breakdown/timing, total cost and default terms are understandable |
+| CUST-57 | Offer | Review complaints procedure | Complaint resolution target/contact route visible before acceptance |
+| CUST-58 | Credit reporting | Offer acceptance | Separate positive/negative credit-information reporting consent required and recorded |
+| CUST-59 | Credit reporting | Decline/omit reporting consent | Offer acceptance is blocked; no hidden consent |
+| CUST-60 | Receipt | Successful disbursement | E-receipt appears only after provider-confirmed finality |
+| CUST-61 | Receipt | Successful repayment | E-receipt appears under Activity and matches transaction amount/reference |
+| CUST-62 | Complaint | Submit complaint | Case reference/procedure returned and regulatory due date recorded |
+| CUST-63 | Guarantor | Product requires guarantor | Borrower can manually add no more than two contacts; no contact-list access |
+| CUST-64 | Guarantor | Independent response | Guarantor confirms/rejects independently; borrower never handles guarantor code |
+
 
 ## Exit criteria
 

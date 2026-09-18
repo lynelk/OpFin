@@ -141,12 +141,20 @@ class ProductionOperationsController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
+        $complaintDays = (int) config('opfin.regulatory.complaint_resolution_days', 30);
         $case = SupportCase::create([
             ...$validator->validated(),
             'case_number' => 'CASE-' . now()->format('Ymd') . '-' . Str::upper(Str::random(8)),
             'created_by' => $request->user()->id,
             'status' => 'open',
             'priority' => $request->input('priority', 'normal'),
+            'regulatory_due_at' => now()->addDays($complaintDays),
+            'complaint_procedure_snapshot' => [
+                'resolution_target_days' => $complaintDays,
+                'complaints_email' => config('opfin.regulatory.complaints_email'),
+                'complaints_phone' => config('opfin.regulatory.complaints_phone'),
+                'complaints_url' => config('opfin.regulatory.complaints_url'),
+            ],
         ]);
 
         $this->auditLogger->record('support.case.created', $request->user(), $case, ['category' => $case->category], $request);
@@ -172,11 +180,15 @@ class ProductionOperationsController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
+        $newStatus = $request->input('status');
         $case->update([
-            'status' => $request->input('status'),
+            'status' => $newStatus,
             'assigned_to' => $request->input('assigned_to', $case->assigned_to),
             'priority' => $request->input('priority', $case->priority),
-            'resolved_at' => in_array($request->input('status'), [SupportCase::STATUS_RESOLVED, SupportCase::STATUS_CLOSED], true) ? now() : null,
+            'first_response_at' => $case->first_response_at ?? now(),
+            'resolved_at' => in_array($newStatus, [SupportCase::STATUS_RESOLVED, SupportCase::STATUS_CLOSED], true) ? now() : null,
+            'sla_breached' => $case->regulatory_due_at?->isPast()
+                && ! in_array($newStatus, [SupportCase::STATUS_RESOLVED, SupportCase::STATUS_CLOSED], true),
         ]);
 
         if ($request->filled('note')) {

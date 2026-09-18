@@ -1,58 +1,45 @@
-# Replacement Scope
+# Web replacement/cutover scope
 
-Date: 2026-05-22
-
-## Required frontend scope for cutover
-
-The frontend replacement must cover every current live-system workflow that customers, operations, support, and compliance teams depend on.
+Updated: 18 September 2026
 
 ## Customer scope
 
-- Login, logout, account recovery.
-- Customer dashboard with real balances, application status, and payment state.
-- Profile and KYC status.
-- KYC submission/retry/review messaging.
-- Consent capture, review, and revocation.
-- Product selection and loan application.
-- Application status tracking.
-- Decision display with reason codes.
-- Manual review/referral messaging.
-- Offer disclosure and acceptance.
-- Loan account detail.
-- Repayment schedule.
-- Repayment initiation and payment status.
-- Customer statement and transaction history.
-- Support/contact/escalation entry points.
+The production web/customer experience must preserve:
 
-## Admin and operations scope
+- account access/recovery;
+- borrower dashboard state;
+- KYC and consent;
+- credit profile/limit/due state;
+- application/referral/decision messaging;
+- formal offer/disclosure/reporting consent;
+- loan account/schedule/repayment status;
+- transaction receipt history;
+- support/complaint entry;
+- privacy/account deletion;
+- accessibility support.
 
-- Admin dashboard with production metrics.
-- Application review queue.
-- Manual decision/referral workflow.
-- Customer lookup.
-- Loan account view.
-- Payment/reconciliation exception queue.
-- Audit trail search/filter/export.
-- Mobile-money transaction status lookup.
-- Support case management.
-- Role-aware navigation and access boundaries.
+## Admin/operations scope
 
-## Compliance and reporting scope
+- credit review/manual referral;
+- customer/loan/payment review;
+- reconciliation/ledger;
+- support/complaint SLA;
+- credit-information exchange;
+- NPL/default-interest controls;
+- term-change/guarantor registers;
+- regulator reports/books and records;
+- audit/governance/security.
 
-- Consent register view/export.
-- KYC register view/export.
-- Credit decision report.
-- Loan book and arrears reports if required.
-- Mobile money settlement/reconciliation report.
-- Audit export.
+## Capability-gated areas
 
-## Out of replacement scope unless live system requires it
+Savings, protection/insurance, investments, employer, community/SACCO, asset finance and participatory finance remain outside the focused launch surface unless their provider/regulatory arrangements are activated.
 
-- Savings.
-- Insurance.
-- Investments.
-- Employer portal.
+## Cutover acceptance
 
-## Current frontend gap
-
-The current app only covers a demo-grade subset of customer credit flow and admin snapshot review. It is below replacement scope and must not be used as the live replacement without completing the scope above.
+- exact candidate passes CI/security/deployment contract;
+- production API contract is deployed first/with compatible web;
+- mock/demo flags are disabled;
+- external provider/legal gates are verified;
+- core customer/admin UAT passes;
+- accessibility/PWD UAT passes;
+- rollback/incident/support ownership is ready.

@@ -18,6 +18,8 @@ Read in this order:
 6. `architecture/testing-strategy.md`
 7. `api/current-endpoints.md`
 8. `api/frontend-backend-contract.md`
+9. `api/API_QUICK_REFERENCE.md`
+10. `../../../docs/UMRA_DIGITAL_LENDING_CONTROLS.md`
 
 ### Testers and operations
 
@@ -40,3 +42,38 @@ Accessibility is part of the contract: simple language, screen-reader semantics,
 ## Documentation rule
 
 Documentation changes with the code. If an endpoint, financial state, authentication step, scoring source, customer label or release control changes, update the relevant document in the same pull request. Stale financial documentation is a defect.
+
+
+## Search and API discovery
+
+From repository root:
+
+```bash
+python3 scripts/search-docs.py "credit reporting" --api
+python3 scripts/search-api.py "credit"
+python3 scripts/search-api.py "umra"
+```
+
+From `apps/api`:
+
+```bash
+php artisan route:list
+php artisan route:list --path=api/credit
+php artisan route:list --path=api/admin/umra
+php artisan route:list --json
+```
+
+The Laravel route table is authoritative for registration; the Markdown docs explain purpose, state and safe client usage.
+
+## Current UMRA control areas
+
+The API now includes governed contracts for:
+
+- positive/negative credit-information exchange;
+- separate electronic reporting consent;
+- complaint procedure and regulatory due/SLA evidence;
+- NPL/default-interest tracking and configurable enforcement;
+- transaction e-receipts;
+- guarantor confirmation controls;
+- governed term/rate changes;
+- regulator books/records and evidence packs.

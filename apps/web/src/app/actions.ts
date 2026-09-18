@@ -160,9 +160,10 @@ export async function acceptCreditOfferAction(formData: FormData) {
   const token = await getAccessToken();
   const offerId = Number(value(formData, "offer_id"));
   const accepted = value(formData, "accept_disclosures");
+  const creditReportingConsent = value(formData, "credit_reporting_consent");
   let next = `/loans/offer?offer=${offerId}&status=disbursement_pending`;
 
-  if (!accepted) {
+  if (!accepted || !creditReportingConsent) {
     redirectWith("/loans/offer", {
       error: "validation",
       message: "Review the offer and explicitly accept the disclosed terms before continuing.",
@@ -174,6 +175,7 @@ export async function acceptCreditOfferAction(formData: FormData) {
     const response = await opfinApi.acceptCreditOffer(
       offerId,
       value(formData, "disclosure_hash"),
+      true,
       token
     );
 

@@ -70,3 +70,18 @@ Repayment initiation requires an idempotency key. Offer/disbursement code retain
 ## Privacy
 
 NIN is masked in normal profile responses. Private KYC image paths and raw provider evidence are not customer-facing fields. Production evidence storage is configurable and should be persistent/private.
+
+
+## Regulatory service boundaries
+
+`CreditReferenceReportingService` owns outbound positive/negative credit-information events, data-quality/consent gates, idempotent provider submission and provider references.
+
+`TransactionReceiptService` owns post-finality receipt issuance and acknowledgement evidence.
+
+`UmraNplCapService` owns overdue/NPL evaluation and default-interest/recovery-cap state.
+
+`CreditTermGovernanceService` owns maker-checker term changes and prior UMRA approval evidence for interest-rate changes.
+
+`RegulatoryReportingService` owns regulator evidence-pack generation, validation and hashing. Report generation is not the same as external filing.
+
+These services are backend-only; clients consume their safe API projections rather than duplicating the underlying policy.

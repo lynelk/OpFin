@@ -2,6 +2,7 @@
 
 use App\Console\Commands\EvaluateMoneyAutopilot;
 use App\Console\Commands\GenerateRegulatoryReports;
+use App\Console\Commands\ProcessUmraCreditControls;
 use App\Console\Commands\ReconcileLongRangeFinancialIntents;
 use App\Console\Commands\RunFinancialIntegrityAudit;
 use App\Console\Commands\RunPlatformAutopilot;
@@ -14,3 +15,4 @@ Schedule::command(RunFinancialIntegrityAudit::class)->everyFiveMinutes()->withou
 Schedule::command(RunPlatformAutopilot::class)->everyFifteenMinutes()->withoutOverlapping(15)->onOneServer();
 Schedule::command(EvaluateMoneyAutopilot::class)->hourly()->withoutOverlapping(60)->onOneServer();
 Schedule::command(GenerateRegulatoryReports::class)->dailyAt('01:15')->withoutOverlapping(120)->onOneServer();
+Schedule::command(ProcessUmraCreditControls::class)->hourly()->withoutOverlapping(55)->onOneServer();

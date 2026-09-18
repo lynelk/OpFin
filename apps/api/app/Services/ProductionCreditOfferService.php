@@ -21,6 +21,8 @@ class ProductionCreditOfferService
         private readonly MobileMoneyService $mobileMoney,
         private readonly ProductionLoanLedgerService $loanLedger,
         private readonly AuditLogger $auditLogger,
+        private readonly CreditReferenceReportingService $creditReporting,
+        private readonly TransactionReceiptService $receipts,
     ) {}
 
     public function createOffer(LoanApplication $application, User $actor, array $pricing): CreditOffer
@@ -73,12 +75,28 @@ class ProductionCreditOfferService
         $netDisbursementMinor = $feeTreatment === 'deducted' ? $principalMinor - $feesMinor : $principalMinor;
         $repayableFeesMinor = $feeTreatment === 'financed' ? $feesMinor : 0;
         $totalRepaymentMinor = $principalMinor + $interestMinor + $repayableFeesMinor;
+        $totalCostOfCreditMinor = $interestMinor + $feesMinor;
+        $defaultInterestRate = max(0, (float) ($term->default_interest_rate ?? 0));
+        $defaultInterestCapMinor = intdiv($interestMinor, 2);
+        $complaintsProcedure = [
+            'resolution_target_days' => (int) config('opfin.regulatory.complaint_resolution_days', 30),
+            'email' => config('opfin.regulatory.complaints_email'),
+            'phone' => config('opfin.regulatory.complaints_phone'),
+            'url' => config('opfin.regulatory.complaints_url'),
+        ];
+        $regulatedIdentity = [
+            'licensed_entity_name' => config('opfin.regulatory.licensed_entity_name'),
+            'trading_name' => config('opfin.regulatory.licensed_trading_name', 'OpFin'),
+            'umra_license_number' => config('opfin.regulatory.umra_license_number'),
+            'business_address' => config('opfin.regulatory.business_address'),
+        ];
         $expiresInMinutes = max(5, min((int) ($pricing['expires_in_minutes'] ?? 1440), 10080));
 
         return DB::transaction(function () use (
             $application, $actor, $decision, $term, $principalMinor, $interestMinor, $feesMinor,
             $accessFeeMinor, $disbursementFeeMinor, $netDisbursementMinor, $totalRepaymentMinor,
             $durationDays, $ratePercent, $termRatePercent, $feeTreatment, $expiresInMinutes,
+            $totalCostOfCreditMinor, $defaultInterestRate, $defaultInterestCapMinor, $complaintsProcedure, $regulatedIdentity,
         ) {
             CreditOffer::query()->where('loan_application_id', $application->id)
                 ->where('status', CreditOffer::STATUS_OFFERED)->where('expires_at', '<=', now())
@@ -124,6 +142,13 @@ class ProductionCreditOfferService
                     'access_fee_minor' => $accessFeeMinor,
                     'disbursement_fee_minor' => $disbursementFeeMinor,
                     'fee_treatment' => $feeTreatment,
+                    'interest_formula' => 'principal × configured_rate_percent ÷ cycle_days × duration_days',
+                    'fee_formula' => 'access_fee + disbursement_fee',
+                    'fees_accrue_at' => 'offer acceptance/disbursement according to fee treatment',
+                    'default_interest_rate_percent' => $defaultInterestRate,
+                    'default_interest_cycle' => (string) ($term->default_interest_cycle ?? 'monthly'),
+                    'umra_default_interest_cap_minor' => $defaultInterestCapMinor,
+                    'umra_npl_cap_enforcement_enabled' => (bool) config('opfin.regulatory.enforce_umra_npl_cap', true),
                 ],
                 'disclosure_snapshot' => [
                     'currency' => (string) config('services.mobile_money.currency', 'UGX'),
@@ -135,6 +160,38 @@ class ProductionCreditOfferService
                     'duration_days' => $durationDays,
                     'repayment_frequency' => (string) $term->repayment_frequency,
                     'fee_treatment' => $feeTreatment,
+                    'interest_rate_percent' => $ratePercent,
+                    'interest_type' => (string) $term->interest_type,
+                    'interest_cycle' => (string) $term->interest_cycle,
+                    'interest_calculation' => 'Flat interest is calculated from principal, the disclosed rate/cycle, and the full term. Exact monetary amounts shown in this offer control.',
+                    'fee_breakdown' => [
+                        'access_fee_minor' => $accessFeeMinor,
+                        'disbursement_fee_minor' => $disbursementFeeMinor,
+                        'total_fees_minor' => $feesMinor,
+                        'treatment' => $feeTreatment,
+                    ],
+                    'total_cost_of_credit_minor' => $totalCostOfCreditMinor,
+                    'first_payment_due_days_after_disbursement' => $this->frequencyDays((string) $term->repayment_frequency),
+                    'final_payment_due_days_after_disbursement' => $durationDays,
+                    'default_and_penalty_terms' => [
+                        'default_interest_rate_percent' => $defaultInterestRate,
+                        'default_interest_cycle' => (string) ($term->default_interest_cycle ?? 'monthly'),
+                        'default_interest_cap_minor' => $defaultInterestCapMinor,
+                        'cap_basis' => 'Default-interest penalty may not exceed half of the initial interest disclosed at offer.',
+                        'npl_recovery_cap_tracking' => true,
+                    ],
+                    'complaints_procedure' => $complaintsProcedure,
+                    'regulated_provider' => $regulatedIdentity,
+                    'variation_control' => [
+                        'accepted_offer_is_immutable' => true,
+                        'interest_rate_change_requires_umra_approval' => true,
+                        'customer_consent_required_for_credit_term_variation' => true,
+                    ],
+                    'credit_information_reporting' => [
+                        'positive_and_negative_information_may_be_reported' => true,
+                        'consent_required_before_external_submission' => true,
+                        'purpose' => 'Credit-reference reporting and responsible lending.',
+                    ],
                 ],
                 'offered_at' => $offeredAt,
                 'expires_at' => $offeredAt->copy()->addMinutes($expiresInMinutes),
@@ -246,6 +303,10 @@ class ProductionCreditOfferService
                 }
                 $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $existing, $offer);
                 $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                DB::afterCommit(function () use ($lockedTransaction, $existing) {
+                    $this->receipts->issue(MobileMoneyTransaction::findOrFail($lockedTransaction->id), 'loan_disbursement');
+                    $this->creditReporting->queueLoanEvent(Loan::findOrFail($existing->id), 'origination');
+                });
 
                 return $existing;
             }
@@ -269,6 +330,9 @@ class ProductionCreditOfferService
                     'duration' => $offer->duration_days,
                     'repayment_amount' => $offer->total_repayment_minor,
                     'repayment_start_date' => $firstDueDate->toDateString(),
+                    'umra_npl_cap_enforcement_enabled' => (bool) config('opfin.regulatory.enforce_umra_npl_cap', true),
+                    'initial_interest_minor' => $offer->interest_amount_minor,
+                    'default_interest_cap_minor' => intdiv((int) $offer->interest_amount_minor, 2),
                 ]);
                 $loan->save();
 
@@ -288,6 +352,10 @@ class ProductionCreditOfferService
                 'provider_reference' => $lockedTransaction->provider_reference,
                 'ledger_reference' => 'loan.disbursement:credit-offer:'.$offer->offer_reference,
             ]);
+            DB::afterCommit(function () use ($lockedTransaction, $loan) {
+                $this->receipts->issue(MobileMoneyTransaction::findOrFail($lockedTransaction->id), 'loan_disbursement');
+                $this->creditReporting->queueLoanEvent(Loan::findOrFail($loan->id), 'origination');
+            });
 
             return $loan;
         });
@@ -352,6 +420,10 @@ class ProductionCreditOfferService
                 'mobile_money_transaction_id' => $lockedTransaction->id,
                 'provider_reference' => $lockedTransaction->provider_reference,
             ]);
+            DB::afterCommit(function () use ($lockedTransaction, $loan) {
+                $this->receipts->issue(MobileMoneyTransaction::findOrFail($lockedTransaction->id), 'disbursement_reversal');
+                $this->creditReporting->queueLoanEvent(Loan::findOrFail($loan->id), 'correction');
+            });
 
             return $loan->fresh();
         });

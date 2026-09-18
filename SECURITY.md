@@ -13,6 +13,7 @@ The exact release commit must pass:
 - **OpFin Monorepo CI**: layout, current-index secret scan, API tests/audit, API asset audit/build, web audit/typecheck/lint/tests/production build/HTTP smoke, Android and iOS release compile checks, and aggregate `release-gate`.
 - **OpFin security monitoring**: locked web/API asset/PHP/Pub dependency checks, security and brand controls, and aggregate `security-gate`.
 - **Deployment contract** for the Railway service boundaries.
+- **Documentation drift check** for current API/product/admin contracts affected by the release.
 
 Failed, cancelled, missing or incomplete checks are not a pass. Do not weaken an audit or bypass a failing gate merely to ship.
 
@@ -44,6 +45,18 @@ KYC requires NIN, National ID front/back and a customer photo holding the ID. Au
 - Credit limit is profile-level; linking multiple phones/wallets must not multiply exposure.
 - Customer UI may explain the composite score and components but should not expose unnecessary internal probability-of-default or raw provider payloads.
 - Production provider credentials must be environment-scoped and least-privilege.
+
+## Credit reporting and regulatory controls
+
+- External positive/negative credit-information reporting requires the dedicated electronic reporting consent and verified complete customer identity.
+- Credit-report payloads are hashed/idempotent and retain provider references, due dates, attempts and failure reasons.
+- Missing consent/data quality must block external transmission rather than being bypassed.
+- Complaint records retain regulatory due/SLA evidence; staff must not erase or backdate SLA state.
+- NPL/default-interest controls retain cap calculations and enforcement state. Disabling enforcement is visible and must never be used to conceal an overcharge.
+- Completed transaction receipts are created only after provider-confirmed finality and committed financial state.
+- Guarantor workflows must not access customer contact lists; independent confirmation evidence is required.
+- Interest/default-interest rate changes require the governed workflow and recorded prior UMRA approval evidence where applicable. Accepted offers are immutable.
+- Generated regulator reports/books are evidence packs, not proof of external filing.
 
 ## Money movement and provider finality
 

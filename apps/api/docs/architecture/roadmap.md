@@ -1,78 +1,66 @@
-# Roadmap
+# OpFin engineering roadmap
 
-## Phase 0: Baseline Control
+Updated: 18 September 2026
 
-Goal: make the current backend understandable and verifiable.
+This roadmap reflects the current platform rather than the earlier foundation phase.
 
-- Replace Laravel boilerplate README and metadata.
-- Remove committed zip artifacts.
-- Confirm CI can run Composer, PHPUnit, Pint, npm, and Vite build.
-- Keep `AGENTS.md` and architecture docs current.
-- Decide which previous security changes should be merged.
+## Completed foundation
 
-## Phase 1: Security and Authorization
+The platform now has production-shaped:
 
-Goal: make protected data and financial actions safe by default.
+- authentication/identity/consent;
+- credit profile and affordability;
+- decision/offer/disbursement/repayment lifecycle;
+- provider finality, ledger and reconciliation;
+- App/Web/WhatsApp/USSD borrower state;
+- accessibility/PWD support;
+- complaint, receipt and regulatory control foundations;
+- CI/security/deployment release gates.
 
-- Add policies for users, institutions, loan applications, loans, transactions, accounts, products, float topups, reports, and chats.
-- Centralize roles and permissions.
-- Add route-specific rate limits.
-- Harden OTP storage and attempts.
-- Add regression tests for direct object access.
+## Immediate launch work
 
-## Phase 2: Financial Integrity
+1. **External activation**
+   - legal lender/UMRA evidence;
+   - identity/CRB/MNO/third-party/affordability providers;
+   - CPay certification;
+   - WhatsApp/USSD provisioning where in scope.
 
-Goal: make money movement deterministic, auditable, and reversible.
+2. **Operational certification**
+   - backup/restore drill;
+   - monitoring/alerts;
+   - incident/provider outage rehearsal;
+   - reconciliation and complaint ownership;
+   - private KYC storage verification.
 
-- Introduce integer minor-unit money fields for new work.
-- Define transaction and loan application state machines.
-- Add idempotency keys for financial actions.
-- Add database transactions around financial state changes.
-- Add immutable ledger model.
-- Add reversal/correction workflows.
+3. **Regulatory evidence**
+   - bureau reporting certification;
+   - complaint contacts;
+   - rate-change approval records when applicable;
+   - regulator report officer workflow.
 
-## Phase 3: Provider Reliability
+4. **Accessibility/release**
+   - physical-device TalkBack/VoiceOver;
+   - large text/reduced motion;
+   - low-literacy/PWD moderated UAT;
+   - signed Play release and declarations.
 
-Goal: make mobile money and CRB/KYC integrations production-grade.
+## Post-launch hardening
 
-- Define provider interfaces.
-- Split sandbox and production adapters.
-- Verify callback authenticity.
-- Persist provider callback events.
-- Add reconciliation jobs and exception queues.
-- Add provider metrics and alerts.
+- additional automated reconciliation/integrity evidence;
+- performance/load testing;
+- data-retention automation;
+- privileged-access reviews;
+- richer operator dashboards;
+- API/schema generation from authoritative routes/contracts;
+- customer-language/localisation packs.
 
-## Phase 4: Compliance Foundation
+## Product expansion rule
 
-Goal: support responsible fintech operations.
+Savings, investments, insurance, employer finance, SACCO/community capital, asset finance and participatory finance may only move from capability-gated to live when each has:
 
-- Add consent versioning.
-- Add audit event tables and service.
-- Add KYC/CRB purpose logging.
-- Add data retention and anonymization workflows.
-- Add compliance report generation and audit trails.
-
-## Phase 5: Product Expansion
-
-Goal: safely add new OpFin product lines.
-
-- Savings goals/wallets.
-- Investments.
-- Insurance.
-- Employer-linked benefits.
-- Payroll deduction integrations.
-- Financial wellness insights.
-
-Each new product line must include authorization, consent, audit logging, ledger/reconciliation impact, tests, and compliance reporting from the first implementation slice.
-
-## Phase 6: Scale and Operations
-
-Goal: prepare for 1,000+ users and beyond.
-
-- Add load tests.
-- Monitor API latency, queue lag, failed jobs, provider errors, and reconciliation drift.
-- Add backup/restore validation.
-- Add incident response runbooks.
-- Add operational dashboards.
-- Add data quality checks for financial records.
-
+- provider/regulatory approval;
+- customer disclosure/consent;
+- financial ledger/reconciliation design;
+- operations/support path;
+- tests/UAT;
+- documentation updated in the same release.

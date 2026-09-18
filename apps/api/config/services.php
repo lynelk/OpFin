@@ -64,6 +64,12 @@ return [
         'password' => env('CRB_CLIENT_SECRET'),
     ],
 
+    'credit_reference_reporting' => [
+        'url' => env('CREDIT_REFERENCE_REPORTING_URL'),
+        'token' => env('CREDIT_REFERENCE_REPORTING_TOKEN'),
+        'provider' => env('CREDIT_REFERENCE_REPORTING_PROVIDER', 'configured_credit_reference'),
+    ],
+
     'identity_verification' => [
         'url' => env('IDENTITY_VERIFICATION_URL'),
         'token' => env('IDENTITY_VERIFICATION_TOKEN'),

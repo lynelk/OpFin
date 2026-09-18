@@ -104,6 +104,7 @@ class _CreditOfferDetail extends StatefulWidget {
 
 class _CreditOfferDetailState extends State<_CreditOfferDetail> {
   bool _accepted = false;
+  bool _creditReportingConsent = false;
   bool _submitting = false;
   final _money = NumberFormat('#,##0', 'en_US');
   late Future<List<Map<String, dynamic>>> _wallets;
@@ -140,7 +141,12 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
       final response = await http.post(
         Uri.parse('$apiUrl/credit/offers/${widget.offer['id']}/accept'),
         headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json', 'Content-Type': 'application/json'},
-        body: jsonEncode({'accept_disclosures': true, 'disclosure_hash': widget.disclosureHash, 'wallet_id': _walletId}),
+        body: jsonEncode({
+          'accept_disclosures': true,
+          'disclosure_hash': widget.disclosureHash,
+          'wallet_id': _walletId,
+          'credit_reporting_consent': _creditReportingConsent,
+        }),
       );
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode < 200 || response.statusCode >= 300 || decoded['success'] != true) throw Exception(decoded['message'] ?? 'Unable to accept offer.');
@@ -161,19 +167,65 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
     final offer = widget.offer;
     final apr = _disclosure['equivalent_maximum_apr_percent'];
     final firstDue = _disclosure['first_payment_due_days_after_disbursement'];
-    final finalDue = _disclosure['full_repayment_due_days_after_disbursement'];
+    final finalDue = _disclosure['full_repayment_due_days_after_disbursement'] ??
+        _disclosure['final_payment_due_days_after_disbursement'];
+    final feeBreakdown = (_disclosure['fee_breakdown'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final defaultTerms = (_disclosure['default_and_penalty_terms'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final complaints = (_disclosure['complaints_procedure'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final provider = (_disclosure['regulated_provider'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
     return Scaffold(
       appBar: AppBar(title: const Text('Review credit offer')),
       body: ListView(padding: const EdgeInsets.all(20), children: [
         _row('Amount you receive', _ugx(offer['net_disbursement_minor'])),
         _row('Interest', _ugx(offer['interest_amount_minor'])),
         _row('Fees', _ugx(offer['fees_minor'])),
+        if (feeBreakdown.isNotEmpty) ...[
+          _row('Access fee', _ugx(feeBreakdown['access_fee_minor'])),
+          _row('Disbursement fee', _ugx(feeBreakdown['disbursement_fee_minor'])),
+          _row('How fees are applied', feeBreakdown['treatment']?.toString() ?? ''),
+        ],
+        _row('Interest rate', '${offer['interest_rate_percent']}% per ${offer['interest_cycle']}'),
+        _row('Interest method', offer['interest_type']?.toString() ?? ''),
+        if (_disclosure['interest_calculation'] != null)
+          _row('How interest is calculated', _disclosure['interest_calculation'].toString()),
+        if (_disclosure['total_cost_of_credit_minor'] != null)
+          _row('Total cost of credit', _ugx(_disclosure['total_cost_of_credit_minor'])),
         _row('Total repayment', _ugx(offer['total_repayment_minor'])),
         _row('Duration', '${offer['duration_days']} days'),
         _row('Repayment frequency', offer['repayment_frequency']?.toString() ?? ''),
         if (apr != null) _row('Equivalent maximum APR', '$apr% including fees'),
         if (firstDue != null) _row('First payment due', '$firstDue days after successful disbursement'),
         if (finalDue != null) _row('Full repayment due', '$finalDue days after successful disbursement'),
+        if (defaultTerms.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text('If you do not pay on time', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text(
+            'Default interest: ${defaultTerms['default_interest_rate_percent'] ?? 0}% per ${defaultTerms['default_interest_cycle'] ?? 'month'}. '
+            '${defaultTerms['cap_basis'] ?? 'Regulatory recovery limits apply.'}',
+          ),
+          if (defaultTerms['default_interest_cap_minor'] != null)
+            _row('Maximum default-interest penalty', _ugx(defaultTerms['default_interest_cap_minor'])),
+        ],
+        if (provider.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          const Text('Who provides this credit?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text(provider['licensed_entity_name']?.toString() ?? provider['trading_name']?.toString() ?? 'OpFin'),
+          if (provider['umra_license_number'] != null)
+            Text('UMRA licence: ${provider['umra_license_number']}'),
+          if (provider['business_address'] != null)
+            Text(provider['business_address'].toString()),
+        ],
+        if (complaints.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          const Text('Complaints and help', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text('We aim to resolve complaints within ${complaints['resolution_target_days'] ?? 30} days.'),
+          if (complaints['email'] != null) Text('Email: ${complaints['email']}'),
+          if (complaints['phone'] != null) Text('Phone: ${complaints['phone']}'),
+          if (complaints['url'] != null) Text('Online: ${complaints['url']}'),
+        ],
         const SizedBox(height: 12),
         FutureBuilder<List<Map<String, dynamic>>>(
           future: _wallets,
@@ -219,11 +271,18 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
         const SizedBox(height: 12),
         CheckboxListTile(
           contentPadding: EdgeInsets.zero,
+          value: _creditReportingConsent,
+          onChanged: (value) => setState(() => _creditReportingConsent = value == true),
+          title: const Text('I consent to OpFin reporting complete and accurate positive or negative credit information about this loan to the applicable authorised credit-reference mechanism.'),
+          subtitle: const Text('This consent is recorded electronically and can be reviewed in your consent history.'),
+        ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
           value: _accepted,
           onChanged: (value) => setState(() => _accepted = value == true),
-          title: const Text('I have reviewed and accept the amount received, interest, fees, APR where applicable, total repayment, due terms and repayment frequency.'),
+          title: const Text('I have reviewed and accept the amount received, interest calculation, fees and when they apply, default terms, total cost, repayment dates and complaint procedure.'),
         ),
-        FilledButton(onPressed: !_accepted || _walletId == null || _submitting || offer['status'] != 'offered' ? null : _accept, child: Text(_submitting ? 'Submitting…' : 'Accept offer and request disbursement')),
+        FilledButton(onPressed: !_accepted || !_creditReportingConsent || _walletId == null || _submitting || offer['status'] != 'offered' ? null : _accept, child: Text(_submitting ? 'Submitting…' : 'Accept offer and request disbursement')),
       ]),
     );
   }

@@ -86,7 +86,7 @@ The request is not an offer and does not move money.
 
 The offer endpoint is the pricing source of truth. Display the supplied amount received, interest, fees, total repayment, duration/frequency and store-policy disclosure values.
 
-Accept using the exact `disclosure_hash` and a verified `wallet_id`.
+Accept using the exact `disclosure_hash`, a verified `wallet_id`, and explicit `credit_reporting_consent: true`. The reporting consent is stored as a separate versioned consent purpose and external bureau submission is blocked when consent is absent.
 
 Do not say "disbursed" until provider success is confirmed.
 
@@ -95,6 +95,21 @@ Do not say "disbursed" until provider success is confirmed.
 Every initiated repayment has an idempotency key and verified wallet ID.
 
 A 202 response means **collection request accepted**. Show wording such as "Payment request sent; confirm on your phone" until provider finality updates the loan.
+
+## 8.5 Receipts and complaints
+
+After provider-confirmed financial finality, clients may read:
+
+- `GET /api/receipts`
+- `GET /api/receipts/{receipt}`
+
+Do not create/display a final receipt for a merely pending provider request.
+
+Customer complaints submitted through `/api/support-cases` return the complaint procedure and carry a regulatory due date. Client/admin screens should display the case reference and due/SLA state where relevant.
+
+## 8.6 Guarantors
+
+Where a product requires guarantors, the borrower may manually provide no more than two contacts. Do not request address-book/contact-list access. Each guarantor independently confirms or rejects through the confirmation workflow.
 
 ## 9. Error handling
 

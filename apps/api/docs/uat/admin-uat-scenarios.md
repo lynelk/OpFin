@@ -1,42 +1,45 @@
-# Admin UAT Scenarios
+# Admin UAT scenarios
 
-Date: 2026-05-22
+Updated: 18 September 2026
 
-Primary sign-off owner: Operations lead
-Supporting owners: Compliance lead, finance lead, engineering lead
+Primary sign-off: Operations lead  
+Supporting: Compliance, Finance, Support, Engineering
 
-## Admin Test Data
+Use authorised test data only. No Critical/High defect may remain open at production release.
 
-- Platform admin user.
-- Operations user.
-- Support user.
-- Compliance/reporting user if applicable.
-- Customers covering verified KYC, pending KYC, active loans, failed payments, and revoked consent.
-- Imported audit logs and ledger records.
+| ID | Area | Scenario | Expected result |
+| --- | --- | --- | --- |
+| ADMIN-01 | Access | Platform admin/operations/support login and role restrictions | Correct navigation; unauthorised roles receive 403/no sensitive data |
+| ADMIN-02 | Customer | Search/review customer with masked sensitive fields | Profile, KYC, consent, loans, payments, support visible according to role |
+| ADMIN-03 | KYC | Review pending/inconclusive KYC | Review decision, reviewer/time and audit event persist |
+| ADMIN-04 | Credit | Inspect composite score/decision evidence | Components, coverage, affordability and reason codes match backend |
+| ADMIN-05 | Offer | Review formal disclosure snapshot | Pricing, fees, default terms, complaints and reporting disclosure match immutable offer |
+| ADMIN-06 | Complaints | Open customer complaint | Regulatory due date and procedure visible |
+| ADMIN-07 | Complaints | First response / near-deadline / overdue case | First response stored; approaching/overdue SLA surfaced |
+| ADMIN-08 | Credit reporting | View outbound reporting register | Positive/negative, status, due date, attempts/provider ref visible |
+| ADMIN-09 | Credit reporting | Missing consent | Record remains blocked; no external request sent |
+| ADMIN-10 | Credit reporting | Incomplete verified identity | Record remains data-quality blocked |
+| ADMIN-11 | Credit reporting | Valid consent/data/provider | Submission becomes submitted with provider reference |
+| ADMIN-12 | NPL | Evaluate overdue loan | Loan gets NPL date/principal-at-NPL/cap values; overdue schedule status updated |
+| ADMIN-13 | NPL | Accrue within default-interest ceiling | Amount accepted and control evidence updates |
+| ADMIN-14 | NPL | Attempt above ceiling with enforcement on | Request rejected; no hidden balance mutation |
+| ADMIN-15 | NPL | Toggle enforcement | Only authorised admin path succeeds; state remains visible/reportable |
+| ADMIN-16 | Guarantor | Add two guarantors | Both invitations pending with independent confirmation |
+| ADMIN-17 | Guarantor | Attempt third contact | Rejected; address book not accessed |
+| ADMIN-18 | Term governance | Attempt direct interest-rate edit | Blocked |
+| ADMIN-19 | Term governance | Maker submits / checker approves unchanged-rate terms | Governed request proceeds |
+| ADMIN-20 | Term governance | Interest-rate change without UMRA approval evidence | Cannot approve/apply |
+| ADMIN-21 | Term governance | Interest-rate change with UMRA reference/date | Applies to future term after maker-checker; accepted offers unchanged |
+| ADMIN-22 | Receipts | Inspect final disbursement/repayment | Exactly one receipt per final event with receipt hash/reference |
+| ADMIN-23 | Compliance reports | Generate UMRA digital-credit evidence packs | Report validates and appears in register |
+| ADMIN-24 | Books/records | Open generated books-and-records report | Loan/payment/ledger/receipt/complaint/register data inspectable |
+| ADMIN-25 | Maker-checker | Same officer attempts incompatible maker/checker action | Blocked |
+| ADMIN-26 | Audit | Inspect privileged actions | Actor, subject, reason/evidence timestamp visible; secrets absent |
+| ADMIN-27 | Error safety | Trigger validation/forbidden/provider error | Safe actionable error; no stack trace/secret/raw identity image |
 
-## Scenarios
+## Exit criteria
 
-| ID | Flow | Data required | Test steps | Expected result | Pass/fail criteria | Sign-off owner |
-| --- | --- | --- | --- | --- | --- | --- |
-| ADMIN-01 | Login | Platform admin credentials | Open admin login, submit credentials. | Admin dashboard loads. | Pass if authenticated and correct admin navigation appears. | Operations lead |
-| ADMIN-02 | Invalid admin login | Admin phone, wrong password | Submit wrong password. | Error displays and session is not created. | Pass if protected admin pages remain inaccessible. | Engineering lead |
-| ADMIN-03 | Access restriction | Customer credentials | Login as customer and open admin route. | Customer is redirected or forbidden. | Pass if admin data is not displayed. | Engineering lead |
-| ADMIN-04 | Customer search | Customer A/D/E records | Search by phone, name, customer ID, national ID where permitted. | Matching customers display with masked sensitive fields. | Pass if search results match source and masking rules hold. | Support lead |
-| ADMIN-05 | Customer profile review | Customer D | Open customer profile. | Profile, KYC, consent, applications, loans, payments, support cases show. | Pass if displayed data matches source and role permissions. | Support lead |
-| ADMIN-06 | KYC review | Customer B pending KYC | Open KYC review queue, approve or reject. | KYC status updates, reviewer/timestamp stored, audit log created. | Pass if customer status updates and audit log exists. | Compliance lead |
-| ADMIN-07 | Consent review | Customer C/F | Open consent records. | Purpose, version, channel, status, grant/revoke timestamps display. | Pass if consent records match source and revoked status is visible. | Compliance lead |
-| ADMIN-08 | Loan application review | Pending application | Open review queue, inspect application, update allowed status. | Application status updates according to role and workflow. | Pass if unauthorized roles cannot update and audit log exists. | Operations lead |
-| ADMIN-09 | Decision review | Application with decision | Open decision details. | Status, reason codes, policy inputs, reviewer/manual review status display. | Pass if decision fields match backend record. | Compliance lead |
-| ADMIN-10 | Loan account review | Active loan | Open loan account. | Principal, interest, fees, outstanding, status, dates display. | Pass if values match source and ledger/schedule links exist. | Finance lead |
-| ADMIN-11 | Repayment schedule review | Active loan | Open repayment schedule. | Schedule rows display due dates, paid, outstanding, overdue state. | Pass if rows match source system and customer view. | Finance lead |
-| ADMIN-12 | Ledger review | Loan with disbursement/repayment | Open ledger view. | Balanced ledger transactions and entries display. | Pass if debits equal credits and references map to payment/loan events. | Finance lead |
-| ADMIN-13 | Audit trail review | Recent sensitive actions | Open audit trail, filter or inspect recent events. | Actor, subject, event, metadata, timestamp display. | Pass if sensitive action logs exist and no secrets are exposed. | Compliance lead |
-| ADMIN-14 | Reports | Reporting data | Generate/view KYC, consent, credit, loan book, ledger, settlement reports. | Reports generate with correct period and totals. | Pass if totals match parallel-run report comparisons. | Compliance lead |
-| ADMIN-15 | Error handling | Admin user | Trigger validation, forbidden, unauthenticated, server error states. | Safe error states display with no stack trace. | Pass if no secret or internal stack detail is exposed. | Engineering lead |
-
-## Admin UAT Exit Criteria
-
-- All admin roles can complete assigned workflows.
-- Unauthorized roles are blocked.
-- Audit logs are created for privileged actions.
-- Reports and ledger views match source/comparison evidence.
+- All regulated/admin controls above pass on the exact candidate.
+- Compliance and Finance reconcile sampled report/receipt/ledger figures to source tables.
+- No route permits a silent interest-rate mutation.
+- No report can be represented as externally filed merely because it was generated.

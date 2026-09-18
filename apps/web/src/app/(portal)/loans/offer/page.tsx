@@ -51,6 +51,8 @@ export default async function LoanOfferPage({ searchParams }: { searchParams?: P
               <tr><th>Approved principal</th><td>{formatUgx(offer.principal_amount_minor)}</td></tr>
               <tr><th>Interest</th><td>{formatUgx(offer.interest_amount_minor)}</td></tr>
               <tr><th>Fees</th><td>{formatUgx(offer.fees_minor)}</td></tr>
+              {offer.disclosure_snapshot?.fee_breakdown ? <tr><th>How fees apply</th><td>{String((offer.disclosure_snapshot.fee_breakdown as { treatment?: string }).treatment ?? offer.fee_treatment)}</td></tr> : null}
+              {offer.disclosure_snapshot?.total_cost_of_credit_minor != null ? <tr><th>Total cost of credit</th><td>{formatUgx(Number(offer.disclosure_snapshot.total_cost_of_credit_minor))}</td></tr> : null}
               <tr><th>Amount you receive</th><td><strong>{formatUgx(offer.net_disbursement_minor)}</strong></td></tr>
               <tr><th>Total repayment</th><td><strong>{formatUgx(offer.total_repayment_minor)}</strong></td></tr>
               <tr><th>Duration</th><td>{offer.duration_days} days</td></tr>
@@ -61,6 +63,19 @@ export default async function LoanOfferPage({ searchParams }: { searchParams?: P
               <tr><th>Decision policy</th><td>{offer.policy_version}</td></tr>
             </tbody>
           </table>
+          {offer.disclosure_snapshot?.interest_calculation ? <p className="muted"><strong>How interest is calculated:</strong> {String(offer.disclosure_snapshot.interest_calculation)}</p> : null}
+          {offer.disclosure_snapshot?.default_and_penalty_terms ? (
+            <div className="notice">
+              <strong>If you do not pay on time:</strong>{" "}
+              {String((offer.disclosure_snapshot.default_and_penalty_terms as { cap_basis?: string }).cap_basis ?? "Regulatory default-interest and recovery limits apply.")}
+            </div>
+          ) : null}
+          {offer.disclosure_snapshot?.complaints_procedure ? (
+            <div className="notice">
+              <strong>Complaints:</strong> OpFin records complaints and targets resolution within{" "}
+              {String((offer.disclosure_snapshot.complaints_procedure as { resolution_target_days?: number }).resolution_target_days ?? 30)} days.
+            </div>
+          ) : null}
         </section>
 
         {canAccept ? (
@@ -73,8 +88,12 @@ export default async function LoanOfferPage({ searchParams }: { searchParams?: P
               <input type="hidden" name="offer_id" value={offer.id} />
               <input type="hidden" name="disclosure_hash" value={disclosureHash} />
               <label className="consent-check">
+                <input type="checkbox" name="credit_reporting_consent" required />
+                <span>I consent to complete and accurate positive or negative credit information about this loan being reported to the applicable authorised credit-reference mechanism.</span>
+              </label>
+              <label className="consent-check">
                 <input type="checkbox" name="accept_disclosures" required />
-                <span>I have reviewed and accept this exact offer, including the amount received, interest, fees, total repayment, duration and repayment frequency.</span>
+                <span>I have reviewed and accept this exact offer, including the interest calculation, fees and when they apply, default terms, total cost, repayment dates and complaints procedure.</span>
               </label>
               <button className="button" type="submit">Accept offer and request disbursement</button>
             </form>

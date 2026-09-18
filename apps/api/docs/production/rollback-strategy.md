@@ -1,6 +1,6 @@
 # Rollback Strategy
 
-Date: 2026-05-22
+Updated: 18 September 2026
 
 Rollback restores service to the current live system if the new OpFin build cannot safely serve customers or operations after cutover.
 
@@ -18,7 +18,7 @@ Rollback should be considered if any critical condition occurs:
 
 - Customers cannot log in or access required loan/payment information.
 - Admin/support users cannot perform critical support or payment operations.
-- MTN/Airtel callbacks are failing or routed incorrectly.
+- CPay/payment-provider callbacks are failing or routed incorrectly.
 - Payments are duplicated, missing, or cannot be reconciled.
 - Loan balances or repayment schedules are materially incorrect.
 - Ledger entries are unbalanced or missing for money-moving actions.
@@ -54,10 +54,14 @@ Rollback should be considered if any critical condition occurs:
    - ledger transactions
    - support cases
    - audit logs
+   - credit-information reports/submission attempts
+   - transaction receipts
+   - complaint SLA state
+   - term-change approvals
 5. Identify money-moving events that occurred after cutover.
 6. Reconcile post-cutover payment/provider events before old system resumes writes.
 7. Route customer/API traffic back to the old system.
-8. Route MTN/Airtel callbacks back to the old system or to a temporary controlled receiver approved by engineering.
+8. Route CPay/payment-provider callbacks back to the old system or to a temporary controlled receiver approved by engineering.
 9. Restore old-system admin write access.
 10. Apply approved post-cutover deltas to the old system if required.
 11. Validate old-system customer login, loan balances, payment status, and admin workflows.

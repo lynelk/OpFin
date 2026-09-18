@@ -110,6 +110,40 @@ Repayment initiation:
 - allocates oldest due first using the versioned production policy;
 - posts immutable accounting only after verified finality.
 
+## UMRA digital-lending controls
+
+The backend now includes:
+
+- automated positive/negative credit-information reporting with data-quality, consent, due-date and retry controls;
+- 30-day complaint-resolution clock and SLA evidence;
+- NPL/default-interest cap tracking with explicit enforcement state;
+- provider-finality-backed transaction receipts;
+- maximum-two guarantor contact confirmation;
+- maker-checker credit-term changes with mandatory prior UMRA evidence for interest-rate changes;
+- regulator evidence packs/books and records in the Admin Compliance Centre.
+
+See `../../docs/UMRA_DIGITAL_LENDING_CONTROLS.md`.
+
+### Additional production configuration
+
+```text
+OPFIN_LICENSED_ENTITY_NAME
+OPFIN_LICENSED_TRADING_NAME
+OPFIN_UMRA_LICENSE_NUMBER
+OPFIN_BUSINESS_ADDRESS
+OPFIN_COMPLAINTS_EMAIL
+OPFIN_COMPLAINTS_PHONE
+OPFIN_COMPLAINTS_URL
+UMRA_COMPLAINT_RESOLUTION_DAYS
+UMRA_CREDIT_REPORTING_DUE_DAYS
+UMRA_ENFORCE_NPL_CAP
+CREDIT_REFERENCE_REPORTING_URL
+CREDIT_REFERENCE_REPORTING_TOKEN
+CREDIT_REFERENCE_REPORTING_PROVIDER
+```
+
+Missing regulatory/provider details must remain explicit configuration gaps; do not invent them.
+
 ## Cross-channel rules
 
 ### WhatsApp
@@ -219,3 +253,16 @@ Current sources of truth:
 - `docs/operations/production-readiness-checklist.md`
 
 Dated audit/checkpoint files remain historical evidence and must not override newer code/current-contract documentation.
+
+
+## Developer discovery
+
+From `apps/api`:
+
+```bash
+python3 ../../scripts/search-api.py "umra"
+python3 ../../scripts/search-docs.py "receipt" --api
+php artisan route:list --path=api/admin/umra
+```
+
+Documentation changes are verified in CI alongside code changes.

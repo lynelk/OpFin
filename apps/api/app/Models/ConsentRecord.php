@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class ConsentRecord extends Model
 {
     public const PURPOSE_CREDIT_PROCESSING = 'credit_processing';
+
+    public const PURPOSE_CREDIT_INFORMATION_REPORTING = 'credit_information_reporting';
     public const STATUS_GRANTED = 'granted';
     public const STATUS_REVOKED = 'revoked';
 

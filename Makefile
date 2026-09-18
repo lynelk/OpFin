@@ -1,4 +1,15 @@
-.PHONY: test api-test web-test client-test layout
+.PHONY: help test api-test web-test client-test layout docs-check docs-search api-search
+
+help:
+	@printf '%s\n' \
+	  'OpFin developer commands:' \
+	  '  make test                         Run layout + API + web + client test suites' \
+	  '  make api-test                     Run API tests' \
+	  '  make web-test                     Run web tests/build checks' \
+	  '  make client-test                  Run Flutter checks' \
+	  '  make docs-check                   Verify current documentation drift rules' \
+	  '  make docs-search QUERY="receipt" Search current repository documentation' \
+	  '  make api-search QUERY="umra"      Search registered Laravel API routes'
 
 test: layout api-test web-test client-test
 
@@ -13,3 +24,14 @@ web-test:
 
 client-test:
 	sh scripts/test-client.sh
+
+docs-check:
+	python3 scripts/verify-documentation-drift.py
+
+docs-search:
+	@test -n "$(QUERY)" || (echo 'Set QUERY, e.g. make docs-search QUERY="credit reporting"' && exit 2)
+	python3 scripts/search-docs.py "$(QUERY)"
+
+api-search:
+	@test -n "$(QUERY)" || (echo 'Set QUERY, e.g. make api-search QUERY="umra"' && exit 2)
+	python3 scripts/search-api.py "$(QUERY)"

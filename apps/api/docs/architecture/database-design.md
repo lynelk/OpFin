@@ -120,3 +120,28 @@ Audit records should capture actor, subject, action, correlation ID, IP/user age
 
 Financial, KYC, consent, and audit data require explicit retention rules. Deletion requests should use pseudonymization where financial retention prevents full deletion.
 
+
+
+## Current regulated credit-control tables
+
+Key current tables include:
+
+- `credit_profiles` / `credit_score_components` — composite profile and attributable scoring;
+- `kyc_cases` / `consent_records` — identity and versioned consent evidence;
+- `credit_offers` / `credit_repayment_schedule_items` — immutable offers and exact schedules;
+- `customer_phone_numbers` / `customer_wallets` — verified contact/wallet ownership;
+- `credit_information_reports` — outbound positive/negative reporting register;
+- `transaction_receipts` — finality-backed receipt register;
+- `guarantor_contacts` — maximum-two manual contacts and independent confirmation evidence;
+- `credit_term_change_requests` — maker-checker pricing/term governance;
+- `support_cases` — complaint procedure, regulatory due date and SLA evidence;
+- `regulatory_report_runs` — hashed/validated regulator evidence packs.
+
+Production loans also carry NPL/default-interest control fields such as principal-at-NPL, initial interest, accrued/cap amounts, recovery cap and enforcement state.
+
+## Regulatory data constraints
+
+- Do not externally submit a credit report with incomplete/unverified borrower identity.
+- Do not delete regulated financial/reporting evidence merely because an account is closed; follow retention policy.
+- Accepted-offer pricing remains snapshotted even if future product terms change.
+- Receipt/reporting side effects occur after the authoritative economic transaction commits.

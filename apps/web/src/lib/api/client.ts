@@ -384,10 +384,14 @@ export const opfinApi = {
   ) => request<{ application: LoanApplication; next_state: string }>("/credit/applications", { method: "POST", bodyJson: payload, token }),
   creditOffers: (token?: string) => request<{ offers: CreditOffer[] }>("/credit/offers", { token }),
   creditOffer: (offerId: number, token?: string) => request<CreditOfferView>(`/credit/offers/${offerId}`, { token }),
-  acceptCreditOffer: (offerId: number, disclosureHash: string, token?: string) =>
+  acceptCreditOffer: (offerId: number, disclosureHash: string, creditReportingConsent: boolean, token?: string) =>
     request<CreditOfferAcceptance>(`/credit/offers/${offerId}/accept`, {
       method: "POST",
-      bodyJson: { accept_disclosures: true, disclosure_hash: disclosureHash },
+      bodyJson: {
+        accept_disclosures: true,
+        disclosure_hash: disclosureHash,
+        credit_reporting_consent: creditReportingConsent
+      },
       token
     }),
   reconciliationRuns: (token?: string) => request<{ runs: ReconciliationRun[] }>("/admin/reconciliation-runs", { token }),

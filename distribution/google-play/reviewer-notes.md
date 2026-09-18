@@ -20,9 +20,10 @@ The review account must use authorised test identity/financial data and a contro
 5. Enter a test amount within the available limit, choose an eligible repayment period and purpose, then submit the request.
 6. Open **Activity** → **Credit offers** if an offer is available.
 7. Review amount received, interest, fees, equivalent APR where applicable, repayment period/frequency, total repayment and payment timing.
-8. Confirm that a verified payout wallet is selected before offer acceptance.
-9. **Do not execute a real payout.** The reviewer environment must use an approved controlled path that cannot create an unauthorised financial obligation.
-10. Open **More** → **Accessibility** and confirm larger-text/reduced-motion controls are present.
+8. Confirm the offer separately asks for credit-information reporting consent and that the detailed pricing/default/complaints disclosure is visible.
+9. Confirm that a verified payout wallet is selected before offer acceptance.
+10. **Do not execute a real payout.** The reviewer environment must use an approved controlled path that cannot create an unauthorised financial obligation.
+12. Open **More** → **Accessibility** and confirm larger-text/reduced-motion controls are present.
 11. Open **More** → **Privacy & account** → **Delete account** to verify the in-app deletion route.
 
 ## KYC review path

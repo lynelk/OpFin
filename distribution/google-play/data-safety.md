@@ -41,3 +41,12 @@ The identity journey may send ID/selfie evidence to the configured identity-veri
 - External resource: verified account-deletion URL in Play Console.
 - Active regulated obligations may require a pending closure case.
 - Legally retained financial/KYC/audit records must be disclosed and limited to the applicable retention purpose.
+
+
+## Credit-information reporting and receipts
+
+Credit/loan performance data may be shared with the applicable authorised credit-reference mechanism only after the separate electronic `credit_information_reporting` consent is recorded and the borrower identity/data-quality gate passes.
+
+The Data Safety declaration and privacy notice must accurately describe this sharing, its purpose and the applicable provider relationship.
+
+Completed disbursement/repayment events generate transaction receipts containing financial references/status, but customer-facing receipts mask unnecessary phone data and do not expose raw provider/KYC payloads.

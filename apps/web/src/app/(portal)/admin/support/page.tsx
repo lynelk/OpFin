@@ -14,7 +14,7 @@ export default async function SupportPage({ searchParams }: { searchParams?: Pro
     const cases = response.data.support_cases;
 
     return (
-      <Screen title="Support cases" description="Customer support intake for payment, KYC, loan, and account issues.">
+      <Screen title="Support cases" description="Customer complaints and support cases with the UMRA 30-day resolution clock, response evidence and escalation visibility.">
         {params?.status ? <StateNotice state="success" message="Support case created." /> : null}
         {params?.message ? <StateNotice state={params.error === "validation" ? "validation" : "server"} message={params.message} /> : null}
         <div className="grid grid-2">
@@ -31,6 +31,10 @@ export default async function SupportPage({ searchParams }: { searchParams?: Pro
                   <option value="payment">Payment</option>
                   <option value="kyc">KYC</option>
                   <option value="loan">Loan</option>
+                  <option value="complaint">Complaint</option>
+                  <option value="collections">Collections</option>
+                  <option value="fees">Fees / pricing</option>
+                  <option value="credit">Credit decision</option>
                   <option value="account">Account</option>
                 </select>
               </div>
@@ -64,6 +68,8 @@ export default async function SupportPage({ searchParams }: { searchParams?: Pro
                   { label: "Category", render: (row) => row.category },
                   { label: "Status", render: (row) => <span className="badge warn">{row.status}</span> },
                   { label: "Subject", render: (row) => row.subject },
+                  { label: "UMRA due", render: (row) => row.regulatory_due_at ? new Date(row.regulatory_due_at).toLocaleDateString("en-GB") : "—" },
+                  { label: "SLA", render: (row) => row.sla_breached ? <span className="badge warn">Breached</span> : <span className="badge ok">Within SLA</span> },
                   {
                     label: "Resolve",
                     render: (row) => (

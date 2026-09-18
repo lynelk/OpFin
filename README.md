@@ -20,7 +20,7 @@ Key product rules:
 - Launch mobile navigation is `Home | Borrow | Activity | More`; non-launch products remain capability-gated rather than crowding the primary experience.
 - Accessibility is part of the core journey: large text, screen readers, reduced motion, simple language and assisted identity verification are supported without lowering assurance.
 
-See `docs/LAUNCH_CUSTOMER_JOURNEY.md` for the complete cross-channel contract.
+See `docs/LAUNCH_CUSTOMER_JOURNEY.md` for the complete cross-channel contract and `docs/UMRA_DIGITAL_LENDING_CONTROLS.md` for the implemented digital-lending compliance controls.
 
 ## Layout
 
@@ -41,6 +41,7 @@ The historical source imports remain in Git history. This repository is the curr
 - External scoring/KYC sources may be unavailable; OpFin records that state instead of inventing data.
 - KYC evidence belongs on private persistent/object storage in production.
 - Store-distributed personal-loan terms retain the repository's 61-day minimum full-repayment rule and preference for eligible 90-day-plus routes.
+- Credit-information reporting, complaint SLA, NPL/default-interest caps, transaction receipts, guarantor confirmation and governed term changes are controlled/auditable backend responsibilities.
 
 Read `SECURITY.md`, `AGENTS.md` and `apps/api/docs/README.md` before changing authentication, KYC, credit, money movement or customer-facing financial state.
 
@@ -51,3 +52,21 @@ Run the affected project gates or the aggregate suite:
 `make api-test`, `make web-test`, `make client-test` or `make test`.
 
 The exact release commit must also pass the repository release gate, security gate and deployment contract. A passing build is not proof that provider credentials, store publication, real-device accessibility or production operations are activated.
+
+
+## Documentation and developer discovery
+
+Start at `docs/README.md`.
+
+Useful commands:
+
+```bash
+python3 scripts/search-docs.py "credit reporting"
+python3 scripts/search-docs.py "complaint" --api
+python3 scripts/search-api.py "umra"
+python3 scripts/search-api.py "receipts"
+```
+
+Training manuals and user guides should be derived from `docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md` plus the current application labels and API contracts.
+
+CI checks documentation drift when backend routes/contracts or customer/admin workflows change.

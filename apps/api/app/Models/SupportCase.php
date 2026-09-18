@@ -22,11 +22,21 @@ class SupportCase extends Model
         'subject',
         'description',
         'resolved_at',
+        'regulatory_due_at',
+        'first_response_at',
+        'sla_breached',
+        'complaint_procedure_snapshot',
     ];
 
     protected function casts(): array
     {
-        return ['resolved_at' => 'datetime'];
+        return [
+            'resolved_at' => 'datetime',
+            'regulatory_due_at' => 'datetime',
+            'first_response_at' => 'datetime',
+            'sla_breached' => 'boolean',
+            'complaint_procedure_snapshot' => 'array',
+        ];
     }
 
     public function notes()
