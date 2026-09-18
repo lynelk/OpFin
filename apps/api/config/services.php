@@ -62,6 +62,10 @@ return [
         'base_url' => env('CRB_URL'),
         'account' => env('CRB_CLIENT_ID'),
         'password' => env('CRB_CLIENT_SECRET'),
+        'reporting_url' => env('CRB_REPORTING_URL'),
+        'reporting_token' => env('CRB_REPORTING_TOKEN'),
+        'reporting_timeout_seconds' => (int) env('CRB_REPORTING_TIMEOUT_SECONDS', 15),
+        'reporting_max_retries' => (int) env('CRB_REPORTING_MAX_RETRIES', 10),
     ],
 
     'identity_verification' => [
