@@ -1,6 +1,6 @@
 # Replacement Feature Scope
 
-Date: 2026-05-22
+Updated: 18 September 2026
 
 This document classifies replacement features for the live-system cutover. If discovery shows a feature is active in the current live system, it moves into "Must exist before cutover" even if it is listed elsewhere here.
 
@@ -20,8 +20,8 @@ This document classifies replacement features for the live-system cutover. If di
 | Loan account creation | Atomic account creation with ledger posting. | Transactional test and ledger balance evidence. |
 | Repayment schedules | Accurate schedule generation/import, due dates, paid/outstanding state. | Schedule comparison report. |
 | Repayment allocation | Principal, interest, fees, penalties if active, partial payments, overpayments. | Allocation tests and sample loan statements. |
-| Mobile money disbursement | MTN/Airtel production-safe disbursement, idempotency, provider status. | Sandbox certification and provider status reconciliation. |
-| Mobile money collection | MTN/Airtel production-safe collection, callbacks, replay protection. | Sandbox certification and duplicate webhook test. |
+| Mobile money disbursement | CPay production-safe disbursement, idempotency, provider status. | Sandbox certification and provider status reconciliation. |
+| Mobile money collection | CPay production-safe collection, callbacks, replay protection. | Sandbox certification and duplicate webhook test. |
 | Ledger | Immutable double-entry, integer minor units, balanced transactions, corrections/reversals. | Trial balance and ledger integrity tests. |
 | Reconciliation | Provider settlement/status matching, exception workflow, finance sign-off. | Reconciliation report with approved exceptions. |
 | Audit logging | Sensitive actions logged with actor, subject, metadata, request context. | Audit export and coverage tests. |
