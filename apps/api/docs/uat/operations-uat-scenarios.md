@@ -1,54 +1,38 @@
-# Operations UAT Scenarios
+# Operations UAT scenarios
 
-Date: 2026-05-22
+Updated: 18 September 2026
 
-Primary sign-off owner: Operations lead
-Supporting owners: Finance lead, support lead, compliance lead, engineering lead
+Primary sign-off: Operations lead  
+Supporting: Finance, Support, Compliance, Engineering
 
-## Operations Test Data
+| ID | Flow | Scenario | Expected result |
+| --- | --- | --- | --- |
+| OPS-01 | Credit review | Referred application | KYC/consent/CRB/profile/affordability context visible and decision audited |
+| OPS-02 | Provider outage | Disbursement/collection provider unavailable | No false finality or ledger mutation |
+| OPS-03 | Duplicate callback | Replay same provider event | One economic transition/ledger posting only |
+| OPS-04 | Repayment retry | Same idempotency key, same instruction | Safe replay; no duplicate collection |
+| OPS-05 | Reconciliation | Matching provider/system record | Matched status with evidence |
+| OPS-06 | Reconciliation | Amount/reference mismatch | Persistent exception; no manufactured balancing entry |
+| OPS-07 | Reversal | Provider reversal of unrepaid disbursement | Append-only reversal state/ledger/reporting correction |
+| OPS-08 | Receipt | Final transaction completes | E-receipt generated once after commit/finality; acknowledgement queued |
+| OPS-09 | Complaint | New complaint | 30-day regulatory due date recorded |
+| OPS-10 | Complaint | Case within five days of deadline | Operations work item/visibility raised |
+| OPS-11 | Complaint | Deadline passes unresolved | SLA breach flag appears; escalation remains open |
+| OPS-12 | Credit reporting | Scheduled run with valid eligible record | Provider called idempotently and reference stored |
+| OPS-13 | Credit reporting | Consent revoked/missing | External submission blocked |
+| OPS-14 | Credit reporting | Invalid/incomplete identity | Data-quality hold |
+| OPS-15 | NPL | Scheduled UMRA control scan | Overdue loan evaluated and reporting event queued |
+| OPS-16 | NPL | Accrual would exceed cap | Blocked when enforcement enabled |
+| OPS-17 | Term change | Direct product-rate update attempt | Blocked; governed workflow required |
+| OPS-18 | Term change | Approved future change | Maker-checker + UMRA evidence retained |
+| OPS-19 | Guarantor | Independent confirm/reject | Status/evidence retained; borrower cannot self-confirm |
+| OPS-20 | Regulatory report | Generate/open evidence pack | Validation/hash/payload visible before officer approval |
+| OPS-21 | Security | Staff attempts to obtain customer PIN/OTP | Procedure rejects this; no credential capture field/log |
+| OPS-22 | PWD support | Assisted KYC case | Support assistance does not lower KYC or require secret sharing |
 
-- Pending manual review applications.
-- Referred credit decisions.
-- Failed mobile money disbursement.
-- Failed mobile money collection.
-- Pending provider callback.
-- Duplicate webhook/payment event.
-- Reversal candidate.
-- Reconciliation exception.
-- Escalated support case.
+## Exit criteria
 
-## Operations Scenarios
-
-| ID | Flow | Data required | Test steps | Expected result | Pass/fail criteria | Sign-off owner |
-| --- | --- | --- | --- | --- | --- | --- |
-| OPS-01 | Manual review queue | Referred application | Open manual review queue, inspect application and decision reason codes. | Queue lists referred items with customer, KYC, consent, affordability/CRB context. | Pass if queue matches backend state and no unauthorized user can act. | Operations lead |
-| OPS-02 | Manual review decision | Referred application | Approve, decline, or keep referred according to policy. | Decision state changes and audit log records actor/reason. | Pass if maker-checker rules apply if required. | Compliance lead |
-| OPS-03 | Payment exception handling | Payment exception | Open reconciliation/exception item. | Exception details show provider/internal refs, amount, status, notes. | Pass if item can be resolved only by allowed role and audit log exists. | Operations lead |
-| OPS-04 | Failed transaction handling | Failed disbursement or collection | Open failed transaction, inspect provider response, mark next action. | Failure reason, retry/reversal/escalation status visible. | Pass if no duplicate ledger entry is created. | Finance lead |
-| OPS-05 | Duplicate webhook handling | Duplicate provider event | Replay duplicate webhook/event in staging. | Duplicate is ignored or marked duplicate. | Pass if one and only one ledger/payment state change exists. | Engineering lead |
-| OPS-06 | Reversal review | Reversal candidate | Open reversal request, review evidence, approve/reject. | Reversal state changes with audit and ledger correction path. | Pass if balances remain correct and provider status is tracked. | Finance lead |
-| OPS-07 | Support escalation | Escalated support case | Open support case, add internal note, assign owner, change status. | Notes and assignment persist; customer-impacting action is audited. | Pass if support and operations roles have correct access. | Support lead |
-| OPS-08 | Reconciliation run | MTN/Airtel unreconciled records | Create reconciliation run for provider/business date. | Run creates items for unmatched/unreconciled transactions. | Pass if item count matches provider/system input. | Finance lead |
-| OPS-09 | Reconciliation match | Reconciliation item | Match item with provider amount/reference. | Item and linked mobile money transaction become matched. | Pass if status updates and audit log records resolver. | Finance lead |
-| OPS-10 | Reconciliation exception | Mismatched item | Mark item as exception with notes. | Exception remains open for finance review. | Pass if mismatch is visible in reports and not silently written off. | Finance lead |
-| OPS-11 | Failed provider outage | Provider sandbox unavailable | Attempt status lookup or callback processing during simulated outage. | System records failure safely and prompts retry/escalation. | Pass if no balance mutation occurs from failed provider call. | Engineering lead |
-| OPS-12 | Operational error handling | Operations user | Trigger validation/forbidden/server error states. | Safe, actionable message displays. | Pass if no stack trace, secret, or sensitive provider payload is exposed. | Engineering lead |
-
-## Employer Admin Scenarios, If Applicable
-
-Run these only if employer-linked benefits or employer eligibility are active in the live system.
-
-| ID | Flow | Data required | Test steps | Expected result | Pass/fail criteria | Sign-off owner |
-| --- | --- | --- | --- | --- | --- | --- |
-| EMP-01 | Employer login | Employer admin user | Login and open employer portal. | Employer admin can access employer-only area. | Pass if customer/admin-only data is not visible. | Employer benefits owner |
-| EMP-02 | Employee verification | Employee records | Search or verify employee eligibility. | Eligible/ineligible status is shown from approved source. | Pass if status matches live employer data. | Employer benefits owner |
-| EMP-03 | Eligibility status | Employee with active/inactive employment | Open eligibility detail. | Employment and benefit eligibility reflect source system. | Pass if inactive employees cannot access employer-only benefits. | Employer benefits owner |
-| EMP-04 | Aggregated reporting | Employer cohort | View aggregated report. | Aggregated counts/totals display without exposing unrelated customer PII. | Pass if report matches live system and privacy rules. | Compliance lead |
-| EMP-05 | Access restrictions | Employer admin | Attempt access to other employer/customer/admin data. | Access is denied. | Pass if unauthorized records are not displayed. | Engineering lead |
-
-## Operations UAT Exit Criteria
-
-- Operations can resolve daily payment, review, reconciliation, and support workflows.
-- Finance signs off on payment and ledger behavior.
-- Support signs off on escalation behavior.
-- No Critical or High operations defects remain open.
+- Operations can complete daily credit/payment/support/regulatory workflows without direct database edits.
+- Finance signs off ledger/reconciliation/receipt integrity.
+- Compliance signs off complaint, NPL, bureau, guarantor and term-change controls.
+- No Critical/High defect remains open.
