@@ -1,0 +1,29 @@
+name: Documentation
+
+on:
+  push:
+    branches: [docs/living-documentation-20260918]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Documentation source audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Collect tracked source for documentation review
+        run: |
+          mkdir -p /tmp/opfin-docs-audit
+          git archive --format=zip HEAD -o /tmp/opfin-docs-audit/source.zip
+          git ls-files '*.md' '*.mdx' '*.yaml' '*.yml' '*openapi*' '*swagger*' > /tmp/opfin-docs-audit/documentation-inventory.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: opfin-documentation-audit
+          path: /tmp/opfin-docs-audit/
+          retention-days: 1
+          if-no-files-found: error
