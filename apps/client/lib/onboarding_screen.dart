@@ -36,7 +36,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>{
       Padding(padding:const EdgeInsets.all(24),child:SizedBox(width:double.infinity,height:52,
         child:FilledButton(onPressed:(){
           if(_index==_pages.length-1){_finish();}else{
-            _controller.nextPage(duration:MediaQuery.disableAnimationsOf(context)?Duration.zero:const Duration(milliseconds:250),
+            _controller.nextPage(duration:MediaQuery.of(context).disableAnimations?Duration.zero:const Duration(milliseconds:250),
               curve:Curves.easeOut);
           }},child:Text(_index==_pages.length-1?'Get started':'Next')))),
     ])));
