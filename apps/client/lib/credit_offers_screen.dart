@@ -104,6 +104,7 @@ class _CreditOfferDetail extends StatefulWidget {
 
 class _CreditOfferDetailState extends State<_CreditOfferDetail> {
   bool _accepted = false;
+  bool _creditReportingConsent = false;
   bool _submitting = false;
   final _money = NumberFormat('#,##0', 'en_US');
   late Future<List<Map<String, dynamic>>> _wallets;
@@ -140,7 +141,12 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
       final response = await http.post(
         Uri.parse('$apiUrl/credit/offers/${widget.offer['id']}/accept'),
         headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json', 'Content-Type': 'application/json'},
-        body: jsonEncode({'accept_disclosures': true, 'disclosure_hash': widget.disclosureHash, 'wallet_id': _walletId}),
+        body: jsonEncode({
+          'accept_disclosures': true,
+          'disclosure_hash': widget.disclosureHash,
+          'wallet_id': _walletId,
+          'credit_reporting_consent': _creditReportingConsent,
+        }),
       );
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode < 200 || response.statusCode >= 300 || decoded['success'] != true) throw Exception(decoded['message'] ?? 'Unable to accept offer.');
@@ -265,11 +271,18 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
         const SizedBox(height: 12),
         CheckboxListTile(
           contentPadding: EdgeInsets.zero,
+          value: _creditReportingConsent,
+          onChanged: (value) => setState(() => _creditReportingConsent = value == true),
+          title: const Text('I consent to OpFin reporting complete and accurate positive or negative credit information about this loan to the applicable authorised credit-reference mechanism.'),
+          subtitle: const Text('This consent is recorded electronically and can be reviewed in your consent history.'),
+        ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
           value: _accepted,
           onChanged: (value) => setState(() => _accepted = value == true),
           title: const Text('I have reviewed and accept the amount received, interest calculation, fees and when they apply, default terms, total cost, repayment dates and complaint procedure.'),
         ),
-        FilledButton(onPressed: !_accepted || _walletId == null || _submitting || offer['status'] != 'offered' ? null : _accept, child: Text(_submitting ? 'Submitting…' : 'Accept offer and request disbursement')),
+        FilledButton(onPressed: !_accepted || !_creditReportingConsent || _walletId == null || _submitting || offer['status'] != 'offered' ? null : _accept, child: Text(_submitting ? 'Submitting…' : 'Accept offer and request disbursement')),
       ]),
     );
   }
