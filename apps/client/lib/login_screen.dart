@@ -46,12 +46,17 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       await UserSession.saveAuthPayload(
         (decoded['data'] as Map).cast<String, dynamic>());
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       Navigator.pushReplacement(context,
         MaterialPageRoute(builder: (_) => const HomeScreen()));
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
