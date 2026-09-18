@@ -32,6 +32,16 @@ return [
         ],
     ],
 
+    'compliance' => [
+        'umra_npl_cap_mode' => env('OPFIN_UMRA_NPL_CAP_MODE', 'enforce'),
+        'complaints_channel' => env('OPFIN_COMPLAINTS_CHANNEL', 'In-app Support'),
+        'complaints_email' => env('OPFIN_COMPLAINTS_EMAIL'),
+        'complaints_phone' => env('OPFIN_COMPLAINTS_PHONE'),
+        'licensed_entity_name' => env('OPFIN_LICENSED_ENTITY_NAME'),
+        'business_address' => env('OPFIN_BUSINESS_ADDRESS'),
+        'umra_license_reference' => env('OPFIN_UMRA_LICENSE_REFERENCE'),
+    ],
+
     'customer_experience' => [
         'secondary_phone_required' => false,
         'simple_language_default' => true,
