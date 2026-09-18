@@ -15,12 +15,15 @@ Key product rules:
 - CRB, MNO, approved third-party and internal behaviour inputs remain separate score components and feed a decomposable OpFin Composite Score.
 - The customer sees the composite score, understandable explanations, available loan limit, amount due and next payment date. Internal probability-of-default values remain internal.
 - Limits are profile-level, not multiplied by wallets or phone numbers.
+- Positive/negative credit performance is staged through the consent-bound outbound reporting register; missing consent/provider configuration fails closed.
+- Provider-confirmed disbursements and repayments generate immutable e-receipts.
+- UMRA NPL recovery ceilings, complaint SLAs, guarantor confirmations and governed term variations are first-class controls.
 - App, WhatsApp and USSD use the same server-authoritative profile and financial state.
 - High-impact financial actions require authenticated confirmation; a PIN is never requested in WhatsApp or USSD.
 - Launch mobile navigation is `Home | Borrow | Activity | More`; non-launch products remain capability-gated rather than crowding the primary experience.
 - Accessibility is part of the core journey: large text, screen readers, reduced motion, simple language and assisted identity verification are supported without lowering assurance.
 
-See `docs/LAUNCH_CUSTOMER_JOURNEY.md` for the complete cross-channel contract.
+See `docs/LAUNCH_CUSTOMER_JOURNEY.md` for the complete cross-channel contract and `docs/UMRA_DIGITAL_LENDING_COMPLIANCE_MATRIX.md` for the January 2024 UMRA control mapping.
 
 ## Layout
 
