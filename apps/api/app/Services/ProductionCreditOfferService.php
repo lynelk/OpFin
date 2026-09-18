@@ -21,6 +21,8 @@ class ProductionCreditOfferService
         private readonly MobileMoneyService $mobileMoney,
         private readonly ProductionLoanLedgerService $loanLedger,
         private readonly AuditLogger $auditLogger,
+        private readonly CreditReferenceReportingService $creditReporting,
+        private readonly TransactionReceiptService $receipts,
     ) {}
 
     public function createOffer(LoanApplication $application, User $actor, array $pricing): CreditOffer
@@ -296,6 +298,8 @@ class ProductionCreditOfferService
                 }
                 $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $existing, $offer);
                 $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                $this->receipts->issue($lockedTransaction->fresh(), 'loan_disbursement');
+                $this->creditReporting->queueLoanEvent($existing->fresh(), 'origination');
 
                 return $existing;
             }
@@ -338,6 +342,8 @@ class ProductionCreditOfferService
                 'provider_reference' => $lockedTransaction->provider_reference,
                 'ledger_reference' => 'loan.disbursement:credit-offer:'.$offer->offer_reference,
             ]);
+            $this->receipts->issue($lockedTransaction->fresh(), 'loan_disbursement');
+            $this->creditReporting->queueLoanEvent($loan->fresh(), 'origination');
 
             return $loan;
         });
@@ -402,6 +408,8 @@ class ProductionCreditOfferService
                 'mobile_money_transaction_id' => $lockedTransaction->id,
                 'provider_reference' => $lockedTransaction->provider_reference,
             ]);
+            $this->receipts->issue($lockedTransaction->fresh(), 'disbursement_reversal');
+            $this->creditReporting->queueLoanEvent($loan->fresh(), 'correction');
 
             return $loan->fresh();
         });
