@@ -76,16 +76,11 @@ class LoanProductsController extends Controller
     }
     public function updateTerm(Request $request, LoanProduct $loanProduct, $termId)
     {
-        $request->validate([
-            'interest_rate' => 'required|numeric|min:0',
-            'interest_type' => 'required|string|max:50',
-            'interest_cycle' => 'required|string|max:50',
-            'repayment_frequency' => 'required|string|max:50',
-            'duration' => 'required|integer|min:1',
-        ]);
-        $term = $loanProduct->terms()->findOrFail($termId);
-        $term->update($request->all());
-        return redirect()->route('loan-products.show', $loanProduct)->with('success', 'Loan product term updated successfully.');
+        $loanProduct->terms()->findOrFail($termId);
+
+        return redirect()
+            ->route('loan-products.show', $loanProduct)
+            ->with('error', 'Direct credit-term changes are disabled. Use the controlled UMRA term-change workflow so maker-checker approval, customer-consent requirements and prior UMRA interest-rate approval can be evidenced.');
     }
     public function changeTermStatus(LoanProduct $loanProduct, $termId)
     {
