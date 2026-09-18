@@ -22,6 +22,9 @@ class ProductionRepaymentService
         private readonly LoanService $loanService,
         private readonly ProductionLoanLedgerService $productionLoanLedgerService,
         private readonly AuditLogger $auditLogger,
+        private readonly NplRecoveryPolicyService $nplPolicy,
+        private readonly TransactionReceiptService $receipts,
+        private readonly CreditReferenceReportingService $creditReporting,
     ) {}
 
     public function initiate(
@@ -63,6 +66,8 @@ class ProductionRepaymentService
             if ($amountMinor > $outstanding) {
                 throw new InvalidArgumentException('Repayment amount exceeds the current outstanding obligation.');
             }
+
+            $this->nplPolicy->assertCollectionPermitted($locked, $amountMinor);
 
             $pending = MobileMoneyTransaction::query()
                 ->where('loan_id', $locked->id)
@@ -195,6 +200,7 @@ class ProductionRepaymentService
         $ledgerReference = 'loan.repayment:'.$transaction->reference;
         if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
             $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+            $this->recordSuccessfulRepaymentCompliance($mobileMoney, $loan);
 
             return $loan->fresh();
         }
@@ -204,6 +210,7 @@ class ProductionRepaymentService
             if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
                 $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
             }
+            $this->recordSuccessfulRepaymentCompliance($mobileMoney, $loan->fresh());
 
             return $loan->fresh();
         }
@@ -255,9 +262,21 @@ class ProductionRepaymentService
                 'fees_minor' => $allocation['fees_minor'],
                 'allocation_policy_version' => self::ALLOCATION_POLICY_VERSION,
             ]);
+            $this->recordSuccessfulRepaymentCompliance($mobileMoney, $lockedLoan->fresh());
 
             return $lockedLoan->fresh();
         });
+    }
+
+    private function recordSuccessfulRepaymentCompliance(MobileMoneyTransaction $mobileMoney, Loan $loan): void
+    {
+        $this->receipts->issue($mobileMoney->fresh());
+        $this->nplPolicy->evaluate($loan);
+        $this->creditReporting->stageLoan(
+            $loan,
+            strcasecmp((string) $loan->status, 'Cleared') === 0 ? 'loan_cleared' : 'repayment',
+            (string) ($mobileMoney->provider_reference ?: $mobileMoney->id),
+        );
     }
 
     public function outstandingMinor(Loan $loan): int
