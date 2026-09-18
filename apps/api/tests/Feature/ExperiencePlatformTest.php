@@ -40,6 +40,7 @@ class ExperiencePlatformTest extends TestCase
             'verification_token' => $token,
             'pin' => '482951',
             'pin_confirmation' => '482951',
+            'terms_accepted' => true,
         ])->assertCreated()->assertJsonPath('success', true);
 
         $this->assertNotNull(User::where('phone', '256700111222')->firstOrFail()->phone_verified_at);
