@@ -90,6 +90,7 @@ class WhatsAppJourneyService
 
         if (strcasecmp($normalized, 'PROFILE') === 0) {
             $state = $this->profiles->status($user);
+
             return $this->respond($conversation->id, 'Next step: '.$state['next_action']['label'].'. A second phone is optional.', 'verified');
         }
 
@@ -105,6 +106,7 @@ class WhatsAppJourneyService
             }
             $web = rtrim((string) config('services.opfin.web_url'), '/');
             $link = $web !== '' ? $web.'/loans/apply'.($amount > 0 ? '?amount='.$amount.'&source=whatsapp' : '?source=whatsapp') : null;
+
             return $this->respond(
                 $conversation->id,
                 'Available: UGX '.number_format((int) $profile->available_to_borrow_minor).'. '.($link ? 'Continue securely: '.$link : 'Continue in the OpFin app to review costs and confirm.'),
@@ -119,6 +121,7 @@ class WhatsAppJourneyService
                 return $this->respond($conversation->id, 'You have no outstanding OpFin loan.', 'verified');
             }
             $web = rtrim((string) config('services.opfin.web_url'), '/');
+
             return $this->respond(
                 $conversation->id,
                 'Outstanding: UGX '.number_format((int) $profile->total_outstanding_minor).'. Amount due now: UGX '.number_format((int) $profile->amount_due_minor).'. '.($web !== '' ? 'Continue securely: '.$web.'/loans/account?source=whatsapp' : 'Continue in the OpFin app to repay.'),
