@@ -31,14 +31,16 @@ class AuthController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $request->validate([
+            $data = $request->validate([
                 'phone' => ['required'],
-                'password' => ['required'],
+                'pin' => ['nullable', 'required_without:password', 'string'],
+                'password' => ['nullable', 'required_without:pin', 'string'],
                 'confirmation' => ['required', 'in:DELETE'],
             ]);
 
+            $credential = (string) ($data['pin'] ?? $data['password']);
             $user = User::where('phone', $request->phone)->first();
-            if (! $user || ! Hash::check($request->password, $user->password)) {
+            if (! $user || ! Hash::check($credential, $user->password)) {
                 return redirect()->back()->with('error', 'User details provided are invalid');
             }
 
