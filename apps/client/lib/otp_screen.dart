@@ -1,279 +1,166 @@
-import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:lottie/lottie.dart';
+import 'package:opfin/complete_registration_screen.dart';
 import 'package:opfin/constants.dart';
-import 'package:opfin/input_decoration.dart';
 import 'package:opfin/login_screen.dart';
+import 'package:sms_autofill/sms_autofill.dart';
 
 class OtpScreen extends StatefulWidget {
-  final String phone;
-  final String? name;
-  final String password;
-  final String passwordConfirmation;
-
   const OtpScreen({
     super.key,
     required this.phone,
-    this.name,
-    required this.password,
-    required this.passwordConfirmation,
+    this.registration = false,
+    this.resetPin,
   });
-
+  final String phone;
+  final bool registration;
+  final String? resetPin;
   @override
-  OtpScreenState createState() => OtpScreenState();
+  State<OtpScreen> createState() => _OtpScreenState();
 }
 
-class OtpScreenState extends State<OtpScreen> {
-  final TextEditingController _otpController = TextEditingController();
-  bool _isResendEnabled = false;
+class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
+  final _controller = TextEditingController();
+  bool _loading = false;
+  bool _resend = false;
   int _countdown = 300;
-  bool _isLoading = false;
-
-  final _formKey = GlobalKey<FormState>();
+  bool _autoSubmitted = false;
 
   @override
-  void initState() {
-    super.initState();
-    _startCountdown();
-  }
+  void initState() { super.initState(); listenForCode(); _tick(); }
 
   @override
-  void dispose() {
-    _otpController.dispose();
-    super.dispose();
+  void codeUpdated() {
+    final value = code;
+    if (value != null && RegExp(r'^\d{6}$').hasMatch(value)) {
+      _controller.text = value;
+      if (!_autoSubmitted) { _autoSubmitted = true; _verify(); }
+    }
   }
 
-  void _startCountdown() {
+  void _tick() {
     Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
-      if (_countdown > 0) {
-        setState(() => _countdown--);
-        _startCountdown();
-      } else {
-        setState(() => _isResendEnabled = true);
-      }
+      if (_countdown > 0) { setState(() => _countdown--); _tick(); }
+      else { setState(() => _resend = true); }
     });
   }
 
-  Future<void> _verifyOtp() async {
-    setState(() => _isLoading = true);
+  Future<void> _verify() async {
+    final otp = _controller.text.trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(otp) || _loading) return;
+    setState(() => _loading = true);
     try {
-      final otp = _otpController.text.trim();
       final response = await http.post(
-        Uri.parse('$apiUrl/verify-otp'),
-        body: {'phone': widget.phone, 'otp': otp},
-      );
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        if (widget.name != null) {
-          final verificationToken = data['data']?['verification_token'] as String?;
-          if (verificationToken == null || verificationToken.isEmpty) {
-            _showMessage('Phone verification could not be completed. Request a new code.');
-            return;
-          }
-          await _register(verificationToken);
-        } else {
-          await _resetPassword();
+        Uri.parse('$apiUrl/verify-otp'), body: {'phone': widget.phone, 'otp': otp});
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode != 200 || decoded['success'] != true) {
+        throw Exception(decoded['message']?.toString() ?? 'The code did not work.');
+      }
+      if (widget.registration) {
+        final token = ((decoded['data'] as Map?)?['verification_token'])?.toString();
+        if (token == null || token.isEmpty) throw Exception('Phone verification failed.');
+        if (!mounted) return;
+        Navigator.pushReplacement(context, MaterialPageRoute(
+          builder: (_) => CompleteRegistrationScreen(
+            phone: widget.phone, verificationToken: token)));
+        return;
+      }
+      if (widget.resetPin != null) {
+        final reset = await http.post(Uri.parse('$apiUrl/reset-password'), body: {
+          'phone': widget.phone, 'otp': otp,
+          'pin': widget.resetPin, 'pin_confirmation': widget.resetPin,
+        });
+        final body = jsonDecode(reset.body) as Map<String, dynamic>;
+        if (reset.statusCode != 200 || body['success'] != true) {
+          throw Exception(body['message']?.toString() ?? 'Unable to reset PIN.');
         }
-        return;
-      }
-
-      _showMessage(data['message'] ?? 'OTP verification failed');
-    } catch (_) {
-      _showMessage('A network error occurred. Please try again.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _regenerateOtp() async {
-    setState(() => _isLoading = true);
-    try {
-      final response = await http.post(
-        Uri.parse('$apiUrl/generate-otp'),
-        body: {'phone': widget.phone},
-      );
-      final data = json.decode(response.body);
-      _showMessage(data['message'] ?? (response.statusCode == 200 ? 'A new code was sent.' : 'Unable to send a new code.'));
-    } catch (_) {
-      _showMessage('A network error occurred. Please try again.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _resendOtp() {
-    if (!_isResendEnabled) return;
-    _regenerateOtp();
-    setState(() {
-      _isResendEnabled = false;
-      _countdown = 300;
-      _otpController.clear();
-    });
-    _startCountdown();
-  }
-
-  Future<void> _register(String verificationToken) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$apiUrl/register'),
-        body: {
-          'name': widget.name,
-          'phone': widget.phone,
-          'verification_token': verificationToken,
-          'password': widget.password,
-          'password_confirmation': widget.passwordConfirmation,
-        },
-      );
-      final data = json.decode(response.body);
-
-      if ((response.statusCode == 200 || response.statusCode == 201) && data['success'] == true) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created. Sign in to continue your OpFin setup.')),
-        );
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-        return;
+          const SnackBar(content: Text('Your new PIN is ready.')));
+        Navigator.pushAndRemoveUntil(
+          context, MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
       }
-
-      _showMessage(data['message'] ?? 'Registration failed');
-    } catch (_) {
-      _showMessage('A network error occurred. Please try again.');
+    } catch (error) {
+      _autoSubmitted = false;
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _resetPassword() async {
+  Future<void> _sendAgain() async {
+    setState(() => _loading = true);
     try {
       final response = await http.post(
-        Uri.parse('$apiUrl/reset-password'),
-        body: {
-          'phone': widget.phone,
-          'otp': _otpController.text.trim(),
-          'password': widget.password,
-          'password_confirmation': widget.passwordConfirmation,
-        },
-      );
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password reset successfully.')),
-        );
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-        return;
+        Uri.parse('$apiUrl/generate-otp'), body: {'phone': widget.phone});
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode != 200 || decoded['success'] != true) {
+        throw Exception(decoded['message']?.toString() ?? 'Unable to send code.');
       }
-
-      _showMessage(data['message'] ?? 'Password reset failed');
-    } catch (_) {
-      _showMessage('A network error occurred. Please try again.');
+      setState(() {
+        _countdown = 300; _resend = false; _controller.clear(); _autoSubmitted = false;
+      });
+      listenForCode(); _tick();
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-  }
-
-  void _showMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 26.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 50),
-                  SizedBox(
-                    height: 160,
-                    child: Lottie.asset('assets/lottie/otp.json', fit: BoxFit.contain),
-                  ),
-                  const SizedBox(height: 25),
-                  const Text(
-                    'Verify your phone',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: OpFinColors.ink),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'We sent a 6-digit code to\n${widget.phone}. Enter it below to continue securely.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16, color: OpFinColors.muted),
-                  ),
-                  const SizedBox(height: 40),
-                  TextFormField(
-                    controller: _otpController,
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    decoration: InputDecorations().inputStyle(
-                      label: 'Verification code',
-                      hint: '6 digits',
-                      icon: Icons.lock_rounded,
-                    ),
-                    style: const TextStyle(color: OpFinColors.ink),
-                    validator: (value) {
-                      final code = value?.trim() ?? '';
-                      if (!RegExp(r'^\d{6}$').hasMatch(code)) {
-                        return 'Enter the 6-digit code';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    _countdown > 0 ? 'Code expires in $_countdown seconds' : 'This code has expired',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: _countdown > 0 ? OpFinColors.muted : Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  _isLoading
-                      ? const CircularProgressIndicator(color: OpFinColors.ink)
-                      : SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _countdown > 0
-                                ? () {
-                                    if (_formKey.currentState!.validate()) _verifyOtp();
-                                  }
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: OpFinColors.indigo,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: const Text('Verify and continue'),
-                          ),
-                        ),
-                  const SizedBox(height: 24),
-                  if (_isResendEnabled)
-                    TextButton(
-                      onPressed: _resendOtp,
-                      child: const Text('Send a new code'),
-                    ),
-                  const SizedBox(height: 40),
-                ],
-              ),
+  void dispose() { cancel(); _controller.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Verify phone')),
+    body: SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          const Icon(Icons.sms_outlined, size: 64),
+          const SizedBox(height: 24),
+          const Text('Enter the 6-digit code',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text('We sent it to ${widget.phone}. On supported phones, OpFin fills it in automatically.',
+            textAlign: TextAlign.center),
+          const SizedBox(height: 32),
+          TextFieldPinAutoFill(
+            controller: _controller,
+            codeLength: 6,
+            currentCode: _controller.text,
+            decoration: const UnderlineDecoration(),
+            onCodeChanged: (value) {
+              if (value != null && value.length == 6) _controller.text = value;
+            },
+          ),
+          const SizedBox(height: 18),
+          Text(_countdown > 0 ? 'Code expires in $_countdown seconds' : 'Code expired',
+            textAlign: TextAlign.center),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 52,
+            child: FilledButton(
+              onPressed: _loading || _countdown <= 0 ? null : _verify,
+              child: _loading
+                ? const SizedBox(height:22,width:22,child:CircularProgressIndicator(strokeWidth:2))
+                : const Text('Continue'),
             ),
           ),
-        ),
+          if (_resend) TextButton(
+            onPressed: _loading ? null : _sendAgain,
+            child: const Text('Send a new code')),
+          const SizedBox(height: 12),
+          const Text('Never share this code with anyone.', textAlign: TextAlign.center),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }

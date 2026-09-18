@@ -1,305 +1,118 @@
-import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/forgot_password_screen.dart';
 import 'package:opfin/home_screen.dart';
-import 'package:opfin/input_decoration.dart';
 import 'package:opfin/register_screen.dart';
 import 'package:opfin/services/user_session.dart';
-import 'package:http/http.dart' as http;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _phone = TextEditingController();
+  final _pin = TextEditingController();
+  bool _loading = false;
 
-  bool _isLoading = false;
+  String _normalise(String value) {
+    final p = value.trim().replaceAll(' ', '');
+    if (p.startsWith('+256')) return p.substring(1);
+    if (p.startsWith('256')) return p;
+    return '256${p.substring(1)}';
+  }
 
   Future<void> _login() async {
-    var phone = _phoneController.text.trim();
-    final password = _passwordController.text.trim();
-
-    if (phone.isEmpty || password.isEmpty) {
+    final phone = _phone.text.trim().replaceAll(' ', '');
+    if (!RegExp(r'^(0\d{9}|256\d{9}|\+256\d{9})$').hasMatch(phone) ||
+        !RegExp(r'^\d{6}$').hasMatch(_pin.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
+        const SnackBar(content: Text('Enter your phone number and 6-digit PIN.')));
       return;
     }
-    if (!RegExp(r'^0\d{9}$').hasMatch(phone)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Enter a valid 10-digit phone number starting with 0')),
-      );
-      return;
-    }
-    phone = '256${phone.substring(1)}';
-
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() => _loading = true);
     try {
-      final response = await http.post(
-        Uri.parse('$apiUrl/login'),
-        body: {'phone': phone, 'password': password},
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success']) {
-          final userId = data['user']['id'];
-          final name = data['user']['name'];
-          final role = data['user']['role'];
-          final userPhone = data['user']['phone'];
-          final nationalId = data['user']['national_id'] ?? "";
-          final dateOfBirth = data['user']['date_of_birth'] ?? "";
-          final ninStatus = data['user']['nin_status'] ?? "";
-          final accessToken = data['access_token'];
-
-          if (data['credit_score'] == null) {
-            data['credit_score'] = {
-              "score": 0,
-              "band": "Unknown",
-              "rating": "Unknown",
-              "probability_of_default_percent": 0.0
-            };
-          }
-          final score = data['credit_score']['score'];
-          final band = data['credit_score']['band'];
-          final rating = data['credit_score']['rating'];
-          final defaultingPercentage =
-              data['credit_score']['probability_of_default_percent'];
-
-          await UserSession.saveSession(
-            userId: userId,
-            accessToken: accessToken,
-            name: name,
-            role: role,
-            phone: userPhone,
-            nationalId: nationalId,
-            dateOfBirth: dateOfBirth,
-            ninStatus: ninStatus,
-            creditScore: score,
-            creditBand: band,
-            creditRating: rating,
-            defaultingPercentage: (defaultingPercentage as num).toDouble(),
-          );
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data['message'] ?? 'Login failed')),
-          );
-        }
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An error occurred. Try again later.')),
-        );
+      final response = await http.post(Uri.parse('$apiUrl/login'),
+        body: {'phone': _normalise(phone), 'pin': _pin.text});
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode != 200 || decoded['success'] != true) {
+        throw Exception(decoded['message']?.toString() ?? 'Unable to sign in.');
       }
-    } catch (e) {
+      await UserSession.saveAuthPayload(
+        (decoded['data'] as Map).cast<String, dynamic>());
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('A network error occurred. Please try again.')),
-      );
+      Navigator.pushReplacement(context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 26.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
+  void dispose() { _phone.dispose(); _pin.dispose(); super.dispose(); }
 
-                // App Icon or Animation
-                SizedBox(
-                  height: 140,
-                  child: Lottie.asset(
-                    'assets/lottie/login.json',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // Title
-                const Text(
-                  "Welcome Back",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: OpFinColors.ink,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 8),
-
-                const Text(
-                  "Login to continue accessing your loan services.",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: OpFinColors.muted,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 40),
-
-                // Phone Input
-                TextField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecorations().inputStyle(
-                    label: "Phone Number",
-                    hint: "0700460055",
-                    icon: Icons.phone_rounded,
-                  ),
-                  style: const TextStyle(color: OpFinColors.ink),
-                ),
-
-                const SizedBox(height: 25),
-
-                // Password Input
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecorations().inputStyle(
-                    label: "Password",
-                    hint: "•••••••••••",
-                    icon: Icons.lock_rounded,
-                  ),
-                  style: const TextStyle(color: OpFinColors.ink),
-                ),
-
-                const SizedBox(height: 35),
-
-                // Login Button
-                _isLoading
-                    ? const CircularProgressIndicator(color: OpFinColors.ink)
-                    : SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: OpFinColors.indigo,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          child: const Text("Login"),
-                        ),
-                      ),
-                const SizedBox(height: 20),
-
-                // Forgot Password (right aligned, subtle)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ForgotPasswordScreen()),
-                      );
-                    },
-                    child: const Text(
-                      "Forgot password?",
-                      style: TextStyle(
-                        color: OpFinColors.muted,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: OpFinColors.line)),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        "OR",
-                        style: TextStyle(
-                          color: OpFinColors.muted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: OpFinColors.line)),
-                  ],
-                ),
-
-                const SizedBox(height: 30),
-
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                    );
-                  },
-                  child: RichText(
-                    textAlign: TextAlign.center,
-                    text: const TextSpan(
-                      text: "Don’t have an account? ",
-                      style: TextStyle(
-                        color: OpFinColors.ink,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: "Register",
-                          style: TextStyle(
-                            color: OpFinColors.ink,
-                            fontWeight: FontWeight.w800,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-              ],
-            ),
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: OpFinColors.ivory,
+    body: SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          const SizedBox(height: 40),
+          const Icon(Icons.account_balance_wallet_outlined,
+            size: 68, color: OpFinColors.indigo),
+          const SizedBox(height: 22),
+          const Text('Welcome back', textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          const Text('Sign in with your phone and 6-digit PIN.',
+            textAlign: TextAlign.center, style: TextStyle(color: OpFinColors.muted)),
+          const SizedBox(height: 34),
+          TextField(
+            controller: _phone,
+            keyboardType: TextInputType.phone,
+            autofillHints: const [AutofillHints.telephoneNumber],
+            decoration: const InputDecoration(
+              labelText: 'Phone number', hintText: '07XXXXXXXX',
+              prefixIcon: Icon(Icons.phone_outlined)),
           ),
-        ),
+          const SizedBox(height: 18),
+          TextField(
+            controller: _pin,
+            keyboardType: TextInputType.number,
+            obscureText: true,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: '6-digit PIN', prefixIcon: Icon(Icons.lock_outline)),
+            onSubmitted: (_) => _login(),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(height: 52, child: FilledButton(
+            onPressed: _loading ? null : _login,
+            child: _loading
+              ? const CircularProgressIndicator(strokeWidth: 2)
+              : const Text('Sign in'))),
+          Align(alignment: Alignment.centerRight, child: TextButton(
+            onPressed: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
+            child: const Text('Forgot PIN?'))),
+          const SizedBox(height: 14),
+          TextButton(
+            onPressed: () => Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (_) => const RegisterScreen())),
+            child: const Text('Create an account')),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
