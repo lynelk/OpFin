@@ -51,7 +51,7 @@ class TransactionReceiptService
             'status' => 'issued',
             'payload' => $payload,
             'payload_hash' => hash('sha256', $canonical),
-            'delivery_channel' => 'sms',
+            'delivery_channel' => 'in_app+sms',
             'issued_at' => now(),
         ]);
 
@@ -67,7 +67,6 @@ class TransactionReceiptService
                     $transaction->provider_reference ?: 'pending-reference',
                 ),
             );
-            $receipt->update(['delivered_at' => now(), 'status' => 'delivered']);
         }
 
         return $receipt->fresh();
