@@ -1,318 +1,83 @@
-import 'package:opfin/brand/brand_colors.dart';
-import 'package:flutter/material.dart';
-import 'package:opfin/constants.dart';
-import 'package:opfin/services/user_session.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import 'login_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:opfin/accessibility_screen.dart';
+import 'package:opfin/constants.dart';
+import 'package:opfin/kyc_setup_screen.dart';
+import 'package:opfin/login_screen.dart';
+import 'package:opfin/secondary_phone_screen.dart';
+import 'package:opfin/services/credit_profile_api.dart';
+import 'package:opfin/services/user_session.dart';
+import 'package:opfin/wallets_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends StatefulWidget{
   const ProfileScreen({super.key});
-
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  @override State<ProfileScreen> createState()=>_ProfileScreenState();
 }
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  String? name, role, phone, dateOfBirth, ninStatus, nationalId, band, rating;
-  int? userId, score;
-  double? defaultingPercentage;
-  final TextEditingController ninController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    getPrefs();
+class _ProfileScreenState extends State<ProfileScreen>{
+  late Future<Map<String,dynamic>> _data;
+  @override void initState(){super.initState();_data=_load();}
+  Future<Map<String,dynamic>> _load() async{
+    final token=await UserSession.getAccessToken();
+    final profile=await http.get(Uri.parse('$apiUrl/profile'),headers:{
+      'Authorization':'Bearer $token','Accept':'application/json'});
+    final body=jsonDecode(profile.body) as Map<String,dynamic>;
+    if(profile.statusCode!=200||body['success']!=true)throw Exception(body['message']??'Unable to load profile.');
+    final state=await CreditProfileApi.load();
+    return {'account':(body['data'] as Map).cast<String,dynamic>(),'credit':state};
   }
-
-  Future<void> getPrefs() async {
-    final data = await UserSession.getProfileData();
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      userId = data['user_id'] as int?;
-      name = prefs.getString('name');
-      role = prefs.getString('role');
-      phone = data['phone'] as String?;
-      dateOfBirth = data['date_of_birth'] as String?;
-      ninStatus = data['nin_status'] as String?;
-      nationalId = data['national_id'] as String?;
-
-      // Credit Score
-      score = prefs.getInt('credit_score');
-      band = prefs.getString('credit_band');
-      rating = prefs.getString('credit_rating');
-      defaultingPercentage = prefs.getDouble('defaulting_percentage');
-    });
+  Future<void> _open(Widget screen) async{
+    await Navigator.push(context,MaterialPageRoute(builder:(_)=>screen));
+    setState(()=>_data=_load());
   }
-
-  Future<void> validateNin() async {
-    final nin = ninController.text.trim();
-
-    if (userId == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User ID not found. Please log in again.")),
-      );
-      return;
-    }
-    if (nin.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a NIN.")),
-      );
-      return;
-    }
-    if (nin.length != 14) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("NIN must be exactly 14 characters.")),
-      );
-      return;
-    }
-    if (!RegExp(r'^[A-Za-z0-9]+$').hasMatch(nin)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("NIN must contain only letters and numbers.")),
-      );
-      return;
-    }
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      final body = {
-        'nin': nin,
-        'user_id': userId,
-      };
-      final token = await UserSession.getAccessToken();
-      final response = await http.post(
-        Uri.parse("$apiUrl/validate-nin"),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
-      );
-      if (!mounted) return;
-      Navigator.of(context).pop(); // Close loading
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        final validation = data['data'];
-
-        await UserSession.saveNinValidation(
-          nationalId: validation['nin'] ?? '',
-          dateOfBirth: validation['date_of_birth'] ?? '',
-          ninStatus: validation['nin_status'] ?? '',
-        );
-
-        getPrefs(); // Refresh UI
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("NIN validated successfully.")),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'] ?? "Validation failed.")),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("A network error occurred. Please try again.")),
-      );
-    }
-  }
-
-  Future<void> _logout() async {
-    try {
-      final token = await UserSession.getAccessToken();
-      if (token != null && token.isNotEmpty) {
-        await http.post(
-          Uri.parse('$apiUrl/logout'),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Accept': 'application/json',
-          },
-        );
-      }
-    } catch (_) {
-      // Proceed with local logout even if the server call fails.
-    }
+  Future<void> _logout() async{
+    try{
+      final token=await UserSession.getAccessToken();
+      await http.post(Uri.parse('$apiUrl/logout'),headers:{
+        'Authorization':'Bearer $token','Accept':'application/json'});
+    }catch(_){}
     await UserSession.clear();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
+    if(!mounted)return;
+    Navigator.pushAndRemoveUntil(context,MaterialPageRoute(builder:(_)=>const LoginScreen()),(_)=>false);
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final profileDetails = {
-      'Name': name ?? '',
-      'Phone Number': phone ?? '',
-      'National ID': nationalId ?? '',
-      'Date of Birth': dateOfBirth ?? '',
-      'NIN Status': ninStatus ?? '',
-      'Credit Score': score != null ? score.toString() : '',
-      'Credit Band': band ?? '',
-      'Credit Rating': rating ?? '',
-      'Defaulting Percentage': defaultingPercentage != null
-          ? "${defaultingPercentage!.toStringAsFixed(2)}%"
-          : '',
-    };
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: OpFinColors.ink),
-        title: const Text(
-          "Profile",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: OpFinColors.ink,
-          ),
-        ),
-        centerTitle: false,
-        foregroundColor: OpFinColors.ink,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              /// PROFILE DETAILS
-              ...profileDetails.entries.map((entry) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        entry.key,
-                        style: const TextStyle(
-                          color: OpFinColors.ink,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 14, horizontal: 16),
-                        margin: const EdgeInsets.only(bottom: 18),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Text(
-                          entry.value.isNotEmpty ? entry.value : '-',
-                          style: const TextStyle(
-                            color: OpFinColors.ink,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  )),
-
-              const SizedBox(height: 10),
-
-              /// NIN VALIDATION
-              if (ninStatus != 'VALID') ...[
-                const SizedBox(height: 10),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Enter NIN',
-                    style: TextStyle(
-                      color: OpFinColors.ink,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: ninController,
-                  decoration: InputDecoration(
-                    hintText: 'CM930121003EGE',
-                    hintStyle: TextStyle(color: Colors.grey[500]),
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 14, horizontal: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: validateNin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: OpFinColors.indigo,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text(
-                      'Validate NIN',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 28),
-              ],
-
-              /// LOGOUT BUTTON
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _logout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: OpFinColors.indigo,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    'Logout',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  @override Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('Profile & security')),
+    body:FutureBuilder<Map<String,dynamic>>(future:_data,builder:(context,s){
+      if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
+      if(s.hasError)return Center(child:Text(s.error.toString()));
+      final account=((s.data!['account'] as Map)['user'] as Map).cast<String,dynamic>();
+      final credit=(s.data!['credit'] as Map).cast<String,dynamic>();
+      final setup=(credit['setup'] as Map?)?.cast<String,dynamic>()??{};
+      return ListView(padding:const EdgeInsets.all(20),children:[
+        Semantics(header:true,child:Text(account['name']?.toString()??'',
+          style:const TextStyle(fontSize:25,fontWeight:FontWeight.w800))),
+        const SizedBox(height:4),
+        Text(account['phone']?.toString()??''),
+        const SizedBox(height:20),
+        Card(child:ListTile(
+          leading:Icon(setup['kyc_status']=='verified'?Icons.verified_user:Icons.badge_outlined),
+          title:const Text('Identity'),
+          subtitle:Text(setup['kyc_status']=='verified'?'Verified':'Not yet verified'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:setup['kyc_status']=='verified'?null:()=>_open(const KycSetupScreen()))),
+        Card(child:ListTile(
+          leading:const Icon(Icons.add_call),
+          title:const Text('Second phone'),
+          subtitle:Text(setup['secondary_phone_verified']==true?'Verified':'Optional · not added'),
+          trailing:setup['secondary_phone_verified']==true?const Icon(Icons.check_circle):const Icon(Icons.chevron_right),
+          onTap:setup['secondary_phone_verified']==true?null:()=>_open(const SecondaryPhoneScreen()))),
+        Card(child:ListTile(
+          leading:const Icon(Icons.account_balance_wallet_outlined),
+          title:const Text('Wallets'),subtitle:const Text('Choose payout and repayment wallet.'),
+          trailing:const Icon(Icons.chevron_right),onTap:()=>_open(const WalletsScreen()))),
+        Card(child:ListTile(
+          leading:const Icon(Icons.accessibility_new),
+          title:const Text('Accessibility'),subtitle:const Text('Larger text, simpler wording and reduced movement.'),
+          trailing:const Icon(Icons.chevron_right),onTap:()=>_open(const AccessibilityScreen()))),
+        const SizedBox(height:18),
+        SizedBox(height:50,child:OutlinedButton.icon(
+          onPressed:_logout,icon:const Icon(Icons.logout),label:const Text('Sign out'))),
+      ]);
+    }));
 }
