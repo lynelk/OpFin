@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\CustomerWalletController;
 use App\Http\Controllers\Api\FinancialWellbeingController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\GuarantorController;
 use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
@@ -24,11 +25,13 @@ use App\Http\Controllers\Api\ProductionOperationsController;
 use App\Http\Controllers\Api\ProductionPaymentOperationsController;
 use App\Http\Controllers\Api\ProductionReconciliationController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\ReceiptController;
 use App\Http\Controllers\Api\ProtectionController;
 use App\Http\Controllers\Api\SaveProtectionOperationsController;
 use App\Http\Controllers\Api\SaveProtectionWorkQueueController;
 use App\Http\Controllers\Api\SavingsController;
 use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\UmraComplianceController;
 use App\Http\Controllers\Api\UssdController;
 use App\Http\Controllers\Api\V5P0PlatformController;
 use App\Http\Controllers\Api\WhatsAppWebhookController;
@@ -48,6 +51,7 @@ Route::post('/webhooks/cpay', CpayWebhookController::class)->middleware('throttl
 Route::post('/ussd', UssdController::class)->middleware('throttle:webhooks')->name('ussd.callback');
 Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->middleware('throttle:webhooks')->name('webhooks.whatsapp.verify');
 Route::post('/webhooks/whatsapp', WhatsAppWebhookController::class)->middleware('throttle:webhooks')->name('webhooks.whatsapp');
+Route::post('/guarantors/confirm', [GuarantorController::class, 'confirm'])->middleware('throttle:auth');
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -93,11 +97,15 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     Route::get('/support-cases', [CustomerSupportController::class, 'index']);
     Route::post('/support-cases', [CustomerSupportController::class, 'store']);
+    Route::get('/receipts', [ReceiptController::class, 'index']);
+    Route::get('/receipts/{receipt}', [ReceiptController::class, 'show']);
     Route::post('/validate-nin', [NinValidationController::class, 'validateNin']);
     Route::post('/credit-scores', [NinValidationController::class, 'creditScores']);
 
     Route::get('/credit/applications', [ProductionLoanApplicationController::class, 'index']);
     Route::post('/credit/applications', [ProductionLoanApplicationController::class, 'store']);
+    Route::get('/credit/applications/{application}/guarantors', [GuarantorController::class, 'index']);
+    Route::post('/credit/applications/{application}/guarantors', [GuarantorController::class, 'store']);
     Route::get('/credit/applications/{application}', [ProductionLoanApplicationController::class, 'show']);
     Route::get('/credit/offers', [ProductionCreditOfferController::class, 'index']);
     Route::get('/credit/offers/{offer}', [ProductionCreditOfferController::class, 'show']);
@@ -162,6 +170,14 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/workflow-runs/{run}/transition', [V5P0PlatformController::class, 'transitionWorkflow']);
 
     Route::post('/admin/credit-decisions/{decision}/approve', [ProductionCreditController::class, 'approve']);
+    Route::get('/admin/umra/credit-reporting', [UmraComplianceController::class, 'creditReporting']);
+    Route::post('/admin/umra/credit-reporting/submit', [UmraComplianceController::class, 'submitCreditReporting']);
+    Route::post('/admin/umra/loans/{loan}/evaluate-npl', [UmraComplianceController::class, 'evaluateNpl']);
+    Route::post('/admin/umra/loans/{loan}/default-interest', [UmraComplianceController::class, 'accrueDefaultInterest']);
+    Route::get('/admin/umra/term-changes', [UmraComplianceController::class, 'termChanges']);
+    Route::post('/admin/umra/product-terms/{term}/changes', [UmraComplianceController::class, 'termChange']);
+    Route::post('/admin/umra/term-changes/{change}/approve', [UmraComplianceController::class, 'approveTermChange']);
+    Route::post('/admin/umra/term-changes/{change}/apply', [UmraComplianceController::class, 'applyTermChange']);
     Route::post('/admin/credit/applications/{application}/offer', [ProductionCreditOfferController::class, 'store']);
     Route::post('/admin/mobile-money-transactions/{transaction}/refresh-status', [ProductionPaymentOperationsController::class, 'refreshStatus']);
     Route::post('/admin/reconciliation-runs', [ProductionReconciliationController::class, 'store']);
