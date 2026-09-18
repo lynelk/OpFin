@@ -7,8 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class KycCase extends Model
 {
     public const STATUS_PENDING_REVIEW = 'pending_review';
+
     public const STATUS_VERIFIED = 'verified';
+
     public const STATUS_REJECTED = 'rejected';
+
     public const STATUS_EXPIRED = 'expired';
 
     protected $fillable = [
