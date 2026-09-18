@@ -81,6 +81,11 @@ Wallet ownership is enforced server-side. Credit limit is profile-level, never p
 | POST | `/api/consents` | Grant explicit versioned consent |
 | DELETE | `/api/consents/{consent}` | Revoke consent |
 
+Two consent purposes matter to the lending journey:
+
+- `credit_processing` supports scoring/credit assessment.
+- `credit_reporting` is recorded separately from the accepted loan offer/disclosure and gates outbound positive/negative credit-information reporting.
+
 KYC multipart fields:
 
 - `national_id`
@@ -155,6 +160,15 @@ Offer acceptance:
 
 A successful acceptance may return `disbursement_pending`; it must not be presented as provider-confirmed money until finality is received.
 
+### Guarantor-backed applications
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/credit/applications/{application}/guarantors/request-code` | Send a guarantor-specific electronic consent code |
+| POST | `/api/credit/applications/{application}/guarantors` | Record electronically verified guarantor consent and automatically resume decisioning when the required count is met |
+
+Product terms expose `guarantors_required` with an allowed range of 0–2. OpFin does not read the customer's contact list.
+
 ## 7. Repayment
 
 | Method | Endpoint | Purpose |
@@ -173,6 +187,17 @@ Required idempotency key is accepted in the `Idempotency-Key` header or body.
 
 HTTP 202 means the collection request was accepted, not that repayment is economically final.
 
+Before collection is initiated, non-performing loans are evaluated against the configured UMRA recovery-control record. In `enforce` mode, a collection request above the remaining tracked recovery ceiling is rejected.
+
+### Transaction receipts
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/receipts` | List the authenticated customer's provider-confirmed transaction receipts |
+| GET | `/api/receipts/{receipt}` | Retrieve one immutable receipt owned by the customer |
+
+Only provider-confirmed successful disbursements/collections receive a successful e-receipt. Receipt payloads carry a SHA-256 evidence hash.
+
 ## 8. Support and accessibility
 
 | Method | Endpoint | Purpose |
@@ -182,6 +207,17 @@ HTTP 202 means the collection request was accepted, not that repayment is econom
 | PATCH | `/api/accessibility-preferences` | Persist language/access preferences |
 
 Accessibility preferences include simple language, large text, screen-reader optimisation and reduced motion.
+
+Customer complaints are classified for UMRA consumer protection, receive a 30-day SLA date, and require a customer-facing resolution summary before operations can close or resolve the case.
+
+### Credit-term variations
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/credit/term-variations` | List proposed changes affecting the authenticated customer's loans, including consent hash |
+| POST | `/api/credit/term-variations/{variation}/accept` | Record explicit consent to the exact proposed change |
+
+Interest-rate variations cannot be accepted until prior UMRA approval evidence has been recorded. The original accepted offer remains immutable.
 
 ## 9. WhatsApp and USSD
 
@@ -202,3 +238,35 @@ USSD supports status/limit/borrow/repay/loan/profile-help menus but hands image/
 Existing admin KYC review, CRB ingestion, credit decision approval, offer generation, payment refresh and reconciliation endpoints remain role-gated. Manual approval is a controlled fallback when automatic profile decisioning cannot safely approve.
 
 Demo routes remain disabled unless explicitly enabled in configuration/testing.
+
+
+## 11. UMRA operations and books
+
+Role-gated to authorised operations/support roles as defined in routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/admin/umra/credit-reference-submissions` | Positive/negative outbound CRB queue and summary |
+| POST | `/api/admin/umra/credit-reference-submissions/{submission}/retry` | Retry a failed/pending CRB submission |
+| GET | `/api/admin/umra/npl-controls` | NPL principal/default-interest/recovery-ceiling register |
+| POST | `/api/admin/umra/loans/{loan}/evaluate-npl` | Re-evaluate a loan's NPL control |
+| GET | `/api/admin/umra/term-variations` | Governed credit-term variation register |
+| POST | `/api/admin/umra/loans/{loan}/term-variations` | Propose a separate versioned term variation |
+| POST | `/api/admin/umra/term-variations/{variation}/umra-approval` | Record prior UMRA interest-rate approval reference + evidence hash |
+| POST | `/api/admin/umra/term-variations/{variation}/apply` | Deliberately fail-closed until a separately controlled versioned economic-amendment executor exists |
+| POST | `/api/admin/governance/regulatory-reports` | Generate a validated regulatory report |
+| POST | `/api/admin/governance/regulatory-reports/{report}/approve` | Maker-checker approval |
+| GET | `/api/admin/governance/regulatory-reports/{report}/export?format=json|csv` | Download an evidence-hashed report/register |
+
+UMRA report profiles include:
+
+- `umra_digital_credit_supervision`
+- `umra_books_and_records`
+- `umra_credit_information_exchange`
+- `umra_npl_recovery`
+- `umra_transaction_receipts`
+- `umra_term_variations`
+- `umra_guarantor_controls`
+- `consumer_protection_complaints`
+
+The Admin web application exposes these through **Compliance reports** and the **UMRA Control Desk**.
