@@ -323,6 +323,9 @@ class ProductionCreditOfferService
                     'duration' => $offer->duration_days,
                     'repayment_amount' => $offer->total_repayment_minor,
                     'repayment_start_date' => $firstDueDate->toDateString(),
+                    'umra_npl_cap_enforcement_enabled' => (bool) config('opfin.regulatory.enforce_umra_npl_cap', true),
+                    'initial_interest_minor' => $offer->interest_amount_minor,
+                    'default_interest_cap_minor' => intdiv((int) $offer->interest_amount_minor, 2),
                 ]);
                 $loan->save();
 
