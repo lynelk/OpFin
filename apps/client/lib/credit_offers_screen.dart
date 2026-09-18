@@ -218,6 +218,76 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
         if (apr != null) _row('Equivalent maximum APR', '$apr% including fees'),
         if (firstDue != null) _row('First payment due', '$firstDue days after successful disbursement'),
         if (finalDue != null) _row('Full repayment due', '$finalDue days after successful disbursement'),
+        if (timing['first_payment_due_days_after_disbursement'] != null && firstDue == null)
+          _row(
+            'First payment due',
+            timing['first_payment_due_days_after_disbursement'].toString() + ' days after successful disbursement',
+          ),
+        if (timing['final_payment_due_days_after_disbursement'] != null && finalDue == null)
+          _row(
+            'Full repayment due',
+            timing['final_payment_due_days_after_disbursement'].toString() + ' days after successful disbursement',
+          ),
+        const Divider(height: 28),
+        const Text('How the cost is calculated', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        if (interest['configured_rate_percent'] != null)
+          _row(
+            'Interest rate',
+            interest['configured_rate_percent'].toString() + '% ' +
+                (interest['cycle'] ?? '').toString() + ', ' +
+                (interest['type'] ?? '').toString(),
+          ),
+        if (interest['term_rate_percent'] != null)
+          _row('Rate for this term', interest['term_rate_percent'].toString() + '%'),
+        if (interest['calculation'] != null)
+          _notice('Interest calculation', interest['calculation'].toString()),
+        if (fees['access_fee_minor'] != null)
+          _row('Access fee', _ugx(fees['access_fee_minor'])),
+        if (fees['disbursement_fee_minor'] != null)
+          _row('Disbursement fee', _ugx(fees['disbursement_fee_minor'])),
+        if (fees['fee_treatment'] != null)
+          _notice(
+            'Fee treatment',
+            'Fees are ' + fees['fee_treatment'].toString() + '. ' +
+                (fees['access_fee_calculation'] ?? '').toString() + ' ' +
+                (fees['disbursement_fee_calculation'] ?? '').toString(),
+          ),
+        const Divider(height: 28),
+        const Text('Your rights and important information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        if (complaints.isNotEmpty)
+          _notice(
+            'Complaints',
+            (complaints['process'] ?? '').toString() +
+                '\nTarget resolution: ' +
+                (complaints['resolution_sla_days'] ?? 30).toString() +
+                ' days. ' +
+                (complaints['channel'] ?? '').toString() +
+                (complaints['phone'] == null ? '' : ' · ' + complaints['phone'].toString()) +
+                (complaints['email'] == null ? '' : ' · ' + complaints['email'].toString()),
+            icon: Icons.support_agent,
+          ),
+        if (creditInfo['notice'] != null)
+          _notice('Credit information reporting', creditInfo['notice'].toString(), icon: Icons.credit_score_outlined),
+        if (guarantors['notice'] != null)
+          _notice(
+            'Guarantors',
+            guarantors['notice'].toString() +
+                ' Maximum contacts: ' +
+                (guarantors['maximum_contacts'] ?? 2).toString() +
+                '.',
+            icon: Icons.people_outline,
+          ),
+        if (variation['notice'] != null)
+          _notice('Changes to your loan terms', variation['notice'].toString(), icon: Icons.rule_outlined),
+        if (provider['licensed_entity_name'] != null || provider['business_address'] != null)
+          _notice(
+            'Provider identity',
+            (provider['licensed_entity_name'] ?? 'Licensed provider to be confirmed').toString() +
+                ' · Regulator: ' +
+                (provider['regulator'] ?? 'UMRA').toString() +
+                (provider['business_address'] == null ? '' : '\n' + provider['business_address'].toString()),
+            icon: Icons.account_balance_outlined,
+          ),
         const SizedBox(height: 12),
         FutureBuilder<List<Map<String, dynamic>>>(
           future: _wallets,
@@ -265,7 +335,7 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
           contentPadding: EdgeInsets.zero,
           value: _accepted,
           onChanged: (value) => setState(() => _accepted = value == true),
-          title: const Text('I have reviewed and accept the amount received, interest, fees, APR where applicable, total repayment, due terms and repayment frequency.'),
+          title: const Text('I have reviewed and accept this exact offer, including the amount received, interest and how it is calculated, fees and penalties, total cost, repayment timing, complaint process, credit-information reporting notice and rules for any future term variation.'),
         ),
         FilledButton(onPressed: !_accepted || _walletId == null || _submitting || offer['status'] != 'offered' ? null : _accept, child: Text(_submitting ? 'Submitting…' : 'Accept offer and request disbursement')),
       ]),
