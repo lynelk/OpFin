@@ -106,6 +106,8 @@ Default composite weights are configuration, not UI promises:
 
 Only available, current source components contribute to the calculated composite. Coverage is recorded explicitly. Minimum coverage is required before a positive automated limit is assigned.
 
+Risk-based profile limit is a maximum exposure signal, not a promise of approval. Automatic approval also requires the configured verified affordability input and debt-service test; otherwise the request is referred for controlled review.
+
 The customer sees:
 
 - **OpFin Score: X / 100**
