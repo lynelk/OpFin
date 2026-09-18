@@ -81,12 +81,14 @@ class ProductionCreditOfferLifecycleTest extends TestCase
 
         $this->postJson("/api/credit/offers/{$offerId}/accept", [
             'accept_disclosures' => true,
+            'credit_reporting_consent' => true,
             'disclosure_hash' => str_repeat('0', 64),
         ])->assertStatus(409)->assertJsonPath('errors.disclosure_hash.0', 'DISCLOSURE_HASH_MISMATCH');
         $this->assertDatabaseCount('mobile_money_transactions', 0);
 
         $acceptance = $this->postJson("/api/credit/offers/{$offerId}/accept", [
             'accept_disclosures' => true,
+            'credit_reporting_consent' => true,
             'disclosure_hash' => $disclosureHash,
         ]);
         $acceptance->assertOk()
@@ -178,6 +180,7 @@ class ProductionCreditOfferLifecycleTest extends TestCase
         $freshOffer->assertJsonPath('data.offer.status', CreditOffer::STATUS_EXPIRED);
         $this->postJson("/api/credit/offers/{$offerId}/accept", [
             'accept_disclosures' => true,
+            'credit_reporting_consent' => true,
             'disclosure_hash' => (string) $freshOffer->json('data.disclosure_hash'),
         ])->assertStatus(409);
         $this->assertDatabaseCount('mobile_money_transactions', 0);
