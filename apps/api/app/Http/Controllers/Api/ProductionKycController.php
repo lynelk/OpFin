@@ -60,9 +60,10 @@ class ProductionKycController extends Controller
 
         $user = $request->user();
         $directory = 'kyc/'.$user->id;
-        $front = $request->file('national_id_front')->store($directory, 'local');
-        $back = $request->file('national_id_back')->store($directory, 'local');
-        $selfie = $request->file('selfie_with_id')->store($directory, 'local');
+        $disk = (string) config('services.identity_verification.disk', 'local');
+        $front = $request->file('national_id_front')->store($directory, $disk);
+        $back = $request->file('national_id_back')->store($directory, $disk);
+        $selfie = $request->file('selfie_with_id')->store($directory, $disk);
 
         $case = KycCase::create([
             'user_id' => $user->id,

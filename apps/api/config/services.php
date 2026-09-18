@@ -67,6 +67,7 @@ return [
     'identity_verification' => [
         'url' => env('IDENTITY_VERIFICATION_URL'),
         'token' => env('IDENTITY_VERIFICATION_TOKEN'),
+        'disk' => env('KYC_FILESYSTEM_DISK', env('FILESYSTEM_DISK', 'local')),
     ],
 
     'scoring' => [

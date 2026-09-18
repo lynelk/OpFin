@@ -30,9 +30,10 @@ class IdentityVerificationService
         }
 
         try {
-            $front = Storage::disk('local')->get($case->national_id_front_path);
-            $back = Storage::disk('local')->get($case->national_id_back_path);
-            $selfie = Storage::disk('local')->get($case->selfie_with_id_path);
+            $disk = (string) config('services.identity_verification.disk', 'local');
+            $front = Storage::disk($disk)->get($case->national_id_front_path);
+            $back = Storage::disk($disk)->get($case->national_id_back_path);
+            $selfie = Storage::disk($disk)->get($case->selfie_with_id_path);
             $phones = CustomerPhoneNumber::query()
                 ->where('user_id', $case->user_id)
                 ->whereNotNull('verified_at')

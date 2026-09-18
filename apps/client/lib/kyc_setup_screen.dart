@@ -75,11 +75,54 @@ class _KycSetupScreenState extends State<KycSetupScreen> {
     if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(text)));
   }
 
+  Future<void> _requestAssistance() async {
+    final token = await UserSession.getAccessToken();
+    final response = await http.post(
+      Uri.parse('$apiUrl/support-cases'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'category': 'accessibility',
+        'subject': 'Assisted identity verification',
+        'description':
+            'I need an accessible alternative or assistance to complete the National ID photo and selfie identity-verification step.',
+        'related_type': 'kyc',
+      }),
+    );
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        body['success'] != true) {
+      throw Exception(body['message']?.toString() ??
+          'Unable to request assisted verification.');
+    }
+  }
+
   void _assistance()=>showDialog<void>(context:context,builder:(_)=>AlertDialog(
     title:const Text('Need help with the photos?'),
     content:const Text(
       'Someone you trust may help position the ID or camera. Keep your PIN and OTP private. If camera use is not possible because of a disability or another access need, contact OpFin support for assisted identity verification.'),
-    actions:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Close'))]));
+    actions:[
+      TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Close')),
+      FilledButton(
+        onPressed:() async {
+          try {
+            await _requestAssistance();
+            if (!mounted) return;
+            Navigator.pop(context);
+            _message('Assisted verification requested. Support can follow up without asking for your PIN or OTP.');
+          } catch (error) {
+            if (!mounted) return;
+            Navigator.pop(context);
+            _message(error.toString().replaceFirst('Exception: ', ''));
+          }
+        },
+        child:const Text('Request assistance'),
+      ),
+    ]));
 
   Widget _step(int number,String title,String hint,bool done,VoidCallback onTap)=>Semantics(
     button:true,label:'$title. ${done?"Photo captured":"Photo required"}',
