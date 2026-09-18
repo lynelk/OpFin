@@ -6,6 +6,45 @@ import { OpfinApiError } from "@/lib/api/errors";
 import { getAccessToken } from "@/lib/auth/session";
 import { formatUgx } from "@/lib/format";
 
+type UmraDisclosure = {
+  total_cost_of_credit_minor?: number;
+  interest?: {
+    configured_rate_percent?: number;
+    cycle?: string;
+    type?: string;
+    term_rate_percent?: number;
+    calculation?: string;
+  };
+  fees?: {
+    access_fee_minor?: number;
+    disbursement_fee_minor?: number;
+    fee_treatment?: string;
+    access_fee_calculation?: string;
+    disbursement_fee_calculation?: string;
+  };
+  repayment_timing?: {
+    first_payment_due_days_after_disbursement?: number;
+    final_payment_due_days_after_disbursement?: number;
+    explanation?: string;
+  };
+  complaints?: {
+    channel?: string;
+    email?: string | null;
+    phone?: string | null;
+    resolution_sla_days?: number;
+    process?: string;
+  };
+  credit_information_exchange?: { notice?: string };
+  guarantors?: { maximum_contacts?: number; required_count?: number; notice?: string };
+  term_variation?: { notice?: string };
+  provider_identity?: {
+    licensed_entity_name?: string | null;
+    trading_name?: string;
+    business_address?: string | null;
+    regulator?: string;
+  };
+};
+
 export default async function LoanOfferPage({ searchParams }: { searchParams?: Promise<{ offer?: string; status?: string; error?: string; message?: string }> }) {
   const params = await searchParams;
   const token = await getAccessToken();
@@ -24,6 +63,7 @@ export default async function LoanOfferPage({ searchParams }: { searchParams?: P
     const response = await opfinApi.creditOffer(offerId, token);
     const offer = response.data.offer;
     const disclosureHash = response.data.disclosure_hash;
+    const disclosure = offer.disclosure_snapshot as UmraDisclosure;
     const canAccept = offer.status === "offered";
 
     return (
@@ -51,6 +91,7 @@ export default async function LoanOfferPage({ searchParams }: { searchParams?: P
               <tr><th>Approved principal</th><td>{formatUgx(offer.principal_amount_minor)}</td></tr>
               <tr><th>Interest</th><td>{formatUgx(offer.interest_amount_minor)}</td></tr>
               <tr><th>Fees</th><td>{formatUgx(offer.fees_minor)}</td></tr>
+              {typeof disclosure.total_cost_of_credit_minor === "number" ? <tr><th>Total cost of credit</th><td>{formatUgx(disclosure.total_cost_of_credit_minor)}</td></tr> : null}
               <tr><th>Amount you receive</th><td><strong>{formatUgx(offer.net_disbursement_minor)}</strong></td></tr>
               <tr><th>Total repayment</th><td><strong>{formatUgx(offer.total_repayment_minor)}</strong></td></tr>
               <tr><th>Duration</th><td>{offer.duration_days} days</td></tr>
