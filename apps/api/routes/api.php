@@ -67,6 +67,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::patch('/accessibility-preferences', [CustomerCreditProfileController::class, 'accessibility']);
     Route::get('/receipts', [CustomerComplianceController::class, 'receipts']);
     Route::get('/receipts/{receipt}', [CustomerComplianceController::class, 'receipt']);
+    Route::post('/credit/applications/{application}/guarantors/request-code', [CustomerComplianceController::class, 'requestGuarantorCode']);
     Route::post('/credit/applications/{application}/guarantors', [CustomerComplianceController::class, 'attachGuarantor']);
     Route::get('/credit/term-variations', [CustomerComplianceController::class, 'variations']);
     Route::post('/credit/term-variations/{variation}/accept', [CustomerComplianceController::class, 'acceptVariation']);
