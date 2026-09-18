@@ -171,7 +171,7 @@ class ProductionLoanApplicationController extends Controller
             return ApiResponse::error('Repay your active loan before requesting another one.', 409, ['code' => ['ACTIVE_LOAN_EXISTS']]);
         }
 
-        if (LoanApplication::query()->where('user_id', $user->id)->whereIn('status', ['Pending', 'Under Review', 'Referred'])->exists()) {
+        if (LoanApplication::query()->where('user_id', $user->id)->whereIn('status', ['Pending', 'Under Review', 'Referred', 'Awaiting Guarantors'])->exists()) {
             return ApiResponse::error('You already have a loan request being checked.', 409, ['code' => ['APPLICATION_ALREADY_IN_PROGRESS']]);
         }
 
@@ -200,8 +200,12 @@ class ProductionLoanApplicationController extends Controller
         $decision = null;
         $offer = null;
         $nextState = 'assessment';
+        $guarantorsRequired = min(2, max(0, (int) ($term->guarantors_required ?? 0)));
 
-        if ($profile) {
+        if ($guarantorsRequired > 0) {
+            $application->update(['status' => 'Awaiting Guarantors']);
+            $nextState = 'guarantors_required';
+        } elseif ($profile) {
             $decision = $this->decisionService->decide($application, null);
             $application->update([
                 'status' => match ($decision->status) {
@@ -247,6 +251,7 @@ class ProductionLoanApplicationController extends Controller
             'offer' => $offer,
             'next_state' => $nextState,
             'routing_mode' => $routingMode,
+            'guarantors_required' => $guarantorsRequired,
         ], 201);
     }
 }
