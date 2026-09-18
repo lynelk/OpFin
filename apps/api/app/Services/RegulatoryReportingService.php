@@ -4,9 +4,15 @@ namespace App\Services;
 
 use App\Models\ConsentRecord;
 use App\Models\CreditDecision;
+use App\Models\CreditReferenceSubmission;
+use App\Models\CreditTermVariation;
 use App\Models\KycCase;
+use App\Models\Loan;
+use App\Models\LoanGuarantor;
+use App\Models\LoanNplControl;
 use App\Models\MobileMoneyTransaction;
 use App\Models\SupportCase;
+use App\Models\TransactionReceipt;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -18,6 +24,12 @@ class RegulatoryReportingService
         'fia_suspicious_activity_register' => 'FIA',
         'pdpo_annual_compliance' => 'PDPO',
         'umra_digital_credit_supervision' => 'UMRA',
+        'umra_books_and_records' => 'UMRA',
+        'umra_credit_information_exchange' => 'UMRA',
+        'umra_npl_recovery' => 'UMRA',
+        'umra_transaction_receipts' => 'UMRA',
+        'umra_term_variations' => 'UMRA',
+        'umra_guarantor_controls' => 'UMRA',
         'consumer_protection_complaints' => 'UMRA',
         'payment_integrity_oversight' => 'BOU',
     ];
@@ -33,6 +45,12 @@ class RegulatoryReportingService
             'fia_suspicious_activity_register' => $this->suspiciousActivityRegister($start, $end),
             'pdpo_annual_compliance' => $this->privacyCompliance($start, $end),
             'umra_digital_credit_supervision' => $this->digitalCreditSupervision($start, $end),
+            'umra_books_and_records' => $this->umraBooksAndRecords($start, $end),
+            'umra_credit_information_exchange' => $this->creditInformationExchange($start, $end),
+            'umra_npl_recovery' => $this->nplRecovery($start, $end),
+            'umra_transaction_receipts' => $this->transactionReceipts($start, $end),
+            'umra_term_variations' => $this->termVariations($start, $end),
+            'umra_guarantor_controls' => $this->guarantorControls($start, $end),
             'consumer_protection_complaints' => $this->consumerProtection($start, $end),
             'payment_integrity_oversight' => $this->paymentIntegrity($start, $end),
             default => $this->annualAmlCompliance($start, $end),
@@ -69,6 +87,12 @@ class RegulatoryReportingService
             $this->generate('fia_large_cash_transactions', $monthStart, $monthEnd),
             $this->generate('fia_suspicious_activity_register', $monthStart, $monthEnd),
             $this->generate('umra_digital_credit_supervision', $monthStart, $monthEnd),
+            $this->generate('umra_books_and_records', $monthStart, $monthEnd),
+            $this->generate('umra_credit_information_exchange', $monthStart, $monthEnd),
+            $this->generate('umra_npl_recovery', $monthStart, $monthEnd),
+            $this->generate('umra_transaction_receipts', $monthStart, $monthEnd),
+            $this->generate('umra_term_variations', $monthStart, $monthEnd),
+            $this->generate('umra_guarantor_controls', $monthStart, $monthEnd),
             $this->generate('consumer_protection_complaints', $monthStart, $monthEnd),
             $this->generate('payment_integrity_oversight', $monthStart, $monthEnd),
             $this->generate('fia_annual_compliance', $yearStart, $yearEnd),
@@ -201,6 +225,141 @@ class RegulatoryReportingService
         ];
     }
 
+    private function umraBooksAndRecords(Carbon $start, Carbon $end): array
+    {
+        $loans = Loan::withoutGlobalScopes()->whereBetween('created_at', [$start, $end]);
+        $receipts = TransactionReceipt::query()->whereBetween('issued_at', [$start, $end]);
+        $crb = CreditReferenceSubmission::query()->whereBetween('created_at', [$start, $end]);
+        $complaints = SupportCase::query()->whereBetween('created_at', [$start, $end]);
+        $variations = CreditTermVariation::query()->whereBetween('created_at', [$start, $end]);
+
+        return [
+            'period' => ['start' => $start->toDateString(), 'end' => $end->toDateString()],
+            'loan_book' => [
+                'loans_created' => (clone $loans)->count(),
+                'principal_disbursed_minor' => (int) (clone $loans)->sum('amount'),
+                'active_loans' => Loan::withoutGlobalScopes()->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])->count(),
+                'cleared_loans' => Loan::withoutGlobalScopes()->where('status', 'Cleared')->count(),
+            ],
+            'credit_reference_exchange' => [
+                'records_created' => (clone $crb)->count(),
+                'submitted' => (clone $crb)->where('status', CreditReferenceSubmission::STATUS_SUBMITTED)->count(),
+                'failed' => (clone $crb)->where('status', CreditReferenceSubmission::STATUS_FAILED)->count(),
+                'positive' => (clone $crb)->where('information_type', 'positive')->count(),
+                'negative' => (clone $crb)->where('information_type', 'negative')->count(),
+            ],
+            'transaction_receipts' => [
+                'issued' => (clone $receipts)->count(),
+                'delivered' => (clone $receipts)->whereNotNull('delivered_at')->count(),
+            ],
+            'complaints' => [
+                'received' => (clone $complaints)->count(),
+                'resolved' => (clone $complaints)->whereIn('status', [SupportCase::STATUS_RESOLVED, SupportCase::STATUS_CLOSED])->count(),
+                'overdue_open' => SupportCase::query()->whereNull('resolved_at')->whereNotNull('sla_due_at')->where('sla_due_at', '<', now())->count(),
+            ],
+            'term_variations' => [
+                'proposed' => (clone $variations)->count(),
+                'applied' => (clone $variations)->where('status', CreditTermVariation::STATUS_APPLIED)->count(),
+                'interest_rate_variations' => (clone $variations)->where('requires_umra_approval', true)->count(),
+            ],
+            'books_available_for_inspection' => true,
+            'source_of_truth' => 'OpFin production ledger, loan, payment, receipt, complaint and credit-reference records',
+        ];
+    }
+
+    private function creditInformationExchange(Carbon $start, Carbon $end): array
+    {
+        $records = CreditReferenceSubmission::query()->whereBetween('created_at', [$start, $end]);
+
+        return [
+            'records' => (clone $records)->count(),
+            'positive' => (clone $records)->where('information_type', 'positive')->count(),
+            'negative' => (clone $records)->where('information_type', 'negative')->count(),
+            'submitted' => (clone $records)->where('status', CreditReferenceSubmission::STATUS_SUBMITTED)->count(),
+            'pending' => (clone $records)->where('status', CreditReferenceSubmission::STATUS_PENDING)->count(),
+            'failed' => (clone $records)->where('status', CreditReferenceSubmission::STATUS_FAILED)->count(),
+            'overdue_pending' => (clone $records)->whereIn('status', [CreditReferenceSubmission::STATUS_PENDING, CreditReferenceSubmission::STATUS_FAILED])->where('due_at', '<', now())->count(),
+            'submission_register' => (clone $records)->orderBy('id')->get([
+                'id', 'loan_id', 'event_type', 'information_type', 'status', 'reporting_date',
+                'payload_hash', 'provider_reference', 'due_at', 'submitted_at', 'retry_count',
+            ])->toArray(),
+        ];
+    }
+
+    private function nplRecovery(Carbon $start, Carbon $end): array
+    {
+        $controls = LoanNplControl::query()
+            ->whereNotNull('non_performing_at')
+            ->whereBetween('non_performing_at', [$start, $end]);
+
+        return [
+            'non_performing_loans' => (clone $controls)->count(),
+            'enforcement_mode' => config('opfin.compliance.umra_npl_cap_mode', 'enforce'),
+            'principal_at_npl_minor' => (int) (clone $controls)->sum('principal_at_npl_minor'),
+            'default_penalty_cap_minor' => (int) (clone $controls)->sum('default_penalty_cap_minor'),
+            'recoverable_interest_cap_minor' => (int) (clone $controls)->sum('recoverable_interest_cap_minor'),
+            'total_recoverable_cap_minor' => (int) (clone $controls)->sum('total_recoverable_cap_minor'),
+            'total_recovered_since_npl_minor' => (int) (clone $controls)->sum('total_recovered_since_npl_minor'),
+            'controls' => (clone $controls)->get()->toArray(),
+        ];
+    }
+
+    private function transactionReceipts(Carbon $start, Carbon $end): array
+    {
+        $receipts = TransactionReceipt::query()->whereBetween('issued_at', [$start, $end]);
+
+        return [
+            'issued' => (clone $receipts)->count(),
+            'delivered' => (clone $receipts)->whereNotNull('delivered_at')->count(),
+            'undelivered' => (clone $receipts)->whereNull('delivered_at')->count(),
+            'total_amount_minor' => (int) (clone $receipts)->sum('amount_minor'),
+            'receipts' => (clone $receipts)->orderBy('issued_at')->get([
+                'receipt_reference', 'transaction_type', 'amount_minor', 'currency',
+                'provider_reference', 'status', 'payload_hash', 'issued_at', 'delivered_at',
+            ])->toArray(),
+        ];
+    }
+
+    private function termVariations(Carbon $start, Carbon $end): array
+    {
+        $variations = CreditTermVariation::query()->whereBetween('created_at', [$start, $end]);
+
+        return [
+            'proposed' => (clone $variations)->count(),
+            'requires_umra_approval' => (clone $variations)->where('requires_umra_approval', true)->count(),
+            'umra_approved' => (clone $variations)->whereNotNull('umra_approved_at')->count(),
+            'customer_consented' => (clone $variations)->whereNotNull('customer_consented_at')->count(),
+            'applied' => (clone $variations)->whereNotNull('applied_at')->count(),
+            'unauthorized_applied' => (clone $variations)->whereNotNull('applied_at')->where(function ($query) {
+                $query->whereNull('customer_consented_at')
+                    ->orWhere(function ($inner) {
+                        $inner->where('requires_umra_approval', true)->whereNull('umra_approved_at');
+                    });
+            })->count(),
+            'register' => (clone $variations)->orderBy('id')->get()->toArray(),
+        ];
+    }
+
+    private function guarantorControls(Carbon $start, Carbon $end): array
+    {
+        $guarantors = LoanGuarantor::query()->whereBetween('created_at', [$start, $end]);
+
+        return [
+            'contacts_recorded' => (clone $guarantors)->count(),
+            'verified' => (clone $guarantors)->where('status', LoanGuarantor::STATUS_VERIFIED)->count(),
+            'electronically_consented' => (clone $guarantors)->whereNotNull('consented_at')->count(),
+            'applications_over_two_contacts' => LoanGuarantor::query()
+                ->select('loan_application_id', DB::raw('count(*) total'))
+                ->groupBy('loan_application_id')
+                ->havingRaw('count(*) > 2')
+                ->count(),
+            'register' => (clone $guarantors)->orderBy('id')->get([
+                'loan_application_id', 'position', 'phone', 'status',
+                'verification_method', 'verification_reference', 'verified_at', 'consented_at',
+            ])->toArray(),
+        ];
+    }
+
     private function consumerProtection(Carbon $start, Carbon $end): array
     {
         $cases = SupportCase::whereBetween('created_at', [$start, $end]);
@@ -248,6 +407,12 @@ class RegulatoryReportingService
             'fia_suspicious_activity_register' => ['candidates', 'submission_control'],
             'pdpo_annual_compliance' => ['consents_created', 'privacy_related_complaints', 'data_breach_incidents', 'affected_data_subjects', 'processing_evidence'],
             'umra_digital_credit_supervision' => ['credit_decisions', 'approved', 'referred', 'declined', 'kyc_cases', 'credit_consent_records'],
+            'umra_books_and_records' => ['loan_book', 'credit_reference_exchange', 'transaction_receipts', 'complaints', 'books_available_for_inspection'],
+            'umra_credit_information_exchange' => ['records', 'positive', 'negative', 'submitted', 'pending', 'failed', 'submission_register'],
+            'umra_npl_recovery' => ['non_performing_loans', 'enforcement_mode', 'principal_at_npl_minor', 'total_recoverable_cap_minor', 'controls'],
+            'umra_transaction_receipts' => ['issued', 'delivered', 'undelivered', 'receipts'],
+            'umra_term_variations' => ['proposed', 'requires_umra_approval', 'umra_approved', 'customer_consented', 'applied', 'unauthorized_applied'],
+            'umra_guarantor_controls' => ['contacts_recorded', 'verified', 'electronically_consented', 'applications_over_two_contacts'],
             'consumer_protection_complaints' => ['received', 'resolved', 'open', 'categories'],
             'payment_integrity_oversight' => ['transactions', 'successful', 'failed', 'unreconciled', 'reconciliation_exceptions'],
             default => ['kyc_cases', 'payment_transactions', 'control_evidence', 'submission_control'],
