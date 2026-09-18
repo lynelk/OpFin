@@ -52,6 +52,8 @@ class CustomerSupportController extends Controller
             'priority' => 'normal',
             'subject' => $request->input('subject'),
             'description' => $request->input('description'),
+            'regulatory_category' => 'umra_consumer_complaint',
+            'sla_due_at' => now()->addDays(30),
         ]);
 
         $this->auditLogger->record('support.case.customer_created', $request->user(), $case, [
