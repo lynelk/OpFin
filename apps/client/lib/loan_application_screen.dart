@@ -156,7 +156,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Semantics(
+              Semantics(
                 header: true,
                 child: Text(
                   'Check your request',
@@ -295,7 +295,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             return ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                const Semantics(
+                Semantics(
                   header: true,
                   child: Text(
                     'How much do you need?',
