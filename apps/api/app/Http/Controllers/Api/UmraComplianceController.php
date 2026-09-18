@@ -52,6 +52,20 @@ class UmraComplianceController extends Controller
         ]);
     }
 
+    public function setNplEnforcement(Loan $loan, Request $request, UmraNplCapService $service): JsonResponse
+    {
+        $request->validate(['enabled' => 'required|boolean']);
+
+        $loan->update([
+            'umra_npl_cap_enforcement_enabled' => $request->boolean('enabled'),
+            'npl_policy_checked_at' => now(),
+        ]);
+
+        return ApiResponse::success('UMRA NPL-cap enforcement setting updated.', [
+            'loan' => $service->evaluate($loan->fresh()),
+        ]);
+    }
+
     public function termChange(LoanProductTerm $term, Request $request, CreditTermGovernanceService $service): JsonResponse
     {
         $validator = Validator::make($request->all(), [
