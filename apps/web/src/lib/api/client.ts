@@ -402,7 +402,7 @@ export const opfinApi = {
     payload: { customer_id: number; category: string; priority?: string; subject: string; description: string; assigned_to?: number },
     token?: string
   ) => request<{ support_case: SupportCase }>("/admin/support-cases", { method: "POST", bodyJson: payload, token }),
-  updateSupportCase: (caseId: number, payload: { status: string; assigned_to?: number; priority?: string; note?: string }, token?: string) =>
+  updateSupportCase: (caseId: number, payload: { status: string; assigned_to?: number; priority?: string; note?: string; resolution_summary?: string }, token?: string) =>
     request<{ support_case: SupportCase }>(`/admin/support-cases/${caseId}`, { method: "PATCH", bodyJson: payload, token }),
   complianceReports: (token?: string) => request<{ reports: ComplianceReport[] }>("/admin/compliance-reports", { token }),
   createComplianceReport: (payload: { report_type: string; period_start: string; period_end: string; parameters?: Record<string, unknown> }, token?: string) =>
