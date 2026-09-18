@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -111,6 +112,88 @@ class GovernanceController extends Controller
 
         return ApiResponse::success('Regulatory report approved for external submission.', [
             'report' => DB::table('regulatory_report_runs')->find($report),
+        ]);
+    }
+
+    public function exportReport(int $report, Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'format' => ['nullable', Rule::in(['json', 'csv'])],
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
+        }
+
+        $record = DB::table('regulatory_report_runs')->where('id', $report)->first();
+        if (! $record) {
+            return ApiResponse::error('Regulatory report not found.', 404);
+        }
+
+        if (! in_array($record->status, ['validated', 'approved_for_submission'], true)) {
+            return ApiResponse::error('Only validated regulatory reports can be exported.', 409);
+        }
+
+        $payload = json_decode((string) $record->payload, true);
+        if (! is_array($payload)) {
+            return ApiResponse::error('Regulatory report payload is invalid.', 500);
+        }
+
+        $format = (string) $request->input('format', 'json');
+        $filename = sprintf(
+            '%s_%s_%s.%s',
+            $record->report_type,
+            $record->period_start,
+            $record->period_end,
+            $format,
+        );
+
+        $this->auditLogger->record('governance.regulatory_report.exported', $request->user(), null, [
+            'report_id' => $record->id,
+            'report_type' => $record->report_type,
+            'regulator' => $record->regulator,
+            'payload_hash' => $record->payload_hash,
+            'format' => $format,
+        ], $request);
+
+        if ($format === 'json') {
+            $body = json_encode([
+                'report' => [
+                    'id' => $record->id,
+                    'report_type' => $record->report_type,
+                    'regulator' => $record->regulator,
+                    'period_start' => $record->period_start,
+                    'period_end' => $record->period_end,
+                    'status' => $record->status,
+                    'payload_hash' => $record->payload_hash,
+                    'generated_at' => $record->generated_at,
+                    'approved_at' => $record->approved_at,
+                ],
+                'payload' => $payload,
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+            return response($body, 200, [
+                'Content-Type' => 'application/json',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+                'X-OpFin-Evidence-Hash' => $record->payload_hash,
+            ]);
+        }
+
+        return response()->streamDownload(function () use ($payload) {
+            $stream = fopen('php://output', 'wb');
+            fputcsv($stream, ['field', 'value']);
+            foreach (Arr::dot($payload) as $field => $value) {
+                fputcsv($stream, [
+                    $field,
+                    is_scalar($value) || $value === null
+                        ? (string) $value
+                        : json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                ]);
+            }
+            fclose($stream);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'X-OpFin-Evidence-Hash' => $record->payload_hash,
         ]);
     }
 
