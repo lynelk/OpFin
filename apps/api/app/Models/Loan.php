@@ -14,7 +14,7 @@ class Loan extends Model
     use HasFactory, SoftDeletes;
 
     public $fillable = [
-        'user_id', 'loan_product_id', 'loan_product_term_id', 'institution_id', 'loan_application_id',
+        'user_id', 'loan_product_id', 'loan_product_term_id', 'institution_id', 'loan_application_id', 'credit_offer_id',
         'amount', 'status', 'reason', 'disbursed_at', 'duration', 'repayment_amount', 'repayment_start_date',
     ];
 
@@ -263,6 +263,11 @@ class Loan extends Model
     public function loanProduct()
     {
         return $this->belongsTo(LoanProduct::class);
+    }
+
+    public function creditOffer()
+    {
+        return $this->belongsTo(CreditOffer::class);
     }
 
     public function loanApplication()
