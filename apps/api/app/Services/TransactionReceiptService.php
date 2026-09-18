@@ -8,6 +8,8 @@ use Illuminate\Support\Str;
 
 class TransactionReceiptService
 {
+    public function __construct(private readonly SmsService $smsService) {}
+
     public function issue(MobileMoneyTransaction $transaction, string $receiptType): object
     {
         $existing = DB::table('transaction_receipts')
@@ -47,7 +49,16 @@ class TransactionReceiptService
             'updated_at' => now(),
         ]);
 
-        return DB::table('transaction_receipts')->find($id);
+        $receipt = DB::table('transaction_receipts')->find($id);
+
+        if ($transaction->phone) {
+            $this->smsService->queueSms(
+                (string) $transaction->phone,
+                'OpFin receipt '.$receipt->receipt_number.': '.strtoupper($receiptType).' UGX '.number_format((int) $transaction->amount_minor).'. Status: '.$transaction->status.'. Ref: '.($transaction->provider_reference ?: $transaction->internal_reference).'.'
+            );
+        }
+
+        return $receipt;
     }
 
     private function maskPhone(string $phone): string
