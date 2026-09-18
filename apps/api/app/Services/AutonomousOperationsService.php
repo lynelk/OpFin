@@ -256,22 +256,32 @@ class AutonomousOperationsService
 
         return $this->processInBatches(
             DB::table('support_cases')
-                ->whereIn('status', ['open', 'new', 'escalated'])
-                ->where('created_at', '<=', now()->subHours(24)),
+                ->whereNotIn('status', ['resolved', 'closed'])
+                ->where(function ($query) {
+                    $query->where('sla_breached', true)
+                        ->orWhere('regulatory_due_at', '<=', now()->addDays(5));
+                }),
             fn ($case): int => $this->upsertWorkItem($runId, [
                 'domain' => 'support',
-                'type' => 'support_sla_risk',
-                'severity' => $case->status === 'escalated' ? 'high' : 'medium',
+                'type' => 'umra_complaint_sla_risk',
+                'severity' => ($case->sla_breached ?? false) ? 'high' : 'medium',
                 'subject_type' => 'support_case',
                 'subject_reference' => (string) $case->id,
-                'title' => 'Support case is approaching or beyond SLA',
-                'description' => 'A customer case has remained unresolved for more than 24 hours.',
-                'recommended_action' => 'Review the full customer context, respond, and escalate only if specialist judgment is required.',
+                'title' => 'Complaint is approaching or beyond the UMRA resolution deadline',
+                'description' => ($case->sla_breached ?? false)
+                    ? 'The complaint has passed its recorded regulatory resolution deadline.'
+                    : 'The complaint is within five days of its recorded regulatory resolution deadline.',
+                'recommended_action' => 'Review the complaint, communicate progress to the customer, resolve with evidence, and escalate internally before the regulatory deadline.',
                 'confidence' => 1,
                 'automation_tier' => 'A1',
                 'requires_human' => true,
-                'due_at' => now()->addHours(1),
-                'context' => ['status' => $case->status, 'user_id' => $case->user_id ?? null],
+                'due_at' => $case->regulatory_due_at ?? now()->addHours(1),
+                'context' => [
+                    'status' => $case->status,
+                    'customer_id' => $case->customer_id ?? null,
+                    'regulatory_due_at' => $case->regulatory_due_at ?? null,
+                    'sla_breached' => (bool) ($case->sla_breached ?? false),
+                ],
             ])
         );
     }
