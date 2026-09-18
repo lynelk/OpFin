@@ -3,6 +3,7 @@ import 'package:opfin/account_delete_screen.dart';
 import 'package:opfin/accessibility_screen.dart';
 import 'package:opfin/faq_screen.dart';
 import 'package:opfin/profile_screen.dart';
+import 'package:opfin/term_variations_screen.dart';
 import 'package:opfin/wallets_screen.dart';
 
 class StoreReadyMoreMobileScreen extends StatelessWidget{
@@ -21,6 +22,8 @@ class StoreReadyMoreMobileScreen extends StatelessWidget{
         ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccessibilityScreen()))),
       _Tile(Icons.help_outline,'Help & support','Get help without sharing your PIN or OTP.',
         ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const FaqsScreen()))),
+      _Tile(Icons.rule_outlined,'Changes to loan terms','Review and consent to any proposed credit-term variation.',
+        ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const TermVariationsScreen()))),
       const SizedBox(height:18),
       const Text('Privacy & account',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),
       const Card(child:Padding(padding:EdgeInsets.all(14),
