@@ -142,6 +142,13 @@ class CreditReferenceReportingService
         $outstanding = (int) (clone $schedule)->sum('total_outstanding_minor');
         $amountDue = (int) (clone $schedule)->where('due_date', '<=', now()->toDateString())->sum('total_outstanding_minor');
         $oldestUnpaid = (clone $schedule)->where('total_outstanding_minor', '>', 0)->orderBy('due_date')->value('due_date');
+        $totalDue = (int) (clone $schedule)->sum('total_due_minor');
+        $paidInstallments = (clone $schedule)->where('status', CreditRepaymentScheduleItem::STATUS_PAID)->count();
+        $overdueInstallments = (clone $schedule)->where('status', CreditRepaymentScheduleItem::STATUS_OVERDUE)->count();
+        $lastPaidAt = (clone $schedule)->whereNotNull('paid_at')->max('paid_at');
+        $daysPastDue = $oldestUnpaid && now()->startOfDay()->greaterThan(\Illuminate\Support\Carbon::parse($oldestUnpaid))
+            ? \Illuminate\Support\Carbon::parse($oldestUnpaid)->startOfDay()->diffInDays(now()->startOfDay())
+            : 0;
 
         return [
             'schema_version' => 'opfin-umra-credit-information-v1',
@@ -154,6 +161,7 @@ class CreditReferenceReportingService
                 'last_name' => $user->last_name,
                 'phone' => $user->phone,
                 'national_id' => $user->national_id,
+                'date_of_birth' => $user->date_of_birth?->toDateString(),
             ],
             'facility' => [
                 'loan_reference' => (string) $loan->id,
@@ -166,6 +174,11 @@ class CreditReferenceReportingService
                 'outstanding_minor' => $outstanding,
                 'amount_due_minor' => $amountDue,
                 'oldest_unpaid_due_date' => $oldestUnpaid,
+                'days_past_due' => $daysPastDue,
+                'total_due_minor' => $totalDue,
+                'paid_installments' => $paidInstallments,
+                'overdue_installments' => $overdueInstallments,
+                'last_paid_at' => $lastPaidAt,
                 'non_performing_at' => $loan->non_performing_at?->toIso8601String(),
             ],
             'quality_controls' => [
