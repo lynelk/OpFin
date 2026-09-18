@@ -42,6 +42,11 @@ class LoanDisclosureService
             'total_repayment_minor' => $totalRepaymentMinor,
             'duration_days' => $durationDays,
             'repayment_frequency' => $repaymentFrequency,
+            'repayment_timing' => [
+                'first_payment_due_days_after_disbursement' => $this->frequencyDays($repaymentFrequency),
+                'final_payment_due_days_after_disbursement' => $durationDays,
+                'explanation' => 'Exact calendar dates are fixed from the confirmed disbursement date and are available in the repayment schedule.',
+            ],
             'interest' => [
                 'configured_rate_percent' => round($configuredRatePercent, 6),
                 'cycle' => $interestCycle,
@@ -80,6 +85,17 @@ class LoanDisclosureService
                 'regulator' => 'Uganda Microfinance Regulatory Authority (UMRA)',
             ],
         ];
+    }
+
+    private function frequencyDays(string $frequency): int
+    {
+        return match (strtolower($frequency)) {
+            'daily' => 1,
+            'weekly' => 7,
+            'fortnightly' => 14,
+            'monthly' => 30,
+            default => 30,
+        };
     }
 
     public function hash(CreditOffer $offer): string
