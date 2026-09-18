@@ -15,6 +15,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->prefix('admin/governance')->group(function () {
     Route::post('/regulatory-reports', [GovernanceController::class, 'generateReport']);
     Route::post('/regulatory-reports/{report}/approve', [GovernanceController::class, 'approveReport']);
+    Route::get('/regulatory-reports/{report}/export', [GovernanceController::class, 'exportReport']);
     Route::post('/integrity-runs', [GovernanceController::class, 'runIntegrity']);
     Route::post('/integrity-alerts/{alert}/resolve', [GovernanceController::class, 'resolveIntegrityAlert']);
 });
