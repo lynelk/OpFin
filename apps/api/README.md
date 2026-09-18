@@ -10,7 +10,7 @@ The launch path is:
 
 The same customer state is consumed by the Flutter app, WhatsApp and USSD. A second phone is optional.
 
-Read `../../docs/LAUNCH_CUSTOMER_JOURNEY.md` and `docs/api/current-endpoints.md` before changing authentication, KYC, score/limit, loan, wallet or repayment behaviour.
+Read `../../docs/LAUNCH_CUSTOMER_JOURNEY.md`, `../../docs/UMRA_DIGITAL_LENDING_COMPLIANCE_MATRIX.md` and `docs/api/current-endpoints.md` before changing authentication, KYC, score/limit, loan, wallet, guarantor, receipt, complaints, CRB reporting or repayment behaviour.
 
 ## Production invariants
 
@@ -219,3 +219,20 @@ Current sources of truth:
 - `docs/operations/production-readiness-checklist.md`
 
 Dated audit/checkpoint files remain historical evidence and must not override newer code/current-contract documentation.
+
+
+## UMRA operational controls
+
+The production API now treats the following as first-class auditable controls:
+
+- separate offer-bound outbound credit-reporting consent;
+- automated positive/negative CRB reporting queue with completeness validation, hashes, retries and provider references;
+- immutable transaction e-receipts after provider finality;
+- 30-day complaint SLA and mandatory resolution summary;
+- UMRA NPL/default-interest recovery tracking with configurable enforce mode;
+- 0–2 electronically confirmed guarantor contacts;
+- immutable accepted offers and separately governed term variations;
+- prior UMRA approval evidence for interest-rate changes; and
+- evidence-hashed UMRA books/registers with JSON/CSV export.
+
+Production values required for these controls include `CRB_REPORTING_URL`, `CRB_REPORTING_TOKEN`, the licensed entity/business-address fields and complaint contact channels. Missing external regulatory/provider evidence must fail closed or remain pending.
