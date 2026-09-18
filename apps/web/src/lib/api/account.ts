@@ -10,7 +10,7 @@ export type AccountDeletionResult = {
   retained_record_categories?: string[];
 };
 
-export async function deleteAccount(password: string, token?: string): Promise<AccountDeletionResult> {
+export async function deleteAccount(pin: string, token?: string): Promise<AccountDeletionResult> {
   if (!API_BASE_URL) throw new OpfinApiError("server", "OpFin API base URL is not configured.");
 
   let response: Response;
@@ -22,7 +22,7 @@ export async function deleteAccount(password: string, token?: string): Promise<A
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({ password, confirmation: "DELETE" }),
+      body: JSON.stringify({ pin, confirmation: "DELETE" }),
       cache: "no-store"
     });
   } catch (error) {
