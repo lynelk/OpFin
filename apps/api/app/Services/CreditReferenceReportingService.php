@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ConsentRecord;
 use App\Models\CreditReferenceSubmission;
 use App\Models\CreditRepaymentScheduleItem;
 use App\Models\CustomerPhoneNumber;
@@ -88,6 +89,18 @@ class CreditReferenceReportingService
 
     public function submit(CreditReferenceSubmission $submission): CreditReferenceSubmission
     {
+        $consent = ConsentRecord::query()
+            ->where('user_id', $submission->user_id)
+            ->where('purpose', ConsentRecord::PURPOSE_CREDIT_REPORTING)
+            ->where('status', ConsentRecord::STATUS_GRANTED)
+            ->latest('granted_at')
+            ->first();
+
+        if (! $consent) {
+            $this->markFailed($submission, 'Outbound credit-information reporting consent is not active.');
+            throw new \RuntimeException('Outbound credit-information reporting consent is not active.');
+        }
+
         $url = trim((string) config('services.crb.reporting_url'));
         $token = trim((string) config('services.crb.reporting_token'));
 
