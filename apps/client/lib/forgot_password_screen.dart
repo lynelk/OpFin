@@ -42,13 +42,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (response.statusCode != 200 || decoded['success'] != true) {
         throw Exception(decoded['message']?.toString() ?? 'Unable to send code.');
       }
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       Navigator.push(context, MaterialPageRoute(
         builder: (_) => OtpScreen(
           phone: _normalise(_phone.text), resetPin: _pin.text)));
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
