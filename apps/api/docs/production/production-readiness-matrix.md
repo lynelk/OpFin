@@ -1,57 +1,50 @@
-# Production Readiness Matrix
+# Production readiness matrix
 
-Date: 2026-05-22
+Updated: 18 September 2026
 
-Legend:
+**Available** means the software/control exists and is covered by current source/tests. It does not mean a regulator, lender, bureau, telco or payment provider has activated the external dependency.
 
-- Ready: production use can be considered after normal verification.
-- Partial: useful implementation exists but cannot be relied on for replacement cutover.
-- Demo only: built for investor/demo use, not production.
-- Missing: not implemented enough for production.
-- Unknown: cannot be verified in this environment.
+| Capability | Software | External / operational gate |
+| --- | --- | --- |
+| Phone/OTP/PIN authentication | Available | SMS delivery/provider health and final production configuration |
+| KYC front/back/selfie/liveness/face/NIN-phone | Available | Production identity-provider credentials/certification |
+| Consent | Available | Current legal/policy versions and production privacy notice |
+| Composite credit profile | Available | CRB/MNO/approved partner sources actually configured |
+| Affordability | Available | Verified income/obligation source required for automatic approval |
+| Loan application | Available | Approved product catalogue/licensed funding |
+| Formal offer/disclosures | Available | Licensed entity/address/complaint contacts/pricing verified |
+| Credit-information reporting | Available | Applicable authorised bureau/mechanism endpoint/schema/certification |
+| Credit-reporting consent | Available | Customer must actively consent; no bypass |
+| Disbursement/repayment | Available | CPay production credentials/certification/provider health |
+| Ledger/reconciliation | Available | Production operations monitoring and exception handling |
+| E-receipts/instant acknowledgement | Available | SMS/provider delivery health |
+| Complaint SLA | Available | Staffed operating process and official complaint contacts |
+| NPL/default-interest controls | Available | Approved operations policy and exception governance |
+| Guarantor controls | Available | Only for products that use guarantors |
+| Credit-term/rate governance | Available | Prior UMRA approval evidence for rate changes |
+| Regulatory books/reports | Available | Responsible officer review and actual external filing |
+| WhatsApp | Available | Meta production credentials |
+| USSD | Available | Aggregator/short code/callback configuration |
+| Accessibility | Available in software | Real-device/PWD UAT evidence |
+| Account deletion | Available | Retention/legal basis and live public URL |
+| Backup/recovery | Infrastructure gate | Backup/PITR/restore drill |
+| Savings/protection/investments/etc. | Capability gated | Applicable licensed partner/product approval |
 
-| Capability | Backend | Frontend | Risk | Replacement verdict |
-| --- | --- | --- | --- | --- |
-| Health check | Partial | N/A | Medium | Needs deployment/runtime monitoring. |
-| Login/authentication | Partial | Partial | High | Token auth exists; hardening and runtime verification required. |
-| Session protection | Partial | Partial | High | Frontend guard can pass role-only cookie; backend must remain source of truth. |
-| RBAC | Partial | Partial | High | Roles exist; full policy coverage required. |
-| Customer profile | Partial | Partial | Medium | Basic view exists; update/support workflows incomplete. |
-| KYC | Partial | Partial | Critical | No full production provider lifecycle or evidence workflow. |
-| Consent | Demo only | Demo only | Critical | Demo consent is not production consent management. |
-| Product catalog | Partial | Partial | High | Products/terms exist; eligibility and disclosure controls incomplete. |
-| Loan application | Partial | Partial | Critical | Legacy and demo paths coexist; production state machine required. |
-| Affordability | Demo only | Demo only | Critical | Mock rules only. |
-| CRB integration | Partial/missing | Missing | Critical | Not safe for production credit decisions. |
-| Decisioning | Demo only | Demo only | Critical | No production policy engine or manual review governance. |
-| Loan offers | Demo only/partial | Partial | Critical | Offer lifecycle and disclosure acceptance evidence incomplete. |
-| Loan account creation | Partial | Partial | Critical | Needs atomic production invariants and ledger coupling. |
-| Repayment schedules | Partial | Partial | High | Exists, but edge cases and production recalculation rules incomplete. |
-| Ledger | Partial | Partial admin view | Critical | Production ledger postings now cover successful legacy disbursement and repayment events, but legacy decimal account/journal paths remain. |
-| Mobile money disbursement | Sandbox/partial | Demo only | Critical | Mock adapter and placeholders cannot process live money safely. |
-| Mobile money collections | Partial legacy/sandbox | Missing | Critical | Production collections/reconciliation workflow incomplete. |
-| Webhooks/idempotency | Partial | N/A | High | Adapter layer exists; production provider behavior unverified. |
-| Reversals | Partial/sandbox | Missing | High | Operational reversal workflow missing. |
-| Reconciliation | Partial | Partial admin snapshot | Critical | No production reconciliation console/reporting. |
-| Audit logging | Partial | Partial admin view | High | Audit coverage/export/retention incomplete. |
-| Admin dashboard | Partial legacy/demo | Placeholder | High | Production operations console missing. |
-| Credit review | Partial/demo | Partial/demo | Critical | Needs real queue, maker-checker, reasoned decisions. |
-| Customer support | Missing/partial legacy | Missing | Critical | No replacement-grade support console. |
-| Compliance reporting | Missing | Missing | Critical | Required before regulated rollout. |
-| Savings | Missing | Placeholder | Medium | Out of replacement scope unless live system has it. |
-| Insurance | Missing | Placeholder | Medium | Out of replacement scope unless live system has it. |
-| Investments | Missing | Placeholder | Medium | Out of replacement scope unless live system has it. |
-| Employer portal | Missing | Placeholder | Medium | Out of replacement scope unless live system has it. |
-| API consistency | Partial | Partial | High | Legacy response shapes vary. |
-| Error handling | Partial | Partial | Medium | Needs global backend and field-level frontend handling. |
-| Accessibility | N/A | Unknown/partial | Medium | Needs browser audit. |
-| Mobile responsiveness | N/A | Unknown | Medium | Needs browser/device audit. |
-| Tests | Unknown | Unknown | Critical | Toolchain unavailable; cannot verify. |
-| Builds | Unknown | Unknown | Critical | Toolchain unavailable; cannot verify. |
-| Fresh migrations | Unknown | N/A | Critical | Toolchain unavailable; cannot verify. |
+## Launch navigation
 
-## Replacement readiness summary
+**Home | Borrow | Activity | More**
 
-Critical replacement areas are not ready: KYC, consent, credit decisioning, CRB, ledger, live mobile money, reconciliation, support operations, compliance reporting, tests/builds, and migration validation.
+Long-range capabilities remain behind capability/provider gates and should not crowd the launch borrower experience.
 
-The current implementation should not be presented as a production replacement until every Critical row is either resolved or explicitly removed from replacement scope with business approval.
+## No-go conditions
+
+Production is blocked by any of the following:
+
+- failed release/security/deployment gate;
+- unconfigured or unverified lender/legal identity;
+- unavailable mandatory KYC/affordability/payment provider path;
+- prohibited or unapproved product terms;
+- missing private KYC storage;
+- unresolved financial-integrity/reconciliation exception;
+- missing credit-reporting consent/data-quality controls;
+- unresolved Critical/High accessibility/compliance defect.
