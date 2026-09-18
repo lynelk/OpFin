@@ -22,6 +22,8 @@ class ProductionRepaymentService
         private readonly LoanService $loanService,
         private readonly ProductionLoanLedgerService $productionLoanLedgerService,
         private readonly AuditLogger $auditLogger,
+        private readonly CreditReferenceReportingService $creditReporting,
+        private readonly TransactionReceiptService $receipts,
     ) {}
 
     public function initiate(
@@ -203,6 +205,7 @@ class ProductionRepaymentService
             $this->loanService->processSuccessfulTransaction($transaction);
             if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
                 $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                $this->receipts->issue($mobileMoney->fresh(), 'loan_repayment');
             }
 
             return $loan->fresh();
@@ -256,7 +259,14 @@ class ProductionRepaymentService
                 'allocation_policy_version' => self::ALLOCATION_POLICY_VERSION,
             ]);
 
-            return $lockedLoan->fresh();
+            $freshLoan = $lockedLoan->fresh();
+            $this->receipts->issue($mobileMoney->fresh(), 'loan_repayment');
+            $this->creditReporting->queueLoanEvent(
+                $freshLoan,
+                $freshLoan->status === 'Cleared' ? 'closure' : 'repayment',
+            );
+
+            return $freshLoan;
         });
     }
 
