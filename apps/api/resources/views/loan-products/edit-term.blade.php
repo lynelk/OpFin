@@ -99,6 +99,43 @@
                     </div>
 
                     <div class="col-md-6 mb-3">
+                        <label for="guarantors_required" class="form-label">Guarantors required</label>
+                        <select class="form-select @error('guarantors_required') is-invalid @enderror"
+                            id="guarantors_required" name="guarantors_required">
+                            <option value="0" {{ old('guarantors_required', $term->guarantors_required ?? 0) == 0 ? 'selected' : '' }}>None</option>
+                            <option value="1" {{ old('guarantors_required', $term->guarantors_required) == 1 ? 'selected' : '' }}>1 verified guarantor</option>
+                            <option value="2" {{ old('guarantors_required', $term->guarantors_required) == 2 ? 'selected' : '' }}>2 verified guarantors</option>
+                        </select>
+                        <div class="form-text">Maximum two contacts. Guarantor numbers must be electronically verified; contact-list access is prohibited.</div>
+                        @error('guarantors_required')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="umra_interest_approval_reference" class="form-label">UMRA approval reference for interest-rate change</label>
+                        <input type="text" class="form-control @error('umra_interest_approval_reference') is-invalid @enderror"
+                            id="umra_interest_approval_reference" name="umra_interest_approval_reference"
+                            value="{{ old('umra_interest_approval_reference', $term->umra_interest_approval_reference) }}">
+                        <div class="form-text">Required only when changing the interest rate on an existing term.</div>
+                        @error('umra_interest_approval_reference')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="umra_interest_approval_document_hash" class="form-label">Approval evidence SHA-256</label>
+                        <input type="text" minlength="64" maxlength="64"
+                            class="form-control @error('umra_interest_approval_document_hash') is-invalid @enderror"
+                            id="umra_interest_approval_document_hash" name="umra_interest_approval_document_hash"
+                            value="{{ old('umra_interest_approval_document_hash', $term->umra_interest_approval_document_hash) }}">
+                        <div class="form-text">Hash the prior written UMRA approval evidence. The document itself belongs in the controlled compliance repository, not this form.</div>
+                        @error('umra_interest_approval_document_hash')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-6 mb-3">
                         <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
                         <select class="form-select @error('status') is-invalid @enderror" id="status" name="status"
                             required>
