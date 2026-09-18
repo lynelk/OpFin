@@ -130,7 +130,7 @@ Typical hierarchy:
 - Next payment date
 - One primary action
 
-Optional profile-strengthening tasks, including a second phone, remain secondary.
+Optional profile-strengthening tasks, including a second phone, remain secondary. If policy permits only one active loan, available-to-borrow is shown as zero while that loan remains active so the UI never invites a request the backend will reject.
 
 ## 8. Loan application
 

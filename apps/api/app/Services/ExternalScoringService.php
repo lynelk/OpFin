@@ -35,9 +35,22 @@ class ExternalScoringService
             ->first();
 
         if ($fresh) {
+            if ($fresh->status !== CrbReport::STATUS_ADVERSE && $fresh->score === null) {
+                return $this->write(
+                    $user,
+                    'crb',
+                    $weight,
+                    null,
+                    CreditScoreComponent::STATUS_ERROR,
+                    $fresh->provider_reference,
+                    ['CRB_SCORE_MISSING'],
+                    ['status' => $fresh->status],
+                );
+            }
+
             $score = $fresh->status === CrbReport::STATUS_ADVERSE
                 ? 0.0
-                : $this->normalise((float) ($fresh->score ?? 0));
+                : $this->normalise((float) $fresh->score);
 
             return $this->write($user, 'crb', $weight, $score, CreditScoreComponent::STATUS_READY, $fresh->provider_reference, [
                 $fresh->status === CrbReport::STATUS_ADVERSE ? 'CRB_ADVERSE_HISTORY' : 'CRB_REPORT_AVAILABLE',

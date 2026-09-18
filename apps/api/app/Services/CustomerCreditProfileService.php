@@ -130,7 +130,11 @@ class CustomerCreditProfileService
         $coverageFactor = min(1.0, $coverage / 100);
         $limit = $adverse || $coverage < $minimumCoverage ? 0 : (int) floor($baseLimit * $coverageFactor);
         $outstanding = $this->totalOutstanding($user);
-        $available = max(0, $limit - $outstanding);
+        $hasActiveLoan = Loan::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])
+            ->exists();
+        $available = $hasActiveLoan ? 0 : max(0, $limit - $outstanding);
 
         $secondaryVerified = CustomerPhoneNumber::query()
             ->where('user_id', $user->id)
@@ -174,6 +178,7 @@ class CustomerCreditProfileService
                     $secondaryVerified ? 'SECONDARY_PHONE_VERIFIED' : null,
                     $coverage < 100 ? 'PARTIAL_EXTERNAL_DATA_COVERAGE' : 'FULL_SCORING_COVERAGE',
                     $adverse ? 'CRB_ADVERSE_HISTORY' : 'CRB_ACCEPTABLE',
+                    $hasActiveLoan ? 'ACTIVE_LOAN_MUST_BE_CLEARED' : null,
                 ])),
                 'customer_explanations' => $explanations,
                 'scored_at' => now(),
@@ -452,8 +457,13 @@ class CustomerCreditProfileService
         if (! $profile || $profile->status === CreditProfile::STATUS_PENDING) {
             return ['code' => 'CALCULATE_PROFILE', 'label' => 'Check your loan limit'];
         }
-        if ($profile->amount_due_minor > 0) {
-            return ['code' => 'REPAY', 'label' => 'Repay amount due'];
+        $activeLoan = Loan::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])
+            ->exists();
+
+        if ($profile->amount_due_minor > 0 || $activeLoan) {
+            return ['code' => 'REPAY', 'label' => $profile->amount_due_minor > 0 ? 'Repay amount due' : 'View your active loan'];
         }
         if ($profile->available_to_borrow_minor > 0) {
             return ['code' => 'BORROW', 'label' => 'Borrow'];
