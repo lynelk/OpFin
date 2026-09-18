@@ -20,7 +20,7 @@ Key product rules:
 - Launch mobile navigation is `Home | Borrow | Activity | More`; non-launch products remain capability-gated rather than crowding the primary experience.
 - Accessibility is part of the core journey: large text, screen readers, reduced motion, simple language and assisted identity verification are supported without lowering assurance.
 
-See `docs/LAUNCH_CUSTOMER_JOURNEY.md` for the complete cross-channel contract.
+See `docs/LAUNCH_CUSTOMER_JOURNEY.md` for the complete cross-channel contract and `docs/UMRA_DIGITAL_LENDING_CONTROLS.md` for the implemented digital-lending compliance controls.
 
 ## Layout
 
