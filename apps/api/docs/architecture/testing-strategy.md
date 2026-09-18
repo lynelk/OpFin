@@ -72,3 +72,19 @@ Before release:
 - no broad SMS/media permissions introduced.
 
 Real financial tests require authorised test accounts and amounts. Do not create unauthorised customer obligations to prove a release.
+
+
+## 6. UMRA/regulatory regression
+
+`UmraDigitalLendingControlsTest` and related feature tests cover:
+
+- 30-day complaint resolution clock;
+- maximum two guarantors and independent confirmation state;
+- NPL/default-interest cap calculation and enforcement;
+- blocked direct interest-rate changes;
+- maker-checker rate change with recorded prior UMRA approval;
+- idempotent transaction receipt generation;
+- credit-reporting consent gate and outbound submission;
+- generation/validation of UMRA books-and-records evidence packs.
+
+Additional release/UAT must verify real provider schema/certification, official complaint contacts and actual regulatory approval evidence; tests deliberately do not manufacture those external facts.
