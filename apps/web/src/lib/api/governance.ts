@@ -40,6 +40,47 @@ export type RegulatoryReport = {
   approved_at?: string | null;
 };
 
+export type CreditReferenceSubmission = {
+  id: number;
+  loan_id?: number | null;
+  event_type: string;
+  information_type: "positive" | "negative" | string;
+  reporting_date: string;
+  status: string;
+  payload_hash: string;
+  provider_reference?: string | null;
+  retry_count: number;
+  due_at: string;
+  submitted_at?: string | null;
+  error_message?: string | null;
+};
+
+export type NplControl = {
+  id: number;
+  loan_id: number;
+  non_performing_at?: string | null;
+  principal_at_npl_minor: number;
+  default_penalty_cap_minor: number;
+  recoverable_interest_cap_minor: number;
+  total_recoverable_cap_minor: number;
+  total_recovered_since_npl_minor: number;
+  enforcement_mode: string;
+  last_evaluated_at?: string | null;
+};
+
+export type TermVariation = {
+  id: number;
+  loan_id: number;
+  status: string;
+  proposed_changes: Record<string, unknown>;
+  reason: string;
+  requires_umra_approval: boolean;
+  umra_approval_reference?: string | null;
+  umra_approved_at?: string | null;
+  customer_consented_at?: string | null;
+  applied_at?: string | null;
+};
+
 export type GovernanceDashboard = {
   integrity: {
     latest_run: IntegrityRun | null;
@@ -100,5 +141,21 @@ export const governanceApi = {
     request<{ report: RegulatoryReport }>(`/admin/governance/regulatory-reports/${reportId}/approve`, token, { method: "POST" }),
   runIntegrity: (token?: string) => request<{ run: IntegrityRun }>("/admin/governance/integrity-runs", token, { method: "POST" }),
   resolveIntegrityAlert: (alertId: number, resolution: string, token?: string) =>
-    request<{ alert: IntegrityAlert }>(`/admin/governance/integrity-alerts/${alertId}/resolve`, token, { method: "POST", body: JSON.stringify({ resolution }) })
+    request<{ alert: IntegrityAlert }>(`/admin/governance/integrity-alerts/${alertId}/resolve`, token, { method: "POST", body: JSON.stringify({ resolution }) }),
+  umraCreditReferences: (token?: string) =>
+    request<{ submissions: CreditReferenceSubmission[]; summary: Record<string, number> }>("/admin/umra/credit-reference-submissions", token),
+  retryCreditReference: (submissionId: number, token?: string) =>
+    request<{ submission: CreditReferenceSubmission }>(`/admin/umra/credit-reference-submissions/${submissionId}/retry`, token, { method: "POST" }),
+  umraNplControls: (token?: string) =>
+    request<{ controls: NplControl[]; enforcement_mode: string }>("/admin/umra/npl-controls", token),
+  evaluateNpl: (loanId: number, token?: string) =>
+    request<{ control: NplControl }>(`/admin/umra/loans/${loanId}/evaluate-npl`, token, { method: "POST" }),
+  umraVariations: (token?: string) =>
+    request<{ variations: TermVariation[] }>("/admin/umra/term-variations", token),
+  proposeVariation: (loanId: number, payload: { proposed_changes: Record<string, unknown>; reason: string }, token?: string) =>
+    request<{ variation: TermVariation }>(`/admin/umra/loans/${loanId}/term-variations`, token, { method: "POST", body: JSON.stringify(payload) }),
+  recordUmraApproval: (variationId: number, payload: { approval_reference: string; approval_document_hash: string }, token?: string) =>
+    request<{ variation: TermVariation }>(`/admin/umra/term-variations/${variationId}/umra-approval`, token, { method: "POST", body: JSON.stringify(payload) }),
+  applyVariation: (variationId: number, token?: string) =>
+    request<{ variation: TermVariation }>(`/admin/umra/term-variations/${variationId}/apply`, token, { method: "POST" })
 };
