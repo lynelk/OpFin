@@ -7,6 +7,7 @@ import 'package:opfin/loan_application_screen.dart';
 import 'package:opfin/loan_applications_screen.dart';
 import 'package:opfin/loan_repayment_screen.dart';
 import 'package:opfin/profile_screen.dart';
+import 'package:opfin/receipts_screen.dart';
 import 'package:opfin/secondary_phone_screen.dart';
 import 'package:opfin/services/credit_profile_api.dart';
 import 'package:opfin/store_ready_more_screen.dart';
@@ -238,5 +239,10 @@ class _ActivityPage extends StatelessWidget{
         title:const Text('Credit offers'),subtitle:const Text('Review costs before accepting.'),
         trailing:const Icon(Icons.chevron_right),
         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const CreditOffersScreen())))),
+      Card(child:ListTile(
+        leading:const Icon(Icons.receipt_long_outlined),
+        title:const Text('Receipts'),subtitle:const Text('Provider-confirmed disbursement and repayment receipts.'),
+        trailing:const Icon(Icons.chevron_right),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ReceiptsScreen())))),
     ]);
 }
