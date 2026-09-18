@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   approveRegulatoryReportAction,
   generateRegulatoryReportAction,
@@ -120,6 +121,7 @@ export default async function CompliancePage({ searchParams }: { searchParams?: 
               { label: "Period", render: (row) => `${row.period_start} to ${row.period_end}` },
               { label: "Validation", render: (row) => badge(row.status) },
               { label: "Evidence hash", render: (row) => <code>{row.payload_hash.slice(0, 12)}…</code> },
+              { label: "View", render: (row) => <Link className="button secondary" href={`/admin/compliance/reports/${row.id}`}>Open</Link> },
               { label: "Officer control", render: (row) => row.status === "validated" ? <form action={approveRegulatoryReportAction} className="inline-form"><input type="hidden" name="report_id" value={row.id} /><button className="button secondary" type="submit">Approve for submission</button></form> : badge(row.status) }
             ]} />
           )}
