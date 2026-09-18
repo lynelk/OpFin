@@ -16,6 +16,11 @@ const reportOptions = [
   ["fia_suspicious_activity_register", "FIA suspicious activity candidate register"],
   ["pdpo_annual_compliance", "PDPO annual privacy compliance"],
   ["umra_digital_credit_supervision", "UMRA digital credit supervision"],
+  ["umra_credit_information_exchange", "UMRA credit information exchange"],
+  ["umra_books_and_records", "UMRA books & records"],
+  ["umra_npl_interest_controls", "UMRA NPL/default-interest controls"],
+  ["umra_transaction_receipts", "UMRA transaction receipts"],
+  ["umra_term_and_guarantor_controls", "UMRA term-change & guarantor controls"],
   ["consumer_protection_complaints", "UMRA consumer protection complaints"],
   ["payment_integrity_oversight", "BoU payment integrity oversight"]
 ] as const;
@@ -47,6 +52,28 @@ export default async function CompliancePage({ searchParams }: { searchParams?: 
           <article className="panel"><p className="muted">Verified WhatsApp sessions</p><div className="stat">{data.whatsapp.verified_sessions}</div><p className="muted">OTP-bound sessions expire after 15 minutes.</p></article>
           <article className="panel"><p className="muted">Regulatory evidence packs</p><div className="stat">{data.regulatory_reports.length}</div><p className="muted">Generated, validated and evidence-hashed.</p></article>
         </div>
+
+        <section className="panel compass-grid">
+          <div className="journey-card-head">
+            <div>
+              <p className="eyebrow">UMRA CONTROL STATUS</p>
+              <h2>Digital lending compliance controls</h2>
+              <p className="muted">Operational controls are generated from system-of-record data. Zero is good for overdue reports, cap breaches and complaint SLA breaches.</p>
+            </div>
+          </div>
+          <div className="grid grid-3">
+            <div><div className="stat">{data.umra.credit_reports_pending}</div><span className="muted">Credit reports pending</span></div>
+            <div><div className="stat">{data.umra.credit_reports_overdue}</div><span className="muted">Credit reports overdue</span></div>
+            <div><div className="stat">{data.umra.credit_reports_failed}</div><span className="muted">Credit report failures</span></div>
+            <div><div className="stat">{data.umra.npl_count}</div><span className="muted">Non-performing loans tracked</span></div>
+            <div><div className="stat">{data.umra.npl_cap_breaches}</div><span className="muted">NPL cap breaches</span></div>
+            <div><div className="stat">{data.umra.receipts_issued}</div><span className="muted">E-receipts issued</span></div>
+            <div><div className="stat">{data.umra.complaints_open}</div><span className="muted">Open complaints</span></div>
+            <div><div className="stat">{data.umra.complaints_sla_breached}</div><span className="muted">Complaint SLA breaches</span></div>
+            <div><div className="stat">{data.umra.pending_guarantor_confirmations}</div><span className="muted">Guarantors awaiting confirmation</span></div>
+            <div><div className="stat">{data.umra.term_changes_pending}</div><span className="muted">Term changes awaiting governance</span></div>
+          </div>
+        </section>
 
         <section className="panel compass-grid">
           <div className="journey-card-head">
