@@ -39,7 +39,7 @@ class WhatsAppJourneyService
             return $this->verify($conversation, $matches[1]);
         }
 
-        if ($conversation->state !== 'verified' || !$conversation->verified_at || !$conversation->expires_at || now()->greaterThan($conversation->expires_at)) {
+        if ($conversation->state !== 'verified' || $conversation->verified_at === null || $conversation->expires_at === null || now()->greaterThan($conversation->expires_at)) {
             return $this->respond(
                 $conversation->id,
                 'For your security, send START. OpFin will send a channel-specific verification code to your registered phone. Then send VERIFY followed by the 6-digit code.',
@@ -48,7 +48,7 @@ class WhatsAppJourneyService
         }
 
         $user = User::find($conversation->user_id);
-        if (!$user) {
+        if ($user === null) {
             return $this->respond($conversation->id, 'We could not match this session to an active OpFin account.', 'blocked');
         }
 
@@ -70,7 +70,7 @@ class WhatsAppJourneyService
         if (strcasecmp($normalized, 'LIMIT') === 0) {
             $state = $this->profiles->status($user);
             $profile = $state['profile'];
-            if (!$profile || $profile->status === 'pending') {
+            if ($profile === null || $profile->status === 'pending') {
                 return $this->respond($conversation->id, 'Your limit is not ready yet. Next step: '.$state['next_action']['label'].'.', 'verified');
             }
 
@@ -89,7 +89,7 @@ class WhatsAppJourneyService
         if (preg_match('/^BORROW(?:\\s+(\\d+))?$/i', $normalized, $matches)) {
             $state = $this->profiles->status($user);
             $profile = $state['profile'];
-            if (!$profile || $profile->available_to_borrow_minor <= 0) {
+            if ($profile === null || $profile->available_to_borrow_minor <= 0) {
                 return $this->respond($conversation->id, 'There is no amount available to borrow right now. Next step: '.$state['next_action']['label'].'.', 'verified');
             }
             $amount = isset($matches[1]) ? (int) $matches[1] : 0;
@@ -108,7 +108,7 @@ class WhatsAppJourneyService
         if (strcasecmp($normalized, 'REPAY') === 0) {
             $state = $this->profiles->status($user);
             $profile = $state['profile'];
-            if (!$profile || $profile->total_outstanding_minor <= 0) {
+            if ($profile === null || $profile->total_outstanding_minor <= 0) {
                 return $this->respond($conversation->id, 'You have no outstanding OpFin loan.', 'verified');
             }
             $web = rtrim((string) config('services.opfin.web_url'), '/');
@@ -242,8 +242,8 @@ class WhatsAppJourneyService
         $this->recordMessage($conversation->id, 'inbound', '[image received]', $providerMessageId);
 
         if ($conversation->state !== 'verified'
-            || !$conversation->verified_at
-            || !$conversation->expires_at
+            || $conversation->verified_at === null
+            || $conversation->expires_at === null
             || now()->greaterThan($conversation->expires_at)) {
             return $this->respond(
                 $conversation->id,
@@ -268,12 +268,12 @@ class WhatsAppJourneyService
             ->where('user_id', $conversation->user_id)
             ->first();
 
-        if (!$case) {
+        if ($case === null) {
             return $this->respond($conversation->id, 'This identity session expired. Send KYC to start again.', 'verified');
         }
 
-        if (!str_starts_with(strtolower($mimeType), 'image/')) {
-            return $this->respond($conversation->id, 'Please send a photo image, not a document or video.', 'verified');
+        if (str_starts_with(strtolower($mimeType), 'image/')) {
+            return $this->respond($conversation->id, 'Please send a photo image, not a document or video.', 'verified') === false;
         }
 
         $step = (string) ($context['kyc_step'] ?? 'front');
@@ -367,7 +367,7 @@ class WhatsAppJourneyService
     private function startVerification(object $conversation): array
     {
         $user = User::where('phone', $conversation->wa_phone)->first();
-        if (!$user) {
+        if ($user === null) {
             $web = rtrim((string) config('services.opfin.web_url'), '/');
             $message = $web !== ''
                 ? 'This number does not have an OpFin account yet. Create one securely at '.$web.'/signup?source=whatsapp. OpFin will verify your phone there and will never ask you to send a PIN in WhatsApp.'
@@ -402,7 +402,7 @@ class WhatsAppJourneyService
             && $conversation->challenge_attempts < 3
             && Hash::check($code, $conversation->challenge_hash);
 
-        if (!$valid) {
+        if ($valid === false) {
             if ($conversation && $conversation->challenge_attempts < 3) {
                 DB::table('whatsapp_conversations')->where('id', $conversation->id)->increment('challenge_attempts');
             }
