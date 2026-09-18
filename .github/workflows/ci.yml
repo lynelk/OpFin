@@ -65,6 +65,15 @@ jobs:
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
             git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
           fi
+      - name: Verify documentation stays in sync
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
+            base="origin/$GITHUB_BASE_REF"
+          else
+            base="HEAD^"
+          fi
+          python3 scripts/verify-documentation-drift.py --base "$base"
       - name: Install PHP 8.2 without Xdebug
         run: |
           sudo apt-get update
