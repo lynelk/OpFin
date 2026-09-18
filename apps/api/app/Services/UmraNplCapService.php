@@ -73,7 +73,7 @@ class UmraNplCapService
         }
 
         $loan->update([
-            'default_interest_accrued_minor' => min($next, $cap),
+            'default_interest_accrued_minor' => $loan->umra_npl_cap_enforcement_enabled ? min($next, $cap) : $next,
             'npl_policy_checked_at' => now(),
         ]);
 
