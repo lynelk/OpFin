@@ -14,11 +14,7 @@ use Illuminate\Support\Str;
 
 class WhatsAppJourneyService
 {
-    public function __construct(
-        private readonly SmsService $smsService,
-        private readonly CustomerCreditProfileService $profiles,
-        private readonly IdentityVerificationService $identityVerification,
-    ) {}
+    public function __construct(private readonly SmsService $smsService, private readonly CustomerCreditProfileService $profiles, private readonly IdentityVerificationService $identityVerification) {}
 
     public function handle(string $phone, string $body, ?string $providerMessageId = null): array
     {
@@ -227,12 +223,8 @@ class WhatsAppJourneyService
         return $this->respond($conversation->id, 'I did not recognise that command. Send MENU to see secure WhatsApp journeys.', 'verified');
     }
 
-    public function handleImage(
-        string $phone,
-        string $bytes,
-        string $mimeType,
-        ?string $providerMessageId = null,
-    ): array {
+    public function handleImage(string $phone, string $bytes, string $mimeType, ?string $providerMessageId = null): array
+    {
         $conversation = $this->conversation($phone);
 
         if ($providerMessageId && DB::table('whatsapp_messages')->where('provider_message_id', $providerMessageId)->exists()) {
