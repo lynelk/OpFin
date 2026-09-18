@@ -33,16 +33,13 @@ class User extends Authenticatable
         self::ROLE_SUPPORT => ['profile.view', 'support.view', 'kyc.review', 'support.manage'],
     ];
 
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasApiTokens, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
+        'first_name',
+        'other_name',
+        'last_name',
         'phone',
         'password',
         'role',
@@ -55,29 +52,22 @@ class User extends Authenticatable
         'date_of_birth',
         'nin_status',
         'api_status',
-        'validated_at'
+        'validated_at',
+        'preferred_language',
+        'accessibility_preferences',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'phone_verified_at' => 'datetime',
             'password' => 'hashed',
+            'accessibility_preferences' => 'array',
         ];
     }
 
@@ -96,11 +86,27 @@ class User extends Authenticatable
     {
         return round(LoanSchedule::where('user_id', $this->id)->sum('total_outstanding'));
     }
+
     public function creditScore()
     {
         return CreditScore::where('user_id', $this->id)
             ->latest('created_at')
             ->first();
+    }
+
+    public function creditProfile()
+    {
+        return $this->hasOne(CreditProfile::class);
+    }
+
+    public function phoneNumbers()
+    {
+        return $this->hasMany(CustomerPhoneNumber::class);
+    }
+
+    public function wallets()
+    {
+        return $this->hasMany(CustomerWallet::class);
     }
 
     public function hasRole(string $role): bool

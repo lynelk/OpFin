@@ -64,6 +64,22 @@ return [
         'password' => env('CRB_CLIENT_SECRET'),
     ],
 
+    'identity_verification' => [
+        'url' => env('IDENTITY_VERIFICATION_URL'),
+        'token' => env('IDENTITY_VERIFICATION_TOKEN'),
+    ],
+
+    'scoring' => [
+        'mno' => [
+            'url' => env('MNO_SCORING_URL'),
+            'token' => env('MNO_SCORING_TOKEN'),
+        ],
+        'third_party' => [
+            'url' => env('THIRD_PARTY_SCORING_URL'),
+            'token' => env('THIRD_PARTY_SCORING_TOKEN'),
+        ],
+    ],
+
     // Airtel integration is retained only for KYC lookup. It must not initiate or inspect money movement.
     'airtel' => [
         'client_id' => env('AIRTEL_CLIENT_ID'),

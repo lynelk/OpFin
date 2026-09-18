@@ -7,6 +7,38 @@ return [
         'max_debt_service_ratio_percent' => (float) env('OPFIN_MAX_DSR_PERCENT', 35),
         'affordability_formula' => 'estimated_monthly_obligation_minor / verified_monthly_income_minor * 100',
         'legacy_origination_enabled' => (bool) env('OPFIN_ENABLE_LEGACY_LOAN_ORIGINATION', false),
+        'model_version' => env('OPFIN_CREDIT_MODEL_VERSION', 'composite-v1'),
+        'auto_decision_policy_version' => env('OPFIN_AUTO_DECISION_POLICY_VERSION', 'credit-profile-v1'),
+        'minimum_limit_coverage_percent' => (float) env('OPFIN_MIN_LIMIT_COVERAGE_PERCENT', 60),
+        'scoring_weights' => [
+            'crb' => 40,
+            'mno' => 25,
+            'third_party' => 15,
+            'internal' => 20,
+        ],
+        'limit_bands' => [
+            'Very strong' => ['min_score' => 85, 'limit_minor' => 500000],
+            'Strong' => ['min_score' => 75, 'limit_minor' => 350000],
+            'Good' => ['min_score' => 65, 'limit_minor' => 200000],
+            'Building' => ['min_score' => 55, 'limit_minor' => 100000],
+            'Starting' => ['min_score' => 45, 'limit_minor' => 50000],
+            'Not eligible' => ['min_score' => 0, 'limit_minor' => 0],
+        ],
+        'default_pricing' => [
+            'access_fee_percent' => (float) env('OPFIN_ACCESS_FEE_PERCENT', 3),
+            'disbursement_fee_minor' => (int) env('OPFIN_DISBURSEMENT_FEE_MINOR', 2000),
+            'fee_treatment' => env('OPFIN_FEE_TREATMENT', 'financed'),
+            'expires_in_minutes' => (int) env('OPFIN_OFFER_EXPIRY_MINUTES', 1440),
+        ],
+    ],
+
+    'customer_experience' => [
+        'secondary_phone_required' => false,
+        'simple_language_default' => true,
+        'minimum_tap_target_dp' => 48,
+        'support_screen_readers' => true,
+        'support_dynamic_text' => true,
+        'reduced_motion_respected' => true,
     ],
 
     'capabilities' => [
