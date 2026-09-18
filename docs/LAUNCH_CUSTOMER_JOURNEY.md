@@ -150,24 +150,49 @@ Submitting a request does not move money.
 
 Before acceptance show, at minimum:
 
-- Amount customer receives
-- Interest
-- Fees
-- Total repayment
-- Duration
-- Repayment frequency
-- Equivalent APR where required
-- First payment timing
-- Final repayment timing
-- Offer expiry
+- licensed/regulated provider identity and business address where configured;
+- principal and amount customer receives;
+- interest amount, rate, method/cycle and calculation explanation;
+- individual fees, when/how they apply and fee treatment;
+- total cost of credit and total repayment;
+- duration and repayment frequency;
+- equivalent APR where required;
+- first and final payment timing;
+- default-interest/penalty terms and applicable regulatory cap explanation;
+- complaints procedure and contact route;
+- offer expiry.
 
-Acceptance is tied to the immutable disclosure hash. Customer selects a verified payout wallet. Disbursement remains pending until provider success.
+Acceptance is tied to the immutable disclosure hash. Customer selects a verified payout wallet.
 
-## 10. Repayment
+Credit-information reporting consent is **separate and explicit** at offer acceptance. It covers complete/accurate positive and negative credit information for the facility. Missing consent prevents external bureau submission.
+
+Disbursement remains pending until provider success.
+
+## 10. Repayment and receipts
 
 Customer can enter a permitted full or partial repayment amount and select a verified repayment wallet.
 
 Each client initiation carries an idempotency key. The UI says **payment request sent** while the provider status is pending. Only a confirmed provider success updates the economic repayment state.
+
+After provider-confirmed finality and committed financial posting, OpFin creates an auditable e-receipt. Receipt history is available under Activity. No final receipt should be created for a pending or rolled-back event.
+
+## 10.5 Complaints
+
+Customers can raise support/complaint cases through the supported channels. A complaint receives:
+
+- case reference;
+- recorded procedure/contact information;
+- regulatory due date;
+- first-response/resolution evidence;
+- SLA-breach tracking.
+
+The operating target is the configured 30-day regulatory resolution period.
+
+## 10.6 Guarantors, where a product requires them
+
+A borrower may manually enter no more than two guarantor contacts.
+
+OpFin does not scrape the customer's address book. Each guarantor independently receives a confirmation request and may confirm or reject. The borrower should never collect or enter the guarantor's confirmation code.
 
 ## 11. WhatsApp
 
