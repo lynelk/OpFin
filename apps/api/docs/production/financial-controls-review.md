@@ -99,6 +99,41 @@ The configured default maximum is `35%` through `OPFIN_MAX_DSR_PERCENT`.
 
 The calculation, threshold, decision policy version and reason codes are retained in decision/audit evidence. Passing the formula does not replace the requirement to substantiate the underlying income and obligation inputs.
 
+## Credit-information exchange
+
+Provider-confirmed facility events can queue positive or negative credit-information reports. External submission requires:
+
+- complete verified customer identity;
+- dedicated active credit-information reporting consent;
+- canonical hashed payload;
+- idempotent event identity;
+- configured provider endpoint.
+
+Blocked/failed/overdue reports remain visible in the compliance register. Reporting side effects occur after committed financial state, so a rolled-back transaction cannot become a bureau event.
+
+## Transaction receipts
+
+Successful disbursement and repayment finality creates one immutable transaction receipt per event. Receipt generation occurs after commit and includes an evidence hash/reference. A pending provider request is not receipt-final.
+
+## NPL and default-interest controls
+
+For production loans entering non-performing state, OpFin records:
+
+- principal at NPL;
+- initial disclosed interest;
+- default-interest accrued;
+- default-interest ceiling;
+- recovery-cap evidence;
+- enforcement status.
+
+The current UMRA control default limits default-interest penalties to one-half of initial disclosed interest and keeps total recoverable interest/default interest bounded by the applicable principal-at-NPL control.
+
+The enforcement toggle is explicit/auditable. A disabled guard does not make a regulatory breach acceptable or invisible.
+
+## Product-term governance
+
+Accepted offers are immutable. Direct interest/default-interest rate mutation is rejected unless prior UMRA approval evidence is attached. Normal changes flow through maker-checker term-change requests and apply to future offers only.
+
 ## Portfolio totals
 
 Customer debt totals combine:
@@ -204,4 +239,5 @@ A money-changing release is acceptable only when:
 5. deployment health checks pass;
 6. provider finality/reconciliation jobs execute;
 7. `opfin:integrity-audit` executes successfully after deployment;
+8. `opfin:umra-credit-controls` is healthy/observable where the UMRA digital-lending controls are active;
 8. any live provider activation still lacking genuine credentials or certification remains fail-closed.
