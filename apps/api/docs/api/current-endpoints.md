@@ -202,3 +202,33 @@ USSD supports status/limit/borrow/repay/loan/profile-help menus but hands image/
 Existing admin KYC review, CRB ingestion, credit decision approval, offer generation, payment refresh and reconciliation endpoints remain role-gated. Manual approval is a controlled fallback when automatic profile decisioning cannot safely approve.
 
 Demo routes remain disabled unless explicitly enabled in configuration/testing.
+
+
+## 11. UMRA digital-lending controls
+
+Customer:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/receipts` | Customer transaction/e-receipt history |
+| GET | `/api/receipts/{receipt}` | Customer-owned receipt detail |
+| GET | `/api/credit/applications/{application}/guarantors` | List guarantor confirmations |
+| POST | `/api/credit/applications/{application}/guarantors` | Add one of maximum two manually-entered guarantors |
+| POST | `/api/guarantors/confirm` | Independent guarantor confirm/reject response |
+
+Admin/operations:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/admin/umra/credit-reporting` | Credit-information exchange register/status |
+| POST | `/api/admin/umra/credit-reporting/submit` | Submit eligible pending outbound reports |
+| POST | `/api/admin/umra/loans/{loan}/evaluate-npl` | Evaluate/update UMRA NPL controls |
+| POST | `/api/admin/umra/loans/{loan}/default-interest` | Accrue default interest within configured cap |
+| PATCH | `/api/admin/umra/loans/{loan}/npl-enforcement` | Explicitly enable/disable per-loan cap enforcement while retaining tracking |
+| GET | `/api/admin/umra/term-changes` | Credit-term governance register |
+| POST | `/api/admin/umra/product-terms/{term}/changes` | Submit governed term change |
+| POST | `/api/admin/umra/term-changes/{change}/approve` | Maker-checker approval; interest change requires prior UMRA evidence |
+| POST | `/api/admin/umra/term-changes/{change}/apply` | Apply approved change to future offers |
+| GET | `/api/admin/governance/regulatory-reports/{report}` | Inspect generated report/books payload and validation evidence |
+
+Offer acceptance now additionally records explicit electronic consent for complete positive/negative credit-information reporting.
