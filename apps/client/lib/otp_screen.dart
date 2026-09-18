@@ -132,13 +132,21 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
           Text('We sent it to ${widget.phone}. On supported phones, OpFin fills it in automatically.',
             textAlign: TextAlign.center),
           const SizedBox(height: 32),
-          TextFieldPinAutoFill(
+          TextField(
             controller: _controller,
-            codeLength: 6,
-            currentCode: _controller.text,
-            decoration: const UnderlineDecoration(),
-            onCodeChanged: (value) {
-              if (value != null && value.length == 6) _controller.text = value;
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            autofillHints: const [AutofillHints.oneTimeCode],
+            decoration: const InputDecoration(
+              labelText: 'Verification code',
+              hintText: '6 digits',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              if (value.length == 6 && !_autoSubmitted) {
+                _autoSubmitted = true;
+                _verify();
+              }
             },
           ),
           const SizedBox(height: 18),
