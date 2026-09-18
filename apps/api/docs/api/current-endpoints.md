@@ -126,7 +126,7 @@ Do not replace unavailable external data with made-up score values.
 | GET | `/api/credit/applications/{application}` | Application/decision/offer state |
 | GET | `/api/credit/offers` | Customer offers |
 | GET | `/api/credit/offers/{offer}` | Full disclosure and disclosure hash |
-| POST | `/api/credit/offers/{offer}/accept` | Accept exact disclosures and choose verified payout wallet |
+| POST | `/api/credit/offers/{offer}/accept` | Accept exact disclosures, separately consent to credit-information reporting, and choose verified payout wallet |
 
 Application payload:
 
@@ -148,12 +148,13 @@ Offer acceptance:
 ```json
 {
   "accept_disclosures": true,
+  "credit_reporting_consent": true,
   "disclosure_hash": "<64-char hash>",
   "wallet_id": 12
 }
 ```
 
-A successful acceptance may return `disbursement_pending`; it must not be presented as provider-confirmed money until finality is received.
+A successful acceptance records a separate versioned `credit_information_reporting` consent and may return `disbursement_pending`; it must not be presented as provider-confirmed money until finality is received.
 
 ## 7. Repayment
 
