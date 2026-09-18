@@ -1,6 +1,6 @@
 # Replacement Scope
 
-Date: 2026-05-22
+Updated: 18 September 2026
 
 This document defines the minimum scope required before OpFin can safely replace the current live system.
 
@@ -12,7 +12,7 @@ The replacement system must handle the live system's current customer, loan, pay
 
 ### Customer identity and access
 
-- Customer login, logout, password reset, and account recovery.
+- Customer phone/OTP/PIN login, logout, PIN reset and account recovery.
 - Admin and support login with privileged-access controls.
 - Session management and token lifecycle controls.
 - Role-based access for customer, operations, support, employer admin if applicable, and platform admin.
@@ -62,8 +62,8 @@ The replacement system must handle the live system's current customer, loan, pay
 
 ### Mobile money
 
-- MTN and Airtel production-ready disbursement.
-- MTN and Airtel production-ready collection.
+- CPay production-ready disbursement.
+- CPay production-ready collection.
 - Provider status lookup.
 - Webhook validation and replay protection.
 - Reconciliation workflow.
@@ -92,6 +92,10 @@ The replacement system must handle the live system's current customer, loan, pay
 - Mobile money settlement reports.
 - Audit exports.
 - Complaints/support reports where required.
+- Credit-information exchange register and submission evidence.
+- NPL/default-interest control report.
+- Transaction receipt register.
+- Governed term-change and guarantor registers.
 
 ## Out of scope unless required by the live system
 
@@ -130,4 +134,4 @@ If any of these are active in the current live system, they move into cutover sc
 
 ## Current scope decision
 
-Current OpFin implementation is below replacement scope. It should continue as a foundation build until the cutover scope above is implemented and verified.
+Current OpFin source implements the core replacement controls listed above. Production cutover remains gated by external provider/licence configuration, migration/restore evidence, real-device accessibility UAT and operational sign-off.
