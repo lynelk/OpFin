@@ -16,6 +16,7 @@ class LoanProductTerm extends Model
         'interest_cycle',
         'repayment_frequency',
         'duration',
+        'guarantors_required',
         'status',
     ];
 
