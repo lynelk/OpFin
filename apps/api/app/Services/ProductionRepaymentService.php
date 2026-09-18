@@ -260,11 +260,11 @@ class ProductionRepaymentService
             ]);
 
             $freshLoan = $lockedLoan->fresh();
-            $this->receipts->issue($mobileMoney->fresh(), 'loan_repayment');
-            $this->creditReporting->queueLoanEvent(
-                $freshLoan,
-                $freshLoan->status === 'Cleared' ? 'closure' : 'repayment',
-            );
+            $eventType = $freshLoan->status === 'Cleared' ? 'closure' : 'repayment';
+            DB::afterCommit(function () use ($mobileMoney, $freshLoan, $eventType) {
+                $this->receipts->issue(MobileMoneyTransaction::findOrFail($mobileMoney->id), 'loan_repayment');
+                $this->creditReporting->queueLoanEvent(Loan::findOrFail($freshLoan->id), $eventType);
+            });
 
             return $freshLoan;
         });
