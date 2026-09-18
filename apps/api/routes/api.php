@@ -174,6 +174,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/umra/credit-reporting/submit', [UmraComplianceController::class, 'submitCreditReporting']);
     Route::post('/admin/umra/loans/{loan}/evaluate-npl', [UmraComplianceController::class, 'evaluateNpl']);
     Route::post('/admin/umra/loans/{loan}/default-interest', [UmraComplianceController::class, 'accrueDefaultInterest']);
+    Route::patch('/admin/umra/loans/{loan}/npl-enforcement', [UmraComplianceController::class, 'setNplEnforcement']);
     Route::get('/admin/umra/term-changes', [UmraComplianceController::class, 'termChanges']);
     Route::post('/admin/umra/product-terms/{term}/changes', [UmraComplianceController::class, 'termChange']);
     Route::post('/admin/umra/term-changes/{change}/approve', [UmraComplianceController::class, 'approveTermChange']);
