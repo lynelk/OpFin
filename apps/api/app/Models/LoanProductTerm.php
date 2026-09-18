@@ -32,6 +32,16 @@ class LoanProductTerm extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::updating(function (LoanProductTerm $term) {
+            $rateChanged = $term->isDirty('interest_rate') || $term->isDirty('default_interest_rate');
+            if ($rateChanged && (blank($term->umra_interest_approval_reference) || blank($term->umra_interest_approved_at))) {
+                throw new \InvalidArgumentException('Interest-rate changes require recorded prior written UMRA approval.');
+            }
+        });
+    }
+
     public function product()
     {
         return $this->belongsTo(LoanProduct::class, 'loan_product_id');
