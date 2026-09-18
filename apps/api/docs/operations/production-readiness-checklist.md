@@ -115,3 +115,55 @@ This checklist applies to the launch borrower journey. Source-code completion is
 - [ ] Independent security test scheduled/completed according to release policy.
 
 Production sign-off requires Product, Compliance, Finance, Operations, Support, Engineering and accessibility/PWD review for the exact candidate.
+
+
+## UMRA credit-information exchange
+
+- [ ] Exact certified credit-reference reporting endpoint/schema is configured in `CRB_REPORTING_URL`.
+- [ ] Reporting token/credentials are environment-scoped and least privilege.
+- [ ] Positive disbursement/repayment/clearance and negative NPL events stage correct complete payloads.
+- [ ] Outbound submission is blocked without active `credit_reporting` consent tied to an accepted offer.
+- [ ] Missing NIN/name/phone/account fields create a visible failed/incomplete record rather than a partial submission.
+- [ ] Idempotent retry and provider-reference capture have been exercised.
+- [ ] Admin UMRA Control Desk shows queue status and failed records.
+- [ ] Portfolio snapshot command is running on schedule.
+
+## UMRA NPL/default-interest controls
+
+- [ ] Compliance/legal team confirms the implemented section-14 calculation against any current UMRA interpretation.
+- [ ] `OPFIN_UMRA_NPL_CAP_MODE=enforce` is confirmed for launch or an approved written exception records why track-only is used.
+- [ ] Principal at NPL is frozen on first classification and does not fall with later principal payments.
+- [ ] Default-penalty ceiling, interest-recovery ceiling and total recovery cap are visible in Admin.
+- [ ] Collection above remaining configured cap is rejected in enforce mode.
+- [ ] Hourly NPL evaluation and negative CRB staging is healthy.
+
+## UMRA receipts and complaints
+
+- [ ] Provider-confirmed disbursement generates exactly one in-app e-receipt.
+- [ ] Provider-confirmed repayment generates exactly one in-app e-receipt.
+- [ ] Pending provider requests never generate successful receipts.
+- [ ] Receipt SMS is not recorded delivered until delivery evidence exists.
+- [ ] Complaint channel/30-day SLA is disclosed in the loan offer.
+- [ ] Complaint cases receive a regulatory category and 30-day SLA due date.
+- [ ] Resolved/closed complaints require a customer-facing resolution summary.
+- [ ] Overdue open complaints appear in UMRA books/reports.
+
+## Guarantors and term changes
+
+- [ ] Product terms allow only 0, 1 or 2 required guarantors.
+- [ ] No contact/SMS permission is introduced to source guarantors.
+- [ ] Guarantor receives an explicit loan-specific consent message before verification.
+- [ ] Application decisioning pauses until the required electronically verified guarantors exist.
+- [ ] Accepted loan offer/disclosure remains immutable.
+- [ ] Proposed term changes are versioned separately and require exact customer consent.
+- [ ] Interest-rate changes require prior UMRA approval reference + SHA-256 evidence before customer acceptance.
+- [ ] Generic automatic mutation of accepted live-loan economics remains disabled unless a separately reviewed versioned amendment executor is introduced.
+- [ ] Existing product catalogue interest-rate edits require prior UMRA approval evidence.
+
+## UMRA books, registers and inspection
+
+- [ ] Generate each UMRA report profile for an authorised test period.
+- [ ] Validate JSON and CSV exports and evidence hash headers.
+- [ ] Maker-checker approval is exercised by two different authorised officers.
+- [ ] Loan book, CRB exchange, NPL, receipts, complaints, guarantors and variation registers reconcile to source tables.
+- [ ] Exact UMRA prescribed return template/submission channel is mapped if UMRA supplies a format beyond the internal evidence pack.
