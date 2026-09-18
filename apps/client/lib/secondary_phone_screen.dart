@@ -68,8 +68,17 @@ class _SecondaryPhoneScreenState extends State<SecondaryPhoneScreen>{
         decoration:const InputDecoration(labelText:'Second phone number')),
       if(_codeSent)...[
         const SizedBox(height:18),
-        TextFieldPinAutoFill(controller:_otp,codeLength:6,currentCode:_otp.text,
-          decoration:const UnderlineDecoration()),
+        TextField(
+          controller:_otp,
+          keyboardType:TextInputType.number,
+          maxLength:6,
+          autofillHints:const [AutofillHints.oneTimeCode],
+          decoration:const InputDecoration(
+            labelText:'Verification code',
+            hintText:'6 digits',
+            border:OutlineInputBorder(),
+          ),
+        ),
       ],
       const SizedBox(height:24),
       SizedBox(height:52,child:FilledButton(
