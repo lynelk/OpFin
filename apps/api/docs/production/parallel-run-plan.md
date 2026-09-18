@@ -17,7 +17,7 @@ The parallel run validates the new OpFin build against the current live system b
 | --- | --- |
 | Live old system | Source of truth during parallel run. |
 | New staging system | Runs imported/mirrored live data and production-like configuration. |
-| Provider sandbox/certification | MTN/Airtel/KYC/CRB integration testing without live money movement unless approved. |
+| Provider sandbox/certification | CPay/KYC/credit-reference integration testing without live money movement unless approved. |
 | Reporting workspace | Stores comparison outputs, exception lists, sign-off evidence. |
 
 ## Run Modes
@@ -77,7 +77,7 @@ Use only after shadow mode passes and stakeholders approve.
 
 ### Mobile money and payments
 
-- Compare MTN/Airtel provider references.
+- Compare CPay/payment-provider references.
 - Compare transaction direction, amount, status, callback payload, and settlement status.
 - Confirm duplicate webhook/event handling does not duplicate ledger entries.
 - Confirm failed, reversed, and pending transactions remain explainable.
