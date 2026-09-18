@@ -84,3 +84,15 @@ Code cannot prove these settings are active. Verify separately:
 ## Incident response
 
 Preserve restricted evidence, contain the affected path, revoke/rotate compromised credentials, assess customer and regulatory impact, fix and test, deploy through the protected process, and record cause and follow-up actions. Do not disclose customer evidence in public pull requests.
+
+
+## UMRA credit reporting and consumer-protection security
+
+- Outbound credit-reference reporting is separately consent-gated and authenticated to the configured provider.
+- Each submission carries an idempotency key and SHA-256 evidence hash; retries must not create duplicated economic/credit-reporting events.
+- CRB payloads may contain NIN, verified phone numbers and loan performance. Restrict logs, exports and operational access accordingly.
+- Regulatory report exports inherit the source report evidence hash and require an authenticated operations/platform-admin session. Treat exported files as restricted financial/customer records.
+- Guarantor numbers are customer-supplied one at a time. Do not add contact-list permission, background contact harvesting or SMS-reading permission for guarantor verification.
+- A guarantor OTP is consent evidence for the stated loan request, not a reusable authentication factor for another purpose.
+- Receipt hashes and provider references are evidence. Do not mark queued SMS acknowledgement as delivered without delivery evidence.
+- UMRA approval evidence hashes for interest-rate changes do not replace the controlled original approval document; the document remains in the authorised compliance repository.
