@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ConsentRecord;
 use App\Models\CreditOffer;
 use App\Models\LoanApplication;
 use App\Services\AppStoreCreditPolicy;
@@ -109,6 +110,7 @@ class ProductionCreditOfferController extends Controller
             'accept_disclosures' => 'required|accepted',
             'disclosure_hash' => 'required|string|size:64',
             'wallet_id' => 'nullable|integer|exists:customer_wallets,id',
+            'credit_reporting_consent' => 'required|accepted',
         ]);
 
         if ($validator->fails()) {
@@ -120,6 +122,25 @@ class ProductionCreditOfferController extends Controller
             return ApiResponse::error('The offer disclosure has changed or the supplied disclosure hash is invalid. Reload the offer before accepting it.', 409, ['disclosure_hash' => ['DISCLOSURE_HASH_MISMATCH']]);
         }
 
+        ConsentRecord::where('user_id', $request->user()->id)
+            ->where('purpose', ConsentRecord::PURPOSE_CREDIT_INFORMATION_REPORTING)
+            ->where('status', ConsentRecord::STATUS_GRANTED)
+            ->update(['status' => ConsentRecord::STATUS_REVOKED, 'revoked_at' => now()]);
+
+        $creditReportingConsent = ConsentRecord::create([
+            'user_id' => $request->user()->id,
+            'purpose' => ConsentRecord::PURPOSE_CREDIT_INFORMATION_REPORTING,
+            'policy_version' => 'credit-reporting-v1',
+            'status' => ConsentRecord::STATUS_GRANTED,
+            'channel' => $channel,
+            'granted_at' => now(),
+            'metadata' => [
+                'offer_reference' => $offer->offer_reference,
+                'disclosure_hash' => $expectedHash,
+                'scope' => 'positive_and_negative_credit_information_reporting',
+            ],
+        ]);
+
         try {
             $result = $this->offerService->acceptOffer($offer, $request->user(), [
                 'disclosure_hash' => $expectedHash,
@@ -130,6 +151,7 @@ class ProductionCreditOfferController extends Controller
                 'user_agent' => $request->userAgent(),
                 'accepted_at' => now()->toISOString(),
                 'wallet_id' => $request->integer('wallet_id') ?: null,
+                'credit_reporting_consent_id' => $creditReportingConsent->id,
             ]);
         } catch (InvalidArgumentException $exception) {
             return ApiResponse::error($exception->getMessage(), 409);
