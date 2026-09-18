@@ -17,16 +17,22 @@ class SupportCase extends Model
         'created_by',
         'case_number',
         'category',
+        'regulatory_category',
         'status',
         'priority',
         'subject',
         'description',
+        'resolution_summary',
         'resolved_at',
+        'sla_due_at',
     ];
 
     protected function casts(): array
     {
-        return ['resolved_at' => 'datetime'];
+        return [
+            'resolved_at' => 'datetime',
+            'sla_due_at' => 'datetime',
+        ];
     }
 
     public function notes()
