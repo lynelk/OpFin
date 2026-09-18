@@ -320,6 +320,10 @@ export type SupportCase = {
   subject: string;
   description: string;
   resolved_at?: string | null;
+  regulatory_due_at?: string | null;
+  first_response_at?: string | null;
+  sla_breached?: boolean;
+  complaint_procedure_snapshot?: Record<string, unknown> | null;
   notes?: Array<{
     id: number;
     note: string;
