@@ -13,12 +13,28 @@ use Illuminate\Support\Carbon;
 
 class ProductionCreditDecisionService
 {
-    public function __construct(private readonly AffordabilityService $affordability) {}
+    public function __construct(
+        private readonly AffordabilityService $affordability,
+        private readonly GuarantorService $guarantors,
+    ) {}
 
     public function decide(LoanApplication $application, ?User $actor = null): CreditDecision
     {
-        $application->loadMissing('user');
+        $application->loadMissing(['user', 'loanProductTerm']);
         $user = $application->user;
+
+        try {
+            $this->guarantors->assertRequirementSatisfied($application);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->record(
+                $application,
+                $actor,
+                CreditDecision::STATUS_REFERRED,
+                0,
+                ['GUARANTOR_VERIFICATION_REQUIRED'],
+                $exception->getMessage(),
+            );
+        }
 
         $kyc = KycCase::where('user_id', $user->id)
             ->where('status', KycCase::STATUS_VERIFIED)
