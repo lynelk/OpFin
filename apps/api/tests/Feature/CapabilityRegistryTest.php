@@ -23,7 +23,11 @@ class CapabilityRegistryTest extends TestCase
             ->assertJsonPath('data.capabilities.home.status', 'AVAILABLE')
             ->assertJsonPath('data.capabilities.borrow.status', 'AVAILABLE')
             ->assertJsonPath('data.capabilities.ussd.status', 'AVAILABLE')
-            ->assertJsonPath('data.capabilities.p2p_participatory_finance.status', 'AVAILABLE')
+            ->assertJsonPath('data.capabilities.p2p_participatory_finance.status', 'DORMANT_READY')
+            ->assertJsonPath('data.capabilities.community_growth_circles.public_name', 'Community Growth Circles')
+            ->assertJsonPath('data.capabilities.workplace_support_finance.public_name', 'Workplace Support Finance')
+            ->assertJsonPath('data.capabilities.member_growth_score.status', 'READY_FOR_INTERNAL_USE')
+            ->assertJsonPath('data.capabilities.member_cooperative_core.status', 'DORMANT_READY')
             ->assertJsonPath('data.capabilities.linked_accounts.status', 'AVAILABLE')
             ->assertJsonPath('data.capabilities.partner_distribution.status', 'AVAILABLE')
             ->assertJsonPath('data.capabilities.payments.owner', 'cpay')
@@ -38,7 +42,9 @@ class CapabilityRegistryTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.capabilities.whatsapp.external_gate', 'meta_whatsapp_production_credentials')
             ->assertJsonPath('data.capabilities.investments.external_gate', 'licensed_investment_provider_custody_and_settlement')
-            ->assertJsonPath('data.capabilities.p2p_participatory_finance.external_gate', 'lender_of_record_custody_settlement_and_regulatory_approval');
+            ->assertJsonPath('data.capabilities.p2p_participatory_finance.external_gate', 'community_growth_circle_governance_custody_regulatory_signoff')
+            ->assertJsonPath('data.capabilities.sacco.public_name', 'Member Cooperative Core')
+            ->assertJsonPath('data.capabilities.employer.public_name', 'Workplace Support Finance');
     }
 
     public function test_capabilities_require_authentication(): void
