@@ -21,6 +21,11 @@ class LoanNplControl extends Model
         'last_evaluated_at',
     ];
 
+    public function loan()
+    {
+        return $this->belongsTo(Loan::class);
+    }
+
     protected function casts(): array
     {
         return [
