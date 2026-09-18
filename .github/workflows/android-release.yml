@@ -7,8 +7,6 @@ on:
       - "android-v*"
     branches:
       - "release/android-*"
-    paths:
-      - ".github/workflows/android-release.yml"
 
 permissions:
   contents: read
@@ -27,6 +25,12 @@ jobs:
       run:
         working-directory: apps/client
     steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Require protected release configuration
         working-directory: .
         env:
@@ -47,18 +51,6 @@ jobs:
               raise SystemExit(1)
           print('Protected signing inputs are present; no debug signing is permitted.')
           PY
-
-      - name: Check out exact commit
-        working-directory: .
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          git init .
-          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
-          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
-          echo "::add-mask::$AUTH"
-          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
-          git checkout --detach FETCH_HEAD
 
       - name: Restore protected upload key
         env:
