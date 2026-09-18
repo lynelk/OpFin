@@ -57,13 +57,14 @@ class NplRecoveryPolicyService
             ->where('created_at', '>=', $nonPerformingAt)
             ->sum('amount_minor');
 
+        $principalAtNpl = $existing->principal_at_npl_minor ?: $principalOutstanding;
         $defaultPenaltyCap = intdiv($initialInterest, 2);
-        $recoverableInterestCap = $principalOutstanding;
-        $totalRecoverableCap = $principalOutstanding + $recoverableInterestCap;
+        $recoverableInterestCap = $principalAtNpl;
+        $totalRecoverableCap = $principalAtNpl + $recoverableInterestCap;
 
         $existing->fill([
             'non_performing_at' => $nonPerformingAt,
-            'principal_at_npl_minor' => $existing->principal_at_npl_minor ?: $principalOutstanding,
+            'principal_at_npl_minor' => $principalAtNpl,
             'initial_interest_minor' => $initialInterest,
             'default_penalty_cap_minor' => $defaultPenaltyCap,
             'recoverable_interest_cap_minor' => $recoverableInterestCap,
