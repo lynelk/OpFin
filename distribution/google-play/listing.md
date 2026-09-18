@@ -23,7 +23,9 @@ With OpFin you can:
 - request a loan within your available limit;
 - review the amount you receive, interest, fees, equivalent APR where applicable, repayment period and total repayment before accepting an offer;
 - choose a verified mobile-money wallet for payout and repayment;
-- track loan requests, offers and repayments; and
+- track loan requests, offers and repayments;
+- view transaction receipts after completed disbursements or repayments;
+- understand how interest, fees and default terms are calculated before accepting a loan; and
 - access support, privacy, accessibility and account controls.
 
 Credit is subject to identity verification, explicit consent, eligibility, affordability assessment, provider/lender rules and applicable law. A displayed credit limit is not a guarantee that every loan request will be approved. Submitting a request does not itself disburse money.
@@ -57,3 +59,8 @@ Provider and regulatory availability may vary. Features that are not approved or
 - Website: `https://opfin.co` only after live-domain verification
 - Privacy policy: `[VERIFY LIVE PRIVACY POLICY URL]`
 - Account deletion: `https://opfin-web-production.up.railway.app/account/delete` until a verified custom-domain replacement is approved
+
+
+### Credit information
+
+Where applicable and with the required electronic consent, OpFin may report complete and accurate positive or negative credit information about a loan to an authorised credit-reference mechanism in support of responsible lending and credit reporting.
