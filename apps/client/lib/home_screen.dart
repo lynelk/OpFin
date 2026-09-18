@@ -105,7 +105,7 @@ class _HomePageState extends State<_HomePage>{
     onRefresh:_reload,
     child:FutureBuilder<Map<String,dynamic>>(future:_state,builder:(context,s){
       if(s.connectionState!=ConnectionState.done){
-        return const ListView(children:[SizedBox(height:260),Center(child:CircularProgressIndicator())]);
+        return ListView(children:const [SizedBox(height:260),Center(child:CircularProgressIndicator())]);
       }
       if(s.hasError){
         return ListView(padding:const EdgeInsets.all(24),children:[
