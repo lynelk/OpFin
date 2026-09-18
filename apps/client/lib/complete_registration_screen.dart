@@ -98,7 +98,7 @@ class _CompleteRegistrationScreenState
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Semantics(
+          Semantics(
             header: true,
             child: Text('Tell us your name',
               style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
