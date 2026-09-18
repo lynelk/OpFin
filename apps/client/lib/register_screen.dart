@@ -79,7 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const Icon(Icons.account_balance_wallet_outlined,
               size: 64, color: OpFinColors.indigo),
           const SizedBox(height: 24),
-          const Semantics(
+          Semantics(
             header: true,
             child: Text('Start with your phone',
               textAlign: TextAlign.center,
