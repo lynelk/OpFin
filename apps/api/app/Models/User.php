@@ -21,7 +21,6 @@ class User extends Authenticatable
 
     public const ROLE_SUPPORT = 'support';
 
-
     public const ROLES = [
         self::ROLE_PLATFORM_ADMIN,
         self::ROLE_OPERATIONS,
@@ -29,7 +28,6 @@ class User extends Authenticatable
         self::ROLE_EMPLOYER_ADMIN,
         self::ROLE_SUPPORT,
     ];
-
 
     public const ROLE_PERMISSIONS = [
         self::ROLE_PLATFORM_ADMIN => ['*'],
