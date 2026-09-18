@@ -12,10 +12,15 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     public const ROLE_PLATFORM_ADMIN = 'platform_admin';
+
     public const ROLE_OPERATIONS = 'operations';
+
     public const ROLE_CUSTOMER = 'customer';
+
     public const ROLE_EMPLOYER_ADMIN = 'employer_admin';
+
     public const ROLE_SUPPORT = 'support';
+
 
     public const ROLES = [
         self::ROLE_PLATFORM_ADMIN,
@@ -25,6 +30,7 @@ class User extends Authenticatable
         self::ROLE_SUPPORT,
     ];
 
+
     public const ROLE_PERMISSIONS = [
         self::ROLE_PLATFORM_ADMIN => ['*'],
         self::ROLE_OPERATIONS => ['profile.view', 'operations.view', 'audit.view', 'kyc.review', 'credit.review', 'reconciliation.manage', 'support.manage', 'compliance.report'],
@@ -33,7 +39,7 @@ class User extends Authenticatable
         self::ROLE_SUPPORT => ['profile.view', 'support.view', 'kyc.review', 'support.manage'],
     ];
 
-    use HasFactory, Notifiable, HasApiTokens, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'name',
