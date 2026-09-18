@@ -64,6 +64,7 @@ export default async function SupportPage({ searchParams }: { searchParams?: Pro
                   { label: "Category", render: (row) => row.category },
                   { label: "Status", render: (row) => <span className="badge warn">{row.status}</span> },
                   { label: "Subject", render: (row) => row.subject },
+                  { label: "UMRA SLA", render: (row) => row.sla_due_at ? new Date(row.sla_due_at).toLocaleDateString() : "—" },
                   {
                     label: "Resolve",
                     render: (row) => (
@@ -72,6 +73,7 @@ export default async function SupportPage({ searchParams }: { searchParams?: Pro
                         <input type="hidden" name="status" value="resolved" />
                         <input type="hidden" name="priority" value={row.priority} />
                         <input type="hidden" name="note" value="Resolved from operations console." />
+                        <input name="resolution_summary" aria-label="Customer-facing resolution summary" placeholder="Resolution communicated to customer" required />
                         <button className="button secondary" type="submit">Resolve</button>
                       </form>
                     )
