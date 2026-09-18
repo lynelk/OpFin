@@ -121,6 +121,21 @@ class ProductionCreditOfferController extends Controller
             return ApiResponse::error('The offer disclosure has changed or the supplied disclosure hash is invalid. Reload the offer before accepting it.', 409, ['disclosure_hash' => ['DISCLOSURE_HASH_MISMATCH']]);
         }
 
+        try {
+            $result = $this->offerService->acceptOffer($offer, $request->user(), [
+                'disclosure_hash' => $expectedHash,
+                'offer_reference' => $offer->offer_reference,
+                'offer_version' => $offer->version,
+                'policy_version' => $offer->policy_version,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'accepted_at' => now()->toISOString(),
+                'wallet_id' => $request->integer('wallet_id') ?: null,
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), 409);
+        }
+
         ConsentRecord::query()
             ->where('user_id', $request->user()->id)
             ->where('purpose', ConsentRecord::PURPOSE_CREDIT_REPORTING)
@@ -145,21 +160,6 @@ class ProductionCreditOfferController extends Controller
                 'electronic_acceptance' => true,
             ],
         ]);
-
-        try {
-            $result = $this->offerService->acceptOffer($offer, $request->user(), [
-                'disclosure_hash' => $expectedHash,
-                'offer_reference' => $offer->offer_reference,
-                'offer_version' => $offer->version,
-                'policy_version' => $offer->policy_version,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'accepted_at' => now()->toISOString(),
-                'wallet_id' => $request->integer('wallet_id') ?: null,
-            ]);
-        } catch (InvalidArgumentException $exception) {
-            return ApiResponse::error($exception->getMessage(), 409);
-        }
 
         return ApiResponse::success('Credit offer accepted and disbursement initiated.', [
             ...$result,
