@@ -1,31 +1,81 @@
 # OpFin Google Play launch: version 1.0.0
 
-Updated 17 September 2026 after reconciling the Android-release changes from PR #35 with the security and brand work in PR #36. This is a handover, not proof of publication or activation of a financial product.
+Updated 18 September 2026 for the unified launch borrower journey. This is a release handover, not proof of Google Play publication, provider certification or activation of lending capital.
 
 ## Canonical launch materials
 
-Use `distribution/google-play/README.md` and its linked listing, financial-features, data-safety, reviewer-notes, release-automation and release-checklist documents. Keep them consistent with the final signed artifact. This document replaces the earlier parallel draft that named `org.rotaryo.opfin` and build 16.
+Use `distribution/google-play/README.md` and its linked listing, financial-features, data-safety, reviewer-notes, release-automation and release-checklist documents together with `docs/LAUNCH_CUSTOMER_JOURNEY.md`.
 
 - App name: **OpFin**
-- App category: **Finance**
-- Initial distribution territory: **Uganda only (UG)**
+- Category: **Finance**
+- Initial territory: **Uganda (UG)**
 - Listing language: English (United Kingdom), en-GB
-- Current source version: **1.0.0+17**; verify the actual artifact version code before upload.
-- Current Android source application ID: **co.opfin.app**, introduced by the merged Android-release change. Confirm ownership and Play Console continuity before the first upload; never change an already published application's identity merely for branding.
+- Source release line: **1.0.0**
+- Android application ID: **co.opfin.app**
+
+Verify the signed artifact's actual build/version code, package identity and signing certificate before upload.
+
+## Launch customer journey
+
+The mobile journey is:
+
+**Phone → OTP → names → 6-digit PIN → Home → National ID verification → credit profile/limit → loan request → formal offer → verified-wallet disbursement → repayment.**
+
+Registration no longer asks a new customer for a long password or forces a second login. A second phone is optional.
+
+Home prioritises amount due or available-to-borrow, then score and the next action. Launch navigation is **Home | Borrow | Activity | More**. Provider-gated savings, investments, peer lending, insurance, SACCO/community capital and asset-finance capabilities should not crowd the initial borrower experience until activated.
+
+## KYC and Android permissions
+
+KYC captures:
+
+- NIN
+- National ID front
+- National ID back
+- Photo of the customer holding the ID
+
+Automatic verification records NIN, liveness, face-match and NIN/phone-link results. Inconclusive/provider-unavailable results stay pending/manual review.
+
+Android requests camera access for direct KYC capture. Do not add broad photo-library/storage permissions for this journey. OTP auto-fill uses SMS Retriever/app signature rather than broad SMS-read permissions.
+
+Production KYC evidence must use a private persistent/object storage disk configured by `KYC_FILESYSTEM_DISK`.
+
+## Lending disclosures and store terms
+
+The backend retains the minimum **61-day** full-repayment restriction for store-distributed personal loans and prefers eligible **90-day-plus** routes.
+
+The customer Loan Application page uses the server-authoritative available limit and eligible terms. Before acceptance, the formal offer shows:
+
+- amount received;
+- interest;
+- mandatory fees;
+- total repayment;
+- duration/frequency;
+- equivalent APR where required;
+- first and final payment timing; and
+- offer expiry.
+
+Offer acceptance uses the disclosure hash and a verified payout wallet. Pending provider disbursement is not displayed as completed.
+
+Before publication, verify the actual legal lender/provider, approved terms, fee-inclusive maximum APR and representative example against the live operating arrangement and Play declarations.
+
+## Accessibility
+
+The release supports system text scaling, an additional large-text option, TalkBack semantics, reduced motion and simple wording. Assisted identity verification can be requested where disability/access needs prevent normal camera use. Assistance does not weaken KYC and neither helpers nor support staff should handle customer PINs or OTPs.
+
+Real-device accessibility/UAT remains a required release check because compilation cannot prove a usable screen-reader or camera experience.
 
 ## Security and release gates
 
-Read `SECURITY.md` for required checks, continuous scans, operational responsibilities and remaining assurance limits. The original vulnerable `sharp 0.35.3` override has been replaced by the patched 0.35.4 lock. Both normal web checks and the deployment prebuild retain the dependency audit. Failures must be investigated, not ignored.
+Read `SECURITY.md`. The exact candidate must pass `release-gate`, `security-gate` and the deployment contract. Android/iOS release compilation is not production signing or store acceptance.
 
-The aggregate `release-gate` must pass for the exact source commit, together with `security-gate` and the deployment contract. Android/iOS release-mode compilation is not proof of production signing or store acceptance. Use the protected Android signed-release process with the approved upload key and correct release identity; no signing secrets belong in source or public logs.
-
-The Android API configuration now points to the configured production host and release configuration requires HTTPS. The upstream backend protections for minimum 61-day full-repayment terms and preference for eligible 90-day-plus routes are preserved. This does not establish approved lending prices, funding or a verified listing APR example.
+No signing secret, provider credential, PIN, OTP or identity evidence belongs in source or public logs.
 
 ## Brand consistency
 
-Read `docs/BRAND_IMPLEMENTATION.md`. Web, mobile and store assets must use the shared `brand/opfin.tokens.json` direction, retained OpFin monogram and Inter typography. Do not use the earlier green generated mockup sheets or the older blue-field store artwork.
+Read `docs/BRAND_IMPLEMENTATION.md`. Web, mobile and store assets must use the shared OpFin tokens, retained monogram and bundled typography.
 
-`bash scripts/build-play-store-assets.sh` regenerates the 512 x 512 Play icon and 1024 x 500 feature graphic from the same app assets and token colours. It updates their provenance hashes. Review regenerated artwork visually before uploading. A store feature graphic is marketing artwork, not an Android screenshot.
+Regenerate Play icon/feature assets using the repository asset script where required and visually inspect them. Marketing art is not a production screenshot.
 
 ## Public URLs
 
@@ -33,10 +83,18 @@ Read `docs/BRAND_IMPLEMENTATION.md`. Web, mobile and store assets must use the s
 - Privacy policy: `https://opfin-production.up.railway.app/privacy-policy`
 - Account deletion: `https://opfin-web-production.up.railway.app/account/delete`
 
-Configured domains and source routes are not evidence of a completed end-to-end deletion test. Verify logged-out access and test the deletion process only with an authorised non-personal test account. A monitored support inbox, approved public privacy contact and legal disclosures still require actual verification; no unverified `support@...` address should be published.
+Verify public accessibility and content before store submission. Do not publish an unverified support/security address.
 
-## Production screenshots and financial disclosures
+## Production screenshots
 
-Capture actual final-release screens with an authorised demonstration account: overview, available credit, offer costs, application status, repayment schedule and account controls. Record the package ID, commit, version, signing-certificate digest, artifact checksum, backend environment and device. Do not generate or reconstruct UI and label it as a production capture. Do not create a real loan, payment or customer deletion to make marketing screenshots.
+Capture final signed-build screens using authorised test data:
 
-Before publication, verify the legal lender, approved minimum and maximum repayment terms, fee-inclusive maximum APR and an accurate representative example with principal, amount received, interest, mandatory charges, dated instalments and total repayment. Confirm licensing, Data safety, app access and Financial features declarations against the actual release and operating arrangements.
+1. Phone/OTP onboarding
+2. Identity/KYC capture guidance
+3. Home with profile/limit
+4. Loan Application with available limit and amount due
+5. Formal offer disclosure
+6. Active-loan/repayment state
+7. Accessibility/Profile controls
+
+Record package ID, commit, version, signing-certificate digest, artifact checksum, backend environment and device. Do not create unauthorised real loans/payments merely to obtain screenshots.

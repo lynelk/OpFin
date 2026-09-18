@@ -4,57 +4,83 @@ Security is maintained through layered controls, verified changes and timely res
 
 ## Reporting
 
-Do not publish passwords, identity documents, account numbers, access tokens, production logs or exploitable customer records in a public issue. Report concerns privately to the repository owner or the authorised OpFin security contact. A dedicated security mailbox and private vulnerability-reporting configuration must be confirmed by the owner before they are advertised. Never invent a support or security address.
+Do not publish passwords, PINs, OTPs, identity documents, account numbers, access tokens, production logs or exploitable customer records in a public issue. Report concerns privately to the repository owner or authorised OpFin security contact. A dedicated security mailbox and private vulnerability-reporting configuration must be confirmed before publication. Never invent a support or security address.
 
 ## Required release checks
 
-The following workflows must pass on the exact commit to be released:
+The exact release commit must pass:
 
-- `OpFin Monorepo CI`: layout, current-index secret scan, API tests/audit, API asset audit/build, web audit/typecheck/lint/tests/production build/HTTP smoke, Android and iOS release compile checks, and the aggregate `release-gate`.
-- `OpFin security monitoring`: locked web/API asset/PHP/Pub dependency checks, security and brand control checks, and the aggregate `security-gate`.
-- `Deployment contract` for the existing Railway deployment contract.
+- **OpFin Monorepo CI**: layout, current-index secret scan, API tests/audit, API asset audit/build, web audit/typecheck/lint/tests/production build/HTTP smoke, Android and iOS release compile checks, and aggregate `release-gate`.
+- **OpFin security monitoring**: locked web/API asset/PHP/Pub dependency checks, security and brand controls, and aggregate `security-gate`.
+- **Deployment contract** for the Railway service boundaries.
 
-Failed, cancelled, missing or incomplete checks are not a pass. Do not add `continue-on-error`, remove the audit, lower the severity threshold, or force a vulnerable package to make the pipeline green. A change to a security exception requires a documented rationale, owner, expiry and independent review. There are no blanket advisory suppressions in this implementation.
+Failed, cancelled, missing or incomplete checks are not a pass. Do not weaken an audit or bypass a failing gate merely to ship.
+
+## Customer authentication
+
+- New mobile customers verify their phone by OTP, then create a six-digit PIN.
+- OTPs are hashed at rest, expire, have attempt limits and are consumed/invalidated by the relevant flow.
+- Android may use SMS Retriever/app-signature formatting for OTP auto-fill; OpFin does not require broad SMS-reading permission.
+- Weak repeated/sequential PINs are rejected and login attempts are rate-limited.
+- Existing legacy password authentication remains a migration compatibility path; it is not the new-customer UX.
+- Sessions remain bearer-token based and sensitive session values remain in secure platform storage.
+- PINs and OTPs must never be requested through WhatsApp, USSD support text or by staff.
+
+## Identity and KYC evidence
+
+KYC requires NIN, National ID front/back and a customer photo holding the ID. Automatic verification records NIN validation, liveness, face match and NIN/phone linkage separately.
+
+- Image evidence is private and must use persistent private/object storage in production through `KYC_FILESYSTEM_DISK`.
+- Do not expose private evidence paths or raw provider payloads to customers.
+- Provider unavailability or inconclusive checks stays pending/manual-review; never fabricate a successful identity result.
+- The mobile app uses camera access for KYC and must not add broad photo-library/storage permissions merely for convenience.
+- Assisted/PWD verification may change how evidence is captured, but not the required assurance. Helpers must not handle PINs or OTPs.
+
+## Credit profile and external data
+
+- Credit-processing consent is explicit, versioned and revocable.
+- CRB, MNO, third-party and internal components remain attributable and decomposable.
+- Missing source data is recorded unavailable/error, not silently replaced.
+- Credit limit is profile-level; linking multiple phones/wallets must not multiply exposure.
+- Customer UI may explain the composite score and components but should not expose unnecessary internal probability-of-default or raw provider payloads.
+- Production provider credentials must be environment-scoped and least-privilege.
+
+## Money movement and provider finality
+
+- CPay remains the production money-movement boundary unless architecture is deliberately changed and revalidated.
+- Only verified customer wallets can be explicitly selected for payout/repayment; ownership is enforced server-side.
+- Client repayment initiation uses idempotency keys.
+- Offer acceptance is tied to an immutable disclosure hash.
+- A provider acknowledgement or pending collection/disbursement is not accounting finality. Customer balances change only through the existing provider-success, ledger and reconciliation controls.
+- Callbacks remain authenticated, replay-safe and auditable.
+
+## Web/runtime protections
+
+- Production web uses nonce-based script controls, anti-framing, MIME sniffing prevention, constrained referrers, HTTPS enforcement and private/no-store HTML.
+- Android disables cleartext traffic and excludes application data from cloud/device-to-device backups. Release API configuration requires HTTPS.
+- API authorisation, tenant isolation, consent, financial finality, CPay-only money movement and regulated account deletion remain backend responsibilities.
+
+## Accessibility and security
+
+Accessibility must not create secret-sharing or lower-assurance shortcuts. Screen readers, text scaling, reduced motion, plain language and assisted device positioning are compatible with the same authentication/KYC controls. Support agents may guide customers but must not ask for PINs or OTPs.
 
 ## Continuing controls
 
-The security workflow runs for pull requests, main-branch pushes and daily at 03:17 UTC once it is on the default branch. It queries current advisories against locked versions, so new advisories can be detected even without a code change. Registry or advisory-service failures fail closed and require investigation rather than being reported as a clean scan.
-
-Dependabot checks Composer, both npm projects, Pub and Actions daily; Android Gradle dependencies are checked weekly. Update pull requests are assigned to `lynelk` and require review and passing checks. Updates are not automatically deployed. Compatible updates may be grouped, but security findings are not ignored.
-
-The web security floor rejects `sharp` versions below 0.35.4 and rejects a mismatch between its override and lockfile. The floor is an additional regression control, not a replacement for current vulnerability scans. The Flutter check sends only public package names and locked versions to OSV, handles pagination and blocks any returned advisory. It explicitly excludes SDK packages and does not claim to audit the Flutter engine, Android/iOS operating systems or every native transitive dependency.
-
-## Runtime protections introduced with the launch hardening
-
-- Per-response nonce-based production script policy, anti-framing, MIME sniffing prevention, constrained referrers, HTTPS enforcement and private/no-store HTML.
-- Existing inline CSS attributes remain permitted for compatibility; arbitrary inline scripts and eval are not permitted by the production script policy.
-- Next.js remote image fetching is closed by default; SVG optimisation, private-IP image fetches and redirect following are not enabled.
-- Existing web session cookies remain HttpOnly, Secure in production and SameSite=Lax. Role cookies are navigation hints, never API authorisation evidence.
-- Android explicitly disables cleartext traffic and excludes application data from cloud and device-to-device backups. Release API configuration must use HTTPS without embedded credentials.
-- Sensitive session identifiers remain in secure storage. Local logout removes active session values while preserving the onboarding preference.
-- API authorisation, tenant isolation, consent, affordability, financial finality, CPay-only money movement and regulated account-deletion rules remain backend responsibilities.
+Security workflows and dependency monitoring run on pull requests/default-branch schedules as configured in `.github`. Registry/advisory failures fail closed. Security findings require investigation, not suppression.
 
 ## Operational controls requiring owner verification
 
-Code checks do not prove these settings are enabled. Verify and record them separately:
+Code cannot prove these settings are active. Verify separately:
 
-1. Protect `main` with required `release-gate`, `security-gate` and deployment-contract checks, reviewed pull requests, no force pushes and controlled administrator bypass. Restrict who can modify workflows and production deployments.
-2. Enable repository vulnerability alerts, private vulnerability reporting, secret scanning and push protection where the account supports them. Review historic commits and rotate exposed credentials; current-index scanning does not purge history or revoke a key.
-3. Use least-privilege, environment-scoped deployment and provider credentials; rotate them, review access and enable strong authentication for privileged operational accounts under the approved access policy.
-4. Test backup restoration, alert delivery and incident response. Confirm production logging excludes credentials and unnecessary financial/identity data, with access control and retention limits.
-5. Verify the actual deployed commit, public response headers, login/session behaviour, permission boundaries and critical financial journeys after deployment. Do not run live payments, loan creation or customer deletion as a smoke test.
-6. Arrange independent security testing before general availability and after substantial changes to identity, authorisation, payment or lending functionality. Include rate limits, IDOR/tenant boundaries, session invalidation, uploads, webhooks and dependency exposure.
+1. Protect `main` with required release/security/deployment checks, reviewed pull requests, no force pushes and controlled administrator bypass.
+2. Enable vulnerability alerts, private vulnerability reporting, secret scanning and push protection where available; rotate any historically exposed credentials.
+3. Use least-privilege, environment-scoped provider/deployment credentials and strong authentication for privileged operational accounts.
+4. Use persistent private/object storage for production KYC evidence, define retention/deletion rules and verify access logging.
+5. Test backup restoration, alert delivery and incident response; confirm logs exclude secrets and unnecessary identity/financial data.
+6. Verify actual deployed commit, headers, session behaviour, KYC/provider configuration, permissions and critical financial journeys after deployment without creating unauthorised real customer obligations.
+7. Complete real-device accessibility testing with TalkBack/VoiceOver, large text and representative PWD-assisted KYC scenarios.
+8. Arrange independent security testing before general availability and after substantial identity, authorisation, payment or lending changes.
 
-## Response ownership and procedure
+## Incident response
 
-The repository owner is accountable for assigning a security maintainer and backup. Review failed scheduled jobs and dependency alerts promptly. As proposed internal response targets, contain confirmed exploitation or exposed production credentials immediately; triage other high-severity findings within one working day and agree a remediation deadline based on exposure. These are operational targets, not an externally advertised service-level promise.
-
-For an incident: preserve restricted evidence, contain the affected path, revoke or rotate compromised credentials, assess customer and regulatory impact with the responsible officers, fix and test, deploy through the protected process, and record the cause and follow-up actions. Do not disclose customer evidence in a public pull request.
-
-## References
-
-- Sharp advisory: https://github.com/advisories/GHSA-rgj7-g3m4-5g8c
-- Next.js CSP: https://nextjs.org/docs/app/guides/content-security-policy
-- Android backup: https://developer.android.com/identity/data/autobackup
-- OSV API: https://google.github.io/osv.dev/api/
-- Dependabot configuration: https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+Preserve restricted evidence, contain the affected path, revoke/rotate compromised credentials, assess customer and regulatory impact, fix and test, deploy through the protected process, and record cause and follow-up actions. Do not disclose customer evidence in public pull requests.
