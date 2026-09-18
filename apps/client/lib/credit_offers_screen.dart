@@ -154,7 +154,41 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
     }
   }
 
-  Widget _row(String label, String value) => ListTile(contentPadding: EdgeInsets.zero, title: Text(label), trailing: Flexible(child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.bold))));
+  Map<String, dynamic> _section(String key) {
+    final value = _disclosure[key];
+    return value is Map ? value.cast<String, dynamic>() : <String, dynamic>{};
+  }
+
+  Widget _row(String label, String value) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(label),
+        trailing: Flexible(
+          child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      );
+
+  Widget _notice(String title, String body, {IconData icon = Icons.info_outline}) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(body),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -162,12 +196,22 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
     final apr = _disclosure['equivalent_maximum_apr_percent'];
     final firstDue = _disclosure['first_payment_due_days_after_disbursement'];
     final finalDue = _disclosure['full_repayment_due_days_after_disbursement'];
+    final interest = _section('interest');
+    final fees = _section('fees');
+    final complaints = _section('complaints');
+    final creditInfo = _section('credit_information_exchange');
+    final variation = _section('term_variation');
+    final guarantors = _section('guarantors');
+    final provider = _section('provider_identity');
+    final timing = _section('repayment_timing');
     return Scaffold(
       appBar: AppBar(title: const Text('Review credit offer')),
       body: ListView(padding: const EdgeInsets.all(20), children: [
         _row('Amount you receive', _ugx(offer['net_disbursement_minor'])),
         _row('Interest', _ugx(offer['interest_amount_minor'])),
         _row('Fees', _ugx(offer['fees_minor'])),
+        if (_disclosure['total_cost_of_credit_minor'] != null)
+          _row('Total cost of credit', _ugx(_disclosure['total_cost_of_credit_minor'])),
         _row('Total repayment', _ugx(offer['total_repayment_minor'])),
         _row('Duration', '${offer['duration_days']} days'),
         _row('Repayment frequency', offer['repayment_frequency']?.toString() ?? ''),
