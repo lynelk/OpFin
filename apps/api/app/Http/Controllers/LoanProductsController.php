@@ -65,8 +65,21 @@ class LoanProductsController extends Controller
             'interest_cycle' => 'required|string|max:50',
             'repayment_frequency' => 'required|string|max:50',
             'duration' => 'required|integer|min:1',
+            'guarantors_required' => 'nullable|integer|min:0|max:2',
         ]);
-        $loanProduct->terms()->create($request->all());
+
+        $data = $request->only([
+            'interest_rate',
+            'interest_type',
+            'interest_cycle',
+            'repayment_frequency',
+            'duration',
+            'guarantors_required',
+            'status',
+        ]);
+        $data['guarantors_required'] = (int) ($data['guarantors_required'] ?? 0);
+
+        $loanProduct->terms()->create($data);
         return redirect()->route('loan-products.show', $loanProduct)->with('success', 'Loan product term added successfully.');
     }
     public function editTerm(LoanProduct $loanProduct, $termId)
@@ -82,9 +95,42 @@ class LoanProductsController extends Controller
             'interest_cycle' => 'required|string|max:50',
             'repayment_frequency' => 'required|string|max:50',
             'duration' => 'required|integer|min:1',
+            'guarantors_required' => 'nullable|integer|min:0|max:2',
+            'umra_interest_approval_reference' => 'nullable|string|max:255',
+            'umra_interest_approval_document_hash' => ['nullable', 'string', 'regex:/^[a-f0-9]{64}$/i'],
         ]);
+
         $term = $loanProduct->terms()->findOrFail($termId);
-        $term->update($request->all());
+        $data = $request->only([
+            'interest_rate',
+            'interest_type',
+            'interest_cycle',
+            'repayment_frequency',
+            'duration',
+            'guarantors_required',
+            'status',
+        ]);
+        $data['guarantors_required'] = (int) ($data['guarantors_required'] ?? 0);
+
+        $rateChanged = (float) $term->interest_rate !== (float) $request->input('interest_rate');
+        if ($rateChanged) {
+            $approvalReference = trim((string) $request->input('umra_interest_approval_reference'));
+            $approvalHash = strtolower(trim((string) $request->input('umra_interest_approval_document_hash')));
+
+            if ($approvalReference === '' || ! preg_match('/^[a-f0-9]{64}$/', $approvalHash)) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'interest_rate' => 'Changing an interest rate requires the prior UMRA approval reference and SHA-256 approval-evidence hash.',
+                    ]);
+            }
+
+            $data['umra_interest_approval_reference'] = $approvalReference;
+            $data['umra_interest_approval_document_hash'] = $approvalHash;
+            $data['umra_interest_approved_at'] = now();
+        }
+
+        $term->update($data);
         return redirect()->route('loan-products.show', $loanProduct)->with('success', 'Loan product term updated successfully.');
     }
     public function changeTermStatus(LoanProduct $loanProduct, $termId)
