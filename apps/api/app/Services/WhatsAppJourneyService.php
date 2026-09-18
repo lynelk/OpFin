@@ -272,8 +272,12 @@ class WhatsAppJourneyService
             return $this->respond($conversation->id, 'This identity session expired. Send KYC to start again.', 'verified');
         }
 
-        if (str_starts_with(strtolower($mimeType), 'image/')) {
-            return $this->respond($conversation->id, 'Please send a photo image, not a document or video.', 'verified') === false;
+        if (str_starts_with(strtolower($mimeType), 'image/') === false) {
+            return $this->respond(
+                $conversation->id,
+                'Please send a photo image, not a document or video.',
+                'verified'
+            );
         }
 
         $step = (string) ($context['kyc_step'] ?? 'front');
