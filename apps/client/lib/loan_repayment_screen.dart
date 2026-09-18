@@ -137,7 +137,7 @@ class _LoanRepaymentScreenState extends State<LoanRepaymentScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
-                  const Semantics(
+                  Semantics(
                     header: true,
                     child: Text(
                       'How much will you repay?',
