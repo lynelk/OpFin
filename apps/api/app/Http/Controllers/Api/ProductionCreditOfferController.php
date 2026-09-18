@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ConsentRecord;
 use App\Models\CreditOffer;
 use App\Models\LoanApplication;
 use App\Services\AppStoreCreditPolicy;
@@ -119,6 +120,31 @@ class ProductionCreditOfferController extends Controller
         if (! hash_equals($expectedHash, (string) $request->input('disclosure_hash'))) {
             return ApiResponse::error('The offer disclosure has changed or the supplied disclosure hash is invalid. Reload the offer before accepting it.', 409, ['disclosure_hash' => ['DISCLOSURE_HASH_MISMATCH']]);
         }
+
+        ConsentRecord::query()
+            ->where('user_id', $request->user()->id)
+            ->where('purpose', ConsentRecord::PURPOSE_CREDIT_REPORTING)
+            ->where('status', ConsentRecord::STATUS_GRANTED)
+            ->update([
+                'status' => ConsentRecord::STATUS_REVOKED,
+                'revoked_at' => now(),
+            ]);
+
+        ConsentRecord::create([
+            'user_id' => $request->user()->id,
+            'purpose' => ConsentRecord::PURPOSE_CREDIT_REPORTING,
+            'policy_version' => 'umra-credit-reporting-v1',
+            'status' => ConsentRecord::STATUS_GRANTED,
+            'channel' => (string) ($offer->application?->distribution_channel ?? 'api'),
+            'granted_at' => now(),
+            'metadata' => [
+                'offer_reference' => $offer->offer_reference,
+                'offer_version' => $offer->version,
+                'disclosure_hash' => $expectedHash,
+                'notice_in_disclosure' => true,
+                'electronic_acceptance' => true,
+            ],
+        ]);
 
         try {
             $result = $this->offerService->acceptOffer($offer, $request->user(), [
