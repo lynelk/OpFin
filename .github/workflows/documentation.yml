@@ -1,0 +1,94 @@
+name: Documentation quality
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 4 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MOBILE_MONEY_PROVIDER: mock
+      OPFIN_ENABLE_DEMO_ROUTES: 'false'
+    steps:
+      - name: Check out candidate and exact comparison commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          base="${PR_BASE:-${PUSH_BASE:-}}"
+          if [[ -n "$base" && ! "$base" =~ ^0+$ ]]; then
+            git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$base"
+            echo "DOC_BASE=$base" >> "$GITHUB_ENV"
+          fi
+      - name: Test documentation tooling
+        run: python3 -m unittest discover -s scripts -p 'test_docs_toolkit.py' -v
+      - name: Verify documentation impact and local links
+        shell: bash
+        run: |
+          args=()
+          if [[ -n "${DOC_BASE:-}" ]]; then args=(--base "$DOC_BASE"); fi
+          python3 scripts/verify-documentation-drift.py "${args[@]}"
+          python3 scripts/docs_toolkit.py check "${args[@]}"
+      - name: Install PHP and Composer for route discovery
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php-cli php-mbstring php-sqlite3 php-xml php-curl composer
+          php -v
+          composer --version
+      - name: Export registered API and verify curated endpoint tables
+        shell: bash
+        run: |
+          mkdir -p .build/api
+          cd apps/api
+          cp .env.example .env
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+          php artisan route:list --json > ../../.build/api/registered-routes.json
+          cd ../..
+          python3 scripts/docs_toolkit.py export-api --routes .build/api/registered-routes.json --environment testing
+          python3 scripts/docs_toolkit.py build --api-dir .build/api
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          result = json.loads(Path('.build/api/api-routes.json').read_text())
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('# Documentation evidence\n\n')
+              summary.write('Source commit: `' + result['source_commit'] + '`\n\n')
+              summary.write(str(len(result['routes'])) + ' non-demo API operations exported.\n\n')
+              summary.write(str(len(result['narrative_uncovered'])) + ' operations need additional narrative coverage.\n\n')
+              summary.write('Registration environment: testing. This is not a production or complete-schema certificate.\n')
+          PY
+      - name: Retain commit-labelled documentation evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: opfin-docs-${{ github.sha }}
+          path: |
+            .build/docs/
+            .build/api/api-routes.json
+            .build/api/API_ROUTE_REFERENCE.md
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

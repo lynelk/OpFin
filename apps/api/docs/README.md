@@ -1,79 +1,37 @@
-# OpFin API Documentation
+# OpFin API documentation
 
-**Purpose:** current developer and operations documentation for the OpFin API  
-**Last regenerated:** 18 September 2026  
-**Scope:** `apps/api` plus the customer-facing contracts consumed by Flutter, web, WhatsApp and USSD
+Review date: 18 September 2026. Audience: developers, integrators, operations, support and testers.
 
 ## Start here
 
-### Developers
+Read [the repository overview](../../../README.md), [developer setup](../../../docs/DEVELOPER_START_HERE.md) and [the launch journey](../../../docs/LAUNCH_CUSTOMER_JOURNEY.md). The API owns authoritative identity, credit, money movement, ledger and reconciliation state. Clients consume that state; they do not independently calculate financial outcomes.
 
-Read in this order:
+## Find the contract
 
-1. `../../README.md` – repository and verification commands
-2. `../../../docs/LAUNCH_CUSTOMER_JOURNEY.md` – launch product contract
-3. `architecture/system-overview.md`
-4. `architecture/api-design.md`
-5. `architecture/security-and-compliance.md`
-6. `architecture/testing-strategy.md`
-7. `api/current-endpoints.md`
-8. `api/frontend-backend-contract.md`
-9. `api/API_QUICK_REFERENCE.md`
-10. `../../../docs/UMRA_DIGITAL_LENDING_CONTROLS.md`
+| Need | Reference |
+| --- | --- |
+| Understand API use without prior backend knowledge | [Integrator guide](api/INTEGRATOR_GUIDE.md) |
+| Find an operation by customer or staff task | [API quick reference](api/API_QUICK_REFERENCE.md) |
+| Read curated payloads and behaviour | [Current endpoints](api/current-endpoints.md) |
+| Understand client responsibilities | [Frontend/backend contract](api/frontend-backend-contract.md) |
+| Understand structure and constraints | [System overview](architecture/system-overview.md), [API design](architecture/api-design.md) |
+| Review security and testing | [Security and compliance](architecture/security-and-compliance.md), [testing strategy](architecture/testing-strategy.md) |
+| Operate and validate the service | [Operational runbook](operations/operational-runbook.md), [readiness](operations/production-readiness-checklist.md), [customer UAT](uat/customer-uat-scenarios.md) |
+| Review digital-lending controls | [UMRA control implementation](../../../docs/UMRA_DIGITAL_LENDING_CONTROLS.md) |
 
-### Testers and operations
-
-Use:
-
-- `uat/customer-uat-scenarios.md`
-- `operations/production-readiness-checklist.md`
-- `../../../SECURITY.md`
-
-## Current launch contract
-
-The customer account and lending path is:
-
-`Phone → OTP → names → 6-digit PIN → identity → credit profile → limit → request → offer → verified-wallet disbursement → repayment`.
-
-The same API profile state drives mobile, WhatsApp and USSD. A second phone is optional. KYC requires NIN, ID front/back and a photo holding the ID. External source absence is recorded honestly rather than replaced with synthetic data.
-
-Accessibility is part of the contract: simple language, screen-reader semantics, text scaling, reduced motion and assisted verification must remain compatible with the same security/KYC controls.
-
-## Documentation rule
-
-Documentation changes with the code. If an endpoint, financial state, authentication step, scoring source, customer label or release control changes, update the relevant document in the same pull request. Stale financial documentation is a defect.
-
-
-## Search and API discovery
-
-From repository root:
+## Search from repository root
 
 ```bash
 python3 scripts/search-docs.py "credit reporting" --api
 python3 scripts/search-api.py "credit"
 python3 scripts/search-api.py "umra"
+make docs-build
 ```
 
-From `apps/api`:
+From `apps/api`, run `php artisan route:list --json` for exact registered metadata. See [maintenance instructions](../../../docs/DOCUMENTATION_MAINTENANCE.md) for generating the full route index and its narrative coverage report.
 
-```bash
-php artisan route:list
-php artisan route:list --path=api/credit
-php artisan route:list --path=api/admin/umra
-php artisan route:list --json
-```
+Registration is not availability: role checks, controller-level ownership checks, feature gates, provider readiness and the deployment environment still apply. The testing export is not a production certificate, an SDK or a complete OpenAPI schema.
 
-The Laravel route table is authoritative for registration; the Markdown docs explain purpose, state and safe client usage.
+## Documentation changes with the implementation
 
-## Current UMRA control areas
-
-The API now includes governed contracts for:
-
-- positive/negative credit-information exchange;
-- separate electronic reporting consent;
-- complaint procedure and regulatory due/SLA evidence;
-- NPL/default-interest tracking and configurable enforcement;
-- transaction e-receipts;
-- guarantor confirmation controls;
-- governed term/rate changes;
-- regulator books/records and evidence packs.
+Update affected contract, setup, operational and training documents in the same PR. Do not replace absent source evidence with invented fields, response examples or provider capabilities. Historical audit/demo/checkpoint documents retain their context and do not override current references.
