@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ConsentRecord;
 use App\Models\CreditRepaymentScheduleItem;
 use App\Models\Loan;
 use App\Models\User;
@@ -57,13 +58,29 @@ class CreditReferenceReportingService
         $submitted = 0;
         $failed = 0;
         $records = DB::table('credit_information_reports')
-            ->whereIn('status', ['pending', 'failed'])
+            ->whereIn('status', ['pending', 'failed', 'blocked_consent'])
             ->where('attempts', '<', 10)
             ->orderBy('due_at')
             ->limit($limit)
             ->get();
 
         foreach ($records as $record) {
+            $consent = ConsentRecord::query()
+                ->where('user_id', $record->user_id)
+                ->where('purpose', ConsentRecord::PURPOSE_CREDIT_INFORMATION_REPORTING)
+                ->where('status', ConsentRecord::STATUS_GRANTED)
+                ->exists();
+
+            if (! $consent) {
+                DB::table('credit_information_reports')->where('id', $record->id)->update([
+                    'status' => 'blocked_consent',
+                    'failure_reason' => 'Active customer consent for credit-information reporting is required before external submission.',
+                    'updated_at' => now(),
+                ]);
+
+                continue;
+            }
+
             try {
                 $request = Http::acceptJson()
                     ->timeout(15)
@@ -102,7 +119,7 @@ class CreditReferenceReportingService
         return [
             'submitted' => $submitted,
             'failed' => $failed,
-            'pending' => DB::table('credit_information_reports')->whereIn('status', ['pending', 'failed'])->count(),
+            'pending' => DB::table('credit_information_reports')->whereIn('status', ['pending', 'failed', 'blocked_consent'])->count(),
             'provider_configured' => true,
         ];
     }
