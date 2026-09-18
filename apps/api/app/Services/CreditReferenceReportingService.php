@@ -20,6 +20,9 @@ class CreditReferenceReportingService
         $hash = hash('sha256', $canonical);
         $negative = in_array($eventType, ['delinquency', 'non_performing', 'write_off'], true);
 
+        $complete = (bool) data_get($payload, 'quality_controls.complete_customer_identity')
+            && (bool) data_get($payload, 'quality_controls.identity_verified');
+
         DB::table('credit_information_reports')->updateOrInsert(
             [
                 'loan_id' => $loan->id,
@@ -29,7 +32,7 @@ class CreditReferenceReportingService
             [
                 'user_id' => $loan->user_id,
                 'report_type' => $negative ? 'negative' : 'positive',
-                'status' => 'pending',
+                'status' => $complete ? 'pending' : 'blocked_data_quality',
                 'provider' => config('services.credit_reference_reporting.provider'),
                 'payload' => $canonical,
                 'due_at' => now()->addDays((int) config('opfin.regulatory.credit_reporting_due_days', 30)),
