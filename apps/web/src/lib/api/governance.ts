@@ -55,6 +55,18 @@ export type GovernanceDashboard = {
     messages_24h: number;
     audit_hashes_present: number;
   };
+  umra: {
+    credit_reports_pending: number;
+    credit_reports_failed: number;
+    credit_reports_overdue: number;
+    npl_count: number;
+    npl_cap_breaches: number;
+    complaints_open: number;
+    complaints_sla_breached: number;
+    receipts_issued: number;
+    pending_guarantor_confirmations: number;
+    term_changes_pending: number;
+  };
 };
 
 async function request<T>(path: string, token?: string, init: RequestInit = {}): Promise<Envelope<T>> {
