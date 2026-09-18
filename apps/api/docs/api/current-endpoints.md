@@ -39,7 +39,7 @@ Authenticated:
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | POST | `/api/logout` | Revoke current token |
-| DELETE | `/api/account` | Regulated account-deletion workflow |
+| DELETE | `/api/account` | Regulated account-deletion workflow; preferred re-authentication field is `pin`, with `password` retained for migrated accounts |
 | GET | `/api/profile` | Sanitised profile; NIN is masked |
 
 Preferred registration payload:
