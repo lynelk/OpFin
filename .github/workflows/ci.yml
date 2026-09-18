@@ -200,10 +200,13 @@ jobs:
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
       - name: Audit, test and build Android
         run: |
-          python3 scripts/audit-pub.py
           cd apps/client
           flutter --version
           flutter pub get
+          git diff --exit-code -- pubspec.lock
+          cd ../..
+          python3 scripts/audit-pub.py
+          cd apps/client
           flutter analyze
           flutter test
           flutter build apk --release --no-pub
