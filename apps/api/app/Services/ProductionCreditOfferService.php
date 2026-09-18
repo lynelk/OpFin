@@ -187,6 +187,11 @@ class ProductionCreditOfferService
                         'interest_rate_change_requires_umra_approval' => true,
                         'customer_consent_required_for_credit_term_variation' => true,
                     ],
+                    'credit_information_reporting' => [
+                        'positive_and_negative_information_may_be_reported' => true,
+                        'consent_required_before_external_submission' => true,
+                        'purpose' => 'Credit-reference reporting and responsible lending.',
+                    ],
                 ],
                 'offered_at' => $offeredAt,
                 'expires_at' => $offeredAt->copy()->addMinutes($expiresInMinutes),
