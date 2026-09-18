@@ -33,7 +33,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _loading = true);
     try {
       String signature = '';
-      if (Platform.isAndroid) signature = await SmsAutoFill().getAppSignature;
+      if (Platform.isAndroid) {
+        signature = await SmsAutoFill().getAppSignature;
+      }
       final response = await http.post(Uri.parse('$apiUrl/generate-otp'), body: {
         'phone': _normalise(_phone.text),
         if (signature.isNotEmpty) 'app_signature': signature,
@@ -55,7 +57,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
