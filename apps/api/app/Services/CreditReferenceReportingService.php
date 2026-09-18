@@ -161,7 +161,7 @@ class CreditReferenceReportingService
                 'last_name' => $user->last_name,
                 'phone' => $user->phone,
                 'national_id' => $user->national_id,
-                'date_of_birth' => $user->date_of_birth?->toDateString(),
+                'date_of_birth' => $user->date_of_birth ? (string) $user->date_of_birth : null,
             ],
             'facility' => [
                 'loan_reference' => (string) $loan->id,
