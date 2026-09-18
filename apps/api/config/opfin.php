@@ -32,6 +32,19 @@ return [
         ],
     ],
 
+    'regulatory' => [
+        'credit_reporting_due_days' => (int) env('UMRA_CREDIT_REPORTING_DUE_DAYS', 30),
+        'complaint_resolution_days' => (int) env('UMRA_COMPLAINT_RESOLUTION_DAYS', 30),
+        'enforce_umra_npl_cap' => (bool) env('UMRA_ENFORCE_NPL_CAP', true),
+        'licensed_entity_name' => env('OPFIN_LICENSED_ENTITY_NAME'),
+        'licensed_trading_name' => env('OPFIN_LICENSED_TRADING_NAME', 'OpFin'),
+        'umra_license_number' => env('OPFIN_UMRA_LICENSE_NUMBER'),
+        'business_address' => env('OPFIN_BUSINESS_ADDRESS'),
+        'complaints_email' => env('OPFIN_COMPLAINTS_EMAIL'),
+        'complaints_phone' => env('OPFIN_COMPLAINTS_PHONE'),
+        'complaints_url' => env('OPFIN_COMPLAINTS_URL'),
+    ],
+
     'customer_experience' => [
         'secondary_phone_required' => false,
         'simple_language_default' => true,
