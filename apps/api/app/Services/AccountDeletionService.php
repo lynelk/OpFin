@@ -17,10 +17,10 @@ class AccountDeletionService
 {
     public function __construct(private readonly AuditLogger $auditLogger) {}
 
-    public function deleteOrRequest(User $user, string $password, Request $request): array
+    public function deleteOrRequest(User $user, string $credential, Request $request): array
     {
-        if (! Hash::check($password, $user->password)) {
-            throw ValidationException::withMessages(['password' => ['Your current password is incorrect.']]);
+        if (! Hash::check($credential, $user->password)) {
+            throw ValidationException::withMessages(['pin' => ['Your current PIN or legacy password is incorrect.']]);
         }
 
         return DB::transaction(function () use ($user, $request) {
@@ -84,6 +84,11 @@ class AccountDeletionService
             $user->tokens()->delete();
             $user->forceFill([
                 'name' => 'Deleted User',
+                'first_name' => null,
+                'other_name' => null,
+                'last_name' => null,
+                'preferred_language' => 'en',
+                'accessibility_preferences' => null,
                 'phone' => 'deleted-'.$user->id.'-'.Str::lower(Str::random(12)),
                 'email' => 'deleted-'.$user->id.'-'.Str::lower(Str::random(8)).'@deleted.invalid',
                 'national_id' => null,
@@ -171,6 +176,9 @@ class AccountDeletionService
             'microbusiness_profiles',
             'community_finance_memberships',
             'offline_sync_batches',
+            'customer_wallets',
+            'customer_phone_numbers',
+            'credit_profiles',
         ] as $table) {
             if (Schema::hasTable($table) && Schema::hasColumn($table, 'user_id')) {
                 DB::table($table)->where('user_id', $userId)->delete();
