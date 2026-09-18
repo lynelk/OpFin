@@ -319,6 +319,9 @@ export type SupportCase = {
   priority: string;
   subject: string;
   description: string;
+  regulatory_category?: string | null;
+  resolution_summary?: string | null;
+  sla_due_at?: string | null;
   resolved_at?: string | null;
   notes?: Array<{
     id: number;
