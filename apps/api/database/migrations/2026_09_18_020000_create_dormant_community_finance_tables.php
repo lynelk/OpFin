@@ -8,6 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Production reconciliation: this dormant foundation existed before the
+        // migration ledger was aligned in some environments. If its membership
+        // table is already present, treat the legacy foundation as authoritative
+        // and allow Laravel to record this migration rather than attempting a
+        // destructive duplicate create.
+        if (Schema::hasTable('community_finance_memberships')) {
+            return;
+        }
+
         Schema::create('community_finance_programmes', function (Blueprint $table) {
             $table->id();
             $table->string('internal_key')->unique();
