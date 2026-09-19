@@ -133,3 +133,8 @@ Clients must:
 - avoid colour-only status;
 - keep touch targets accessible;
 - keep the primary screen simple and reveal technical detail only on request.
+
+
+## Financial-life space binding
+
+Financial-life summaries, asset lists/creation, obligation lists/creation and settlements use the `{space}` route parameter to resolve the existing financial space before checking active membership. Unknown spaces return 404; authenticated users without an active membership receive 403. Record lists and settlements stay scoped to that space, including when the same user belongs to more than one space. A settlement referencing another space's obligation returns 404 without changing it. These endpoints record financial-life obligations; they do not initiate provider payments.
