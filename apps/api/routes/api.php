@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\FinancialWellbeingController;
 use App\Http\Controllers\Api\FinancialSpaceController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\PlatformCommerceController;
+use App\Http\Controllers\Api\OrganisationJourneyController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\GuarantorController;
@@ -76,6 +77,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/marketplace/products', [PlatformCommerceController::class, 'catalogue']);
     Route::get('/plans', [PlatformCommerceController::class, 'plans']);
     Route::post('/financial-spaces/{space}/subscription', [PlatformCommerceController::class, 'subscribe']);
+    Route::get('/financial-spaces/{space}/workspace', [OrganisationJourneyController::class, 'workspace']);
+    Route::put('/financial-spaces/{space}/organisation-onboarding', [OrganisationJourneyController::class, 'onboarding']);
+    Route::post('/financial-spaces/{space}/employer/enable', [OrganisationJourneyController::class, 'enableEmployer']);
     Route::get('/phone-numbers', [CustomerPhoneController::class, 'index']);
     Route::post('/phone-numbers/secondary', [CustomerPhoneController::class, 'verifySecondary']);
     Route::get('/wallets', [CustomerWalletController::class, 'index']);
