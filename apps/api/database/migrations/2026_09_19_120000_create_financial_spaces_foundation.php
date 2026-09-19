@@ -67,13 +67,14 @@ return new class extends Migration
             $table->unique(['financial_space_id', 'capability_key'], 'fsc_space_capability_unique');
         });
 
-        // Bootstrap exactly one Personal Space for every current user.
-        DB::table('users')->orderBy('id')->chunkById(500, function ($users) {
+        $personalSpaceByUser = [];
+
+        DB::table('users')->orderBy('id')->chunkById(500, function ($users) use (&$personalSpaceByUser) {
             foreach ($users as $user) {
                 $spaceId = DB::table('financial_spaces')->insertGetId([
                     'public_id' => (string) Str::uuid(),
                     'type' => 'personal',
-                    'name' => trim((string) ($user->first_name ?? '')) ?: 'My Money',
+                    'name' => 'My Money',
                     'country' => 'UG',
                     'currency' => 'UGX',
                     'status' => 'active',
@@ -91,6 +92,8 @@ return new class extends Migration
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                $personalSpaceByUser[(int) $user->id] = $spaceId;
             }
         });
 
@@ -100,18 +103,14 @@ return new class extends Migration
                 $table->index(['financial_space_id', 'user_id']);
             });
 
-            DB::statement("UPDATE {$tableName} target
-                SET financial_space_id = (
-                    SELECT fsm.financial_space_id
-                    FROM financial_space_memberships fsm
-                    JOIN financial_spaces fs ON fs.id = fsm.financial_space_id
-                    WHERE fsm.user_id = target.user_id
-                      AND fs.type = 'personal'
-                      AND fsm.role = 'owner'
-                    ORDER BY fsm.id ASC
-                    LIMIT 1
-                )
-                WHERE financial_space_id IS NULL");
+            DB::table($tableName)->select(['id', 'user_id'])->orderBy('id')->chunkById(500, function ($rows) use ($tableName, $personalSpaceByUser) {
+                foreach ($rows as $row) {
+                    $spaceId = $personalSpaceByUser[(int) $row->user_id] ?? null;
+                    if ($spaceId !== null) {
+                        DB::table($tableName)->where('id', $row->id)->update(['financial_space_id' => $spaceId]);
+                    }
+                }
+            });
         }
     }
 
@@ -119,7 +118,8 @@ return new class extends Migration
     {
         foreach (['financial_calendar_events', 'financial_entries', 'financial_budgets', 'financial_accounts'] as $tableName) {
             Schema::table($tableName, function (Blueprint $table) {
-                $table->dropForeign([$table->getTable() === '' ? 'financial_space_id' : 'financial_space_id']);
+                $table->dropForeign(['financial_space_id']);
+                $table->dropIndex([$table->getTable() === '' ? 'financial_space_id' : 'financial_space_id', 'user_id']);
                 $table->dropColumn('financial_space_id');
             });
         }
