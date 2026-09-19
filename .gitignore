@@ -12,3 +12,5 @@
 **/ios/Pods/
 **/DerivedData/
 coverage/
+.build/
+**/__pycache__/

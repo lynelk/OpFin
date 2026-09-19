@@ -2,9 +2,11 @@
 
 Updated: 18 September 2026
 
-This is a task-oriented index. Exact registered routes remain authoritative in Laravel.
+This is a task-oriented index. Start with [the integrator guide](INTEGRATOR_GUIDE.md) for authentication, request handling, errors and safe retries. Laravel's registered routes establish the exact addresses; controller checks, permissions and capability gates still apply. A registered operation is not proof of production availability.
 
 ## Search the API
+
+From repository root:
 
 ```bash
 python3 scripts/search-api.py "credit"
@@ -20,6 +22,18 @@ php artisan route:list --path=api/credit
 php artisan route:list --path=api/admin/umra
 php artisan route:list --json
 ```
+
+The [documentation workflow](../../../../docs/DOCUMENTATION_MAINTENANCE.md) compares the endpoint tables with Laravel registration and generates a full discovery index. Its coverage report identifies operations needing more narrative documentation; it does not invent request/response schemas.
+
+## Service and capability checks
+
+| Task | Method / endpoint |
+| --- | --- |
+| Check that the process responds | `GET /api/health/live` |
+| Inspect dependency and operational readiness | `GET /api/health/ready` |
+| Read the authenticated capability response | `GET /api/capabilities` |
+
+Inspect the readiness body, not only HTTP status. Warming workers or blocked integrations must not be presented as ready services.
 
 ## Account and identity
 
@@ -99,13 +113,15 @@ Complaints carry the configured regulatory resolution deadline.
 
 | Task | Method / endpoint |
 | --- | --- |
-| Governance overview | `GET /api/admin/governance/overview` |
+| Governance dashboard | `GET /api/admin/governance/dashboard` |
 | Regulatory reports | `GET /api/admin/governance/regulatory-reports` |
 | Report detail | `GET /api/admin/governance/regulatory-reports/{report}` |
-| Generate report | `POST /api/admin/governance/regulatory-reports/generate` |
-| Approve report | governed maker-checker endpoint in governance routes |
+| Generate report | `POST /api/admin/governance/regulatory-reports` |
+| Approve report | `POST /api/admin/governance/regulatory-reports/{report}/approve` |
 
-Current UMRA report profiles include digital credit supervision, credit-information exchange, books/records, NPL/default-interest, receipts, term/guarantor controls and consumer complaints.
+The governance routes register platform-admin, operations and support roles for the read group; the write group registers platform-admin and operations roles. Controller-level governance checks still apply. See [the route definitions](../../routes/governance.php), which are mounted under `/api` by [application bootstrap](../../bootstrap/app.php).
+
+Current UMRA report profiles include digital credit supervision, credit-information exchange, books/records, NPL/default-interest, receipts, term/guarantor controls and consumer complaints. Generating or approving an evidence pack does not establish external regulatory filing.
 
 ## Provider callbacks
 
@@ -116,4 +132,4 @@ Current UMRA report profiles include digital credit supervision, credit-informat
 | WhatsApp webhook | `POST /api/webhooks/whatsapp` |
 | USSD callback | `POST /api/ussd` |
 
-Read `current-endpoints.md` for request/response notes and `frontend-backend-contract.md` for client rules.
+Read [current endpoints](current-endpoints.md) for request/response notes and [the frontend/backend contract](frontend-backend-contract.md) for client rules. Callback authentication and replay controls must be reviewed in the handler; absence of customer-token middleware does not mean an unsigned request is permitted.

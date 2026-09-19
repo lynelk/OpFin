@@ -1,0 +1,104 @@
+name: Documentation quality
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 4 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MOBILE_MONEY_PROVIDER: mock
+      OPFIN_ENABLE_DEMO_ROUTES: 'false'
+    steps:
+      - name: Check out candidate and exact comparison commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          base="${PR_BASE:-${PUSH_BASE:-}}"
+          if [[ -n "$base" && ! "$base" =~ ^0+$ ]]; then
+            git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$base"
+            echo "DOC_BASE=$base" >> "$GITHUB_ENV"
+          fi
+      - name: Test documentation tooling
+        run: python3 -m unittest discover -s scripts -p 'test_docs_toolkit.py' -v
+      - name: Verify documentation impact and local links
+        shell: bash
+        run: |
+          args=()
+          if [[ -n "${DOC_BASE:-}" ]]; then args=(--base "$DOC_BASE"); fi
+          python3 scripts/verify-documentation-drift.py "${args[@]}"
+          python3 scripts/docs_toolkit.py check "${args[@]}"
+      - name: Install PHP and Composer for route discovery
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y php-cli php-mbstring php-sqlite3 php-xml php-curl composer
+          php -v
+          composer --version
+      - name: Export registered API and verify curated endpoint tables
+        shell: bash
+        run: |
+          mkdir -p .build/api
+          cd apps/api
+          cp .env.example .env
+          composer install --no-interaction --prefer-dist --no-progress
+          php artisan key:generate
+          php artisan route:list --json > ../../.build/api/registered-routes.json
+          cd ../..
+          python3 scripts/docs_toolkit.py export-api --routes .build/api/registered-routes.json --environment testing
+          python3 scripts/docs_toolkit.py build --api-dir .build/api
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          result = json.loads(Path('.build/api/api-routes.json').read_text())
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('# Documentation evidence\n\n')
+              summary.write('Source commit: `' + result['source_commit'] + '`\n\n')
+              summary.write(str(len(result['routes'])) + ' non-demo API operations exported.\n\n')
+              summary.write(str(len(result['narrative_uncovered'])) + ' operations need additional narrative coverage.\n\n')
+              summary.write('Registration environment: testing. This is not a production or complete-schema certificate.\n')
+          PY
+      - name: Publish source evidence in the workflow summary
+        shell: bash
+        run: |
+          python3 - <<'PYDOC'
+          import json, os
+          from pathlib import Path
+          from urllib.parse import quote
+          api = json.loads(Path('.build/api/api-routes.json').read_text())
+          inventory = json.loads(Path('.build/docs/documentation-inventory.json').read_text())
+          print('OPFIN_API_EXPORT=' + json.dumps(api, separators=(',', ':')))
+          print('OPFIN_DOCUMENTATION_INVENTORY=' + json.dumps(inventory, separators=(',', ':')))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('\n## Browse documentation at this commit\n\n')
+              for doc in inventory['documents']:
+                  if doc.get('generated'):
+                      continue
+                  url = 'https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '/blob/' + api['source_commit'] + '/' + quote(doc['path'], safe='/')
+                  summary.write('- [' + doc['path'] + '](' + url + ')' + (' (historical)' if doc['historical'] else '') + '\n')
+              summary.write('\n' + Path('.build/api/API_ROUTE_REFERENCE.md').read_text())
+              summary.write('\nThe offline portal is reproducible with `make docs-build` at this commit. This workflow uses no external actions and does not upload a hosted HTML artefact.\n')
+          PYDOC
