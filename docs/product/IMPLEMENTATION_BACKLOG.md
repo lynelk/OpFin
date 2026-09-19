@@ -1,0 +1,72 @@
+# OpFin Canonical Implementation Backlog
+
+Updated: 19 September 2026
+
+## P0 — Foundation
+- FS-001 Create Financial Space schema, Personal Space bootstrap and backfill.
+- FS-002 Create generic memberships, roles and invitations.
+- FS-003 Add Space context resolution to authenticated APIs.
+- FS-004 Add Space-level capability state.
+- FS-005 Add plans/entitlements separately from RBAC and eligibility.
+- FS-006 Add cross-Space isolation behavioural tests and audit context.
+- DOC-001 Keep Blueprint/domain/gap/API docs synchronised in CI.
+
+## P1 — Onboarding convergence
+- ONB-001 Register person once; automatically create Personal Space.
+- ONB-002 Intent routing: Manage my money / Start or join a group / Set up an organisation / Accept invitation.
+- ONB-003 Progressive verification levels and resumable onboarding.
+- ONB-004 Invitation-first group/employer/SACCO joining.
+- ONB-005 Assisted onboarding with explicit actor/audit/consent separation.
+
+## P1 — Individual mobile-complete slice
+- IND-001 Everyday money and transaction capture.
+- IND-002 Budget and goal management.
+- IND-003 General debt, receivables and payables.
+- IND-004 Assets, liabilities and net worth.
+- IND-005 Safe-to-spend and financial-health projections.
+- IND-006 Savings/investments/protection partner journeys.
+- IND-007 Mobile-completeness acceptance suite including poor connectivity and accessibility.
+
+## P1 — Savings Group mobile-complete slice
+- GRP-001 Create/join/invite.
+- GRP-002 Officials, roles, member lifecycle and governance.
+- GRP-003 Contributions, savings, expenses and fees.
+- GRP-004 Member loans, repayments and guarantor/approval flows.
+- GRP-005 Statements, audit history, meetings/voting where enabled.
+- GRP-006 Group goals, investments and protection.
+- GRP-007 Mobile-completeness and low-literacy acceptance certification.
+
+## P2 — Web and Workspaces
+- WEB-001 Space switcher shared with App semantics.
+- WEB-002 Enhanced Individual/Household analysis, forecasting and reports.
+- WEB-003 Enhanced Group productivity, bulk operations and advanced reporting.
+- WEB-004 Business/Employer Workspace.
+- WEB-005 SACCO/Cooperative Workspace.
+- WEB-006 Regulated Partner Workspace.
+
+## P2 — Partner and monetisation
+- PAR-001 Partner Catalogue and product lifecycle.
+- PAR-002 Eligibility/suitability interface before marketplace presentation.
+- PAR-003 Standard partner adapter/webhook contract and failure state model.
+- REV-001 Plans/subscriptions/entitlements.
+- REV-002 Commercial agreements and effective-dated terms.
+- REV-003 Immutable revenue events and allocations.
+- REV-004 CPay billing/collection/settlement/reconciliation integration.
+- REV-005 Revenue disclosure, reconciliation and finance reporting.
+
+## P3 — Institutional journeys
+- BUS-001 Business KYB and role onboarding; informal-to-formal progression.
+- EMP-001 Employer capability activation on Business Space and privacy boundary.
+- SAC-001 SACCO institutional verification, member linkage and product configuration.
+- REG-001 Fund Manager/insurer/lender/other regulated partner onboarding and certification.
+
+## Final acceptance
+- E2E-001 App/Web/API parity and Space isolation.
+- E2E-002 Financial integrity/idempotency/reconciliation.
+- E2E-003 Accessibility, low-literacy, localisation-ready and interrupted-network journeys.
+- E2E-004 Partner outage/retry/recovery and duplicate-callback safety.
+- E2E-005 Revenue attribution, settlement and reconciliation.
+- E2E-006 Documentation/API drift and production operational acceptance.
+
+## Definition of done
+A slice is not done until API, client experience, permissions, audit, accessibility, failure states, automated tests, documentation and production acceptance evidence are complete.
