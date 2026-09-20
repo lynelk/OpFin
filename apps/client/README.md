@@ -111,3 +111,8 @@ Android builds require compile SDK 37 because the secure-storage dependency requ
 The existing Play Store application ID is `org.rotaryo.opfin` under **Core-Synergies**, verified in Play Console on 20 September 2026. The Kotlin namespace remains `co.opfin.app`; the manifest names its activity explicitly. Android updates must retain the Play application ID and use the registered upload key.
 
 GitHub Actions must remain disabled. Build and validate on an authorised local release workstation using `../../distribution/google-play/release-automation.md`. Never use a CI/debug-signed build for distribution.
+
+
+### Release contract guard
+
+Run `python3 ../../scripts/verify-android-release-contract.py` from `apps/client` (or `python3 scripts/verify-android-release-contract.py` from repository root) before any Android release build. The standard repository layout validation also runs this guard. It protects the existing Play application ID, API 37 compile requirement, launcher resolution, minimum release target, sensitive backup/cleartext controls and launch permission boundary without requiring the private signing key.

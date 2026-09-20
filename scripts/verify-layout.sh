@@ -10,4 +10,5 @@ if grep -RIn --exclude-dir=.git --exclude='*.md' --exclude='*.example' -E '(CPAY
   echo "A secret-like assignment was committed." >&2
   exit 1
 fi
-echo "OpFin monorepo layout and secret boundary checks passed."
+python3 scripts/verify-android-release-contract.py
+echo "OpFin monorepo layout, secret boundary and Android release contract checks passed."
