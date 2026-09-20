@@ -1,8 +1,10 @@
 # OpFin Google Play listing pack
 
-Updated: 18 September 2026
+Updated: 20 September 2026
 
-This folder is the controlled source for OpFin's first Google Play release. It covers package `co.opfin.app`, version line `1.0.0`, initial distribution in Uganda, and the production Android channel `play_store`.
+This folder is the controlled source for the next update to OpFin's existing Google Play listing, package `org.rotaryo.opfin`, version line `1.0.0`, and the production Android channel `play_store`. Play Console confirmed this identity on 20 September 2026 under the **Core-Synergies** developer account. Uganda is the intended launch market; review the existing track's country selection before publishing.
+
+GitHub Actions must remain disabled at the owner's instruction. Use the local signing procedure in `release-automation.md`. An approved privacy-policy or Data safety change is not a new Android build or a production rollout.
 
 The pack does not assert that a licence, provider approval, funding line, production KYC provider or payment capability exists merely because source code supports it. Verify every operational dependency before submission.
 
