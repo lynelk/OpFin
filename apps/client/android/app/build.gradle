@@ -38,7 +38,7 @@ def isCiBuild = System.getenv('CI') == 'true'
 
 android {
     namespace = "co.opfin.app"
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
