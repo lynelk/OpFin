@@ -138,3 +138,16 @@ Clients must:
 ## Financial-life space binding
 
 Financial-life summaries, asset lists/creation, obligation lists/creation and settlements use the `{space}` route parameter to resolve the existing financial space before checking active membership. Unknown spaces return 404; authenticated users without an active membership receive 403. Record lists and settlements stay scoped to that space, including when the same user belongs to more than one space. A settlement referencing another space's obligation returns 404 without changing it. These endpoints record financial-life obligations; they do not initiate provider payments.
+
+
+## 11. Identity, Financial Spaces and progressive onboarding
+
+A person registers once. Clients must not create separate identities for group membership, employment, SACCO membership or investment activity. Use Financial Spaces and memberships/roles to represent those contexts. The Personal Space is private by default.
+
+The current Space contract includes listing/creating Spaces, accepting invitations, membership/invitation management, Space capabilities, financial-life summaries, assets/obligations, institutional workspace state and progressive organisation onboarding. Employer is enabled on a Business Space rather than represented as a second legal entity.
+
+Permission, entitlement and eligibility are distinct server-side gates. A visible UI capability does not imply that a regulated product is eligible or activated. Commercial terms/revenue must not feed backwards into financial-health advice.
+
+## 12. Channel contract
+
+Individuals and Savings Groups must be able to complete normal journeys in the Flutter App. Web consumes the same server-authoritative Space state and adds analysis/productivity/institutional workspace depth. USSD/WhatsApp/assisted channels must not invent separate financial truth.
