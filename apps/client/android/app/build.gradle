@@ -38,6 +38,7 @@ def isCiBuild = System.getenv('CI') == 'true'
 
 android {
     namespace = "co.opfin.app"
+    // flutter_secure_storage 11.x requires API 37 at compile time; targetSdk remains independently controlled below.
     compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
