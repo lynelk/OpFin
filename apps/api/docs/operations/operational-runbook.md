@@ -176,3 +176,12 @@ Use the governed term-change register:
 Generate evidence packs from the Compliance Centre. Inspect validation evidence and payload/register detail before approval/submission.
 
 The system generates evidence; the responsible regulated officer remains accountable for external filing.
+
+
+## Financial Space operations — 20 September 2026
+
+When investigating any non-credit financial record, identify the Financial Space first, then actor membership/role, capability, entitlement and eligibility. Never infer cross-Space authority from the fact that the same person participates in both Spaces. Employer/group administrators do not receive Personal Space visibility by relationship alone.
+
+For Partner Catalogue and subscription/revenue operations, keep recommendation/financial-health logic upstream of commercial terms. Revenue Events are idempotent commercial attribution records and must reconcile to the applicable CPay/provider evidence; they are not a substitute ledger.
+
+For institutional onboarding, treat profile → KYB → regulatory evidence → products → integration → certification as progressive stages. Technical capability activation does not replace regulatory/provider approval.
