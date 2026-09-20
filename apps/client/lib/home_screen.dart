@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/credit_offers_screen.dart';
+import 'package:opfin/financial_spaces_screen.dart';
+import 'package:opfin/connected_financial_life_screen.dart';
 import 'package:opfin/kyc_setup_screen.dart';
 import 'package:opfin/loan_application_screen.dart';
 import 'package:opfin/loan_applications_screen.dart';
@@ -23,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen>{
   int _index=0;
   @override
   Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('OpFin')),
+    appBar:AppBar(title:const Text('OpFin'),actions:[IconButton(tooltip:'My spaces',icon:const Icon(Icons.swap_horiz),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const FinancialSpacesScreen())))]),
     body:IndexedStack(index:_index,children:const[
       _HomePage(),_BorrowPage(),_ActivityPage(),StoreReadyMoreMobileScreen()
     ]),
@@ -130,8 +132,8 @@ class _HomePageState extends State<_HomePage>{
         Semantics(header:true,child:Text('Hi, $_name',
           style:const TextStyle(fontSize:27,fontWeight:FontWeight.w800))),
         const SizedBox(height:4),
-        Text(pending?'One step at a time. Complete your profile to see your limit.'
-          :amountDue>0?'Your repayment comes first.':'Your borrowing position today.',
+        Text(pending?'One step at a time. Build your financial picture as you go.'
+          :amountDue>0?'Your repayment comes first.':'Understand, manage, plan and improve your money.',
           style:const TextStyle(color:OpFinColors.muted)),
         const SizedBox(height:18),
         Card(
@@ -163,6 +165,18 @@ class _HomePageState extends State<_HomePage>{
             ])),
         ),
         const SizedBox(height:14),
+        Card(child:ListTile(
+          leading:const Icon(Icons.account_balance_wallet_outlined),
+          title:const Text('My money & spaces',style:TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:const Text('Personal money, savings groups, household and organisations in one place.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>_open(const FinancialSpacesScreen()))),
+        Card(child:ListTile(
+          leading:const Icon(Icons.insights_outlined),
+          title:const Text('Plan my financial life',style:TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:const Text('Accounts, goals, household, business and community context.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>_open(const ConnectedFinancialLifeScreen()))),
         if(setup['secondary_phone_verified']!=true)
           Card(child:ListTile(
             leading:const Icon(Icons.add_call),
