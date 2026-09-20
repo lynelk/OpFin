@@ -95,3 +95,8 @@ Search all documentation from repository root:
 python3 scripts/search-docs.py "repayment"
 python3 scripts/search-api.py "receipts"
 ```
+
+
+## 20 September 2026 product-surface update
+
+Financial Spaces are now part of the canonical OpFin experience. One person may access Personal, Household, Savings Group and authorised organisation contexts without creating separate identities. Individuals and Savings Groups remain mobile-complete; Web provides enhanced analysis and institutional workspace capabilities. The customer proposition is to understand, manage, plan and improve money, with borrowing as one capability rather than the product boundary.
