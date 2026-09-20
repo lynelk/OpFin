@@ -26,7 +26,7 @@ jobs:
         working-directory: apps/client
     steps:
       - name: Check out exact commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -189,7 +189,7 @@ jobs:
           PY
 
       - name: Upload controlled release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: opfin-android-${{ github.sha }}
           path: |

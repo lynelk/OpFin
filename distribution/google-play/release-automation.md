@@ -36,3 +36,17 @@ On macOS use `base64 < opfin-upload-keystore.jks | tr -d '\n'`.
 
 The workflow reconstructs signing files with owner-only permissions, never prints their contents, and destroys them in an `always()` cleanup step. Do not add automatic production promotion until the Play Developer API service account has least-privilege track permissions and a separate approval gate.
 
+
+
+## Approved action pins
+
+The Android workflow uses these exact official-action commits:
+
+```text
+actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+```
+
+These correspond to checkout v4.2.2 and upload-artifact v4.6.2. If repository Actions settings allow only owner-hosted actions, an administrator must allow these two exact references under selected actions before the build can start. Do not enable all GitHub or third-party actions to resolve this restriction. Updating a pin requires reviewing the upstream release and updating both the workflow and the permitted reference.
+
+The production environment's reviewers, branch restrictions and signing secrets remain required. Workflow success produces release files only; it does not submit Play declarations or promote a production track.

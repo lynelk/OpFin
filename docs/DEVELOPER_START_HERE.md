@@ -1,6 +1,6 @@
 # OpFin developer start here
 
-Updated: 18 September 2026
+Updated: 19 September 2026
 
 This guide is the shortest route from “I have the repository” to “I understand where to make a safe change.”
 
@@ -157,5 +157,18 @@ For new developer-facing APIs:
 ## 8. Release definition
 
 A change is not “done” because it compiled.
+
+### CI workflow maintenance
+
+`.github/workflows/ci.yml` must contain one definition for each job. A failed
+workflow with no jobs may indicate invalid workflow YAML, not an application test
+failure. Validate YAML (including duplicate mapping keys) and Bash syntax after
+editing embedded scripts. Do not bypass the release gate to resolve this condition.
+
+The API formatting check uses a NUL-delimited Git diff of added, copied, modified
+and renamed PHP files, then removes the `apps/api/` prefix before running Pint
+from that directory. This preserves filenames containing spaces, excludes deleted
+files and fails if the comparison ref is unavailable. A docs-only change skips
+Pint, but does not skip API tests or audits.
 
 For production financial changes, the exact candidate must pass CI, security monitoring and deployment contract; migrations/provider configuration must be verified; production deployment must become healthy; and any required reconciliation/integrity checks must pass.
