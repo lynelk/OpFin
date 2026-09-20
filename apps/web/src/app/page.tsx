@@ -92,6 +92,21 @@ export default function HomePage() {
         <div><strong>Human control</strong><span>for high-impact decisions</span></div>
       </section>
 
+      <section className="marketing-section" id="groups">
+        <div className="marketing-section-head">
+          <p className="marketing-eyebrow">ONE IDENTITY, MANY FINANCIAL SPACES</p>
+          <h2>Your money can belong to you, a household, a group or an organisation without becoming one tangled account.</h2>
+          <p>Switch between Financial Spaces with role-based access and clear privacy boundaries. Individuals and savings groups can complete normal journeys in the App; Web adds room for deeper analysis and institutional work.</p>
+        </div>
+        <div className="marketing-pillar-grid">
+          {audiences.map((audience) => (
+            <article className="marketing-feature-card" key={audience.title}>
+              <h3>{audience.title}</h3><p>{audience.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="marketing-section" id="how-it-works">
         <div className="marketing-section-head">
           <p className="marketing-eyebrow">EVERYTHING WORKS TOGETHER</p>
