@@ -1,6 +1,6 @@
 # OpFin API quick reference
 
-Updated: 18 September 2026
+Updated: 20 September 2026
 
 This is a task-oriented index. Exact registered routes remain authoritative in Laravel.
 
@@ -117,3 +117,32 @@ Current UMRA report profiles include digital credit supervision, credit-informat
 | USSD callback | `POST /api/ussd` |
 
 Read `current-endpoints.md` for request/response notes and `frontend-backend-contract.md` for client rules.
+
+
+## Financial Spaces
+
+| Task | Method / endpoint |
+| --- | --- |
+| My authorised Spaces | `GET /api/financial-spaces` |
+| Create Space | `POST /api/financial-spaces` |
+| Accept invitation | `POST /api/financial-spaces/invitations/accept` |
+| Members | `GET /api/financial-spaces/{space}/members` |
+| Invite member | `POST /api/financial-spaces/{space}/invitations` |
+| Financial position | `GET /api/financial-spaces/{space}/financial-life` |
+| Assets | `GET/POST /api/financial-spaces/{space}/assets` |
+| Debt / receivables | `GET/POST /api/financial-spaces/{space}/obligations` |
+| Institutional workspace | `GET /api/financial-spaces/{space}/workspace` |
+| Organisation onboarding | `PUT /api/financial-spaces/{space}/organisation-onboarding` |
+| Enable Employer capability | `POST /api/financial-spaces/{space}/employer/enable` |
+
+## Marketplace and commercial platform
+
+| Task | Method / endpoint |
+| --- | --- |
+| Partner products | `GET /api/marketplace/products` |
+| OpFin plans | `GET /api/plans` |
+| Subscribe a Space | `POST /api/financial-spaces/{space}/subscription` |
+| Record revenue event | `POST /api/admin/revenue-events` |
+| Reconcile revenue / CPay | `POST /api/admin/revenue-events/{event}/reconcile` |
+
+**Design contract:** one person may belong to many Spaces; Employer is a Business capability; permission, entitlement and eligibility are separate; Personal Space data is not exposed to employers/groups merely because a relationship exists.

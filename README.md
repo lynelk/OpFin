@@ -70,3 +70,17 @@ python3 scripts/search-api.py "receipts"
 Training manuals and user guides should be derived from `docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md` plus the current application labels and API contracts.
 
 CI checks documentation drift when backend routes/contracts or customer/admin workflows change.
+
+
+## Current product documentation (20 September 2026)
+
+- [Canonical Product Blueprint](docs/product/OPFIN_PRODUCT_BLUEPRINT.md)
+- [Financial Spaces domain model](docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md)
+- [User Manual](docs/manuals/OPFIN_USER_MANUAL.md)
+- [Training Manual](docs/manuals/OPFIN_TRAINING_MANUAL.md)
+- [Operational Manual](docs/manuals/OPFIN_OPERATIONAL_MANUAL.md)
+- [UAT Manual](docs/manuals/OPFIN_UAT_MANUAL.md)
+- [Current API endpoints](apps/api/docs/api/current-endpoints.md)
+- [API quick reference](apps/api/docs/api/API_QUICK_REFERENCE.md)
+
+These documents describe the current Financial Spaces architecture and supersede April-era prompt packs/architecture drafts for operational and training use.
