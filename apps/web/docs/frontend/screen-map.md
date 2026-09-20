@@ -56,3 +56,10 @@ python3 scripts/search-api.py "credit"
 ## Documentation rule
 
 When a workflow changes materially, update this map or the corresponding current product/API guide in the same PR.
+
+
+## Financial Spaces and Workspaces — 20 September 2026
+
+The current Web experience includes a Financial Spaces index and Space detail/workspace context. The product proposition is **understand, manage, plan and improve your money** across Personal, Household, Savings Group and authorised organisation contexts. Web is an enhancement for Individuals/Savings Groups and the deeper operating surface for Business/Employer, SACCO and regulated-partner administration.
+
+Do not restore lending as the sole organising principle for Home/navigation. Borrowing remains one financial capability alongside everyday money, budgeting/goals, debt/receivables, assets/net position, saving, investment and protection.
