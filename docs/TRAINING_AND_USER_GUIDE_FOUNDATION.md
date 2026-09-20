@@ -129,3 +129,12 @@ When producing a guide, use:
 5. relevant operational/UAT documentation.
 
 Do not use dated audit/demo/checkpoint documents as current instructions.
+
+
+## Canonical whole-product training baseline — 20 September 2026
+
+The four maintained manuals under `docs/manuals/` now supersede this file as the primary task-level guidance: `OPFIN_USER_MANUAL.md`, `OPFIN_TRAINING_MANUAL.md`, `OPFIN_OPERATIONAL_MANUAL.md` and `OPFIN_UAT_MANUAL.md`. This file remains a reusable foundation for credit/regulatory teaching.
+
+Training must now introduce **one identity, many Financial Spaces** before product-specific services. A learner should understand My Money/Personal Space, Savings Group and authorised organisation contexts; that membership does not expose Personal Space data; and that additional verification appears progressively when the activity requires it. Individuals and Savings Groups should be trained to complete normal journeys in the App without depending on Web.
+
+Whole-product modules should cover everyday money, budgeting/goals, assets, debt/receivables, net position/safe-to-spend, savings groups, partner products and support before or alongside the existing responsible-credit modules below.

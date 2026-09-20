@@ -143,3 +143,21 @@ Rules:
 - Raw provider payloads scattered across unrelated tables.
 - Cross-domain writes without database transactions and audit records.
 
+
+
+## Canonical domain additions — 20 September 2026
+
+### Financial Spaces and Membership
+Owns Space identity/type, membership, roles, invitations and privacy boundaries. Membership never grants automatic access to another Space, especially a person's Personal Space.
+
+### Capability, Entitlement and Eligibility
+Capability describes what a Space can support; entitlement describes commercial/plan access; eligibility describes whether the customer/entity may use a product under product/risk/regulatory rules. These must not be collapsed into one role or flag.
+
+### Financial Life
+Owns Space-scoped everyday money context, budgets/goals, assets, obligations/receivables, net position and safe-to-spend inputs/projections. Provider money movement remains outside this domain until executed through the approved payments boundary.
+
+### Partner Catalogue and Commerce
+Owns partners/products, territories, disclosures, commercial agreements and immutable/idempotent Revenue Events. Financial guidance determines need before commercial economics are calculated. CPay references/reconciliation evidence attach downstream.
+
+### Organisation Journeys
+Business, SACCO, Investment/Fund and regulated Partner Spaces progress through profile, KYB, regulatory evidence, products, integration and certification. Employer is a Business capability rather than a duplicate entity.

@@ -172,3 +172,12 @@ files and fails if the comparison ref is unavailable. A docs-only change skips
 Pint, but does not skip API tests or audits.
 
 For production financial changes, the exact candidate must pass CI, security monitoring and deployment contract; migrations/provider configuration must be verified; production deployment must become healthy; and any required reconciliation/integrity checks must pass.
+
+
+## 9. Canonical Financial Spaces baseline
+
+New development starts from **Person → Financial Space → Membership/Role → Capability → Entitlement → Eligibility**. Do not introduce a new user/account type when a Space, role or capability models the requirement. Employer is a Business capability; an investor is normally a person/organisation role; regulated providers use organisation/partner onboarding.
+
+Core Space APIs are documented in `apps/api/docs/api/current-endpoints.md`. Financial records should become Space-scoped while retaining actor/provenance. Permission, commercial entitlement and regulatory/product eligibility are independent gates. Clients must not recreate these decisions locally.
+
+For Individuals and Savings Groups, normal journeys must remain complete in the App. Web may add analysis, reporting and productivity but must not become a hidden prerequisite. Low literacy, low digital literacy, unreliable connectivity, minimal typing and assisted use are normal design constraints.

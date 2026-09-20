@@ -60,3 +60,12 @@ Minimum production topology:
 
 The current repository has strong Laravel domain foundations for users, institutions, loans, transactions, accounts, mobile money, SMS, CRB, and admin views. It still needs stronger boundaries, centralized permissions, audit logging, provider verification, ledger immutability, and operational readiness before it should be treated as production fintech infrastructure.
 
+
+
+## Canonical architecture update — 20 September 2026
+
+OpFin is now modelled as a financial operating platform with embedded financial services. The canonical context boundary is the **Financial Space**. A single Person may own or participate in Personal, Household, Savings Group, Business, SACCO, Investment/Fund and Partner Spaces through scoped memberships/roles.
+
+Financial functions attach to the Space: money/cash flow, budgets, goals, assets, liabilities/obligations, receivables, savings, investments, protection, borrowing and financial-health/intelligence. Regulated partner products are exposed through the Partner Catalogue. Commercial plans/entitlements and Revenue Events are separate from permissions and eligibility. CPay/Cito remains the execution/reconciliation boundary where configured for money movement.
+
+The older Current State paragraph above is historical context and must not be used to infer that these foundations are still absent; current implementation status is maintained in `docs/product/CANONICAL_IMPLEMENTATION_STATUS.md`.

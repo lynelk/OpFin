@@ -74,3 +74,10 @@ Historical documents should retain their original date/context rather than being
 ## Documentation quality rule
 
 Every system/API change must update the relevant current documentation in the same pull request. CI checks documentation drift for route, backend, web and mobile changes. Documentation that materially disagrees with production behaviour is treated as a defect.
+
+
+## Canonical product baseline — 20 September 2026
+
+The fully enabled product is a financial operating platform, not a lending-only application. For current work, read `product/OPFIN_PRODUCT_BLUEPRINT.md` and `architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md` before the older lending-specific journey documents. Current manuals live under `manuals/` and are authoritative for user, training, operations and UAT guidance.
+
+The current hierarchy is: source code and registered routes → Product Blueprint/domain model → current API references → current manuals → lending/regulatory specialist guides → dated audit/demo/history. A specialist lending guide must not be interpreted as the whole-product architecture.
