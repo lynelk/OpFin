@@ -1,6 +1,13 @@
 import { OpFinSymbol } from "@/components/OpFinSymbol";
 import Link from "next/link";
 
+const audiences = [
+  { title: "Individuals", text: "Manage everyday money, budgets, goals, debt, assets, savings, investments and protection from the App." },
+  { title: "Savings groups", text: "Create or join a group, manage members, contributions, obligations and shared financial progress without needing a computer." },
+  { title: "Businesses & employers", text: "Separate business finances, enable employer services and use the Web Workspace for deeper administration." },
+  { title: "SACCOs & partners", text: "Connect regulated products, members and operations through governed Workspaces, APIs and the Partner Catalogue." }
+];
+
 const pillars = [
   { label: "Manage", title: "See your money clearly", text: "Bring accounts, cash flow, obligations and goals into one Financial Compass." },
   { label: "Save", title: "Build resilience automatically", text: "Create goals, contribute on your schedule and let approved rules keep progress moving." },
@@ -26,7 +33,8 @@ export default function HomePage() {
         </Link>
         <nav className="marketing-nav-links" aria-label="Primary">
           <a href="#individuals">Individuals</a>
-          <a href="#employers">Employers</a>
+          <a href="#groups">Groups</a>
+          <a href="#employers">Businesses</a>
           <a href="#partners">Partners</a>
           <a href="#learn">Learn</a>
         </nav>
@@ -39,8 +47,8 @@ export default function HomePage() {
       <section className="marketing-hero" id="individuals">
         <div className="marketing-hero-copy">
           <p className="marketing-eyebrow">YOUR FINANCIAL PROGRESS, CONNECTED</p>
-          <h1>Your next step, clearer.</h1>
-          <p className="marketing-lead">Understand your money, build savings, access responsible credit, protect what matters and grow your future with a financial platform that gets smarter as you progress.</p>
+          <h1>Understand, manage, plan and improve your money.</h1>
+          <p className="marketing-lead">One OpFin identity for your personal money, household, savings groups and organisations. Start simply in the App, then use deeper Web tools when you need them.</p>
           <div className="marketing-hero-actions">
             <Link className="button marketing-primary marketing-large" href="/login">Get started</Link>
             <a className="button secondary marketing-large" href="#how-it-works">Explore OpFin</a>
@@ -87,8 +95,8 @@ export default function HomePage() {
       <section className="marketing-section" id="how-it-works">
         <div className="marketing-section-head">
           <p className="marketing-eyebrow">EVERYTHING WORKS TOGETHER</p>
-          <h2>A financial platform organised around your life, not product silos.</h2>
-          <p>OpFin connects financial wellbeing, savings, protection and responsible credit so each service can improve the next decision.</p>
+          <h2>A financial operating platform organised around the jobs your money needs to do.</h2>
+          <p>Budget, save, manage debt, record assets, understand net worth, invest, protect, pay and borrow through one connected financial picture. Regulated services remain subject to eligibility and partner availability.</p>
         </div>
         <div className="marketing-pillar-grid">
           {pillars.map((pillar) => (
