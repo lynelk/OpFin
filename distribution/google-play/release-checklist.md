@@ -1,6 +1,6 @@
 # Google Play release checklist
 
-Updated: 18 September 2026
+Updated: 20 September 2026
 
 ## Product and compliance
 
@@ -16,10 +16,10 @@ Updated: 18 September 2026
 
 ## Engineering
 
-- `[ ]` Package name is `co.opfin.app`.
+- `[ ]` Package name is `org.rotaryo.opfin`, matching the existing Core-Synergies Play listing.
 - `[ ]` Version code exceeds every prior Play upload.
 - `[ ]` Production API uses public HTTPS and ends in `/api`.
-- `[ ]` Exact release SHA passes API, web, Flutter, security and deployment-contract gates.
+- `[ ]` Exact release SHA passes API, web, Flutter, security and deployment-contract gates. Record equivalent local results while GitHub Actions is disabled; do not skip the checks.
 - `[ ]` Android manifest requests only permissions justified by the launch build: Internet and Camera.
 - `[ ]` No READ_SMS, contacts, call-log, gallery/media or broad storage permission is present for lending.
 - `[ ]` KYC private-storage configuration has been tested in the production environment.
