@@ -346,6 +346,20 @@ function mockRequest<T>(path: string, init: RequestOptions = {}): Promise<ApiEnv
   return Promise.resolve(envelope({} as T, "No mock contract is defined for this endpoint"));
 }
 
+export type FinancialSpace = { id:number; public_id:string; type:string; name:string; country:string; currency:string; status:string; role:string };
+export type FinancialLife = { cash_minor:number; assets_minor:number; debt_minor:number; receivables_minor:number; net_worth_minor:number; upcoming_30d_minor:number; safe_to_spend_minor:number; currency:string };
+
+export const financialSpacesApi = {
+  list: (token?: string) => request<{ spaces: FinancialSpace[] }>("/financial-spaces", { token }),
+  create: (payload: { type:string; name:string; country?:string; currency?:string }, token?:string) => request<{ space: FinancialSpace }>("/financial-spaces", { method:"POST", bodyJson:payload, token }),
+  members: (spaceId:number, token?:string) => request<{ members: unknown[] }>(`/financial-spaces/${spaceId}/members`, { token }),
+  invite: (spaceId:number, payload:{phone?:string;email?:string;role:string}, token?:string) => request<{invitation_id:number;invitation_token:string;expires_at:string}>(`/financial-spaces/${spaceId}/invitations`, {method:"POST",bodyJson:payload,token}),
+  financialLife: (spaceId:number, token?:string) => request<FinancialLife>(`/financial-spaces/${spaceId}/financial-life`, { token }),
+  workspace: (spaceId:number, token?:string) => request<Record<string,unknown>>(`/financial-spaces/${spaceId}/workspace`, { token }),
+  catalogue: (country="UG", token?:string) => request<{products:unknown[]}>(`/marketplace/products?country=${country}`, {token}),
+  plans: (token?:string) => request<{plans:unknown[]}>("/plans", {token})
+};
+
 export const opfinApi = {
   login: (phone: string, password: string) =>
     request<LoginResponse>("/login", {
