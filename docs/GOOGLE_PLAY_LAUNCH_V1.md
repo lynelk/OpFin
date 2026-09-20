@@ -1,6 +1,6 @@
 # OpFin Google Play launch: version 1.0.0
 
-Updated 18 September 2026 for the unified launch borrower journey. This is a release handover, not proof of Google Play publication, provider certification or activation of lending capital.
+Updated 20 September 2026 for the unified launch borrower journey and the verified existing Play listing. This is a release handover, not proof of publication of the new build, provider certification or activation of lending capital.
 
 ## Canonical launch materials
 
@@ -11,9 +11,11 @@ Use `distribution/google-play/README.md` and its linked listing, financial-featu
 - Initial territory: **Uganda (UG)**
 - Listing language: English (United Kingdom), en-GB
 - Source release line: **1.0.0**
-- Android application ID: **co.opfin.app**
+- Android application ID: **org.rotaryo.opfin**, under the **Core-Synergies** developer account
 
 Verify the signed artifact's actual build/version code, package identity and signing certificate before upload.
+
+Keep GitHub Actions disabled as instructed by the owner. Follow the local signing procedure in `distribution/google-play/release-automation.md` and retain equivalent release-validation evidence.
 
 ## Launch customer journey
 

@@ -105,3 +105,9 @@ Financial Spaces are now part of the canonical OpFin experience. One person may 
 ## Android compile SDK
 
 Android builds require compile SDK 37 because the secure-storage dependency requires that API level. The target SDK remains 36 and the minimum supported Android version remains the Flutter-configured minimum. Install the Android 37 platform in local SDK environments before compiling; CI can provision it through Gradle when SDK licences are already accepted.
+
+## Android Play identity and signing
+
+The existing Play Store application ID is `org.rotaryo.opfin` under **Core-Synergies**, verified in Play Console on 20 September 2026. The Kotlin namespace remains `co.opfin.app`; the manifest names its activity explicitly. Android updates must retain the Play application ID and use the registered upload key.
+
+GitHub Actions must remain disabled. Build and validate on an authorised local release workstation using `../../distribution/google-play/release-automation.md`. Never use a CI/debug-signed build for distribution.
