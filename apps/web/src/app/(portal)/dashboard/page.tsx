@@ -52,8 +52,11 @@ export default async function DashboardPage() {
     return (
       <Screen
         title={`Welcome, ${user.name}`}
-        description="Your Financial Compass shows recorded money, commitments, goals and the clearest next step without presenting estimates as confirmed cash."
+        description="Understand, manage, plan and improve your money. Your Financial Compass separates recorded facts from estimates and keeps each Financial Space private."
       >
+        <section className="panel">
+          <div className="case-card-head"><div><h2>Your financial spaces</h2><p className="muted">Personal money, households, savings groups and organisations under one identity.</p></div><Link href="/spaces">Open spaces</Link></div>
+        </section>
         <section className="panel compass-next-action">
           <p className="eyebrow">Recommended next step</p>
           <h2>{nextAction.title}</h2>
