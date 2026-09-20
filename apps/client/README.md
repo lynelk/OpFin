@@ -1,6 +1,6 @@
 # OpFin mobile application
 
-Updated: 18 September 2026
+Updated: 20 September 2026
 
 The Flutter application is OpFin's primary customer mobile experience. It deliberately presents a simple borrower journey while the API keeps identity, scoring, affordability, accounting, reconciliation and regulatory complexity behind the interface.
 
@@ -77,6 +77,8 @@ flutter run
 ```
 
 Production release checks also compile Android APK/AAB and iOS release targets.
+
+Android builds require compile SDK 37 because the secure-storage dependency requires that API level. The target SDK remains 36 and the minimum supported Android version remains the Flutter-configured minimum. Install the Android 37 platform in local SDK environments before compiling; CI can provision it through Gradle when the SDK licences are already accepted.
 
 API base URL is supplied through the established build/environment configuration. Never place provider secrets in Flutter.
 
