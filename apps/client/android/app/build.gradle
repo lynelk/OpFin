@@ -51,7 +51,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "co.opfin.app"
+        // Preserve the existing Google Play listing and installed-app update path.
+        applicationId = "org.rotaryo.opfin"
         minSdkVersion flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutterVersionCode.toInteger()
