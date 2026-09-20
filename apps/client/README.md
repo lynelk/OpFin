@@ -100,3 +100,8 @@ python3 scripts/search-api.py "receipts"
 ## 20 September 2026 product-surface update
 
 Financial Spaces are now part of the canonical OpFin experience. One person may access Personal, Household, Savings Group and authorised organisation contexts without creating separate identities. Individuals and Savings Groups remain mobile-complete; Web provides enhanced analysis and institutional workspace capabilities. The customer proposition is to understand, manage, plan and improve money, with borrowing as one capability rather than the product boundary.
+
+
+## Android compile SDK
+
+Android builds require compile SDK 37 because the secure-storage dependency requires that API level. The target SDK remains 36 and the minimum supported Android version remains the Flutter-configured minimum. Install the Android 37 platform in local SDK environments before compiling; CI can provision it through Gradle when SDK licences are already accepted.
