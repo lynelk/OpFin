@@ -1,6 +1,6 @@
 # Current API endpoints
 
-Generated from the launch borrower contract on **18 September 2026**. Routes remain subject to the middleware and role gates in source.
+Updated against the registered canonical platform routes on **20 September 2026**. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:
 
@@ -233,3 +233,54 @@ Admin/operations:
 | GET | `/api/admin/governance/regulatory-reports/{report}` | Inspect generated report/books payload and validation evidence |
 
 Offer acceptance now additionally records explicit electronic consent for complete positive/negative credit-information reporting.
+
+
+## 17. Financial Spaces and multi-entity membership
+
+Authenticated routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/financial-spaces` | List Financial Spaces the signed-in person can access |
+| POST | `/api/financial-spaces` | Create Household, Savings Group, Business, SACCO, Investment/Fund or Partner Space |
+| POST | `/api/financial-spaces/invitations/accept` | Join a Space using a single-use invitation token |
+| GET | `/api/financial-spaces/{space}/members` | List members when authorised |
+| POST | `/api/financial-spaces/{space}/invitations` | Invite a person with a scoped role |
+| PUT | `/api/financial-spaces/{space}/capabilities` | Configure a Space capability when authorised |
+| GET | `/api/financial-spaces/{space}/workspace` | Role-aware institutional workspace summary |
+| PUT | `/api/financial-spaces/{space}/organisation-onboarding` | Progress Business/SACCO/Fund/Partner onboarding |
+| POST | `/api/financial-spaces/{space}/employer/enable` | Enable Employer services on a Business Space |
+
+A person is registered once and can hold different roles in many Spaces. Membership does not grant access to the member's Personal Space.
+
+## 18. Complete financial-life APIs
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/financial-spaces/{space}/financial-life` | Cash, assets, debt, receivables, net position, upcoming commitments and safe-to-spend |
+| GET/POST | `/api/financial-spaces/{space}/obligations` | List or record debt, payables and receivables |
+| POST | `/api/financial-spaces/{space}/obligations/{obligation}/settlements` | Record settlement against an obligation |
+| GET/POST | `/api/financial-spaces/{space}/assets` | List or record assets |
+
+These endpoints are Space-scoped. Cross-Space access is denied unless an active membership/role permits the action.
+
+## 19. Partner Catalogue, plans and subscriptions
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/marketplace/products` | Active eligible-market partner catalogue surface |
+| GET | `/api/plans` | Active OpFin plans |
+| POST | `/api/financial-spaces/{space}/subscription` | Activate plan entitlements for an authorised Space |
+
+Permission, entitlement and product/regulatory eligibility are separate gates. Commercial economics must not determine financial-health advice.
+
+## 20. Revenue events and CPay reconciliation
+
+Operations/admin routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/admin/revenue-events` | Record idempotent subscription, commission, revenue-share, transaction, platform/API or servicing revenue |
+| POST | `/api/admin/revenue-events/{event}/reconcile` | Attach CPay and reconciliation references and settle/reconcile the event |
+
+CPay remains the approved execution/reconciliation boundary where money movement is required. Revenue events attribute commercial economics; they are not a replacement financial ledger.
