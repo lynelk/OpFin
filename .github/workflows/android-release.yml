@@ -143,7 +143,7 @@ jobs:
           if not version:
               raise SystemExit('pubspec.yaml must declare a version name and version code.')
           name, code = version.groups()
-          expected = ('co.opfin.app', name, code)
+          expected = ('org.rotaryo.opfin', name, code)
           actual = (manifest.get('package'), manifest.get(ns + 'versionName'), manifest.get(ns + 'versionCode'))
           if actual != expected:
               raise SystemExit(f'AAB identity mismatch: {actual!r} != {expected!r}')
