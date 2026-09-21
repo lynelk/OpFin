@@ -30,10 +30,14 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
     final capability = values[1];
     final guidance = (capability['guidance'] as List?) ?? const [];
     if (guidance.isNotEmpty) {
-      await InclusiveFinanceApi.recordCapabilityEvent(
-        eventType: 'guidance_shown',
-        context: {'guidance_count': guidance.length},
-      );
+      try {
+        await InclusiveFinanceApi.recordCapabilityEvent(
+          eventType: 'guidance_shown',
+          context: {'guidance_count': guidance.length},
+        );
+      } catch (_) {
+        // Evidence capture must never block the customer's financial journey.
+      }
     }
     return {
       'profile': values[0],
@@ -380,13 +384,15 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
                                 contentPadding: EdgeInsets.zero,
                                 title: Text(programme['name']?.toString() ?? 'Programme'),
                                 subtitle: Text(programme['code']?.toString() ?? ''),
-                                trailing: FilledButton.tonal(
-                                  onPressed: () => _enrol(
-                                    (programme['id'] as num).toInt(),
-                                    programme['name']?.toString() ?? 'programme',
-                                  ),
-                                  child: const Text('Join'),
-                                ),
+                                trailing: programme['enrolment_status'] == 'enrolled'
+                                    ? const Chip(label: Text('Joined'))
+                                    : FilledButton.tonal(
+                                        onPressed: () => _enrol(
+                                          (programme['id'] as num).toInt(),
+                                          programme['name']?.toString() ?? 'programme',
+                                        ),
+                                        child: const Text('Join'),
+                                      ),
                               );
                             }),
                         ],
