@@ -23,6 +23,23 @@ class InclusiveFinanceService
         'first_time_formal_borrower',
     ];
 
+    public const PROTECTED_SIGNAL_KEYS = [
+        'gender',
+        'sex',
+        'age',
+        'age_cohort',
+        'age_group',
+        'date_of_birth',
+        'disability',
+        'disability_status',
+        'pwd_status',
+        'refugee_status',
+        'refugee_or_displaced_status',
+        'displacement_status',
+        'rural_urban',
+        'first_time_formal_borrower',
+    ];
+
     public const SUPPORT_INSTRUMENT_TYPES = [
         'salary_undertaking',
         'employer_guarantee',
@@ -289,8 +306,15 @@ class InclusiveFinanceService
             }
 
             if ($riskEligible) {
-                if (in_array($signal->signal_key, self::MEASUREMENT_ONLY_KEYS, true)) {
-                    throw new InvalidArgumentException('Voluntary inclusion and programme-measurement attributes can never be marked as credit-risk inputs.');
+                $normalisedKey = strtolower(trim((string) $signal->signal_key));
+                if (in_array($normalisedKey, self::PROTECTED_SIGNAL_KEYS, true)) {
+                    throw new InvalidArgumentException('Protected, accessibility and programme-measurement attributes can never be marked as credit-risk inputs.');
+                }
+                if (! in_array($signal->purpose, ['credit_assessment', 'affordability'], true)) {
+                    throw new InvalidArgumentException('Only approved credit-assessment or affordability signals can be marked as risk eligible.');
+                }
+                if ($signal->expires_at !== null && now()->greaterThan($signal->expires_at)) {
+                    throw new InvalidArgumentException('Expired alternative-data signals cannot be marked as risk eligible.');
                 }
                 if ($signal->source_type === 'user_reported' || ! $signal->provider_reference) {
                     throw new InvalidArgumentException('Risk-eligible signals require independently verifiable provider provenance.');
