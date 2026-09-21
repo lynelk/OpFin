@@ -34,7 +34,7 @@ From Home, open **Build financial resilience** to see your financial-reputation 
 
 You can optionally help OpFin measure inclusion outcomes. If you opt in, you can provide voluntary inclusion details and later change them or withdraw programme-measurement consent. These details are kept outside credit-risk decisioning.
 
-Where an inclusive-finance programme is available, OpFin shows whether the information on your account is sufficient for programme participation. A programme participation result is not a loan approval or decline.
+Where an inclusive-finance programme is available, OpFin shows whether the information on your account is sufficient for programme participation. A programme participation result is not a loan approval or decline. After joining, you can choose **Leave** to end participation. Leaving does not erase the earlier participation record; programme reporting stops counting new outcomes after the recorded exit time.
 
 You can also submit alternative credit-support evidence, for example a salary undertaking, guarantee, receivable or warehouse receipt. Evidence must be verified and supported by the relevant financial product before it can affect eligibility.
 
