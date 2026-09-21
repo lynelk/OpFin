@@ -40,7 +40,7 @@ return new class extends Migration
             $table->string('signal_key')->index();
             $table->json('signal_value')->nullable();
             $table->string('purpose')->index();
-            $table->unsignedBigInteger('consent_record_id')->nullable()->index();
+            $table->foreignId('consent_record_id')->nullable()->constrained('consent_records')->nullOnDelete();
             $table->boolean('risk_eligible')->default(false)->index();
             $table->boolean('verified')->default(false)->index();
             $table->string('provider_reference')->nullable()->index();
@@ -86,7 +86,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('financial_space_id')->nullable()->constrained()->nullOnDelete();
-            $table->unsignedBigInteger('loan_application_id')->nullable()->index();
+            $table->foreignId('loan_application_id')->nullable()->constrained('loan_applications')->nullOnDelete();
             $table->string('instrument_type')->index();
             $table->string('provider_name')->nullable();
             $table->string('external_reference')->nullable()->index();
@@ -104,7 +104,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->unsignedBigInteger('loan_application_id')->nullable()->index();
-            $table->unsignedBigInteger('credit_decision_id')->nullable()->index();
+            $table->foreignId('credit_decision_id')->nullable()->constrained('credit_decisions')->nullOnDelete();
             $table->string('assessment_type')->default('decision_review')->index();
             $table->string('status')->index();
             $table->json('reason_codes')->nullable();
