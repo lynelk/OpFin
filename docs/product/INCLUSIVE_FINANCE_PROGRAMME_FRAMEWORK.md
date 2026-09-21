@@ -65,7 +65,8 @@ Rules:
 
 - programme measurement is opt-in;
 - voluntary measurement attributes are cleared when consent is withdrawn;
-- accessibility preferences continue to use the existing user accessibility settings;
+- customers can edit voluntary inclusion details after opting in and can choose "prefer not to say" for sensitive categories;
+- accessibility preferences continue to use the existing user accessibility settings, including large text, simple language, reduced motion and a branded high-contrast mode;
 - programme measurement data is not exposed as a credit-profile component;
 - no essential financial journey depends on agreeing to programme measurement.
 
@@ -161,6 +162,8 @@ A programme can define:
 - start/end dates;
 - lifecycle status.
 
+Programme eligibility uses an explicit allow-list of fields and operators. Supported inclusion fields may determine **programme participation only**. KYC state and the non-score financial-reputation stage can also be used. Missing voluntary information produces an incomplete eligibility result rather than silently inferring the customer's demographic status.
+
 Target-population fields support outreach, lawful programme eligibility and reporting. They do not become credit-risk variables.
 
 ## 8. Alternative collateral and credit support
@@ -203,6 +206,8 @@ Privacy rules:
 
 Programme evidence should progressively cover access, first formal use, affordability, repayment, financial reputation and customer capability outcomes.
 
+Credit outcomes are counted only after enrolment and before programme exit. Capability events observed among enrolled participants are reported separately from direct programme events and are not described as programme-caused unless the intervention itself is explicitly attributed.
+
 ## 10. Mobile experience
 
 The Flutter application exposes **Build financial resilience** from Home.
@@ -217,7 +222,7 @@ The screen includes:
 - available inclusive-finance programmes;
 - alternative credit-support evidence.
 
-Accessibility remains a product-wide concern. Existing simple-language, large-text, screen-reader, reduced-motion and audio-guidance preferences are reused rather than reimplemented as a parallel inclusion setting.
+Accessibility remains a product-wide concern. Existing simple-language, large-text, screen-reader and reduced-motion preferences are reused rather than reimplemented as a parallel inclusion setting. A branded high-contrast mode is also available. Material controls retain padded targets and semantic labels so platform assistive technologies such as VoiceOver and TalkBack can operate against the same customer journeys. Assistive-technology support still requires device/UAT certification before a production accessibility claim is made.
 
 ## 11. Product boundary with Stolets
 
@@ -250,5 +255,7 @@ The code foundation does not fabricate external readiness. Production use still 
 - accessibility/UAT evidence;
 - production database migration and rollback evidence;
 - programme KPI definitions agreed with the relevant implementation partner.
+
+Sensitive inclusion, provider-signal, support-instrument and programme configuration mutations are audit logged without copying raw sensitive values into the audit metadata.
 
 These are operational gates, not missing licence strings to be invented in source code.
