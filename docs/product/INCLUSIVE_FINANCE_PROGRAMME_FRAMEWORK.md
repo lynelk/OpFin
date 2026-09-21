@@ -201,7 +201,7 @@ The admin impact API reports, for enrolled programme populations:
 Privacy rules:
 
 - only profiles with active programme-measurement consent enter cohort reporting;
-- cohort groups smaller than five are suppressed;
+- an inclusion dimension is suppressed when any of its groups is smaller than five, preventing simple differencing from programme totals;
 - the impact surface returns aggregate outcomes rather than individual sensitive records.
 
 Programme evidence should progressively cover access, first formal use, affordability, repayment, financial reputation and customer capability outcomes.
