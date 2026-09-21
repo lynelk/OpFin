@@ -1,6 +1,6 @@
 # Canonical Programme Implementation Status
 
-Updated: 19 September 2026
+Updated: 21 September 2026
 
 This file is an implementation evidence index. A capability is only marked complete when code and automated acceptance evidence exist.
 
@@ -17,6 +17,20 @@ This file is an implementation evidence index. A capability is only marked compl
 - Organisation onboarding cases for Business, SACCO, Investment/Fund and regulated Partner Spaces.
 - Employer activation as a Business capability, preserving the Personal Space privacy boundary.
 - Automated cross-Space isolation, invitation, employer and financial-life tests.
+
+## Inclusive-finance foundations implemented 21 September 2026
+
+- Voluntary inclusive-finance profile with explicit programme-measurement consent and automatic clearing of measurement attributes on withdrawal.
+- Measurement-only inclusion fields technically separated from credit-decision inputs.
+- Financial-capability guidance and intervention/outcome event evidence.
+- Financial-reputation pathway built from verified identity and actual repayment/reporting behaviour without creating a second credit score.
+- Alternative-data signal registry with provenance, verification, consent and risk-eligibility gates.
+- Configurable inclusive-finance programmes and customer enrolment linked to existing Financial Spaces/partners.
+- Alternative credit-support evidence for salary undertakings, guarantees, savings pledges, receivables, warehouse receipts and related instruments.
+- Fair-treatment assessment evidence and customer-facing explanation of decision boundaries.
+- Aggregate impact reporting using system-of-record outcomes and five-person minimum cohort suppression.
+- Flutter Financial Resilience experience exposing capability, reputation, programme measurement, programme enrolment and credit-support evidence.
+- Automated feature tests for measurement consent, protected-field exclusion, provider-signal consent, programme reporting privacy and alternative-collateral verification.
 
 ## Existing capabilities retained and integrated by contract
 
