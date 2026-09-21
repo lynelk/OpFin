@@ -1,7 +1,7 @@
 # OpFin Product Blueprint
 
 Status: Canonical product contract  
-Updated: 19 September 2026  
+Updated: 21 September 2026  
 Language: English (United Kingdom)
 
 ## Product position
@@ -78,6 +78,16 @@ An Individual must be able to use the App for onboarding/verification, money tra
 A Savings Group must additionally be able to create/join a group, invite/manage members, assign officials/roles, manage contributions/savings, member loans/repayments, expenses/fees, approvals, meetings/voting where enabled, goals, investments/protection, statements and audit history.
 
 No computer or paid subscription may be required for essential Individual or Savings Group financial management.
+
+## Inclusive-finance and programme-delivery contract
+
+OpFin supports inclusive-finance programmes through a deliberately separate measurement and delivery layer. Voluntary inclusion attributes such as gender, age cohort, disability status, refugee/displaced-person status and rural/urban classification may be used for service adaptation, lawful programme eligibility and aggregate reporting, but are not credit-risk inputs.
+
+The platform provides financial-capability guidance, a non-score financial-reputation pathway, governed alternative-data provenance, configurable programme enrolment, alternative credit-support evidence and privacy-suppressed impact reporting. Existing affordability, CRB, consent, credit reason-code, UMRA, hardship and partner controls remain authoritative rather than being duplicated.
+
+**Product boundary:** Stolets is a separate SME automation, digitisation and commerce product. OpFin may consume an explicitly consented, approved external signal from Stolets or refer a customer to it, but OpFin does not absorb POS, inventory, purchasing or merchant-operations functions. Shared infrastructure does not create shared product identity.
+
+See product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md for the canonical programme and data-governance rules.
 
 ## Revenue integrity
 
