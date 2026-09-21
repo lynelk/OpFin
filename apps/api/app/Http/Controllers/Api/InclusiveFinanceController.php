@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\InclusiveFinanceService;
 use App\Support\ApiResponse;
@@ -294,12 +293,4 @@ class InclusiveFinanceController extends Controller
         }
     }
 
-    private function guard(callable $callback, int $status = 200): JsonResponse
-    {
-        try {
-            return ApiResponse::success('Inclusive-finance operation completed.', $callback(), $status);
-        } catch (InvalidArgumentException $exception) {
-            return ApiResponse::error($exception->getMessage(), 422);
-        }
-    }
 }
