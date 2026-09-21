@@ -40,7 +40,7 @@ Open **Build financial resilience** from Home. Explain the financial-reputation 
 ## Module 10 — Voluntary inclusion and programmes
 Show the optional programme-measurement switch. If the learner chooses to participate, demonstrate the voluntary inclusion form and the ability to choose **Prefer not to say** where available. Explain that these details may support programme eligibility and aggregate reporting but do not become credit-risk inputs.
 
-Demonstrate an active programme. An eligible customer can join; an incomplete or ineligible result must be explained as a programme-participation result, not a credit decline.
+Demonstrate an active programme. An eligible customer can join; an incomplete or ineligible result must be explained as a programme-participation result, not a credit decline. Demonstrate **Leave** for an enrolled customer and explain that exit is voluntary and idempotent, preserves prior audit evidence and stops later events being counted inside that programme’s participation window. An exited participation is not silently re-enrolled.
 
 ## Module 11 — Alternative credit support
 Demonstrate adding support evidence such as a salary undertaking, guarantee, receivable or warehouse receipt. Explain the three separate states: **submitted → independently verified/rejected → recognised by a relevant product policy**. Submission or verification alone does not approve credit.
