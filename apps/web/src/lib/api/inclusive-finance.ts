@@ -1,3 +1,10 @@
+export type ProgrammeEligibilityRule = {
+  field: string;
+  operator: "equals" | "in";
+  value?: string | boolean;
+  values?: Array<string | boolean>;
+};
+
 export type InclusiveFinanceProgramme = {
   id: number;
   code: string;
@@ -5,6 +12,11 @@ export type InclusiveFinanceProgramme = {
   sponsor_space_id?: number | null;
   partner_id?: number | null;
   status: string;
+  target_population?: Record<string, unknown>;
+  eligibility_rules?: {
+    all?: ProgrammeEligibilityRule[];
+    any?: ProgrammeEligibilityRule[];
+  };
   starts_at?: string | null;
   ends_at?: string | null;
   enrolled_people?: number;
@@ -37,16 +49,38 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
-async function get<T>(path: string, token?: string): Promise<T> {
+export type CreateInclusiveFinanceProgramme = {
+  code: string;
+  name: string;
+  status?: "draft" | "active" | "paused" | "closed";
+  sponsor_space_id?: number | null;
+  partner_id?: number | null;
+  target_population?: Record<string, unknown>;
+  eligibility_rules?: {
+    all?: ProgrammeEligibilityRule[];
+    any?: ProgrammeEligibilityRule[];
+  };
+  starts_at?: string | null;
+  ends_at?: string | null;
+};
+
+async function request<T>(
+  path: string,
+  token?: string,
+  init: RequestInit = {}
+): Promise<T> {
   const baseUrl = process.env.NEXT_PUBLIC_OPFIN_API_URL;
   if (!baseUrl) {
     throw new Error("OpFin API base URL is not configured.");
   }
 
   const response = await fetch(`${baseUrl}${path}`, {
+    ...init,
     headers: {
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init.headers
     },
     cache: "no-store"
   });
@@ -61,9 +95,14 @@ async function get<T>(path: string, token?: string): Promise<T> {
 
 export const inclusiveFinanceApi = {
   programmes: (token?: string) =>
-    get<{ programmes: InclusiveFinanceProgramme[] }>("/admin/inclusive-finance/programmes", token),
+    request<{ programmes: InclusiveFinanceProgramme[] }>("/admin/inclusive-finance/programmes", token),
   impact: (programmeId?: number, token?: string) => {
     const query = programmeId ? `?programme_id=${programmeId}` : "";
-    return get<InclusiveFinanceImpact>(`/admin/inclusive-finance/impact${query}`, token);
-  }
+    return request<InclusiveFinanceImpact>(`/admin/inclusive-finance/impact${query}`, token);
+  },
+  createProgramme: (payload: CreateInclusiveFinanceProgramme, token?: string) =>
+    request<InclusiveFinanceProgramme>("/admin/inclusive-finance/programmes", token, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    })
 };
