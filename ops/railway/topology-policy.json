@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "product": "OpFin",
+  "requiresExplicitOwnerConsentForNewRailwayResource": true,
+  "permanentValidationServicesAllowed": false,
+  "allowedProjects": [
+    "OpFin"
+  ],
+  "environments": {
+    "production": {
+      "allowedServices": [
+        "Postgres",
+        "OpFin",
+        "opfin-web",
+        "opfin-worker",
+        "opfin-scheduler"
+      ]
+    }
+  },
+  "validationPolicy": {
+    "persistentRailwayServiceCreation": "forbidden",
+    "preferredRunner": "GitHub Actions or other ephemeral CI only"
+  },
+  "workspaceCostPolicy": {
+    "railwayAgentHardLimitUsd": 0,
+    "computeHardLimitUsd": 10
+  }
+}
