@@ -29,8 +29,11 @@ This file is an implementation evidence index. A capability is only marked compl
 - Alternative credit-support evidence for salary undertakings, guarantees, savings pledges, receivables, warehouse receipts and related instruments.
 - Fair-treatment assessment evidence and customer-facing explanation of decision boundaries.
 - Aggregate impact reporting using system-of-record outcomes and five-person minimum cohort suppression.
-- Flutter Financial Resilience experience exposing capability, reputation, programme measurement, programme enrolment and credit-support evidence.
-- Automated feature tests for measurement consent, protected-field exclusion, provider-signal consent, programme reporting privacy and alternative-collateral verification.
+- Flutter Financial Resilience experience exposing capability, reputation, editable voluntary programme measurement, programme eligibility/enrolment and credit-support evidence.
+- High-contrast accessibility mode added alongside existing large-text, simple-language, reduced-motion and screen-reader support.
+- Operations programme configuration UI and privacy-suppressed impact dashboard.
+- Audit logging for sensitive inclusive-finance mutations without duplicating raw sensitive values into audit metadata.
+- Automated feature tests for measurement consent, protected-field exclusion, provider-signal consent, programme eligibility, Financial Space isolation, programme reporting privacy, enrolment idempotency and alternative-collateral verification.
 
 ## Existing capabilities retained and integrated by contract
 
