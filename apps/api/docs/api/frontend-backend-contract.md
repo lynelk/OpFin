@@ -164,7 +164,7 @@ Customer routes:
 - `POST /api/inclusive-finance/capability/events` for intervention/outcome evidence;
 - `GET /api/inclusive-finance/reputation` for the non-score financial-reputation pathway;
 - `GET/POST /api/inclusive-finance/signals` for customer-reported, non-risk signals;
-- `GET /api/inclusive-finance/programmes` and `POST /api/inclusive-finance/programmes/{programme}/enrol` for programme discovery and enrolment;
+- `GET /api/inclusive-finance/programmes`, `POST /api/inclusive-finance/programmes/{programme}/enrol` and `DELETE /api/inclusive-finance/programmes/{programme}/enrol` for programme discovery, enrolment and voluntary exit;
 - `GET/POST /api/inclusive-finance/support-instruments` for alternative credit-support evidence; and
 - `GET /api/inclusive-finance/fair-treatment` for the documented decision boundary.
 
@@ -176,6 +176,7 @@ Client rules:
 - provider-supplied signals are not exposed as approved scoring inputs merely because an operator verifies their provenance;
 - verified warehouse receipts, guarantees or other support evidence do not automatically change eligibility, limit, price or approval;
 - programme eligibility and credit eligibility are separate concepts;
+- leaving a programme is idempotent; historical evidence remains bounded by the recorded enrolment and exit timestamps, and the client must not silently re-enrol an exited participation;
 - an automated fair-treatment reason-code review is evidence of that review scope only and must not be presented as certification of an external model/provider's fairness;
 - high-contrast mode is an accessibility preference, not a claim of physical-device certification.
 
