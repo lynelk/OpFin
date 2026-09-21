@@ -32,6 +32,7 @@ export type InclusiveFinanceImpact = {
   average_approved_amount_minor: number;
   npl_count: number;
   impact_events: Record<string, number>;
+  capability_events: Record<string, number>;
   participant_capability_events: Record<string, number>;
   cohorts: Record<string, Record<string, number>>;
   measurement_notes: {
