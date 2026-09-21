@@ -305,7 +305,8 @@ Admin/operations routes:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| GET | /api/admin/inclusive-finance/programmes | Programme register with enrolment counts |\n| GET | /api/admin/inclusive-finance/impact | Aggregate programme outcomes; optional programme_id query filter |
+| GET | /api/admin/inclusive-finance/programmes | Programme register with enrolment counts |
+| GET | /api/admin/inclusive-finance/impact | Aggregate programme outcomes; optional programme_id query filter |
 | POST | /api/admin/inclusive-finance/programmes | Create programme configuration |
 | PATCH | /api/admin/inclusive-finance/programmes/{programme} | Update programme lifecycle/configuration |
 | POST | /api/admin/inclusive-finance/signals | Ingest independently verifiable provider signal |
