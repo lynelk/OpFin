@@ -548,6 +548,12 @@ class InclusiveFinanceService
                         'system_assessment' => $eligibility,
                         'customer_evidence' => (array) ($data['eligibility_evidence'] ?? []),
                     ]),
+                    'loan_application_floor_id' => $existing?->loan_application_floor_id
+                        ?? (int) (DB::table('loan_applications')->where('user_id', $user->id)->max('id') ?? 0),
+                    'loan_application_ceiling_id' => null,
+                    'capability_event_floor_id' => $existing?->capability_event_floor_id
+                        ?? (int) (DB::table('financial_capability_events')->where('user_id', $user->id)->max('id') ?? 0),
+                    'capability_event_ceiling_id' => null,
                     'enrolled_at' => $existing?->enrolled_at ?? now(),
                     'exited_at' => null,
                     'created_at' => $existing?->created_at ?? now(),
@@ -608,6 +614,12 @@ class InclusiveFinanceService
                     ->where('id', $enrolment->id)
                     ->update([
                         'status' => 'exited',
+                        'loan_application_ceiling_id' => (int) (DB::table('loan_applications')
+                            ->where('user_id', $user->id)
+                            ->max('id') ?? 0),
+                        'capability_event_ceiling_id' => (int) (DB::table('financial_capability_events')
+                            ->where('user_id', $user->id)
+                            ->max('id') ?? 0),
                         'exited_at' => $exitedAt,
                         'updated_at' => $exitedAt,
                     ]);
@@ -820,13 +832,10 @@ class InclusiveFinanceService
                 ->join('inclusive_finance_enrolments as enrolments', 'enrolments.user_id', '=', 'applications.user_id')
                 ->whereIn('enrolments.status', ['enrolled', 'exited'])
                 ->when($programmeId !== null, fn ($query) => $query->where('enrolments.programme_id', $programmeId))
+                ->whereColumn('applications.id', '>', 'enrolments.loan_application_floor_id')
                 ->where(function ($query) {
-                    $query->whereNull('enrolments.enrolled_at')
-                        ->orWhereColumn('applications.created_at', '>=', 'enrolments.enrolled_at');
-                })
-                ->where(function ($query) {
-                    $query->whereNull('enrolments.exited_at')
-                        ->orWhereColumn('applications.created_at', '<=', 'enrolments.exited_at');
+                    $query->whereNull('enrolments.loan_application_ceiling_id')
+                        ->orWhereColumn('applications.id', '<=', 'enrolments.loan_application_ceiling_id');
                 })
                 ->distinct()
                 ->pluck('applications.id')
@@ -866,13 +875,10 @@ class InclusiveFinanceService
                 ->join('inclusive_finance_enrolments as enrolments', 'enrolments.user_id', '=', 'events.user_id')
                 ->whereIn('enrolments.status', ['enrolled', 'exited'])
                 ->when($programmeId !== null, fn ($query) => $query->where('enrolments.programme_id', $programmeId))
+                ->whereColumn('events.id', '>', 'enrolments.capability_event_floor_id')
                 ->where(function ($query) {
-                    $query->whereNull('enrolments.enrolled_at')
-                        ->orWhereColumn('events.occurred_at', '>=', 'enrolments.enrolled_at');
-                })
-                ->where(function ($query) {
-                    $query->whereNull('enrolments.exited_at')
-                        ->orWhereColumn('events.occurred_at', '<=', 'enrolments.exited_at');
+                    $query->whereNull('enrolments.capability_event_ceiling_id')
+                        ->orWhereColumn('events.id', '<=', 'enrolments.capability_event_ceiling_id');
                 })
                 ->distinct()
                 ->pluck('events.id')
