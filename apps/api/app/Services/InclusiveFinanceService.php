@@ -7,6 +7,7 @@ use App\Models\CreditProfile;
 use App\Models\KycCase;
 use App\Models\Loan;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
@@ -101,7 +102,10 @@ class InclusiveFinanceService
         }
 
         $servicePreferences = array_key_exists('service_preferences', $data)
-            ? (array) $data['service_preferences']
+            ? collect((array) $data['service_preferences'])
+                ->only(['assisted_onboarding', 'preferred_support_channel'])
+                ->reject(fn ($value) => $value === null || $value === '')
+                ->all()
             : $this->json($existing?->service_preferences);
 
         DB::table('inclusive_finance_profiles')->updateOrInsert(
@@ -325,7 +329,7 @@ class InclusiveFinanceService
                 if (! in_array($signal->purpose, ['credit_assessment', 'affordability'], true)) {
                     throw new InvalidArgumentException('Only approved credit-assessment or affordability signals can be marked as risk eligible.');
                 }
-                if ($signal->expires_at !== null && now()->greaterThan($signal->expires_at)) {
+                if ($signal->expires_at !== null && now()->greaterThan(Carbon::parse($signal->expires_at))) {
                     throw new InvalidArgumentException('Expired alternative-data signals cannot be marked as risk eligible.');
                 }
                 if ($signal->source_type === 'user_reported' || ! $signal->provider_reference) {
