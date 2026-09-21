@@ -166,4 +166,4 @@ Read `current-endpoints.md` for request/response notes and `frontend-backend-con
 | Admin support verification | PATCH /api/admin/inclusive-finance/support-instruments/{instrument}/verify |
 | Admin fair-treatment assessment | POST /api/admin/inclusive-finance/fair-treatment/{application}/assess |
 
-Voluntary inclusion fields are for service adaptation/programme measurement and do not feed credit risk. See docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md.
+Voluntary inclusion fields are for service adaptation/programme measurement and do not feed credit risk. Programme participation, provider-signal verification and alternative collateral evidence do not automatically change a credit decision. See `docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md`.
