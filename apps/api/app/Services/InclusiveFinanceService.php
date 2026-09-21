@@ -90,15 +90,15 @@ class InclusiveFinanceService
         $existing = DB::table('inclusive_finance_profiles')->where('user_id', $user->id)->first();
         $consent = (bool) ($data['programme_measurement_consent'] ?? $existing?->programme_measurement_consent ?? false);
 
-        $attributes = array_key_exists('measurement_attributes', $data)
+        $attributesProvided = array_key_exists('measurement_attributes', $data);
+        $attributes = $attributesProvided
             ? $this->filterMeasurementAttributes((array) $data['measurement_attributes'])
             : $this->json($existing?->measurement_attributes);
 
-        if ($attributes !== [] && ! $consent) {
-            throw new InvalidArgumentException('Programme measurement consent is required before voluntary inclusion attributes can be stored.');
-        }
-
         if (! $consent) {
+            if ($attributesProvided && $attributes !== []) {
+                throw new InvalidArgumentException('Programme measurement consent is required before voluntary inclusion attributes can be stored.');
+            }
             $attributes = [];
         }
 
