@@ -11,7 +11,7 @@
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^3.0.2",
         "laravel/ui": "^4.6",
-        "openai-php/client": "^0.20.1"
+        "openai-php/client": "^0.21.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
