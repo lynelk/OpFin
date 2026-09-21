@@ -33,7 +33,6 @@ export type InclusiveFinanceImpact = {
   npl_count: number;
   impact_events: Record<string, number>;
   participant_capability_events: Record<string, number>;
-  participant_capability_events: Record<string, number>;
   cohorts: Record<string, Record<string, number>>;
   measurement_notes: {
     credit_outcomes_window: string;
