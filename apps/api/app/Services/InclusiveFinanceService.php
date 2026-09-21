@@ -38,6 +38,7 @@ class InclusiveFinanceService
         'refugee_or_displaced_status',
         'displacement_status',
         'rural_urban',
+        'employment_category',
         'first_time_formal_borrower',
     ];
 
@@ -285,6 +286,14 @@ class InclusiveFinanceService
 
     public function ingestProviderSignal(array $data, User $actor): array
     {
+        if (isset($data['financial_space_id'])) {
+            $subject = User::query()->find($data['user_id']);
+            if (! $subject) {
+                throw new InvalidArgumentException('Alternative-data subject was not found.');
+            }
+            $this->assertSpaceMembership($subject, (int) $data['financial_space_id']);
+        }
+
         if (in_array($data['source_type'], ['user_reported', 'programme_measurement'], true)) {
             throw new InvalidArgumentException('Provider signal ingestion requires an independently verifiable source.');
         }
@@ -828,10 +837,15 @@ class InclusiveFinanceService
 
         $result = [];
         foreach ($counts as $key => $groups) {
+            // Suppress the whole dimension when any bucket is below the privacy
+            // threshold. Returning the large buckets while hiding a small one can
+            // allow the hidden value to be reconstructed from programme totals.
+            if (collect($groups)->contains(fn ($count) => $count < 5)) {
+                continue;
+            }
+
             foreach ($groups as $label => $count) {
-                if ($count >= 5) {
-                    $result[$key][$label] = $count;
-                }
+                $result[$key][$label] = $count;
             }
         }
 
