@@ -165,17 +165,25 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
       ),
     );
 
+    if (submitted != true) {
+      provider.dispose();
+      reference.dispose();
+      value.dispose();
+      return;
+    }
+
+    final providerName = provider.text;
+    final externalReference = reference.text;
+    final valueMinor = int.tryParse(value.text.replaceAll(',', '').trim());
     provider.dispose();
     reference.dispose();
     value.dispose();
 
-    if (submitted != true) return;
-
     await InclusiveFinanceApi.addSupportInstrument(
       instrumentType: type,
-      providerName: provider.text,
-      externalReference: reference.text,
-      valueMinor: int.tryParse(value.text.replaceAll(',', '').trim()),
+      providerName: providerName,
+      externalReference: externalReference,
+      valueMinor: valueMinor,
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
