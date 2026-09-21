@@ -148,7 +148,7 @@ class InclusiveFinanceFoundationTest extends TestCase
                 'all' => [[
                     'field' => 'age_cohort',
                     'operator' => 'in',
-                    'values' => ['18_24', '25_34'],
+                    'values' => ['18_24', '25_35'],
                 ]],
             ],
         ])->assertCreated()->json('data.id');
