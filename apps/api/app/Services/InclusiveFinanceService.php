@@ -351,6 +351,26 @@ class InclusiveFinanceService
         ];
     }
 
+    public function adminProgrammes(): array
+    {
+        $programmes = DB::table('inclusive_finance_programmes')
+            ->orderByDesc('id')
+            ->get()
+            ->map(function ($programme) {
+                $payload = $this->programmePayload($programme);
+                $payload['enrolled_people'] = DB::table('inclusive_finance_enrolments')
+                    ->where('programme_id', $programme->id)
+                    ->where('status', 'enrolled')
+                    ->distinct('user_id')
+                    ->count('user_id');
+
+                return $payload;
+            })
+            ->values();
+
+        return ['programmes' => $programmes];
+    }
+
     public function createProgramme(array $data): array
     {
         $id = DB::table('inclusive_finance_programmes')->insertGetId([
