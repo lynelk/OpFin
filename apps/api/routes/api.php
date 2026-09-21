@@ -207,6 +207,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
 
     Route::post('/admin/credit-decisions/{decision}/approve', [ProductionCreditController::class, 'approve']);
 
+    Route::get('/admin/inclusive-finance/programmes', [InclusiveFinanceController::class, 'adminProgrammes']);
     Route::get('/admin/inclusive-finance/impact', [InclusiveFinanceController::class, 'adminImpact']);
     Route::post('/admin/inclusive-finance/programmes', [InclusiveFinanceController::class, 'createProgramme']);
     Route::patch('/admin/inclusive-finance/programmes/{programme}', [InclusiveFinanceController::class, 'updateProgramme']);
