@@ -109,14 +109,24 @@ class InclusiveFinanceService
                 ->all()
             : $this->json($existing?->service_preferences);
 
+        $wasConsented = (bool) ($existing?->programme_measurement_consent ?? false);
+        $consentedAt = $existing?->consented_at;
+        $withdrawnAt = $existing?->withdrawn_at;
+        if ($consent && ! $wasConsented) {
+            $consentedAt = now();
+            $withdrawnAt = null;
+        } elseif (! $consent && $wasConsented) {
+            $withdrawnAt = now();
+        }
+
         DB::table('inclusive_finance_profiles')->updateOrInsert(
             ['user_id' => $user->id],
             [
                 'programme_measurement_consent' => $consent,
                 'measurement_attributes' => $attributes === [] ? null : json_encode($attributes),
                 'service_preferences' => $servicePreferences === [] ? null : json_encode($servicePreferences),
-                'consented_at' => $consent ? ($existing?->consented_at ?? now()) : null,
-                'withdrawn_at' => $consent ? null : now(),
+                'consented_at' => $consentedAt,
+                'withdrawn_at' => $withdrawnAt,
                 'created_at' => $existing?->created_at ?? now(),
                 'updated_at' => now(),
             ],
@@ -331,8 +341,7 @@ class InclusiveFinanceService
             }
 
             if ($riskEligible) {
-                $normalisedKey = strtolower(trim((string) $signal->signal_key));
-                if (in_array($normalisedKey, self::PROTECTED_SIGNAL_KEYS, true)) {
+                if ($this->isProtectedSignalKey((string) $signal->signal_key)) {
                     throw new InvalidArgumentException('Protected, accessibility and programme-measurement attributes can never be marked as credit-risk inputs.');
                 }
                 if (! in_array($signal->purpose, ['credit_assessment', 'affordability'], true)) {
@@ -427,8 +436,12 @@ class InclusiveFinanceService
 
     public function createProgramme(array $data): array
     {
+        $code = $this->normaliseProgrammeCode($data['code']);
+        $this->assertProgrammeCodeAvailable($code);
+        $this->assertProgrammeWindow($data['starts_at'] ?? null, $data['ends_at'] ?? null);
+
         $id = DB::table('inclusive_finance_programmes')->insertGetId([
-            'code' => strtoupper(trim($data['code'])),
+            'code' => $code,
             'name' => $data['name'],
             'sponsor_space_id' => $data['sponsor_space_id'] ?? null,
             'partner_id' => $data['partner_id'] ?? null,
@@ -453,7 +466,16 @@ class InclusiveFinanceService
             throw new InvalidArgumentException('Inclusive-finance programme not found.');
         }
 
+        $effectiveStartsAt = array_key_exists('starts_at', $data) ? $data['starts_at'] : $programme->starts_at;
+        $effectiveEndsAt = array_key_exists('ends_at', $data) ? $data['ends_at'] : $programme->ends_at;
+        $this->assertProgrammeWindow($effectiveStartsAt, $effectiveEndsAt);
+
         $update = ['updated_at' => now()];
+        if (array_key_exists('code', $data)) {
+            $code = $this->normaliseProgrammeCode($data['code']);
+            $this->assertProgrammeCodeAvailable($code, $programmeId);
+            $update['code'] = $code;
+        }
         foreach (['name', 'sponsor_space_id', 'partner_id', 'status', 'starts_at', 'ends_at'] as $field) {
             if (array_key_exists($field, $data)) {
                 $update[$field] = $data[$field];
@@ -607,6 +629,10 @@ class InclusiveFinanceService
             throw new InvalidArgumentException('Credit-support instrument not found.');
         }
 
+        if ($status === 'verified' && $instrument->expires_at !== null && now()->greaterThan(Carbon::parse($instrument->expires_at))) {
+            throw new InvalidArgumentException('Expired credit-support evidence cannot be verified.');
+        }
+
         if ($status === 'verified' && in_array($instrument->instrument_type, ['warehouse_receipt', 'receivable', 'asset_evidence'], true)) {
             if (! $instrument->provider_name || ! $instrument->external_reference) {
                 throw new InvalidArgumentException('Externally evidenced collateral requires a provider name and reference before verification.');
@@ -679,6 +705,8 @@ class InclusiveFinanceService
                 'decision_status' => $decision?->status,
                 'reason_code_count' => count($reasons),
                 'protected_attribute_inputs' => [],
+                'review_scope' => 'decision_reason_codes',
+                'certifies_model_fairness' => false,
             ]),
             'policy_version' => 'fair-treatment-v1',
             'assessed_at' => now(),
@@ -691,6 +719,9 @@ class InclusiveFinanceService
             'status' => $status,
             'reason_codes' => $assessmentReasons,
             'credit_decision_id' => $decision?->id,
+            'review_scope' => 'decision_reason_codes',
+            'certifies_model_fairness' => false,
+            'notice' => 'This automated review checks decision reason codes for prohibited inclusion markers. It does not certify the fairness of an external model or provider.',
         ];
     }
 
@@ -737,10 +768,17 @@ class InclusiveFinanceService
                     ->pluck('total', 'status')
                     ->map(fn ($value) => (int) $value)
                     ->all();
-                $averageApproved = (int) round((float) DB::table('credit_decisions')
+                $approvedAmounts = DB::table('credit_decisions')
                     ->whereIn('loan_application_id', $applicationIds)
                     ->where('status', 'approved')
-                    ->avg('approved_amount_minor'));
+                    ->pluck('approved_amount_minor')
+                    ->map(fn ($value) => (int) $value)
+                    ->all();
+                if ($approvedAmounts !== []) {
+                    $approvedTotal = array_sum($approvedAmounts);
+                    $approvedCount = count($approvedAmounts);
+                    $averageApproved = intdiv($approvedTotal + intdiv($approvedCount, 2), $approvedCount);
+                }
             }
 
             if ($applicationIds !== [] && Schema::hasTable('loans') && Schema::hasColumn('loans', 'non_performing_at')) {
@@ -1050,6 +1088,73 @@ class InclusiveFinanceService
             'verified_at' => $instrument->verified_at,
             'expires_at' => $instrument->expires_at,
         ];
+    }
+
+    private function normaliseProgrammeCode(string $code): string
+    {
+        $normalised = strtoupper(trim($code));
+        if ($normalised === '') {
+            throw new InvalidArgumentException('Programme code is required.');
+        }
+
+        return $normalised;
+    }
+
+    private function assertProgrammeCodeAvailable(string $code, ?int $ignoreProgrammeId = null): void
+    {
+        $query = DB::table('inclusive_finance_programmes')->whereRaw('UPPER(code) = ?', [$code]);
+        if ($ignoreProgrammeId !== null) {
+            $query->where('id', '!=', $ignoreProgrammeId);
+        }
+
+        if ($query->exists()) {
+            throw new InvalidArgumentException('Programme code is already in use.');
+        }
+    }
+
+    private function assertProgrammeWindow(?string $startsAt, ?string $endsAt): void
+    {
+        if ($startsAt === null || $endsAt === null) {
+            return;
+        }
+
+        if (Carbon::parse($endsAt)->lt(Carbon::parse($startsAt))) {
+            throw new InvalidArgumentException('Programme end date must be on or after the start date.');
+        }
+    }
+
+    private function isProtectedSignalKey(string $key): bool
+    {
+        $normalised = strtolower(trim((string) preg_replace('/[^a-z0-9]+/i', '_', $key)));
+        $normalised = trim($normalised, '_');
+
+        if (in_array($normalised, self::PROTECTED_SIGNAL_KEYS, true)) {
+            return true;
+        }
+
+        $tokens = array_values(array_filter(explode('_', $normalised)));
+        if (array_intersect($tokens, ['gender', 'sex', 'disability', 'disabled', 'pwd', 'refugee', 'displaced', 'displacement'])) {
+            return true;
+        }
+
+        if (in_array($normalised, [
+            'dob',
+            'birth_date',
+            'birth_year',
+            'year_of_birth',
+            'customer_age',
+            'applicant_age',
+            'borrower_age',
+        ], true)) {
+            return true;
+        }
+
+        return str_contains($normalised, 'age_cohort')
+            || str_contains($normalised, 'age_group')
+            || str_contains($normalised, 'date_of_birth')
+            || str_contains($normalised, 'rural_urban')
+            || str_contains($normalised, 'employment_category')
+            || str_contains($normalised, 'first_time_formal_borrower');
     }
 
     private function assertSpaceMembership(User $user, ?int $spaceId): void
