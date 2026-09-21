@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { createInclusiveFinanceProgrammeAction } from "@/app/inclusion-actions";
 import { Screen, StateNotice } from "@/components/Screen";
 import { inclusiveFinanceApi } from "@/lib/api/inclusive-finance";
 import { getAccessToken } from "@/lib/auth/session";
@@ -11,7 +12,12 @@ function humanise(value: string): string {
 export default async function InclusionPage({
   searchParams
 }: {
-  searchParams?: Promise<{ programme_id?: string }>;
+  searchParams?: Promise<{
+    programme_id?: string;
+    status?: string;
+    error?: string;
+    message?: string;
+  }>;
 }) {
   const params = await searchParams;
   const parsedProgramme = params?.programme_id ? Number(params.programme_id) : undefined;
@@ -38,6 +44,137 @@ export default async function InclusionPage({
         title="Inclusion & programmes"
         description="Programme delivery, financial-capability evidence and privacy-safe inclusion outcomes. Voluntary programme demographics remain outside credit-risk decisioning."
       >
+        {params?.status === "programme-created" ? (
+          <StateNotice state="success" message="Inclusive-finance programme created." />
+        ) : null}
+        {params?.message ? (
+          <StateNotice state={params.error === "validation" ? "validation" : "server"} message={params.message} />
+        ) : null}
+
+        <section className="panel">
+          <div className="case-card-head">
+            <div>
+              <p className="eyebrow">PROGRAMME CONFIGURATION</p>
+              <h2>Create an inclusive-finance programme</h2>
+              <p className="muted">
+                Configure delivery and eligibility without adding demographic fields to credit scoring.
+                Eligibility here governs programme participation only.
+              </p>
+            </div>
+          </div>
+          <form action={createInclusiveFinanceProgrammeAction} className="form-grid">
+            <div className="field">
+              <label htmlFor="code">Programme code</label>
+              <input id="code" name="code" placeholder="BIFS-YOUTH-01" required />
+            </div>
+            <div className="field">
+              <label htmlFor="name">Programme name</label>
+              <input id="name" name="name" placeholder="Youth financial inclusion pilot" required />
+            </div>
+            <div className="field">
+              <label htmlFor="status">Status</label>
+              <select id="status" name="status" defaultValue="draft">
+                <option value="draft">Draft</option>
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+                <option value="closed">Closed</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="starts_at">Start date</label>
+              <input id="starts_at" name="starts_at" type="date" />
+            </div>
+            <div className="field">
+              <label htmlFor="ends_at">End date</label>
+              <input id="ends_at" name="ends_at" type="date" />
+            </div>
+            <div className="field">
+              <label htmlFor="sponsor_space_id">Sponsor Financial Space ID</label>
+              <input id="sponsor_space_id" name="sponsor_space_id" inputMode="numeric" placeholder="Optional" />
+            </div>
+            <div className="field">
+              <label htmlFor="partner_id">Partner ID</label>
+              <input id="partner_id" name="partner_id" inputMode="numeric" placeholder="Optional" />
+            </div>
+            <div className="field">
+              <label htmlFor="age_cohort">Age group eligibility</label>
+              <select id="age_cohort" name="age_cohort" defaultValue="any">
+                <option value="any">Any</option>
+                <option value="18_24">18–24</option>
+                <option value="25_34">25–34</option>
+                <option value="35_44">35–44</option>
+                <option value="45_54">45–54</option>
+                <option value="55_plus">55+</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="gender">Gender eligibility</label>
+              <select id="gender" name="gender" defaultValue="any">
+                <option value="any">Any</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="another_identity">Another identity</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="disability_status">Disability inclusion eligibility</label>
+              <select id="disability_status" name="disability_status" defaultValue="any">
+                <option value="any">Any</option>
+                <option value="person_with_disability">Person with a disability</option>
+                <option value="no_disability_declared">No disability declared</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="refugee_or_displaced_status">Refugee/displacement eligibility</label>
+              <select id="refugee_or_displaced_status" name="refugee_or_displaced_status" defaultValue="any">
+                <option value="any">Any</option>
+                <option value="refugee_or_displaced">Refugee or displaced person</option>
+                <option value="not_refugee_or_displaced">Neither</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="rural_urban">Area eligibility</label>
+              <select id="rural_urban" name="rural_urban" defaultValue="any">
+                <option value="any">Any</option>
+                <option value="rural">Rural</option>
+                <option value="peri_urban">Peri-urban</option>
+                <option value="urban">Urban</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="employment_category">Employment eligibility</label>
+              <select id="employment_category" name="employment_category" defaultValue="any">
+                <option value="any">Any</option>
+                <option value="salaried">Salaried</option>
+                <option value="self_employed">Self-employed</option>
+                <option value="informal_worker">Informal worker</option>
+                <option value="student">Student</option>
+                <option value="not_currently_employed">Not currently employed</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="first_time_formal_borrower">First-time formal borrower</label>
+              <select id="first_time_formal_borrower" name="first_time_formal_borrower" defaultValue="any">
+                <option value="any">Any</option>
+                <option value="yes">Required</option>
+                <option value="no">Must not be first-time</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="kyc_verified">Verified identity</label>
+              <select id="kyc_verified" name="kyc_verified" defaultValue="any">
+                <option value="any">Not required by programme</option>
+                <option value="required">Required</option>
+              </select>
+            </div>
+            <button className="button" type="submit">Create programme</button>
+          </form>
+          <p className="muted">
+            Voluntary inclusion attributes are used only when a programme explicitly requires them.
+            Customers can decline programme measurement; they are then not silently reclassified for credit.
+          </p>
+        </section>
         <section className="panel">
           <div className="case-card-head">
             <div>
