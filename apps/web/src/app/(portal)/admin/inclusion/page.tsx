@@ -60,7 +60,7 @@ export default async function InclusionPage({
           <section className="panel">
             <p className="muted">Applications</p>
             <div className="stat">{impact.applications}</div>
-            <p className="muted">System-of-record loan applications from enrolled customers.</p>
+            <p className="muted">System-of-record applications within the programme participation window.</p>
           </section>
           <section className="panel">
             <p className="muted">Approved decisions</p>
@@ -124,21 +124,37 @@ export default async function InclusionPage({
 
         <div className="grid grid-2 compass-grid">
           <section className="panel">
-            <h2>Capability & programme events</h2>
-            {Object.keys(impact.impact_events).length === 0 ? (
-              <p className="muted">No programme outcome events are recorded in this scope yet.</p>
+            <h2>Programme & capability evidence</h2>
+            {Object.keys(impact.impact_events).length === 0 &&
+            Object.keys(impact.participant_capability_events).length === 0 ? (
+              <p className="muted">No programme or participant capability events are recorded in this scope yet.</p>
             ) : (
               <div className="case-list">
                 {Object.entries(impact.impact_events).map(([event, count]) => (
-                  <div className="case-card" key={event}>
+                  <div className="case-card" key={`programme:${event}`}>
                     <div className="case-card-head">
-                      <strong>{humanise(event)}</strong>
+                      <div>
+                        <strong>{humanise(event)}</strong>
+                        <p className="muted">Direct programme event</p>
+                      </div>
+                      <span className="badge">{count}</span>
+                    </div>
+                  </div>
+                ))}
+                {Object.entries(impact.participant_capability_events).map(([event, count]) => (
+                  <div className="case-card" key={`capability:${event}`}>
+                    <div className="case-card-head">
+                      <div>
+                        <strong>{humanise(event)}</strong>
+                        <p className="muted">Participant capability event after enrolment</p>
+                      </div>
                       <span className="badge">{count}</span>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+            <p className="muted">{impact.measurement_notes.capability_events_window}</p>
           </section>
 
           <section className="panel">
@@ -177,6 +193,7 @@ export default async function InclusionPage({
             they may be marked eligible for a governed scoring policy. Verification alone never changes a score,
             limit, price or approval.
           </p>
+          <p className="muted">{impact.measurement_notes.credit_outcomes_window}</p>
         </section>
       </Screen>
     );
