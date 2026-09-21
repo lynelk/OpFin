@@ -7,6 +7,7 @@ import {
   type ProgrammeEligibilityRule
 } from "@/lib/api/inclusive-finance";
 import { getAccessToken } from "@/lib/auth/session";
+import { OpfinApiError } from "@/lib/api/errors";
 
 function value(formData: FormData, key: string): string {
   const raw = formData.get(key);
@@ -60,8 +61,9 @@ export async function createInclusiveFinanceProgrammeAction(formData: FormData) 
   try {
     await inclusiveFinanceApi.createProgramme(payload, token);
   } catch (error) {
+    const kind = error instanceof OpfinApiError ? error.kind : "server";
     const message = error instanceof Error ? error.message : "Programme creation failed";
-    redirect(`/admin/inclusion?error=server&message=${encodeURIComponent(message)}`);
+    redirect(`/admin/inclusion?error=${kind}&message=${encodeURIComponent(message)}`);
   }
 
   redirect("/admin/inclusion?status=programme-created");
