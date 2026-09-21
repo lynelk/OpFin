@@ -25,12 +25,12 @@ class InclusiveFinanceController extends Controller
         $validated = $request->validate([
             'programme_measurement_consent' => ['sometimes', 'boolean'],
             'measurement_attributes' => ['sometimes', 'array'],
-            'measurement_attributes.gender' => ['nullable', 'string', 'max:80'],
-            'measurement_attributes.age_cohort' => ['nullable', 'string', 'max:40'],
-            'measurement_attributes.disability_status' => ['nullable', 'string', 'max:80'],
-            'measurement_attributes.refugee_or_displaced_status' => ['nullable', 'string', 'max:80'],
-            'measurement_attributes.rural_urban' => ['nullable', 'string', 'max:40'],
-            'measurement_attributes.employment_category' => ['nullable', 'string', 'max:80'],
+            'measurement_attributes.gender' => ['nullable', Rule::in(['female', 'male', 'another_identity', 'prefer_not_to_say'])],
+            'measurement_attributes.age_cohort' => ['nullable', Rule::in(['18_24', '25_34', '35_44', '45_54', '55_plus', 'prefer_not_to_say'])],
+            'measurement_attributes.disability_status' => ['nullable', Rule::in(['person_with_disability', 'no_disability_declared', 'prefer_not_to_say'])],
+            'measurement_attributes.refugee_or_displaced_status' => ['nullable', Rule::in(['refugee_or_displaced', 'not_refugee_or_displaced', 'prefer_not_to_say'])],
+            'measurement_attributes.rural_urban' => ['nullable', Rule::in(['rural', 'peri_urban', 'urban', 'prefer_not_to_say'])],
+            'measurement_attributes.employment_category' => ['nullable', Rule::in(['salaried', 'self_employed', 'informal_worker', 'student', 'not_currently_employed', 'other', 'prefer_not_to_say'])],
             'measurement_attributes.first_time_formal_borrower' => ['nullable', 'boolean'],
             'service_preferences' => ['sometimes', 'array'],
         ]);
