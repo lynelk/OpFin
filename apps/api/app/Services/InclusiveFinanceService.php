@@ -637,30 +637,77 @@ class InclusiveFinanceService
         $enrolments = $enrolmentsQuery->get();
         $userIds = $enrolments->pluck('user_id')->unique()->values()->all();
 
+        $applicationIds = [];
         $decisionCounts = [];
         $applications = 0;
         $nplCount = 0;
         $averageApproved = 0;
+        $capabilityEventCounts = [];
 
         if ($userIds !== []) {
-            $applications = DB::table('loan_applications')->whereIn('user_id', $userIds)->count();
+            $applicationIds = DB::table('loan_applications as applications')
+                ->join('inclusive_finance_enrolments as enrolments', 'enrolments.user_id', '=', 'applications.user_id')
+                ->where('enrolments.status', 'enrolled')
+                ->when($programmeId !== null, fn ($query) => $query->where('enrolments.programme_id', $programmeId))
+                ->where(function ($query) {
+                    $query->whereNull('enrolments.enrolled_at')
+                        ->orWhereColumn('applications.created_at', '>=', 'enrolments.enrolled_at');
+                })
+                ->where(function ($query) {
+                    $query->whereNull('enrolments.exited_at')
+                        ->orWhereColumn('applications.created_at', '<=', 'enrolments.exited_at');
+                })
+                ->distinct()
+                ->pluck('applications.id')
+                ->all();
 
-            if (Schema::hasTable('credit_decisions')) {
+            $applications = count($applicationIds);
+
+            if ($applicationIds !== [] && Schema::hasTable('credit_decisions')) {
                 $decisionCounts = DB::table('credit_decisions')
-                    ->whereIn('user_id', $userIds)
+                    ->whereIn('loan_application_id', $applicationIds)
                     ->select('status', DB::raw('COUNT(*) as total'))
                     ->groupBy('status')
                     ->pluck('total', 'status')
                     ->map(fn ($value) => (int) $value)
                     ->all();
                 $averageApproved = (int) round((float) DB::table('credit_decisions')
-                    ->whereIn('user_id', $userIds)
+                    ->whereIn('loan_application_id', $applicationIds)
                     ->where('status', 'approved')
                     ->avg('approved_amount_minor'));
             }
 
-            if (Schema::hasTable('loans') && Schema::hasColumn('loans', 'non_performing_at')) {
-                $nplCount = DB::table('loans')->whereIn('user_id', $userIds)->whereNotNull('non_performing_at')->count();
+            if ($applicationIds !== [] && Schema::hasTable('loans') && Schema::hasColumn('loans', 'non_performing_at')) {
+                $nplCount = DB::table('loans')
+                    ->whereIn('loan_application_id', $applicationIds)
+                    ->whereNotNull('non_performing_at')
+                    ->count();
+            }
+
+            $capabilityEventIds = DB::table('financial_capability_events as events')
+                ->join('inclusive_finance_enrolments as enrolments', 'enrolments.user_id', '=', 'events.user_id')
+                ->where('enrolments.status', 'enrolled')
+                ->when($programmeId !== null, fn ($query) => $query->where('enrolments.programme_id', $programmeId))
+                ->where(function ($query) {
+                    $query->whereNull('enrolments.enrolled_at')
+                        ->orWhereColumn('events.occurred_at', '>=', 'enrolments.enrolled_at');
+                })
+                ->where(function ($query) {
+                    $query->whereNull('enrolments.exited_at')
+                        ->orWhereColumn('events.occurred_at', '<=', 'enrolments.exited_at');
+                })
+                ->distinct()
+                ->pluck('events.id')
+                ->all();
+
+            if ($capabilityEventIds !== []) {
+                $capabilityEventCounts = DB::table('financial_capability_events')
+                    ->whereIn('id', $capabilityEventIds)
+                    ->select('event_type', DB::raw('COUNT(*) as total'))
+                    ->groupBy('event_type')
+                    ->pluck('total', 'event_type')
+                    ->map(fn ($value) => (int) $value)
+                    ->all();
             }
         }
 
@@ -683,7 +730,12 @@ class InclusiveFinanceService
             'average_approved_amount_minor' => $averageApproved,
             'npl_count' => $nplCount,
             'impact_events' => $eventCounts,
+            'participant_capability_events' => $capabilityEventCounts,
             'cohorts' => $this->cohortSummary($userIds),
+            'measurement_notes' => [
+                'credit_outcomes_window' => 'Only applications created after programme enrolment and before exit are counted.',
+                'capability_events_window' => 'Participant capability events are observed after enrolment; they are not claimed as programme-caused without a directly attributed intervention.',
+            ],
             'privacy' => [
                 'minimum_cohort_size' => 5,
                 'small_cohorts_suppressed' => true,
