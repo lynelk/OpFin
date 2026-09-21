@@ -74,14 +74,12 @@ jobs:
             base="HEAD^"
           fi
           python3 scripts/verify-documentation-drift.py --base "$base"
-      - name: Install PHP 8.2 without Xdebug
+      - name: Install supported PHP without Xdebug
         run: |
           sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository ppa:ondrej/php -y
-          sudo apt-get update
-          sudo apt-get install -y php8.2-cli php8.2-mbstring php8.2-sqlite3 php8.2-xml php8.2-curl
-          sudo update-alternatives --set php /usr/bin/php8.2
+          sudo apt-get install -y php-cli php-mbstring php-sqlite3 php-xml php-curl
+          sudo phpdismod xdebug 2>/dev/null || true
+          php -r 'if (version_compare(PHP_VERSION, "8.2.0", "<")) { fwrite(STDERR, "PHP 8.2+ is required\\n"); exit(1); }'
           php -v
           composer --version
       - name: Test API
