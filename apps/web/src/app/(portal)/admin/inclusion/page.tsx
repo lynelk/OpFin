@@ -101,8 +101,8 @@ export default async function InclusionPage({
               <select id="age_cohort" name="age_cohort" defaultValue="any">
                 <option value="any">Any</option>
                 <option value="18_24">18–24</option>
-                <option value="25_34">25–34</option>
-                <option value="35_44">35–44</option>
+                <option value="25_35">25–35</option>
+                <option value="36_44">36–44</option>
                 <option value="45_54">45–54</option>
                 <option value="55_plus">55+</option>
               </select>
