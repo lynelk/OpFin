@@ -214,10 +214,11 @@ class InclusiveFinanceService
         return [
             'signals' => DB::table('alternative_data_signals')
                 ->where('user_id', $user->id)
+                ->where('source_type', 'user_reported')
                 ->orderByDesc('observed_at')
                 ->orderByDesc('id')
                 ->get()
-                ->map(fn ($signal) => $this->signalPayload($signal))
+                ->map(fn ($signal) => $this->customerSignalPayload($signal))
                 ->values(),
             'measurement_only_keys' => self::MEASUREMENT_ONLY_KEYS,
             'governance' => 'Customer-submitted signals are not risk eligible. Verified provider signals require active credit-processing consent and an approved scoring policy before they may influence underwriting.',
@@ -341,7 +342,7 @@ class InclusiveFinanceService
                     ->where('user_id', $user->id)
                     ->value('status');
 
-                return $this->programmePayload($programme, $status ? (string) $status : null);
+                return $this->customerProgrammePayload($programme, $status ? (string) $status : null);
             })
             ->values();
 
@@ -476,7 +477,7 @@ class InclusiveFinanceService
 
             return [
                 'enrolment' => $enrolment,
-                'programme' => $this->programmePayload($programme),
+                'programme' => $this->customerProgrammePayload($programme, 'enrolled'),
                 'measurement_consent' => $this->profile($user)['programme_measurement_consent'],
             ];
         });
@@ -789,6 +790,19 @@ class InclusiveFinanceService
             ->all();
     }
 
+    private function customerProgrammePayload(object $programme, ?string $enrolmentStatus = null): array
+    {
+        return [
+            'id' => $programme->id,
+            'code' => $programme->code,
+            'name' => $programme->name,
+            'status' => $programme->status,
+            'starts_at' => $programme->starts_at,
+            'ends_at' => $programme->ends_at,
+            'enrolment_status' => $enrolmentStatus,
+        ];
+    }
+
     private function programmePayload(object $programme, ?string $enrolmentStatus = null): array
     {
         return [
@@ -805,6 +819,22 @@ class InclusiveFinanceService
             'starts_at' => $programme->starts_at,
             'ends_at' => $programme->ends_at,
             'enrolment_status' => $enrolmentStatus,
+        ];
+    }
+
+    private function customerSignalPayload(object $signal): array
+    {
+        return [
+            'id' => $signal->id,
+            'financial_space_id' => $signal->financial_space_id,
+            'source_type' => $signal->source_type,
+            'signal_key' => $signal->signal_key,
+            'signal_value' => $this->jsonValue($signal->signal_value),
+            'purpose' => $signal->purpose,
+            'risk_eligible' => false,
+            'verified' => false,
+            'observed_at' => $signal->observed_at,
+            'expires_at' => $signal->expires_at,
         ];
     }
 
