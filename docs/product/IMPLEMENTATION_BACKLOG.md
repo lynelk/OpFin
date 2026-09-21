@@ -60,7 +60,7 @@ Updated: 21 September 2026
 - IF-003 Financial reputation pathway separate from the Composite Score. **Implemented.**
 - IF-004 Governed alternative-data signal provenance and risk-eligibility gate. **Implemented.**
 - IF-005 Fair-treatment assessment evidence and protected-field exclusion. **Implemented.**
-- IF-006 Programme configuration, enrolment and aggregate impact reporting. **Implemented.**
+- IF-006 Programme configuration, enrolment, voluntary exit and aggregate impact reporting with deterministic participation boundaries. **Implemented.**
 - IF-007 Alternative collateral/guarantee evidence API including warehouse receipts. **Implemented.**
 - IF-008 Mobile Financial Resilience surface. **Implemented.**
 - IF-009 Production partner/provider certification, programme agreements and approved product-policy mapping. **Operational activation gate, not inventable in code.**
