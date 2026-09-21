@@ -901,6 +901,12 @@ class InclusiveFinanceService
                 || ! in_array($operator, ['equals', 'in'], true)) {
                 throw new InvalidArgumentException('Programme eligibility rules contain an unsupported field or operator.');
             }
+            if ($operator === 'equals' && ! array_key_exists('value', $rule)) {
+                throw new InvalidArgumentException('Programme eligibility equals rules require a value.');
+            }
+            if ($operator === 'in' && (! isset($rule['values']) || ! is_array($rule['values']) || $rule['values'] === [])) {
+                throw new InvalidArgumentException('Programme eligibility in rules require one or more values.');
+            }
 
             if (! array_key_exists($field, $context)) {
                 $results[] = null;
