@@ -308,6 +308,16 @@ class InclusiveFinanceService
             throw new InvalidArgumentException('Provider signal ingestion requires an independently verifiable source.');
         }
 
+        if (isset($data['consent_record_id'])) {
+            $consentBelongsToSubject = ConsentRecord::query()
+                ->whereKey($data['consent_record_id'])
+                ->where('user_id', $data['user_id'])
+                ->exists();
+            if (! $consentBelongsToSubject) {
+                throw new InvalidArgumentException('The supplied consent record does not belong to the alternative-data subject.');
+            }
+        }
+
         $id = DB::table('alternative_data_signals')->insertGetId([
             'user_id' => $data['user_id'],
             'financial_space_id' => $data['financial_space_id'] ?? null,
