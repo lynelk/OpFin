@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\InclusiveFinanceService;
+use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,7 +17,7 @@ class InclusiveFinanceController extends Controller
 
     public function profile(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->service->profile($request->user())]);
+        return ApiResponse::success('Inclusive-finance profile loaded.', $this->service->profile($request->user()));
     }
 
     public function updateProfile(Request $request): JsonResponse
@@ -39,7 +40,7 @@ class InclusiveFinanceController extends Controller
 
     public function capability(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->service->capability($request->user())]);
+        return ApiResponse::success('Financial-capability guidance loaded.', $this->service->capability($request->user()));
     }
 
     public function recordCapabilityEvent(Request $request): JsonResponse
@@ -53,17 +54,17 @@ class InclusiveFinanceController extends Controller
             'guidance_version' => ['nullable', 'string', 'max:80'],
         ]);
 
-        return response()->json(['data' => $this->service->recordCapabilityEvent($request->user(), $validated)], 201);
+        return ApiResponse::success('Financial-capability event recorded.', $this->service->recordCapabilityEvent($request->user(), $validated), 201);
     }
 
     public function reputation(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->service->reputation($request->user())]);
+        return ApiResponse::success('Financial-reputation pathway loaded.', $this->service->reputation($request->user()));
     }
 
     public function signals(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->service->signals($request->user())]);
+        return ApiResponse::success('Alternative-data signals loaded.', $this->service->signals($request->user()));
     }
 
     public function storeSignal(Request $request): JsonResponse
@@ -77,12 +78,12 @@ class InclusiveFinanceController extends Controller
             'expires_at' => ['nullable', 'date'],
         ]);
 
-        return response()->json(['data' => $this->service->storeUserSignal($request->user(), $validated)], 201);
+        return ApiResponse::success('Customer signal recorded outside credit decisioning.', $this->service->storeUserSignal($request->user(), $validated), 201);
     }
 
     public function programmes(): JsonResponse
     {
-        return response()->json(['data' => $this->service->programmes()]);
+        return ApiResponse::success('Open inclusive-finance programmes loaded.', $this->service->programmes());
     }
 
     public function enrol(Request $request, int $programme): JsonResponse
@@ -97,7 +98,7 @@ class InclusiveFinanceController extends Controller
 
     public function supportInstruments(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->service->supportInstruments($request->user())]);
+        return ApiResponse::success('Credit-support instruments loaded.', $this->service->supportInstruments($request->user()));
     }
 
     public function storeSupportInstrument(Request $request): JsonResponse
@@ -114,12 +115,12 @@ class InclusiveFinanceController extends Controller
             'expires_at' => ['nullable', 'date'],
         ]);
 
-        return response()->json(['data' => $this->service->storeSupportInstrument($request->user(), $validated)], 201);
+        return ApiResponse::success('Credit-support evidence recorded for verification.', $this->service->storeSupportInstrument($request->user(), $validated), 201);
     }
 
     public function fairTreatment(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->service->fairTreatment($request->user())]);
+        return ApiResponse::success('Fair-treatment information loaded.', $this->service->fairTreatment($request->user()));
     }
 
     public function adminImpact(Request $request): JsonResponse
@@ -128,7 +129,7 @@ class InclusiveFinanceController extends Controller
             'programme_id' => ['nullable', 'integer', 'exists:inclusive_finance_programmes,id'],
         ]);
 
-        return response()->json(['data' => $this->service->impactSummary($validated['programme_id'] ?? null)]);
+        return ApiResponse::success('Inclusive-finance impact summary loaded.', $this->service->impactSummary($validated['programme_id'] ?? null));
     }
 
     public function createProgramme(Request $request): JsonResponse
@@ -207,9 +208,9 @@ class InclusiveFinanceController extends Controller
     private function guard(callable $callback, int $status = 200): JsonResponse
     {
         try {
-            return response()->json(['data' => $callback()], $status);
+            return ApiResponse::success('Inclusive-finance operation completed.', $callback(), $status);
         } catch (InvalidArgumentException $exception) {
-            return response()->json(['message' => $exception->getMessage()], 422);
+            return ApiResponse::error($exception->getMessage(), 422);
         }
     }
 }
