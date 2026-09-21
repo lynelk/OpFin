@@ -32,6 +32,9 @@ class InclusiveFinanceApi {
       case 'PATCH':
         response = await http.patch(uri, headers: headers, body: jsonEncode(body ?? {}));
         break;
+      case 'DELETE':
+        response = await http.delete(uri, headers: headers, body: jsonEncode(body ?? {}));
+        break;
       default:
         response = await http.get(uri, headers: headers);
     }
@@ -74,6 +77,9 @@ class InclusiveFinanceApi {
 
   static Future<Map<String, dynamic>> enrol(int programmeId) =>
       _request('/inclusive-finance/programmes/$programmeId/enrol', method: 'POST');
+
+  static Future<Map<String, dynamic>> leaveProgramme(int programmeId) =>
+      _request('/inclusive-finance/programmes/$programmeId/enrol', method: 'DELETE');
 
   static Future<Map<String, dynamic>> supportInstruments() =>
       _request('/inclusive-finance/support-instruments');
