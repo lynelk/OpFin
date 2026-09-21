@@ -561,17 +561,32 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
                           else
                             ...programmes.whereType<Map>().map((item) {
                               final programme = item.cast<String, dynamic>();
+                              final eligibility =
+                                  (programme['eligibility'] as Map?)
+                                          ?.cast<String, dynamic>() ??
+                                      <String, dynamic>{};
+                              final eligibilityStatus =
+                                  eligibility['status']?.toString() ?? 'eligible';
+                              final joined =
+                                  programme['enrolment_status'] == 'enrolled';
+                              final subtitle = eligibilityStatus == 'incomplete'
+                                  ? 'More voluntary or verified eligibility information is needed.'
+                                  : eligibilityStatus == 'ineligible'
+                                      ? 'This account does not currently meet the programme criteria.'
+                                      : programme['code']?.toString() ?? '';
                               return ListTile(
                                 contentPadding: EdgeInsets.zero,
                                 title: Text(programme['name']?.toString() ?? 'Programme'),
-                                subtitle: Text(programme['code']?.toString() ?? ''),
-                                trailing: programme['enrolment_status'] == 'enrolled'
+                                subtitle: Text(subtitle),
+                                trailing: joined
                                     ? const Chip(label: Text('Joined'))
                                     : FilledButton.tonal(
-                                        onPressed: () => _enrol(
-                                          (programme['id'] as num).toInt(),
-                                          programme['name']?.toString() ?? 'programme',
-                                        ),
+                                        onPressed: eligibilityStatus == 'eligible'
+                                            ? () => _enrol(
+                                                  (programme['id'] as num).toInt(),
+                                                  programme['name']?.toString() ?? 'programme',
+                                                )
+                                            : null,
                                         child: const Text('Join'),
                                       ),
                               );
