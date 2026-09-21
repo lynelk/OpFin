@@ -64,7 +64,13 @@ class InclusiveFinanceController extends Controller
             'guidance_version' => ['nullable', 'string', 'max:80'],
         ]);
 
-        return ApiResponse::success('Financial-capability event recorded.', $this->service->recordCapabilityEvent($request->user(), $validated), 201);
+        return $this->audited(
+            'inclusive_finance.capability_event.recorded',
+            $request,
+            fn () => $this->service->recordCapabilityEvent($request->user(), $validated),
+            ['event_type' => $validated['event_type']],
+            201,
+        );
     }
 
     public function reputation(Request $request): JsonResponse
