@@ -51,11 +51,16 @@ class InclusiveFinanceApi {
 
   static Future<Map<String, dynamic>> updateProfile({
     required bool programmeMeasurementConsent,
+    Map<String, dynamic>? measurementAttributes,
   }) =>
       _request(
         '/inclusive-finance/profile',
         method: 'PATCH',
-        body: {'programme_measurement_consent': programmeMeasurementConsent},
+        body: {
+          'programme_measurement_consent': programmeMeasurementConsent,
+          if (measurementAttributes != null)
+            'measurement_attributes': measurementAttributes,
+        },
       );
 
   static Future<Map<String, dynamic>> capability() =>
