@@ -1,0 +1,767 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\ConsentRecord;
+use App\Models\CreditProfile;
+use App\Models\KycCase;
+use App\Models\Loan;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use InvalidArgumentException;
+
+class InclusiveFinanceService
+{
+    public const MEASUREMENT_ONLY_KEYS = [
+        'gender',
+        'age_cohort',
+        'disability_status',
+        'refugee_or_displaced_status',
+        'rural_urban',
+        'employment_category',
+        'first_time_formal_borrower',
+    ];
+
+    public const SUPPORT_INSTRUMENT_TYPES = [
+        'salary_undertaking',
+        'employer_guarantee',
+        'group_guarantee',
+        'savings_pledge',
+        'receivable',
+        'insurance_guarantee',
+        'warehouse_receipt',
+        'asset_evidence',
+        'development_guarantee',
+        'other',
+    ];
+
+    public function profile(User $user): array
+    {
+        $profile = DB::table('inclusive_finance_profiles')->where('user_id', $user->id)->first();
+
+        return [
+            'programme_measurement_consent' => (bool) ($profile?->programme_measurement_consent ?? false),
+            'measurement_attributes' => (bool) ($profile?->programme_measurement_consent ?? false)
+                ? $this->json($profile?->measurement_attributes)
+                : [],
+            'service_preferences' => $this->json($profile?->service_preferences),
+            'accessibility_preferences' => $user->accessibility_preferences ?? [],
+            'preferred_language' => $user->preferred_language ?? 'en',
+            'measurement_only_fields' => self::MEASUREMENT_ONLY_KEYS,
+            'decisioning_use_allowed' => false,
+            'notice' => 'Voluntary inclusion attributes support service adaptation and aggregate programme reporting. They are not credit-risk inputs.',
+        ];
+    }
+
+    public function updateProfile(User $user, array $data): array
+    {
+        $existing = DB::table('inclusive_finance_profiles')->where('user_id', $user->id)->first();
+        $consent = (bool) ($data['programme_measurement_consent'] ?? $existing?->programme_measurement_consent ?? false);
+
+        $attributes = array_key_exists('measurement_attributes', $data)
+            ? $this->filterMeasurementAttributes((array) $data['measurement_attributes'])
+            : $this->json($existing?->measurement_attributes);
+
+        if ($attributes !== [] && ! $consent) {
+            throw new InvalidArgumentException('Programme measurement consent is required before voluntary inclusion attributes can be stored.');
+        }
+
+        if (! $consent) {
+            $attributes = [];
+        }
+
+        $servicePreferences = array_key_exists('service_preferences', $data)
+            ? (array) $data['service_preferences']
+            : $this->json($existing?->service_preferences);
+
+        DB::table('inclusive_finance_profiles')->updateOrInsert(
+            ['user_id' => $user->id],
+            [
+                'programme_measurement_consent' => $consent,
+                'measurement_attributes' => $attributes === [] ? null : json_encode($attributes),
+                'service_preferences' => $servicePreferences === [] ? null : json_encode($servicePreferences),
+                'consented_at' => $consent ? ($existing?->consented_at ?? now()) : null,
+                'withdrawn_at' => $consent ? null : now(),
+                'created_at' => $existing?->created_at ?? now(),
+                'updated_at' => now(),
+            ],
+        );
+
+        return $this->profile($user->fresh());
+    }
+
+    public function capability(User $user): array
+    {
+        $profile = CreditProfile::query()->where('user_id', $user->id)->first();
+        $verifiedKyc = KycCase::query()
+            ->where('user_id', $user->id)
+            ->where('status', KycCase::STATUS_VERIFIED)
+            ->exists();
+        $clearedLoans = Loan::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where('status', 'Cleared')
+            ->count();
+
+        $activeLoans = Loan::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])
+            ->count();
+
+        $budgetCount = Schema::hasTable('financial_budgets')
+            ? DB::table('financial_budgets')->where('user_id', $user->id)->where('active', true)->count()
+            : 0;
+
+        $savingsGoalCount = Schema::hasTable('savings_goals')
+            ? DB::table('savings_goals')->where('user_id', $user->id)->count()
+            : 0;
+
+        $guidance = [];
+        if (! $verifiedKyc) {
+            $guidance[] = $this->guidance('VERIFY_IDENTITY', 'Verify your identity', 'A verified identity helps you use regulated financial services safely.');
+        }
+        if ($budgetCount === 0) {
+            $guidance[] = $this->guidance('CREATE_BUDGET', 'Create a simple budget', 'Start with what comes in, essential commitments and what remains.');
+        }
+        if ((int) ($profile?->total_outstanding_minor ?? 0) > 0 || $activeLoans > 0) {
+            $guidance[] = $this->guidance('PLAN_REPAYMENT', 'Plan your next repayment', 'Review what is due before taking on another commitment.');
+        }
+        if ($savingsGoalCount === 0) {
+            $guidance[] = $this->guidance('START_SAVINGS_GOAL', 'Set a savings goal', 'A small regular target can strengthen your financial resilience.');
+        }
+        if ($clearedLoans === 0 && $verifiedKyc) {
+            $guidance[] = $this->guidance('BUILD_REPUTATION', 'Build your financial reputation', 'Good repayment behaviour can create a useful formal track record over time.');
+        }
+
+        return [
+            'financial_reputation' => $this->reputation($user),
+            'financial_position' => [
+                'amount_due_minor' => (int) ($profile?->amount_due_minor ?? 0),
+                'total_outstanding_minor' => (int) ($profile?->total_outstanding_minor ?? 0),
+                'available_to_borrow_minor' => (int) ($profile?->available_to_borrow_minor ?? 0),
+                'next_due_date' => $profile?->next_due_date?->toDateString(),
+            ],
+            'guidance' => $guidance,
+            'guidance_version' => 'inclusive-finance-v1',
+            'principle' => 'Capability guidance is educational and contextual. It does not override affordability, eligibility or regulated product controls.',
+        ];
+    }
+
+    public function recordCapabilityEvent(User $user, array $data): array
+    {
+        $id = DB::table('financial_capability_events')->insertGetId([
+            'user_id' => $user->id,
+            'financial_space_id' => $data['financial_space_id'] ?? null,
+            'event_type' => $data['event_type'],
+            'intervention_code' => $data['intervention_code'] ?? null,
+            'context' => isset($data['context']) ? json_encode($data['context']) : null,
+            'outcome' => isset($data['outcome']) ? json_encode($data['outcome']) : null,
+            'guidance_version' => $data['guidance_version'] ?? 'inclusive-finance-v1',
+            'occurred_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return ['id' => $id, 'recorded' => true];
+    }
+
+    public function reputation(User $user): array
+    {
+        $verifiedKyc = KycCase::query()
+            ->where('user_id', $user->id)
+            ->where('status', KycCase::STATUS_VERIFIED)
+            ->exists();
+
+        $clearedLoans = Loan::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where('status', 'Cleared')
+            ->count();
+
+        $profile = CreditProfile::query()->where('user_id', $user->id)->first();
+        $positiveReports = Schema::hasTable('credit_information_reports')
+            ? DB::table('credit_information_reports')
+                ->where('user_id', $user->id)
+                ->where('status', 'submitted')
+                ->whereIn('event_type', ['origination', 'repayment', 'closure'])
+                ->count()
+            : 0;
+
+        if (! $verifiedKyc) {
+            $stage = 'identity_building';
+        } elseif ($clearedLoans === 0) {
+            $stage = 'starter';
+        } elseif ($clearedLoans < 3) {
+            $stage = 'building';
+        } else {
+            $stage = 'established';
+        }
+
+        return [
+            'stage' => $stage,
+            'cleared_loans' => $clearedLoans,
+            'positive_credit_reports_submitted' => $positiveReports,
+            'profile_status' => $profile?->status ?? 'not_ready',
+            'model' => 'reputation-pathway-v1',
+            'is_credit_score' => false,
+            'explanation' => 'This is a progress pathway built from verified identity and actual financial behaviour. It is not a replacement credit score.',
+        ];
+    }
+
+    public function signals(User $user): array
+    {
+        return [
+            'signals' => DB::table('alternative_data_signals')
+                ->where('user_id', $user->id)
+                ->orderByDesc('observed_at')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn ($signal) => $this->signalPayload($signal))
+                ->values(),
+            'measurement_only_keys' => self::MEASUREMENT_ONLY_KEYS,
+            'governance' => 'Customer-submitted signals are not risk eligible. Verified provider signals require active credit-processing consent and an approved scoring policy before they may influence underwriting.',
+        ];
+    }
+
+    public function storeUserSignal(User $user, array $data): array
+    {
+        $id = DB::table('alternative_data_signals')->insertGetId([
+            'user_id' => $user->id,
+            'financial_space_id' => $data['financial_space_id'] ?? null,
+            'source_type' => 'user_reported',
+            'signal_key' => $data['signal_key'],
+            'signal_value' => json_encode($data['signal_value']),
+            'purpose' => $data['purpose'],
+            'consent_record_id' => null,
+            'risk_eligible' => false,
+            'verified' => false,
+            'provider_reference' => null,
+            'provenance' => json_encode(['submitted_by' => 'customer', 'channel' => $data['channel'] ?? 'app']),
+            'observed_at' => now(),
+            'expires_at' => $data['expires_at'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $this->signalPayload(DB::table('alternative_data_signals')->find($id));
+    }
+
+    public function ingestProviderSignal(array $data, User $actor): array
+    {
+        if (in_array($data['source_type'], ['user_reported', 'programme_measurement'], true)) {
+            throw new InvalidArgumentException('Provider signal ingestion requires an independently verifiable source.');
+        }
+
+        $id = DB::table('alternative_data_signals')->insertGetId([
+            'user_id' => $data['user_id'],
+            'financial_space_id' => $data['financial_space_id'] ?? null,
+            'source_type' => $data['source_type'],
+            'signal_key' => $data['signal_key'],
+            'signal_value' => json_encode($data['signal_value']),
+            'purpose' => $data['purpose'] ?? 'credit_assessment',
+            'consent_record_id' => $data['consent_record_id'] ?? null,
+            'risk_eligible' => false,
+            'verified' => false,
+            'provider_reference' => $data['provider_reference'],
+            'provenance' => json_encode(array_merge(
+                (array) ($data['provenance'] ?? []),
+                ['ingested_by_user_id' => $actor->id],
+            )),
+            'observed_at' => $data['observed_at'] ?? now(),
+            'expires_at' => $data['expires_at'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $this->signalPayload(DB::table('alternative_data_signals')->find($id));
+    }
+
+    public function verifySignal(int $signalId, bool $riskEligible, User $actor): array
+    {
+        return DB::transaction(function () use ($signalId, $riskEligible, $actor) {
+            $signal = DB::table('alternative_data_signals')->where('id', $signalId)->lockForUpdate()->first();
+            if (! $signal) {
+                throw new InvalidArgumentException('Alternative-data signal not found.');
+            }
+
+            if ($riskEligible) {
+                if (in_array($signal->signal_key, self::MEASUREMENT_ONLY_KEYS, true)) {
+                    throw new InvalidArgumentException('Voluntary inclusion and programme-measurement attributes can never be marked as credit-risk inputs.');
+                }
+                if ($signal->source_type === 'user_reported' || ! $signal->provider_reference) {
+                    throw new InvalidArgumentException('Risk-eligible signals require independently verifiable provider provenance.');
+                }
+
+                $consent = ConsentRecord::query()
+                    ->where('user_id', $signal->user_id)
+                    ->where('purpose', ConsentRecord::PURPOSE_CREDIT_PROCESSING)
+                    ->where('status', ConsentRecord::STATUS_GRANTED)
+                    ->latest('granted_at')
+                    ->first();
+
+                if (! $consent) {
+                    throw new InvalidArgumentException('Active credit-processing consent is required before a signal can be marked risk eligible.');
+                }
+            }
+
+            $provenance = $this->json($signal->provenance);
+            $provenance['verified_by_user_id'] = $actor->id;
+            $provenance['verified_at'] = now()->toIso8601String();
+
+            DB::table('alternative_data_signals')->where('id', $signalId)->update([
+                'verified' => true,
+                'risk_eligible' => $riskEligible,
+                'consent_record_id' => $riskEligible ? ($consent?->id ?? $signal->consent_record_id) : $signal->consent_record_id,
+                'provenance' => json_encode($provenance),
+                'updated_at' => now(),
+            ]);
+
+            return $this->signalPayload(DB::table('alternative_data_signals')->find($signalId));
+        });
+    }
+
+    public function programmes(): array
+    {
+        $programmes = DB::table('inclusive_finance_programmes')
+            ->where('status', 'active')
+            ->where(function ($query) {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+            })
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($programme) => $this->programmePayload($programme))
+            ->values();
+
+        return [
+            'programmes' => $programmes,
+            'targeting_notice' => 'Target-population fields support outreach, eligibility and reporting. They are not credit-risk variables.',
+        ];
+    }
+
+    public function createProgramme(array $data): array
+    {
+        $id = DB::table('inclusive_finance_programmes')->insertGetId([
+            'code' => strtoupper(trim($data['code'])),
+            'name' => $data['name'],
+            'sponsor_space_id' => $data['sponsor_space_id'] ?? null,
+            'partner_id' => $data['partner_id'] ?? null,
+            'status' => $data['status'] ?? 'draft',
+            'target_population' => isset($data['target_population']) ? json_encode($data['target_population']) : null,
+            'eligibility_rules' => isset($data['eligibility_rules']) ? json_encode($data['eligibility_rules']) : null,
+            'product_config' => isset($data['product_config']) ? json_encode($data['product_config']) : null,
+            'reporting_config' => isset($data['reporting_config']) ? json_encode($data['reporting_config']) : null,
+            'starts_at' => $data['starts_at'] ?? null,
+            'ends_at' => $data['ends_at'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $this->programmePayload(DB::table('inclusive_finance_programmes')->find($id));
+    }
+
+    public function updateProgramme(int $programmeId, array $data): array
+    {
+        $programme = DB::table('inclusive_finance_programmes')->find($programmeId);
+        if (! $programme) {
+            throw new InvalidArgumentException('Inclusive-finance programme not found.');
+        }
+
+        $update = ['updated_at' => now()];
+        foreach (['name', 'sponsor_space_id', 'partner_id', 'status', 'starts_at', 'ends_at'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $update[$field] = $data[$field];
+            }
+        }
+        foreach (['target_population', 'eligibility_rules', 'product_config', 'reporting_config'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $update[$field] = $data[$field] === null ? null : json_encode($data[$field]);
+            }
+        }
+
+        DB::table('inclusive_finance_programmes')->where('id', $programmeId)->update($update);
+
+        return $this->programmePayload(DB::table('inclusive_finance_programmes')->find($programmeId));
+    }
+
+    public function enrol(User $user, int $programmeId, array $data): array
+    {
+        $programme = DB::table('inclusive_finance_programmes')
+            ->where('id', $programmeId)
+            ->where('status', 'active')
+            ->first();
+        if (! $programme) {
+            throw new InvalidArgumentException('This programme is not open for enrolment.');
+        }
+
+        return DB::transaction(function () use ($user, $programme, $data) {
+            $existing = DB::table('inclusive_finance_enrolments')
+                ->where('programme_id', $programme->id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            DB::table('inclusive_finance_enrolments')->updateOrInsert(
+                ['programme_id' => $programme->id, 'user_id' => $user->id],
+                [
+                    'financial_space_id' => $data['financial_space_id'] ?? null,
+                    'status' => 'enrolled',
+                    'eligibility_evidence' => isset($data['eligibility_evidence']) ? json_encode($data['eligibility_evidence']) : null,
+                    'enrolled_at' => $existing?->enrolled_at ?? now(),
+                    'exited_at' => null,
+                    'created_at' => $existing?->created_at ?? now(),
+                    'updated_at' => now(),
+                ],
+            );
+
+            $enrolment = DB::table('inclusive_finance_enrolments')
+                ->where('programme_id', $programme->id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            DB::table('impact_events')->insert([
+                'programme_id' => $programme->id,
+                'enrolment_id' => $enrolment->id,
+                'user_id' => $user->id,
+                'financial_space_id' => $enrolment->financial_space_id,
+                'event_type' => 'programme_enrolled',
+                'outcome_code' => 'enrolled',
+                'numeric_value' => null,
+                'metadata' => json_encode(['source' => 'customer_enrolment']),
+                'occurred_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return [
+                'enrolment' => $enrolment,
+                'programme' => $this->programmePayload($programme),
+                'measurement_consent' => $this->profile($user)['programme_measurement_consent'],
+            ];
+        });
+    }
+
+    public function supportInstruments(User $user): array
+    {
+        return [
+            'instruments' => DB::table('credit_support_instruments')
+                ->where('user_id', $user->id)
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn ($instrument) => $this->instrumentPayload($instrument))
+                ->values(),
+            'supported_types' => self::SUPPORT_INSTRUMENT_TYPES,
+            'notice' => 'Recording evidence does not itself change credit eligibility. A product policy must explicitly recognise a verified support instrument.',
+        ];
+    }
+
+    public function storeSupportInstrument(User $user, array $data): array
+    {
+        $id = DB::table('credit_support_instruments')->insertGetId([
+            'user_id' => $user->id,
+            'financial_space_id' => $data['financial_space_id'] ?? null,
+            'loan_application_id' => $data['loan_application_id'] ?? null,
+            'instrument_type' => $data['instrument_type'],
+            'provider_name' => $data['provider_name'] ?? null,
+            'external_reference' => $data['external_reference'] ?? null,
+            'value_minor' => $data['value_minor'] ?? null,
+            'currency' => strtoupper($data['currency'] ?? 'UGX'),
+            'verification_status' => 'pending',
+            'evidence' => isset($data['evidence']) ? json_encode($data['evidence']) : null,
+            'verified_by' => null,
+            'verified_at' => null,
+            'expires_at' => $data['expires_at'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $this->instrumentPayload(DB::table('credit_support_instruments')->find($id));
+    }
+
+    public function verifySupportInstrument(int $instrumentId, string $status, User $actor): array
+    {
+        if (! in_array($status, ['verified', 'rejected'], true)) {
+            throw new InvalidArgumentException('Verification status must be verified or rejected.');
+        }
+
+        $instrument = DB::table('credit_support_instruments')->find($instrumentId);
+        if (! $instrument) {
+            throw new InvalidArgumentException('Credit-support instrument not found.');
+        }
+
+        if ($status === 'verified' && in_array($instrument->instrument_type, ['warehouse_receipt', 'receivable', 'asset_evidence'], true)) {
+            if (! $instrument->provider_name || ! $instrument->external_reference) {
+                throw new InvalidArgumentException('Externally evidenced collateral requires a provider name and reference before verification.');
+            }
+        }
+
+        DB::table('credit_support_instruments')->where('id', $instrumentId)->update([
+            'verification_status' => $status,
+            'verified_by' => $actor->id,
+            'verified_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $this->instrumentPayload(DB::table('credit_support_instruments')->find($instrumentId));
+    }
+
+    public function fairTreatment(User $user): array
+    {
+        $decision = Schema::hasTable('credit_decisions')
+            ? DB::table('credit_decisions')->where('user_id', $user->id)->orderByDesc('id')->first()
+            : null;
+
+        return [
+            'latest_decision' => $decision ? [
+                'id' => $decision->id,
+                'status' => $decision->status,
+                'reason_codes' => $this->json($decision->reason_codes),
+                'policy_version' => $decision->policy_version,
+                'decision_summary' => $decision->decision_summary,
+            ] : null,
+            'protected_or_measurement_attributes_used' => false,
+            'measurement_only_fields' => self::MEASUREMENT_ONLY_KEYS,
+            'explanation' => 'Inclusion attributes are stored outside the credit-decision inputs. Credit decisions use verified identity, consented credit data, approved scoring inputs, profile limits and affordability controls.',
+        ];
+    }
+
+    public function assessApplication(int $applicationId): array
+    {
+        $application = DB::table('loan_applications')->find($applicationId);
+        if (! $application) {
+            throw new InvalidArgumentException('Loan application not found.');
+        }
+
+        $decision = Schema::hasTable('credit_decisions')
+            ? DB::table('credit_decisions')->where('loan_application_id', $applicationId)->first()
+            : null;
+        $reasons = $decision ? $this->json($decision->reason_codes) : [];
+
+        $forbiddenMarkers = ['GENDER', 'DISABILITY', 'REFUGEE', 'RURAL_URBAN', 'AGE_COHORT'];
+        $forbiddenUsed = collect($reasons)->contains(function ($reason) use ($forbiddenMarkers) {
+            $upper = strtoupper((string) $reason);
+            return collect($forbiddenMarkers)->contains(fn ($marker) => str_contains($upper, $marker));
+        });
+
+        $status = $forbiddenUsed ? 'failed' : ($decision && $reasons !== [] ? 'passed' : 'review');
+        $assessmentReasons = array_values(array_filter([
+            $forbiddenUsed ? 'MEASUREMENT_ATTRIBUTE_FOUND_IN_DECISION_REASON' : 'MEASUREMENT_ATTRIBUTES_EXCLUDED',
+            ! $decision ? 'DECISION_NOT_AVAILABLE' : null,
+            $decision && $reasons === [] ? 'DECISION_REASON_CODES_MISSING' : null,
+        ]));
+
+        $id = DB::table('fair_treatment_assessments')->insertGetId([
+            'user_id' => $application->user_id,
+            'loan_application_id' => $applicationId,
+            'credit_decision_id' => $decision?->id,
+            'assessment_type' => 'decision_review',
+            'status' => $status,
+            'reason_codes' => json_encode($assessmentReasons),
+            'metrics' => json_encode([
+                'decision_status' => $decision?->status,
+                'reason_code_count' => count($reasons),
+                'protected_attribute_inputs' => [],
+            ]),
+            'policy_version' => 'fair-treatment-v1',
+            'assessed_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return [
+            'assessment_id' => $id,
+            'status' => $status,
+            'reason_codes' => $assessmentReasons,
+            'credit_decision_id' => $decision?->id,
+        ];
+    }
+
+    public function impactSummary(?int $programmeId = null): array
+    {
+        $enrolmentsQuery = DB::table('inclusive_finance_enrolments')->where('status', 'enrolled');
+        if ($programmeId !== null) {
+            $enrolmentsQuery->where('programme_id', $programmeId);
+        }
+        $enrolments = $enrolmentsQuery->get();
+        $userIds = $enrolments->pluck('user_id')->unique()->values()->all();
+
+        $decisionCounts = [];
+        $applications = 0;
+        $nplCount = 0;
+        $averageApproved = 0;
+
+        if ($userIds !== []) {
+            $applications = DB::table('loan_applications')->whereIn('user_id', $userIds)->count();
+
+            if (Schema::hasTable('credit_decisions')) {
+                $decisionCounts = DB::table('credit_decisions')
+                    ->whereIn('user_id', $userIds)
+                    ->select('status', DB::raw('COUNT(*) as total'))
+                    ->groupBy('status')
+                    ->pluck('total', 'status')
+                    ->map(fn ($value) => (int) $value)
+                    ->all();
+                $averageApproved = (int) round((float) DB::table('credit_decisions')
+                    ->whereIn('user_id', $userIds)
+                    ->where('status', 'approved')
+                    ->avg('approved_amount_minor'));
+            }
+
+            if (Schema::hasTable('loans') && Schema::hasColumn('loans', 'non_performing_at')) {
+                $nplCount = DB::table('loans')->whereIn('user_id', $userIds)->whereNotNull('non_performing_at')->count();
+            }
+        }
+
+        $eventQuery = DB::table('impact_events');
+        if ($programmeId !== null) {
+            $eventQuery->where('programme_id', $programmeId);
+        }
+        $eventCounts = $eventQuery
+            ->select('event_type', DB::raw('COUNT(*) as total'))
+            ->groupBy('event_type')
+            ->pluck('total', 'event_type')
+            ->map(fn ($value) => (int) $value)
+            ->all();
+
+        return [
+            'programme_id' => $programmeId,
+            'enrolled_people' => count($userIds),
+            'applications' => $applications,
+            'decisions' => $decisionCounts,
+            'average_approved_amount_minor' => $averageApproved,
+            'npl_count' => $nplCount,
+            'impact_events' => $eventCounts,
+            'cohorts' => $this->cohortSummary($userIds),
+            'privacy' => [
+                'minimum_cohort_size' => 5,
+                'small_cohorts_suppressed' => true,
+                'only_consented_measurement_profiles_included' => true,
+            ],
+        ];
+    }
+
+    private function cohortSummary(array $userIds): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+
+        $counts = [];
+        $profiles = DB::table('inclusive_finance_profiles')
+            ->whereIn('user_id', $userIds)
+            ->where('programme_measurement_consent', true)
+            ->get();
+
+        foreach ($profiles as $profile) {
+            foreach ($this->json($profile->measurement_attributes) as $key => $value) {
+                if (! in_array($key, self::MEASUREMENT_ONLY_KEYS, true) || is_array($value) || is_object($value)) {
+                    continue;
+                }
+                $label = is_bool($value) ? ($value ? 'yes' : 'no') : trim((string) $value);
+                if ($label === '') {
+                    continue;
+                }
+                $counts[$key][$label] = ($counts[$key][$label] ?? 0) + 1;
+            }
+        }
+
+        $result = [];
+        foreach ($counts as $key => $groups) {
+            foreach ($groups as $label => $count) {
+                if ($count >= 5) {
+                    $result[$key][$label] = $count;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    private function filterMeasurementAttributes(array $attributes): array
+    {
+        return collect($attributes)
+            ->only(self::MEASUREMENT_ONLY_KEYS)
+            ->reject(fn ($value) => $value === null || $value === '')
+            ->all();
+    }
+
+    private function programmePayload(object $programme): array
+    {
+        return [
+            'id' => $programme->id,
+            'code' => $programme->code,
+            'name' => $programme->name,
+            'sponsor_space_id' => $programme->sponsor_space_id,
+            'partner_id' => $programme->partner_id,
+            'status' => $programme->status,
+            'target_population' => $this->json($programme->target_population),
+            'eligibility_rules' => $this->json($programme->eligibility_rules),
+            'product_config' => $this->json($programme->product_config),
+            'reporting_config' => $this->json($programme->reporting_config),
+            'starts_at' => $programme->starts_at,
+            'ends_at' => $programme->ends_at,
+        ];
+    }
+
+    private function signalPayload(object $signal): array
+    {
+        return [
+            'id' => $signal->id,
+            'user_id' => $signal->user_id,
+            'financial_space_id' => $signal->financial_space_id,
+            'source_type' => $signal->source_type,
+            'signal_key' => $signal->signal_key,
+            'signal_value' => $this->jsonValue($signal->signal_value),
+            'purpose' => $signal->purpose,
+            'risk_eligible' => (bool) $signal->risk_eligible,
+            'verified' => (bool) $signal->verified,
+            'provider_reference' => $signal->provider_reference,
+            'provenance' => $this->json($signal->provenance),
+            'observed_at' => $signal->observed_at,
+            'expires_at' => $signal->expires_at,
+        ];
+    }
+
+    private function instrumentPayload(object $instrument): array
+    {
+        return [
+            'id' => $instrument->id,
+            'financial_space_id' => $instrument->financial_space_id,
+            'loan_application_id' => $instrument->loan_application_id,
+            'instrument_type' => $instrument->instrument_type,
+            'provider_name' => $instrument->provider_name,
+            'external_reference' => $instrument->external_reference,
+            'value_minor' => $instrument->value_minor === null ? null : (int) $instrument->value_minor,
+            'currency' => $instrument->currency,
+            'verification_status' => $instrument->verification_status,
+            'evidence' => $this->json($instrument->evidence),
+            'verified_at' => $instrument->verified_at,
+            'expires_at' => $instrument->expires_at,
+        ];
+    }
+
+    private function guidance(string $code, string $title, string $text): array
+    {
+        return ['code' => $code, 'title' => $title, 'text' => $text];
+    }
+
+    private function json(?string $value): array
+    {
+        if (! $value) {
+            return [];
+        }
+
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function jsonValue(?string $value): mixed
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return json_decode($value, true);
+    }
+}
