@@ -788,6 +788,17 @@ class InclusiveFinanceService
             ->map(fn ($value) => (int) $value)
             ->all();
 
+        $capabilityEventCounts = [];
+        if ($userIds !== []) {
+            $capabilityEventCounts = DB::table('financial_capability_events')
+                ->whereIn('user_id', $userIds)
+                ->select('event_type', DB::raw('COUNT(*) as total'))
+                ->groupBy('event_type')
+                ->pluck('total', 'event_type')
+                ->map(fn ($value) => (int) $value)
+                ->all();
+        }
+
         return [
             'programme_id' => $programmeId,
             'enrolled_people' => count($userIds),
