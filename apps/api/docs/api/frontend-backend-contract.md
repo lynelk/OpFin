@@ -151,3 +151,32 @@ Permission, entitlement and eligibility are distinct server-side gates. A visibl
 ## 12. Channel contract
 
 Individuals and Savings Groups must be able to complete normal journeys in the Flutter App. Web consumes the same server-authoritative Space state and adds analysis/productivity/institutional workspace depth. USSD/WhatsApp/assisted channels must not invent separate financial truth.
+
+
+## 13. Inclusive-finance and programme-delivery contract
+
+The mobile and web clients may use the inclusive-finance API as an additional resilience/programme surface. It does **not** replace the server-authoritative credit profile, decision, offer or payment contracts above.
+
+Customer routes:
+
+- `GET/PATCH /api/inclusive-finance/profile` for optional programme-measurement consent, voluntary inclusion attributes and service preferences;
+- `GET /api/inclusive-finance/capability` for contextual guidance based on existing financial truth;
+- `POST /api/inclusive-finance/capability/events` for intervention/outcome evidence;
+- `GET /api/inclusive-finance/reputation` for the non-score financial-reputation pathway;
+- `GET/POST /api/inclusive-finance/signals` for customer-reported, non-risk signals;
+- `GET /api/inclusive-finance/programmes` and `POST /api/inclusive-finance/programmes/{programme}/enrol` for programme discovery and enrolment;
+- `GET/POST /api/inclusive-finance/support-instruments` for alternative credit-support evidence; and
+- `GET /api/inclusive-finance/fair-treatment` for the documented decision boundary.
+
+Client rules:
+
+- voluntary programme-measurement fields are never presented as credit-score components;
+- withdrawal of programme-measurement consent clears the stored voluntary attributes while retaining grant/withdrawal timestamps for audit evidence;
+- customer-submitted alternative-data signals are never risk eligible;
+- provider-supplied signals are not exposed as approved scoring inputs merely because an operator verifies their provenance;
+- verified warehouse receipts, guarantees or other support evidence do not automatically change eligibility, limit, price or approval;
+- programme eligibility and credit eligibility are separate concepts;
+- an automated fair-treatment reason-code review is evidence of that review scope only and must not be presented as certification of an external model/provider's fairness;
+- high-contrast mode is an accessibility preference, not a claim of physical-device certification.
+
+**OpFin/Stolets boundary:** Stolets remains a separate SME automation, digitisation and commerce product. A future Stolets-derived signal can enter OpFin only through an explicit, consented and governed provider interface. Clients must not merge the products, databases or user journeys.
