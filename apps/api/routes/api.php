@@ -100,6 +100,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/inclusive-finance/signals', [InclusiveFinanceController::class, 'storeSignal']);
     Route::get('/inclusive-finance/programmes', [InclusiveFinanceController::class, 'programmes']);
     Route::post('/inclusive-finance/programmes/{programme}/enrol', [InclusiveFinanceController::class, 'enrol']);
+    Route::delete('/inclusive-finance/programmes/{programme}/enrol', [InclusiveFinanceController::class, 'exitProgramme']);
     Route::get('/inclusive-finance/support-instruments', [InclusiveFinanceController::class, 'supportInstruments']);
     Route::post('/inclusive-finance/support-instruments', [InclusiveFinanceController::class, 'storeSupportInstrument']);
     Route::get('/inclusive-finance/fair-treatment', [InclusiveFinanceController::class, 'fairTreatment']);
