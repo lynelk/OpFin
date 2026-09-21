@@ -1,3 +1,5 @@
+import { classifyStatus, OpfinApiError } from "./errors";
+
 export type ProgrammeEligibilityRule = {
   field: string;
   operator: "equals" | "in";
@@ -71,23 +73,39 @@ async function request<T>(
 ): Promise<T> {
   const baseUrl = process.env.NEXT_PUBLIC_OPFIN_API_URL;
   if (!baseUrl) {
-    throw new Error("OpFin API base URL is not configured.");
+    throw new OpfinApiError("server", "OpFin API base URL is not configured.");
   }
 
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers
-    },
-    cache: "no-store"
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers
+      },
+      cache: "no-store"
+    });
+  } catch (error) {
+    throw new OpfinApiError(
+      "network",
+      error instanceof Error ? error.message : "OpFin API is unreachable"
+    );
+  }
 
-  const payload = (await response.json().catch(() => ({}))) as Partial<ApiEnvelope<T>> & { message?: string };
-  if (!response.ok || payload.success !== true || !payload.data) {
-    throw new Error(payload.message ?? `OpFin API request failed: ${response.status}`);
+  const payload = (await response.json().catch(() => ({}))) as Partial<ApiEnvelope<T>> & {
+    message?: string;
+    errors?: Record<string, string[]>;
+  };
+  if (!response.ok || payload.success !== true || payload.data === undefined) {
+    throw new OpfinApiError(
+      classifyStatus(response.status),
+      payload.message ?? `OpFin API request failed: ${response.status}`,
+      response.status,
+      payload.errors ?? {}
+    );
   }
 
   return payload.data;
