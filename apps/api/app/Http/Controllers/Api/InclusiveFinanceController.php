@@ -36,6 +36,8 @@ class InclusiveFinanceController extends Controller
             'measurement_attributes.employment_category' => ['nullable', Rule::in(['salaried', 'self_employed', 'informal_worker', 'student', 'not_currently_employed', 'other', 'prefer_not_to_say'])],
             'measurement_attributes.first_time_formal_borrower' => ['nullable', 'boolean'],
             'service_preferences' => ['sometimes', 'array'],
+            'service_preferences.assisted_onboarding' => ['nullable', 'boolean'],
+            'service_preferences.preferred_support_channel' => ['nullable', Rule::in(['in_app', 'phone', 'sms', 'whatsapp', 'email'])],
         ]);
 
         return $this->audited(
