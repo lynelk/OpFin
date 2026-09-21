@@ -26,7 +26,7 @@ class InclusiveFinanceFoundationTest extends TestCase
             'programme_measurement_consent' => true,
             'measurement_attributes' => [
                 'gender' => 'female',
-                'disability_status' => 'uses_assistive_technology',
+                'disability_status' => 'person_with_disability',
             ],
         ])->assertOk()
             ->assertJsonPath('data.programme_measurement_consent', true)
@@ -110,7 +110,7 @@ class InclusiveFinanceFoundationTest extends TestCase
         Sanctum::actingAs($customer);
         $this->patchJson('/api/inclusive-finance/profile', [
             'programme_measurement_consent' => true,
-            'measurement_attributes' => ['age_cohort' => '18-35'],
+            'measurement_attributes' => ['age_cohort' => '18_24'],
         ])->assertOk();
         $this->postJson('/api/inclusive-finance/programmes/'.$programmeId.'/enrol', [])
             ->assertCreated()
@@ -151,6 +151,63 @@ class InclusiveFinanceFoundationTest extends TestCase
             'id' => $instrumentId,
             'verification_status' => 'verified',
         ]);
+    }
+
+    public function test_customer_cannot_attach_inclusion_evidence_to_another_financial_space(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+        $spaceId = $this->postJson('/api/financial-spaces', [
+            'type' => 'savings_group',
+            'name' => 'Protected Group',
+        ])->assertCreated()->json('data.space.id');
+
+        $outsider = User::factory()->create();
+        Sanctum::actingAs($outsider);
+
+        $this->postJson('/api/inclusive-finance/capability/events', [
+            'financial_space_id' => $spaceId,
+            'event_type' => 'education_viewed',
+        ])->assertStatus(422);
+
+        $this->postJson('/api/inclusive-finance/support-instruments', [
+            'financial_space_id' => $spaceId,
+            'instrument_type' => 'group_guarantee',
+        ])->assertStatus(422);
+    }
+
+    public function test_repeat_programme_enrolment_is_idempotent_and_capability_events_are_reported_after_enrolment(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+        $programmeId = $this->postJson('/api/admin/inclusive-finance/programmes', [
+            'code' => 'BIFS-CAPABILITY-01',
+            'name' => 'Capability Pilot',
+            'status' => 'active',
+        ])->assertCreated()->json('data.id');
+
+        $customer = User::factory()->create();
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/inclusive-finance/programmes/'.$programmeId.'/enrol', [])->assertCreated();
+        $this->postJson('/api/inclusive-finance/programmes/'.$programmeId.'/enrol', [])->assertCreated();
+        $this->postJson('/api/inclusive-finance/capability/events', [
+            'event_type' => 'education_viewed',
+            'intervention_code' => 'BUDGET_BASICS',
+        ])->assertCreated();
+
+        $this->assertSame(
+            1,
+            DB::table('impact_events')
+                ->where('programme_id', $programmeId)
+                ->where('user_id', $customer->id)
+                ->where('event_type', 'programme_enrolled')
+                ->count()
+        );
+
+        Sanctum::actingAs($admin);
+        $this->getJson('/api/admin/inclusive-finance/impact?programme_id='.$programmeId)
+            ->assertOk()
+            ->assertJsonPath('data.participant_capability_events.education_viewed', 1);
     }
 
     public function test_fair_treatment_view_explicitly_excludes_programme_measurement_attributes(): void
