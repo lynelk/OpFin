@@ -25,7 +25,7 @@ This file is an implementation evidence index. A capability is only marked compl
 - Financial-capability guidance and intervention/outcome event evidence.
 - Financial-reputation pathway built from verified identity and actual repayment/reporting behaviour without creating a second credit score.
 - Alternative-data signal registry with provenance, verification, consent and risk-eligibility gates.
-- Configurable inclusive-finance programmes and customer enrolment linked to existing Financial Spaces/partners.
+- Configurable inclusive-finance programmes with customer enrolment, voluntary idempotent exit and deterministic enrolment-to-exit impact windows linked to existing Financial Spaces/partners.
 - Alternative credit-support evidence for salary undertakings, guarantees, savings pledges, receivables, warehouse receipts and related instruments.
 - Fair-treatment assessment evidence and customer-facing explanation of decision boundaries.
 - Aggregate impact reporting using system-of-record outcomes and five-person minimum cohort suppression.
