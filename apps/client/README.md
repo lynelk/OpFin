@@ -68,6 +68,8 @@ Home now exposes **Build financial resilience**. The mobile experience includes:
 
 Programme measurement is optional and is never required to borrow or manage money. Withdrawing measurement consent clears stored voluntary inclusion attributes. Credit-support evidence must be verified and recognised by the relevant product policy before it can affect a financial product.
 
+Customers can also leave an enrolled inclusive-finance programme from the Financial Resilience surface. Exit is explicit and keeps historical evidence only through the recorded exit time; the client does not silently re-enrol an exited participation.
+
 Stolets remains a separate SME automation/digitisation product. The OpFin mobile app does not absorb POS, inventory or merchant-operation journeys merely because an approved external business signal may later be consumed with customer consent.
 
 ## Accessibility
