@@ -127,8 +127,8 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
                     decoration: const InputDecoration(labelText: 'Age group'),
                     items: const [
                       DropdownMenuItem(value: '18_24', child: Text('18–24')),
-                      DropdownMenuItem(value: '25_34', child: Text('25–34')),
-                      DropdownMenuItem(value: '35_44', child: Text('35–44')),
+                      DropdownMenuItem(value: '25_35', child: Text('25–35')),
+                      DropdownMenuItem(value: '36_44', child: Text('36–44')),
                       DropdownMenuItem(value: '45_54', child: Text('45–54')),
                       DropdownMenuItem(value: '55_plus', child: Text('55+')),
                       DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
