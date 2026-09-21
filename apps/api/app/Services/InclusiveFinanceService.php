@@ -535,6 +535,10 @@ class InclusiveFinanceService
                 ->where('user_id', $user->id)
                 ->first();
 
+            if ($existing?->status === 'exited') {
+                throw new InvalidArgumentException('This programme participation has already ended. Contact support or programme operations if re-enrolment is required.');
+            }
+
             DB::table('inclusive_finance_enrolments')->updateOrInsert(
                 ['programme_id' => $programme->id, 'user_id' => $user->id],
                 [
@@ -575,6 +579,63 @@ class InclusiveFinanceService
             return [
                 'enrolment' => $enrolment,
                 'programme' => $this->customerProgrammePayload($programme, 'enrolled', $eligibility),
+                'measurement_consent' => $this->profile($user)['programme_measurement_consent'],
+            ];
+        });
+    }
+
+    public function exitProgramme(User $user, int $programmeId): array
+    {
+        return DB::transaction(function () use ($user, $programmeId) {
+            $programme = DB::table('inclusive_finance_programmes')->find($programmeId);
+            if (! $programme) {
+                throw new InvalidArgumentException('Inclusive-finance programme not found.');
+            }
+
+            $enrolment = DB::table('inclusive_finance_enrolments')
+                ->where('programme_id', $programmeId)
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $enrolment) {
+                throw new InvalidArgumentException('This customer is not enrolled in the selected programme.');
+            }
+
+            if ($enrolment->status !== 'exited') {
+                $exitedAt = now();
+                DB::table('inclusive_finance_enrolments')
+                    ->where('id', $enrolment->id)
+                    ->update([
+                        'status' => 'exited',
+                        'exited_at' => $exitedAt,
+                        'updated_at' => $exitedAt,
+                    ]);
+
+                DB::table('impact_events')->insert([
+                    'programme_id' => $programmeId,
+                    'enrolment_id' => $enrolment->id,
+                    'user_id' => $user->id,
+                    'financial_space_id' => $enrolment->financial_space_id,
+                    'event_type' => 'programme_exited',
+                    'outcome_code' => 'customer_exit',
+                    'numeric_value' => null,
+                    'metadata' => json_encode(['source' => 'customer_exit']),
+                    'occurred_at' => $exitedAt,
+                    'created_at' => $exitedAt,
+                    'updated_at' => $exitedAt,
+                ]);
+
+                $enrolment = DB::table('inclusive_finance_enrolments')->find($enrolment->id);
+            }
+
+            return [
+                'enrolment' => $enrolment,
+                'programme' => $this->customerProgrammePayload(
+                    $programme,
+                    'exited',
+                    $this->programmeEligibility($user, $programme),
+                ),
                 'measurement_consent' => $this->profile($user)['programme_measurement_consent'],
             ];
         });
@@ -740,7 +801,7 @@ class InclusiveFinanceService
 
     public function impactSummary(?int $programmeId = null): array
     {
-        $enrolmentsQuery = DB::table('inclusive_finance_enrolments')->where('status', 'enrolled');
+        $enrolmentsQuery = DB::table('inclusive_finance_enrolments')->whereIn('status', ['enrolled', 'exited']);
         if ($programmeId !== null) {
             $enrolmentsQuery->where('programme_id', $programmeId);
         }
@@ -757,7 +818,7 @@ class InclusiveFinanceService
         if ($userIds !== []) {
             $applicationIds = DB::table('loan_applications as applications')
                 ->join('inclusive_finance_enrolments as enrolments', 'enrolments.user_id', '=', 'applications.user_id')
-                ->where('enrolments.status', 'enrolled')
+                ->whereIn('enrolments.status', ['enrolled', 'exited'])
                 ->when($programmeId !== null, fn ($query) => $query->where('enrolments.programme_id', $programmeId))
                 ->where(function ($query) {
                     $query->whereNull('enrolments.enrolled_at')
@@ -803,7 +864,7 @@ class InclusiveFinanceService
 
             $capabilityEventIds = DB::table('financial_capability_events as events')
                 ->join('inclusive_finance_enrolments as enrolments', 'enrolments.user_id', '=', 'events.user_id')
-                ->where('enrolments.status', 'enrolled')
+                ->whereIn('enrolments.status', ['enrolled', 'exited'])
                 ->when($programmeId !== null, fn ($query) => $query->where('enrolments.programme_id', $programmeId))
                 ->where(function ($query) {
                     $query->whereNull('enrolments.enrolled_at')
