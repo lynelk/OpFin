@@ -1,0 +1,23 @@
+name: Railway topology policy
+
+on:
+  push:
+    paths:
+      - "ops/railway/**"
+      - ".github/workflows/railway-topology-policy.yml"
+  pull_request:
+    paths:
+      - "ops/railway/**"
+      - ".github/workflows/railway-topology-policy.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce approved Railway topology
+        run: python3 ops/railway/check_topology_policy.py
