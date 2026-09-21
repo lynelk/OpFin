@@ -1,6 +1,6 @@
 # OpFin launch customer journey
 
-Updated: 18 September 2026
+Updated: 21 September 2026
 
 This document is the current product contract for the launch borrower journey across the mobile app, WhatsApp and USSD. It favours comprehension over feature density. The customer should see a simple next step; the platform keeps scoring, provider orchestration, compliance and accounting complexity behind the interface.
 
@@ -132,6 +132,14 @@ Typical hierarchy:
 
 Optional profile-strengthening tasks, including a second phone, remain secondary. If policy permits only one active loan, available-to-borrow is shown as zero while that loan remains active so the UI never invites a request the backend will reject.
 
+### Financial resilience entry point
+
+Home may also expose **Build financial resilience** as a secondary, non-blocking destination. It can show financial-capability guidance, the non-score financial-reputation pathway, optional programme participation and alternative credit-support evidence.
+
+This surface must not become another mandatory onboarding funnel. Voluntary inclusion attributes require explicit programme-measurement consent, remain outside credit-risk inputs and are cleared when that consent is withdrawn. Recording a warehouse receipt, guarantee or other support instrument is evidence submission only; it is not credit approval.
+
+OpFin does not absorb Stolets merchant operations through this surface. POS, inventory, purchasing and day-to-day SME operations remain Stolets product responsibilities.
+
 ## 8. Loan application
 
 The Loan Application page must display:
@@ -236,6 +244,7 @@ USSD cannot capture KYC photos. It directs the customer to an authenticated app/
 - Errors tell the customer what to do next.
 - Journeys can be resumed after network/session interruption without duplicate financial actions.
 - PWD assistance routes are available without creating a lower-assurance customer class.
+- High-contrast mode may be offered as an additional preference, but production claims about VoiceOver/TalkBack or assistive-device compatibility still require supported-device UAT evidence.
 
 ## 14. Launch navigation
 
