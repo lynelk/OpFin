@@ -29,7 +29,7 @@ class InclusiveFinanceController extends Controller
             'programme_measurement_consent' => ['sometimes', 'boolean'],
             'measurement_attributes' => ['sometimes', 'array'],
             'measurement_attributes.gender' => ['nullable', Rule::in(['female', 'male', 'another_identity', 'prefer_not_to_say'])],
-            'measurement_attributes.age_cohort' => ['nullable', Rule::in(['18_24', '25_34', '35_44', '45_54', '55_plus', 'prefer_not_to_say'])],
+            'measurement_attributes.age_cohort' => ['nullable', Rule::in(['18_24', '25_35', '36_44', '45_54', '55_plus', 'prefer_not_to_say'])],
             'measurement_attributes.disability_status' => ['nullable', Rule::in(['person_with_disability', 'no_disability_declared', 'prefer_not_to_say'])],
             'measurement_attributes.refugee_or_displaced_status' => ['nullable', Rule::in(['refugee_or_displaced', 'not_refugee_or_displaced', 'prefer_not_to_say'])],
             'measurement_attributes.rural_urban' => ['nullable', Rule::in(['rural', 'peri_urban', 'urban', 'prefer_not_to_say'])],
