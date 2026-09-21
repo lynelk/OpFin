@@ -479,4 +479,59 @@ class InclusiveFinanceFoundationTest extends TestCase
         ]);
     }
 
+
+    public function test_programme_exit_is_idempotent_and_preserves_the_historical_reporting_window(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+        $programmeId = $this->postJson('/api/admin/inclusive-finance/programmes', [
+            'code' => 'BIFS-EXIT-01',
+            'name' => 'Voluntary Participation Pilot',
+            'status' => 'active',
+        ])->assertCreated()->json('data.id');
+
+        $customer = User::factory()->create();
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/inclusive-finance/programmes/'.$programmeId.'/enrol', [])
+            ->assertCreated();
+
+        $this->postJson('/api/inclusive-finance/capability/events', [
+            'event_type' => 'education_viewed',
+            'intervention_code' => 'BEFORE_EXIT',
+        ])->assertCreated();
+
+        $this->deleteJson('/api/inclusive-finance/programmes/'.$programmeId.'/enrol')
+            ->assertOk()
+            ->assertJsonPath('data.enrolment.status', 'exited');
+
+        $this->deleteJson('/api/inclusive-finance/programmes/'.$programmeId.'/enrol')
+            ->assertOk()
+            ->assertJsonPath('data.enrolment.status', 'exited');
+
+        $this->postJson('/api/inclusive-finance/capability/events', [
+            'event_type' => 'action_taken',
+            'intervention_code' => 'AFTER_EXIT',
+        ])->assertCreated();
+
+        $this->postJson('/api/inclusive-finance/programmes/'.$programmeId.'/enrol', [])
+            ->assertStatus(422);
+
+        $this->assertSame(
+            1,
+            DB::table('impact_events')
+                ->where('programme_id', $programmeId)
+                ->where('user_id', $customer->id)
+                ->where('event_type', 'programme_exited')
+                ->count()
+        );
+
+        Sanctum::actingAs($admin);
+        $this->getJson('/api/admin/inclusive-finance/impact?programme_id='.$programmeId)
+            ->assertOk()
+            ->assertJsonPath('data.enrolled_people', 1)
+            ->assertJsonPath('data.participant_capability_events.education_viewed', 1)
+            ->assertJsonMissingPath('data.participant_capability_events.action_taken')
+            ->assertJsonPath('data.impact_events.programme_exited', 1);
+    }
+
 }
