@@ -160,7 +160,7 @@ Read `current-endpoints.md` for request/response notes and `frontend-backend-con
 | Programme enrolment | POST /api/inclusive-finance/programmes/{programme}/enrol |
 | Alternative collateral/support | GET/POST /api/inclusive-finance/support-instruments |
 | Fair-treatment explanation | GET /api/inclusive-finance/fair-treatment |
-| Admin impact summary | GET /api/admin/inclusive-finance/impact |
+| Admin programme register | GET /api/admin/inclusive-finance/programmes |\n| Admin impact summary | GET /api/admin/inclusive-finance/impact |
 | Admin programme configuration | POST/PATCH /api/admin/inclusive-finance/programmes[/{programme}] |
 | Admin provider-signal governance | POST /api/admin/inclusive-finance/signals; PATCH /api/admin/inclusive-finance/signals/{signal}/verify |
 | Admin support verification | PATCH /api/admin/inclusive-finance/support-instruments/{instrument}/verify |
