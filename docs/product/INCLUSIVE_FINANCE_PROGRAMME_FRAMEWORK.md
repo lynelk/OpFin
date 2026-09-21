@@ -132,9 +132,9 @@ The inclusive-finance layer reuses the existing OpFin controls for:
 - hardship;
 - governed product and term changes.
 
-The fair_treatment_assessments table adds evidence that decision reason codes remain explainable and that programme-measurement attributes have not crossed into the decision path.
+The fair_treatment_assessments table adds an automated reason-code review for prohibited programme-measurement markers. The programme-measurement data store remains technically separate from the production credit-decision path.
 
-A fair-treatment assessment is not an approval decision. A legitimate affordability decline can still pass fair-treatment controls.
+A fair-treatment assessment is not an approval decision and is not certification of an external model or provider's fairness. A legitimate affordability decline can still pass the reason-code review, while broader model governance remains a separate control.
 
 ## 6. Financial Institution and partner delivery
 
