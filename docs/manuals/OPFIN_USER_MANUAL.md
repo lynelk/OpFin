@@ -1,6 +1,6 @@
 # OpFin User Manual
 
-Version: 20 September 2026
+Version: 21 September 2026
 
 ## What OpFin is
 OpFin helps you understand, manage, plan and improve your money. One sign-in can give you access to your private Personal Space and, when invited or authorised, households, savings groups, businesses, SACCOs and other organisations.
@@ -29,8 +29,17 @@ Use only products shown as available to you. Regulated products may require iden
 ## Offline and low-connectivity use
 Where the App supports offline capture, queued changes remain visible and synchronise when connectivity returns. Money-changing actions require provider confirmation and cannot be assumed complete merely because they were initiated offline.
 
+## Financial resilience and inclusion
+From Home, open **Build financial resilience** to see your financial-reputation stage, current credit position and practical next steps. The reputation stage is a progress indicator based on verified identity and actual financial behaviour; it is not another credit score.
+
+You can optionally help OpFin measure inclusion outcomes. If you opt in, you can provide voluntary inclusion details and later change them or withdraw programme-measurement consent. These details are kept outside credit-risk decisioning.
+
+Where an inclusive-finance programme is available, OpFin shows whether the information on your account is sufficient for programme participation. A programme participation result is not a loan approval or decline.
+
+You can also submit alternative credit-support evidence, for example a salary undertaking, guarantee, receivable or warehouse receipt. Evidence must be verified and supported by the relevant financial product before it can affect eligibility.
+
 ## Accessibility
-Use clear visual actions and accessibility preferences where available. OpFin is designed to minimise typing and progressively disclose detail. Assisted onboarding must never require surrendering your PIN.
+Use accessibility preferences for larger text, simple wording, reduced movement and high contrast. OpFin uses semantic controls intended to work with platform screen readers such as VoiceOver and TalkBack. Assisted onboarding must never require surrendering your PIN or OTP.
 
 ## Help and privacy
 Use Support for a problem or complaint. Permissions and consents can be reviewed in the account experience. Organisation membership never grants automatic access to private Personal Space data.
