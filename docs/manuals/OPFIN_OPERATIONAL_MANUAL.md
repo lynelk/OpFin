@@ -43,7 +43,7 @@ Provider signals begin as non-risk eligible. Only independently verifiable provi
 Support instruments are evidence records. Externally evidenced collateral such as warehouse receipts, receivables and asset evidence require a provider/issuer and external reference before verification. Verification alone does not create an approval; the applicable product policy must recognise the instrument.
 
 ## Impact reporting
-Use aggregate programme reporting for enrolments, applications, decision outcomes, NPL state and capability evidence. Cohorts smaller than five are suppressed and only consented measurement profiles enter cohort reporting. Credit outcomes are scoped to the participation window. Participant capability events are not to be described as programme-caused unless a directly attributed intervention supports that conclusion.
+Use aggregate programme reporting for enrolments, applications, decision outcomes, NPL state and capability evidence. Only consented measurement profiles enter cohort reporting. If any group within an inclusion dimension is smaller than five, that whole dimension is suppressed to reduce differencing risk. Credit outcomes are scoped to the participation window. Participant capability events are not to be described as programme-caused unless a directly attributed intervention supports that conclusion.
 
 ## Accessibility operations
 Support staff should know how to guide customers to large text, simple wording, reduced motion and high contrast. Screen-reader and other assistive-technology behaviour must be physically tested on supported devices before certification or public claims.
