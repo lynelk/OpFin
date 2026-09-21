@@ -36,6 +36,8 @@ Use **Inclusion & programmes** to configure and review programme delivery. A pro
 
 Programme-measurement attributes require customer consent. Withdrawal clears the stored voluntary inclusion attributes. Never fill a customer's demographic or disability field by inference.
 
+Customers may voluntarily leave a programme. Exit is idempotent and records `exited_at` plus a `programme_exited` impact event. Historical reporting retains the participant but excludes credit/capability outcomes after exit. The current single-period model deliberately blocks silent automatic re-enrolment after exit; any future re-entry mechanism must preserve the prior participation window.
+
 ## Alternative-data operations
 Provider signals begin as non-risk eligible. Only independently verifiable provider signals with an approved credit-assessment/affordability purpose and active credit-processing consent may be marked eligible for an approved scoring policy. Protected demographic/accessibility attributes remain prohibited as risk inputs. Risk eligibility alone does not change a score, limit, price or approval.
 
