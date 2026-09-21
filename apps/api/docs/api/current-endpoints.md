@@ -1,6 +1,6 @@
 # Current API endpoints
 
-Updated against the registered canonical platform routes on **20 September 2026**. Routes remain subject to the middleware and role gates in source.
+Updated against the registered canonical platform routes on **21 September 2026**. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:
 
@@ -284,3 +284,35 @@ Operations/admin routes:
 | POST | `/api/admin/revenue-events/{event}/reconcile` | Attach CPay and reconciliation references and settle/reconcile the event |
 
 CPay remains the approved execution/reconciliation boundary where money movement is required. Revenue events attribute commercial economics; they are not a replacement financial ledger.
+
+## 21. Inclusive finance, programme delivery and alternative credit support
+
+Customer routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET/PATCH | /api/inclusive-finance/profile | Read/update optional programme-measurement consent and service preferences |
+| GET | /api/inclusive-finance/capability | Contextual financial-capability guidance and current credit position |
+| POST | /api/inclusive-finance/capability/events | Record guidance/intervention/outcome evidence |
+| GET | /api/inclusive-finance/reputation | Non-score financial-reputation pathway |
+| GET/POST | /api/inclusive-finance/signals | Read or submit customer-reported non-risk signals |
+| GET | /api/inclusive-finance/programmes | List active programmes |
+| POST | /api/inclusive-finance/programmes/{programme}/enrol | Enrol in an open programme |
+| GET/POST | /api/inclusive-finance/support-instruments | Read or submit alternative credit-support evidence |
+| GET | /api/inclusive-finance/fair-treatment | Explain the governed credit-decision boundary |
+
+Admin/operations routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | /api/admin/inclusive-finance/impact | Aggregate programme outcomes; optional programme_id query filter |
+| POST | /api/admin/inclusive-finance/programmes | Create programme configuration |
+| PATCH | /api/admin/inclusive-finance/programmes/{programme} | Update programme lifecycle/configuration |
+| POST | /api/admin/inclusive-finance/signals | Ingest independently verifiable provider signal |
+| PATCH | /api/admin/inclusive-finance/signals/{signal}/verify | Verify signal and, where permitted, mark it eligible for a governed risk model |
+| PATCH | /api/admin/inclusive-finance/support-instruments/{instrument}/verify | Verify/reject alternative collateral or guarantee evidence |
+| POST | /api/admin/inclusive-finance/fair-treatment/{application}/assess | Persist a fair-treatment decision review |
+
+Programme-measurement attributes are technically separate from credit-decision inputs. Customer-reported signals are never risk eligible. Provider signals require provenance and active credit-processing consent before they may even become eligible for an approved scoring/product policy. Eligibility does not automatically alter the Composite Score.
+
+Impact cohort reporting includes only consented programme-measurement profiles and suppresses cohort groups smaller than five. Alternative collateral verification records evidence; it does not automatically approve a loan or alter pricing.
