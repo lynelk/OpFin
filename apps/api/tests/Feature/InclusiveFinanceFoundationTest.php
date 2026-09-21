@@ -94,6 +94,89 @@ class InclusiveFinanceFoundationTest extends TestCase
             ->assertJsonPath('data.verified', true);
     }
 
+    public function test_protected_provider_attributes_and_non_credit_purposes_cannot_become_risk_inputs(): void
+    {
+        $customer = User::factory()->create();
+        ConsentRecord::create([
+            'user_id' => $customer->id,
+            'purpose' => ConsentRecord::PURPOSE_CREDIT_PROCESSING,
+            'policy_version' => 'test-v1',
+            'status' => ConsentRecord::STATUS_GRANTED,
+            'channel' => 'app',
+            'granted_at' => now(),
+        ]);
+
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+
+        $protectedSignalId = $this->postJson('/api/admin/inclusive-finance/signals', [
+            'user_id' => $customer->id,
+            'source_type' => 'partner',
+            'signal_key' => 'refugee_status',
+            'signal_value' => 'refugee',
+            'purpose' => 'credit_assessment',
+            'provider_reference' => 'PARTNER-PROTECTED-001',
+        ])->assertCreated()->json('data.id');
+
+        $this->patchJson('/api/admin/inclusive-finance/signals/'.$protectedSignalId.'/verify', [
+            'risk_eligible' => true,
+        ])->assertStatus(422);
+
+        $capabilitySignalId = $this->postJson('/api/admin/inclusive-finance/signals', [
+            'user_id' => $customer->id,
+            'source_type' => 'partner',
+            'signal_key' => 'training_completion',
+            'signal_value' => true,
+            'purpose' => 'financial_capability',
+            'provider_reference' => 'PARTNER-CAPABILITY-001',
+        ])->assertCreated()->json('data.id');
+
+        $this->patchJson('/api/admin/inclusive-finance/signals/'.$capabilitySignalId.'/verify', [
+            'risk_eligible' => true,
+        ])->assertStatus(422);
+    }
+
+    public function test_configured_programme_eligibility_uses_inclusion_profile_without_becoming_credit_risk(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+        $programmeId = $this->postJson('/api/admin/inclusive-finance/programmes', [
+            'code' => 'BIFS-YOUTH-RULES-01',
+            'name' => 'Youth Inclusion Pilot',
+            'status' => 'active',
+            'eligibility_rules' => [
+                'all' => [[
+                    'field' => 'age_cohort',
+                    'operator' => 'in',
+                    'values' => ['18_24', '25_34'],
+                ]],
+            ],
+        ])->assertCreated()->json('data.id');
+
+        $customer = User::factory()->create();
+        Sanctum::actingAs($customer);
+
+        $this->getJson('/api/inclusive-finance/programmes')
+            ->assertOk()
+            ->assertJsonPath('data.programmes.0.eligibility.status', 'incomplete');
+
+        $this->postJson('/api/inclusive-finance/programmes/'.$programmeId.'/enrol', [])
+            ->assertStatus(422);
+
+        $this->patchJson('/api/inclusive-finance/profile', [
+            'programme_measurement_consent' => true,
+            'measurement_attributes' => ['age_cohort' => '18_24'],
+        ])->assertOk()
+            ->assertJsonPath('data.decisioning_use_allowed', false);
+
+        $this->getJson('/api/inclusive-finance/programmes')
+            ->assertOk()
+            ->assertJsonPath('data.programmes.0.eligibility.status', 'eligible');
+
+        $this->postJson('/api/inclusive-finance/programmes/'.$programmeId.'/enrol', [])
+            ->assertCreated();
+    }
+
     public function test_programme_enrolment_and_impact_reporting_are_privacy_suppressed_for_small_cohorts(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
