@@ -15,16 +15,32 @@ class _AccessibilityScreenState extends State<AccessibilityScreen>{
   bool _saving=false;
   @override void initState(){super.initState();_settings=OpFinAccessibility.settings.value;}
   Future<void> _save() async{
-    setState(()=>_saving=true);await OpFinAccessibility.update(_settings);
+    setState(()=>_saving=true);
+    await OpFinAccessibility.update(_settings);
+
     try{
       final token=await UserSession.getAccessToken();
-      await http.patch(Uri.parse('$apiUrl/accessibility-preferences'),headers:{
+      if(token==null||token.isEmpty){
+        throw Exception('Secure session is required to sync accessibility preferences.');
+      }
+      final response=await http.patch(Uri.parse('$apiUrl/accessibility-preferences'),headers:{
         'Authorization':'Bearer $token','Accept':'application/json','Content-Type':'application/json'
       },body:jsonEncode({
         'simple_language':_settings.simpleLanguage,'large_text':_settings.largeText,
         'reduced_motion':_settings.reducedMotion,'high_contrast':_settings.highContrast,
         'screen_reader_optimised':true}));
-    }finally{if(mounted){setState(()=>_saving=false);Navigator.pop(context);}}
+      if(response.statusCode<200||response.statusCode>=300){
+        throw Exception('Accessibility preference sync failed.');
+      }
+      if(mounted)Navigator.pop(context);
+    }catch(_){
+      if(mounted){
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:Text('Accessibility settings were saved on this device, but could not be synced to your account.')));
+      }
+    }finally{
+      if(mounted)setState(()=>_saving=false);
+    }
   }
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('Accessibility')),
