@@ -40,6 +40,18 @@ class InclusiveFinanceService
         'first_time_formal_borrower',
     ];
 
+    public const PROGRAMME_ELIGIBILITY_FIELDS = [
+        'gender',
+        'age_cohort',
+        'disability_status',
+        'refugee_or_displaced_status',
+        'rural_urban',
+        'employment_category',
+        'first_time_formal_borrower',
+        'kyc_verified',
+        'financial_reputation_stage',
+    ];
+
     public const SUPPORT_INSTRUMENT_TYPES = [
         'salary_undertaking',
         'employer_guarantee',
@@ -366,7 +378,11 @@ class InclusiveFinanceService
                     ->where('user_id', $user->id)
                     ->value('status');
 
-                return $this->customerProgrammePayload($programme, $status ? (string) $status : null);
+                return $this->customerProgrammePayload(
+                    $programme,
+                    $status ? (string) $status : null,
+                    $this->programmeEligibility($user, $programme),
+                );
             })
             ->values();
 
@@ -459,7 +475,16 @@ class InclusiveFinanceService
             throw new InvalidArgumentException('This programme is not open for enrolment.');
         }
 
-        return DB::transaction(function () use ($user, $programme, $data) {
+        $eligibility = $this->programmeEligibility($user, $programme);
+        if ($eligibility['status'] !== 'eligible') {
+            throw new InvalidArgumentException(
+                $eligibility['status'] === 'incomplete'
+                    ? 'This programme needs additional voluntary or verified eligibility information before enrolment.'
+                    : 'This account does not meet the configured programme eligibility rules.'
+            );
+        }
+
+        return DB::transaction(function () use ($user, $programme, $data, $eligibility) {
             $existing = DB::table('inclusive_finance_enrolments')
                 ->where('programme_id', $programme->id)
                 ->where('user_id', $user->id)
@@ -470,7 +495,10 @@ class InclusiveFinanceService
                 [
                     'financial_space_id' => $data['financial_space_id'] ?? null,
                     'status' => 'enrolled',
-                    'eligibility_evidence' => isset($data['eligibility_evidence']) ? json_encode($data['eligibility_evidence']) : null,
+                    'eligibility_evidence' => json_encode([
+                        'system_assessment' => $eligibility,
+                        'customer_evidence' => (array) ($data['eligibility_evidence'] ?? []),
+                    ]),
                     'enrolled_at' => $existing?->enrolled_at ?? now(),
                     'exited_at' => null,
                     'created_at' => $existing?->created_at ?? now(),
@@ -501,7 +529,7 @@ class InclusiveFinanceService
 
             return [
                 'enrolment' => $enrolment,
-                'programme' => $this->customerProgrammePayload($programme, 'enrolled'),
+                'programme' => $this->customerProgrammePayload($programme, 'enrolled', $eligibility),
                 'measurement_consent' => $this->profile($user)['programme_measurement_consent'],
             ];
         });
@@ -814,8 +842,108 @@ class InclusiveFinanceService
             ->all();
     }
 
-    private function customerProgrammePayload(object $programme, ?string $enrolmentStatus = null): array
+    private function programmeEligibility(User $user, object $programme): array
     {
+        $rules = $this->json($programme->eligibility_rules);
+        if ($rules === []) {
+            return ['status' => 'eligible', 'reason_codes' => [], 'policy' => 'no_configured_rules'];
+        }
+
+        $profile = DB::table('inclusive_finance_profiles')->where('user_id', $user->id)->first();
+        $measurement = ($profile?->programme_measurement_consent ?? false)
+            ? $this->json($profile?->measurement_attributes)
+            : [];
+
+        $context = $measurement;
+        $context['kyc_verified'] = KycCase::query()
+            ->where('user_id', $user->id)
+            ->where('status', KycCase::STATUS_VERIFIED)
+            ->exists();
+        $context['financial_reputation_stage'] = $this->reputation($user)['stage'];
+
+        $allResult = $this->evaluateEligibilityGroup((array) ($rules['all'] ?? []), $context, true);
+        $anyRules = (array) ($rules['any'] ?? []);
+        $anyResult = $anyRules === []
+            ? ['status' => 'eligible', 'reason_codes' => []]
+            : $this->evaluateEligibilityGroup($anyRules, $context, false);
+
+        $statuses = [$allResult['status'], $anyResult['status']];
+        $status = in_array('ineligible', $statuses, true)
+            ? 'ineligible'
+            : (in_array('incomplete', $statuses, true) ? 'incomplete' : 'eligible');
+
+        return [
+            'status' => $status,
+            'reason_codes' => array_values(array_unique(array_merge(
+                $allResult['reason_codes'],
+                $anyResult['reason_codes'],
+            ))),
+            'policy' => 'configured_rules_v1',
+        ];
+    }
+
+    private function evaluateEligibilityGroup(array $rules, array $context, bool $requireAll): array
+    {
+        if ($rules === []) {
+            return ['status' => 'eligible', 'reason_codes' => []];
+        }
+
+        $results = [];
+        $reasons = [];
+        foreach ($rules as $index => $rule) {
+            if (! is_array($rule)) {
+                throw new InvalidArgumentException('Programme eligibility rules are malformed.');
+            }
+
+            $field = (string) ($rule['field'] ?? '');
+            $operator = (string) ($rule['operator'] ?? '');
+            if (! in_array($field, self::PROGRAMME_ELIGIBILITY_FIELDS, true)
+                || ! in_array($operator, ['equals', 'in'], true)) {
+                throw new InvalidArgumentException('Programme eligibility rules contain an unsupported field or operator.');
+            }
+
+            if (! array_key_exists($field, $context)) {
+                $results[] = null;
+                $reasons[] = 'ELIGIBILITY_INFORMATION_MISSING';
+                continue;
+            }
+
+            $actual = $context[$field];
+            $matched = $operator === 'equals'
+                ? $actual === ($rule['value'] ?? null)
+                : in_array($actual, (array) ($rule['values'] ?? []), true);
+            $results[] = $matched;
+            if (! $matched) {
+                $reasons[] = 'PROGRAMME_CRITERIA_NOT_MET';
+            }
+        }
+
+        if ($requireAll) {
+            if (in_array(false, $results, true)) {
+                return ['status' => 'ineligible', 'reason_codes' => $reasons];
+            }
+            if (in_array(null, $results, true)) {
+                return ['status' => 'incomplete', 'reason_codes' => $reasons];
+            }
+
+            return ['status' => 'eligible', 'reason_codes' => []];
+        }
+
+        if (in_array(true, $results, true)) {
+            return ['status' => 'eligible', 'reason_codes' => []];
+        }
+        if (in_array(null, $results, true)) {
+            return ['status' => 'incomplete', 'reason_codes' => $reasons];
+        }
+
+        return ['status' => 'ineligible', 'reason_codes' => $reasons];
+    }
+
+    private function customerProgrammePayload(
+        object $programme,
+        ?string $enrolmentStatus = null,
+        ?array $eligibility = null,
+    ): array {
         return [
             'id' => $programme->id,
             'code' => $programme->code,
@@ -824,6 +952,7 @@ class InclusiveFinanceService
             'starts_at' => $programme->starts_at,
             'ends_at' => $programme->ends_at,
             'enrolment_status' => $enrolmentStatus,
+            'eligibility' => $eligibility,
         ];
     }
 
