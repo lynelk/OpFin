@@ -256,6 +256,36 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
     await _reload();
   }
 
+  Future<void> _leaveProgramme(int programmeId, String programmeName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Leave programme?'),
+        content: Text(
+          'You can stop participating in $programmeName. This keeps existing programme evidence for audit and reporting up to the exit time.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Stay enrolled'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Leave programme'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await InclusiveFinanceApi.leaveProgramme(programmeId);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('You have left $programmeName.')),
+    );
+    await _reload();
+  }
+
   Future<void> _addSupportInstrument() async {
     var type = 'salary_undertaking';
     final provider = TextEditingController();
@@ -569,7 +599,11 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
                                   eligibility['status']?.toString() ?? 'eligible';
                               final joined =
                                   programme['enrolment_status'] == 'enrolled';
-                              final subtitle = eligibilityStatus == 'incomplete'
+                              final exited =
+                                  programme['enrolment_status'] == 'exited';
+                              final subtitle = exited
+                                  ? 'You left this programme. Existing evidence remains limited to your participation period.'
+                                  : eligibilityStatus == 'incomplete'
                                   ? 'More voluntary or verified eligibility information is needed.'
                                   : eligibilityStatus == 'ineligible'
                                       ? 'This account does not currently meet the programme criteria.'
@@ -579,16 +613,24 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
                                 title: Text(programme['name']?.toString() ?? 'Programme'),
                                 subtitle: Text(subtitle),
                                 trailing: joined
-                                    ? const Chip(label: Text('Joined'))
-                                    : FilledButton.tonal(
-                                        onPressed: eligibilityStatus == 'eligible'
-                                            ? () => _enrol(
-                                                  (programme['id'] as num).toInt(),
-                                                  programme['name']?.toString() ?? 'programme',
-                                                )
-                                            : null,
-                                        child: const Text('Join'),
-                                      ),
+                                    ? OutlinedButton(
+                                        onPressed: () => _leaveProgramme(
+                                          (programme['id'] as num).toInt(),
+                                          programme['name']?.toString() ?? 'programme',
+                                        ),
+                                        child: const Text('Leave'),
+                                      )
+                                    : exited
+                                        ? const Chip(label: Text('Left'))
+                                        : FilledButton.tonal(
+                                            onPressed: eligibilityStatus == 'eligible'
+                                                ? () => _enrol(
+                                                      (programme['id'] as num).toInt(),
+                                                      programme['name']?.toString() ?? 'programme',
+                                                    )
+                                                : null,
+                                            child: const Text('Join'),
+                                          ),
                               );
                             }),
                         ],
