@@ -37,6 +37,7 @@ Record tester, build/commit, environment, date, evidence and result for every ca
 | UAT-29 | Inclusion Financial Space isolation | Attempt to attach capability/support evidence to another user's Space | Request blocked; no cross-Space evidence written |
 | UAT-30 | High contrast accessibility | Enable high contrast and complete core journey | Stronger boundaries/contrast apply without breaking layout, labels or touch targets |
 | UAT-31 | Screen reader physical-device test | Use VoiceOver/TalkBack on sign-in, Home, resilience, programme and support flows | Controls have understandable semantics, focus order is usable and no critical action is inaccessible |
+| UAT-32 | Voluntary programme exit | Enrol, record a capability event, leave the programme twice, then record another capability event | Exit is idempotent; one exit event is recorded; historical participant count remains; post-exit capability event is excluded from that programme’s observation window; automatic re-enrolment is blocked |
 
 ## Release decision
 Do not sign off with unresolved Critical/High defects in identity, permissions, financial integrity, privacy, money movement, reconciliation or required mobile completeness. Record medium/low exceptions with owner and accepted disposition.
