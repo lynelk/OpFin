@@ -75,6 +75,12 @@ return new class extends Migration
             $table->foreignId('financial_space_id')->nullable()->constrained()->nullOnDelete();
             $table->string('status')->default('enrolled')->index();
             $table->json('eligibility_evidence')->nullable();
+            // Sequence boundaries make impact attribution deterministic even when
+            // enrolment/exit and customer events share the same DB timestamp second.
+            $table->unsignedBigInteger('loan_application_floor_id')->default(0);
+            $table->unsignedBigInteger('loan_application_ceiling_id')->nullable();
+            $table->unsignedBigInteger('capability_event_floor_id')->default(0);
+            $table->unsignedBigInteger('capability_event_ceiling_id')->nullable();
             $table->timestamp('enrolled_at')->nullable();
             $table->timestamp('exited_at')->nullable();
             $table->timestamps();
@@ -103,7 +109,7 @@ return new class extends Migration
         Schema::create('fair_treatment_assessments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->unsignedBigInteger('loan_application_id')->nullable()->index();
+            $table->foreignId('loan_application_id')->nullable()->constrained('loan_applications')->nullOnDelete();
             $table->foreignId('credit_decision_id')->nullable()->constrained('credit_decisions')->nullOnDelete();
             $table->string('assessment_type')->default('decision_review')->index();
             $table->string('status')->index();
