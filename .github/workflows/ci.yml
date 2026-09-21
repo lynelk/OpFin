@@ -106,7 +106,9 @@ jobs:
           if [[ "${#files[@]}" -eq 0 ]]; then exit 0; fi
           cd apps/api
           printf 'Checking %s changed PHP files\n' "${#files[@]}"
-          ./vendor/bin/pint --test "${files[@]}"
+          ./vendor/bin/pint "${files[@]}"
+          git diff --color=never -- "${files[@]}"
+          git diff --quiet -- "${files[@]}"
 
   api-assets:
     runs-on: ubuntu-latest
