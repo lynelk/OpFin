@@ -22,7 +22,8 @@ class _AccessibilityScreenState extends State<AccessibilityScreen>{
         'Authorization':'Bearer $token','Accept':'application/json','Content-Type':'application/json'
       },body:jsonEncode({
         'simple_language':_settings.simpleLanguage,'large_text':_settings.largeText,
-        'reduced_motion':_settings.reducedMotion,'screen_reader_optimised':true}));
+        'reduced_motion':_settings.reducedMotion,'high_contrast':_settings.highContrast,
+        'screen_reader_optimised':true}));
     }finally{if(mounted){setState(()=>_saving=false);Navigator.pop(context);}}
   }
   @override Widget build(BuildContext context)=>Scaffold(
@@ -40,6 +41,9 @@ class _AccessibilityScreenState extends State<AccessibilityScreen>{
       SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Reduce movement'),
         subtitle:const Text('Reduce animations where the device supports it.'),value:_settings.reducedMotion,
         onChanged:(v)=>setState(()=>_settings=_settings.copyWith(reducedMotion:v))),
+      SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('High contrast'),
+        subtitle:const Text('Use stronger text, focus and control boundaries.'),value:_settings.highContrast,
+        onChanged:(v)=>setState(()=>_settings=_settings.copyWith(highContrast:v))),
       const SizedBox(height:20),
       SizedBox(height:52,child:FilledButton(onPressed:_saving?null:_save,
         child:_saving?const CircularProgressIndicator(strokeWidth:2):const Text('Save'))),
