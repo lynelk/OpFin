@@ -149,6 +149,8 @@ class InclusiveFinanceService
 
     public function recordCapabilityEvent(User $user, array $data): array
     {
+        $this->assertSpaceMembership($user, $data['financial_space_id'] ?? null);
+
         $id = DB::table('financial_capability_events')->insertGetId([
             'user_id' => $user->id,
             'financial_space_id' => $data['financial_space_id'] ?? null,
@@ -224,6 +226,8 @@ class InclusiveFinanceService
 
     public function storeUserSignal(User $user, array $data): array
     {
+        $this->assertSpaceMembership($user, $data['financial_space_id'] ?? null);
+
         $id = DB::table('alternative_data_signals')->insertGetId([
             'user_id' => $user->id,
             'financial_space_id' => $data['financial_space_id'] ?? null,
@@ -319,7 +323,7 @@ class InclusiveFinanceService
         });
     }
 
-    public function programmes(): array
+    public function programmes(User $user): array
     {
         $programmes = DB::table('inclusive_finance_programmes')
             ->where('status', 'active')
@@ -331,7 +335,14 @@ class InclusiveFinanceService
             })
             ->orderBy('name')
             ->get()
-            ->map(fn ($programme) => $this->programmePayload($programme))
+            ->map(function ($programme) use ($user) {
+                $status = DB::table('inclusive_finance_enrolments')
+                    ->where('programme_id', $programme->id)
+                    ->where('user_id', $user->id)
+                    ->value('status');
+
+                return $this->programmePayload($programme, $status ? (string) $status : null);
+            })
             ->values();
 
         return [
@@ -387,9 +398,17 @@ class InclusiveFinanceService
 
     public function enrol(User $user, int $programmeId, array $data): array
     {
+        $this->assertSpaceMembership($user, $data['financial_space_id'] ?? null);
+
         $programme = DB::table('inclusive_finance_programmes')
             ->where('id', $programmeId)
             ->where('status', 'active')
+            ->where(function ($query) {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+            })
             ->first();
         if (! $programme) {
             throw new InvalidArgumentException('This programme is not open for enrolment.');
@@ -419,19 +438,21 @@ class InclusiveFinanceService
                 ->where('user_id', $user->id)
                 ->first();
 
-            DB::table('impact_events')->insert([
-                'programme_id' => $programme->id,
-                'enrolment_id' => $enrolment->id,
-                'user_id' => $user->id,
-                'financial_space_id' => $enrolment->financial_space_id,
-                'event_type' => 'programme_enrolled',
-                'outcome_code' => 'enrolled',
-                'numeric_value' => null,
-                'metadata' => json_encode(['source' => 'customer_enrolment']),
-                'occurred_at' => now(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            if (! $existing || $existing->status !== 'enrolled') {
+                DB::table('impact_events')->insert([
+                    'programme_id' => $programme->id,
+                    'enrolment_id' => $enrolment->id,
+                    'user_id' => $user->id,
+                    'financial_space_id' => $enrolment->financial_space_id,
+                    'event_type' => 'programme_enrolled',
+                    'outcome_code' => 'enrolled',
+                    'numeric_value' => null,
+                    'metadata' => json_encode(['source' => 'customer_enrolment']),
+                    'occurred_at' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
             return [
                 'enrolment' => $enrolment,
@@ -457,6 +478,17 @@ class InclusiveFinanceService
 
     public function storeSupportInstrument(User $user, array $data): array
     {
+        $this->assertSpaceMembership($user, $data['financial_space_id'] ?? null);
+        if (isset($data['loan_application_id'])) {
+            $owned = DB::table('loan_applications')
+                ->where('id', $data['loan_application_id'])
+                ->where('user_id', $user->id)
+                ->exists();
+            if (! $owned) {
+                throw new InvalidArgumentException('The selected loan application does not belong to this customer.');
+            }
+        }
+
         $id = DB::table('credit_support_instruments')->insertGetId([
             'user_id' => $user->id,
             'financial_space_id' => $data['financial_space_id'] ?? null,
@@ -685,7 +717,7 @@ class InclusiveFinanceService
             ->all();
     }
 
-    private function programmePayload(object $programme): array
+    private function programmePayload(object $programme, ?string $enrolmentStatus = null): array
     {
         return [
             'id' => $programme->id,
@@ -700,6 +732,7 @@ class InclusiveFinanceService
             'reporting_config' => $this->json($programme->reporting_config),
             'starts_at' => $programme->starts_at,
             'ends_at' => $programme->ends_at,
+            'enrolment_status' => $enrolmentStatus,
         ];
     }
 
@@ -738,6 +771,23 @@ class InclusiveFinanceService
             'verified_at' => $instrument->verified_at,
             'expires_at' => $instrument->expires_at,
         ];
+    }
+
+    private function assertSpaceMembership(User $user, ?int $spaceId): void
+    {
+        if ($spaceId === null) {
+            return;
+        }
+
+        $member = DB::table('financial_space_memberships')
+            ->where('financial_space_id', $spaceId)
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->exists();
+
+        if (! $member) {
+            throw new InvalidArgumentException('You do not have access to the selected Financial Space.');
+        }
     }
 
     private function guidance(string $code, string $title, string $text): array
