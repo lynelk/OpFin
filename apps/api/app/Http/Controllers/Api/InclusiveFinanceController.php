@@ -123,6 +123,11 @@ class InclusiveFinanceController extends Controller
         return ApiResponse::success('Fair-treatment information loaded.', $this->service->fairTreatment($request->user()));
     }
 
+    public function adminProgrammes(): JsonResponse
+    {
+        return ApiResponse::success('Inclusive-finance programme register loaded.', $this->service->adminProgrammes());
+    }
+
     public function adminImpact(Request $request): JsonResponse
     {
         $validated = $request->validate([
