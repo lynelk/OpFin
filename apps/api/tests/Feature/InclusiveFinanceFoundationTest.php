@@ -313,7 +313,9 @@ class InclusiveFinanceFoundationTest extends TestCase
 
         $this->getJson('/api/inclusive-finance/fair-treatment')
             ->assertOk()
-            ->assertJsonPath('data.protected_or_measurement_attributes_used', false);
+            ->assertJsonPath('data.protected_or_measurement_attributes_used', null)
+            ->assertJsonPath('data.inclusive_finance_measurement_fields_allowed_as_risk_inputs', false)
+            ->assertJsonPath('data.certifies_model_fairness', false);
     }
 
     public function test_programme_measurement_consent_preserves_auditable_grant_and_withdrawal_timestamps(): void
