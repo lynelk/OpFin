@@ -134,6 +134,19 @@ class InclusiveFinanceFoundationTest extends TestCase
         $this->patchJson('/api/admin/inclusive-finance/signals/'.$capabilitySignalId.'/verify', [
             'risk_eligible' => true,
         ])->assertStatus(422);
+
+        $employmentSignalId = $this->postJson('/api/admin/inclusive-finance/signals', [
+            'user_id' => $customer->id,
+            'source_type' => 'employer',
+            'signal_key' => 'employment_category',
+            'signal_value' => 'informal_worker',
+            'purpose' => 'credit_assessment',
+            'provider_reference' => 'EMP-PROTECTED-002',
+        ])->assertCreated()->json('data.id');
+
+        $this->patchJson('/api/admin/inclusive-finance/signals/'.$employmentSignalId.'/verify', [
+            'risk_eligible' => true,
+        ])->assertStatus(422);
     }
 
     public function test_configured_programme_eligibility_uses_inclusion_profile_without_becoming_credit_risk(): void
