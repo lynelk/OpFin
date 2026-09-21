@@ -1,6 +1,6 @@
 # OpFin Training Manual
 
-Version: 20 September 2026
+Version: 21 September 2026
 Audience: customers, savings-group members and facilitators
 
 ## Training outcome
@@ -32,3 +32,18 @@ Demonstrate retry/offline states. A learner must know that an initiated payment 
 
 ## Facilitator checks
 Use plain language; demonstrate rather than lecture; never collect a learner's PIN; allow repetition; use icons and amounts before technical terminology; verify understanding by asking the learner to perform the task unaided.
+
+
+## Module 9 — Financial resilience
+Open **Build financial resilience** from Home. Explain the financial-reputation stage, current credit position and contextual next steps. Reinforce that the reputation stage is not another credit score and does not replace affordability checks.
+
+## Module 10 — Voluntary inclusion and programmes
+Show the optional programme-measurement switch. If the learner chooses to participate, demonstrate the voluntary inclusion form and the ability to choose **Prefer not to say** where available. Explain that these details may support programme eligibility and aggregate reporting but do not become credit-risk inputs.
+
+Demonstrate an active programme. An eligible customer can join; an incomplete or ineligible result must be explained as a programme-participation result, not a credit decline.
+
+## Module 11 — Alternative credit support
+Demonstrate adding support evidence such as a salary undertaking, guarantee, receivable or warehouse receipt. Explain the three separate states: **submitted → independently verified/rejected → recognised by a relevant product policy**. Submission or verification alone does not approve credit.
+
+## Module 12 — Accessibility preferences
+Demonstrate larger text, simple wording, reduced movement and high contrast. Where available on the test device, demonstrate VoiceOver/TalkBack against the same core journey. Never claim certification for an assistive device that has not completed physical-device UAT.
