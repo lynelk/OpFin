@@ -158,6 +158,7 @@ Read `current-endpoints.md` for request/response notes and `frontend-backend-con
 | Alternative-data signals | GET/POST /api/inclusive-finance/signals |
 | Open programmes | GET /api/inclusive-finance/programmes |
 | Programme enrolment | POST /api/inclusive-finance/programmes/{programme}/enrol |
+| Leave programme | DELETE /api/inclusive-finance/programmes/{programme}/enrol |
 | Alternative collateral/support | GET/POST /api/inclusive-finance/support-instruments |
 | Fair-treatment explanation | GET /api/inclusive-finance/fair-treatment |
 | Admin programme register | GET /api/admin/inclusive-finance/programmes |
