@@ -663,9 +663,12 @@ class InclusiveFinanceService
                 'policy_version' => $decision->policy_version,
                 'decision_summary' => $decision->decision_summary,
             ] : null,
-            'protected_or_measurement_attributes_used' => false,
+            'protected_or_measurement_attributes_used' => null,
+            'protected_or_measurement_attributes_used_status' => 'not_determined_by_this_endpoint',
+            'inclusive_finance_measurement_fields_allowed_as_risk_inputs' => false,
+            'certifies_model_fairness' => false,
             'measurement_only_fields' => self::MEASUREMENT_ONLY_KEYS,
-            'explanation' => 'Inclusion attributes are stored outside the credit-decision inputs. Credit decisions use verified identity, consented credit data, approved scoring inputs, profile limits and affordability controls.',
+            'explanation' => 'OpFin programme-measurement attributes are stored outside the credit-decision inputs and are not eligible risk inputs. This endpoint does not certify the fairness of external scoring models or providers.',
         ];
     }
 
