@@ -1,6 +1,6 @@
 # OpFin mobile application
 
-Updated: 18 September 2026
+Updated: 21 September 2026
 
 The Flutter application is OpFin's primary customer mobile experience. It deliberately presents a simple borrower journey while the API keeps identity, scoring, affordability, accounting, reconciliation and regulatory complexity behind the interface.
 
@@ -54,6 +54,21 @@ Only verified customer wallets can be selected for payout/repayment.
 A payment request is not a completed payment. Customer balances change only after provider-confirmed finality.
 
 Completed disbursement/repayment events create auditable e-receipts. Customers can view receipts under **Activity**.
+
+## Financial resilience and inclusive finance
+
+Home now exposes **Build financial resilience**. The mobile experience includes:
+
+- a financial-reputation stage that is explicitly not a second credit score;
+- current amount due/outstanding and practical capability guidance;
+- optional programme-measurement consent;
+- a fair-treatment explanation showing that programme demographics stay outside credit decisioning;
+- active inclusive-finance programmes and enrolment;
+- alternative credit-support evidence such as salary undertakings, guarantees, receivables and warehouse receipts.
+
+Programme measurement is optional and is never required to borrow or manage money. Withdrawing measurement consent clears stored voluntary inclusion attributes. Credit-support evidence must be verified and recognised by the relevant product policy before it can affect a financial product.
+
+Stolets remains a separate SME automation/digitisation product. The OpFin mobile app does not absorb POS, inventory or merchant-operation journeys merely because an approved external business signal may later be consumed with customer consent.
 
 ## Accessibility
 
