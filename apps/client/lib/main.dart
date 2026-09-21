@@ -18,7 +18,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) => ValueListenableBuilder<AccessibilitySettings>(
     valueListenable: OpFinAccessibility.settings,
     builder:(context,settings,_)=>MaterialApp(
-      debugShowCheckedModeBanner:false,title:'OpFin',theme:OpFinTheme.light,
+      debugShowCheckedModeBanner:false,title:'OpFin',theme:settings.highContrast?OpFinTheme.highContrastLight:OpFinTheme.light,
       builder:(context,child){
         final media=MediaQuery.of(context);
         final deviceScale=media.textScaler.scale(1);
