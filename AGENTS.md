@@ -58,3 +58,9 @@ Documentation is part of the implementation, not a post-release chore.
 - Dated audit/demo/checkpoint files remain historical evidence and do not override current docs.
 - CI runs `scripts/verify-documentation-drift.py`; do not bypass it by weakening the check.
 - Training manuals, staff guides and customer help content should be derived from `docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md` plus current application labels/contracts.
+
+## Railway infrastructure consent
+
+Railway infrastructure is controlled by `ops/railway/topology-policy.json`. Do **not** create a new Railway project, environment, service, database, volume, bucket, persistent validation workload, or increase replica counts unless the workspace owner has explicitly approved that specific infrastructure change. A request to build, test, validate, fix, deploy, synchronise or release software is not infrastructure-creation consent.
+
+Use the existing approved services first. Run build, browser, migration, compatibility and release validation in ephemeral CI unless the owner has explicitly authorised a persistent Railway resource. Never use Railway Agent to work around this rule. Keep the workspace Railway Agent hard limit at USD 0 and respect the current compute hard limit. If an approved topology change is required, update the allow-list, cost impact and governance documentation in the same reviewed change before provisioning it.
