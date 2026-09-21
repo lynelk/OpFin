@@ -17,6 +17,7 @@ REQUIRED_CURRENT_DOCS = [
     "docs/DEVELOPER_START_HERE.md",
     "docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md",
     "docs/product/OPFIN_PRODUCT_BLUEPRINT.md",
+    "docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md",
     "docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md",
     "docs/manuals/OPFIN_USER_MANUAL.md",
     "docs/manuals/OPFIN_TRAINING_MANUAL.md",
