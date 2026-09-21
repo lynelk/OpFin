@@ -182,7 +182,7 @@ HTTP 202 means the collection request was accepted, not that repayment is econom
 | POST | `/api/support-cases` | Create support/assisted-KYC case |
 | PATCH | `/api/accessibility-preferences` | Persist language/access preferences |
 
-Accessibility preferences include simple language, large text, screen-reader optimisation and reduced motion.
+Accessibility preferences include simple language, large text, screen-reader optimisation, reduced motion and high contrast. High-contrast support is a software preference and does not by itself constitute supported-device accessibility certification.
 
 ## 9. WhatsApp and USSD
 
@@ -315,4 +315,4 @@ Admin/operations routes:
 
 Programme-measurement attributes are technically separate from credit-decision inputs. Customer-reported signals are never risk eligible. Provider signals require provenance and active credit-processing consent before they may even become eligible for an approved scoring/product policy. Protected demographic/accessibility fields and non-credit-purpose signals cannot be promoted to risk inputs. Eligibility does not automatically alter the Composite Score.
 
-Programme participation rules use an explicit allow-list. Missing voluntary inclusion information produces an incomplete eligibility result; OpFin does not infer it. Impact cohort reporting includes only consented programme-measurement profiles and suppresses an entire inclusion dimension when any bucket is smaller than five, reducing differencing risk. Credit outcomes are scoped to the enrolment window, while participant capability events are reported separately from direct programme events. Alternative collateral verification records evidence; it does not automatically approve a loan or alter pricing.
+Programme participation rules use an explicit allow-list. Missing voluntary inclusion information produces an incomplete eligibility result; OpFin does not infer it. Impact cohort reporting includes only consented programme-measurement profiles and suppresses an entire inclusion dimension when any bucket is smaller than five, reducing differencing risk. Credit outcomes are scoped to the enrolment window, while participant capability events are reported separately from direct programme events. Alternative collateral verification records evidence; it does not automatically approve a loan or alter pricing. Expired support evidence cannot be verified. Programme codes are normalised case-insensitively and programme effective dates must remain internally valid. Automated fair-treatment assessment is limited to decision reason-code review and is not external-model fairness certification.
