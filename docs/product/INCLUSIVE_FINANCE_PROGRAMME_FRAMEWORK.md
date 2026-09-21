@@ -152,6 +152,8 @@ The programme layer links a programme to an optional sponsor Financial Space and
 
 The inclusive_finance_programmes and inclusive_finance_enrolments tables support configurable interventions.
 
+Participation is voluntary. A customer can end an existing participation through the authenticated programme exit endpoint. Exit is idempotent, records `exited_at` and a `programme_exited` impact event, and keeps earlier programme evidence for historical reporting. The current single-period enrolment model does not silently re-enrol a customer after exit; any re-entry requires an explicit future lifecycle design or controlled programme-operations decision.
+
 A programme can define:
 
 - sponsor/partner;
@@ -206,7 +208,7 @@ Privacy rules:
 
 Programme evidence should progressively cover access, first formal use, affordability, repayment, financial reputation and customer capability outcomes.
 
-Credit outcomes are counted only after enrolment and before programme exit. Capability events observed among enrolled participants are reported separately from direct programme events and are not described as programme-caused unless the intervention itself is explicitly attributed.
+Credit outcomes are counted only after enrolment and before programme exit. Exited customers remain part of historical participant totals, while post-exit credit/capability events are excluded from the programme observation window. Capability events observed during participation are reported separately from direct programme events and are not described as programme-caused unless the intervention itself is explicitly attributed.
 
 ## 10. Mobile experience
 
