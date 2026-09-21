@@ -81,6 +81,167 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
     await _reload();
   }
 
+  Future<void> _editInclusionDetails(Map<String, dynamic> existing) async {
+    String? gender = existing['gender']?.toString();
+    String? ageCohort = existing['age_cohort']?.toString();
+    String? disabilityStatus = existing['disability_status']?.toString();
+    String? displacementStatus = existing['refugee_or_displaced_status']?.toString();
+    String? ruralUrban = existing['rural_urban']?.toString();
+    String? employmentCategory = existing['employment_category']?.toString();
+    String? firstFormalBorrower = existing['first_time_formal_borrower'] == true
+        ? 'yes'
+        : existing['first_time_formal_borrower'] == false
+            ? 'no'
+            : null;
+
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Voluntary inclusion details'),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'These details are optional. OpFin uses them for accessibility, programme eligibility where applicable and aggregate inclusion reporting. They are not credit-risk inputs.',
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: gender,
+                    decoration: const InputDecoration(labelText: 'Gender'),
+                    items: const [
+                      DropdownMenuItem(value: 'female', child: Text('Female')),
+                      DropdownMenuItem(value: 'male', child: Text('Male')),
+                      DropdownMenuItem(value: 'another_identity', child: Text('Another identity')),
+                      DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+                    ],
+                    onChanged: (value) => setDialogState(() => gender = value),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: ageCohort,
+                    decoration: const InputDecoration(labelText: 'Age group'),
+                    items: const [
+                      DropdownMenuItem(value: '18_24', child: Text('18–24')),
+                      DropdownMenuItem(value: '25_34', child: Text('25–34')),
+                      DropdownMenuItem(value: '35_44', child: Text('35–44')),
+                      DropdownMenuItem(value: '45_54', child: Text('45–54')),
+                      DropdownMenuItem(value: '55_plus', child: Text('55+')),
+                      DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+                    ],
+                    onChanged: (value) => setDialogState(() => ageCohort = value),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: disabilityStatus,
+                    decoration: const InputDecoration(labelText: 'Disability inclusion'),
+                    items: const [
+                      DropdownMenuItem(value: 'person_with_disability', child: Text('Person with a disability')),
+                      DropdownMenuItem(value: 'no_disability_declared', child: Text('No disability declared')),
+                      DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+                    ],
+                    onChanged: (value) => setDialogState(() => disabilityStatus = value),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: displacementStatus,
+                    decoration: const InputDecoration(labelText: 'Refugee or displacement status'),
+                    items: const [
+                      DropdownMenuItem(value: 'refugee_or_displaced', child: Text('Refugee or displaced person')),
+                      DropdownMenuItem(value: 'not_refugee_or_displaced', child: Text('Neither')),
+                      DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+                    ],
+                    onChanged: (value) => setDialogState(() => displacementStatus = value),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: ruralUrban,
+                    decoration: const InputDecoration(labelText: 'Area'),
+                    items: const [
+                      DropdownMenuItem(value: 'rural', child: Text('Rural')),
+                      DropdownMenuItem(value: 'peri_urban', child: Text('Peri-urban')),
+                      DropdownMenuItem(value: 'urban', child: Text('Urban')),
+                      DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+                    ],
+                    onChanged: (value) => setDialogState(() => ruralUrban = value),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: employmentCategory,
+                    decoration: const InputDecoration(labelText: 'Employment category'),
+                    items: const [
+                      DropdownMenuItem(value: 'salaried', child: Text('Salaried')),
+                      DropdownMenuItem(value: 'self_employed', child: Text('Self-employed')),
+                      DropdownMenuItem(value: 'informal_worker', child: Text('Informal worker')),
+                      DropdownMenuItem(value: 'student', child: Text('Student')),
+                      DropdownMenuItem(value: 'not_currently_employed', child: Text('Not currently employed')),
+                      DropdownMenuItem(value: 'other', child: Text('Other')),
+                      DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+                    ],
+                    onChanged: (value) => setDialogState(() => employmentCategory = value),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: firstFormalBorrower,
+                    decoration: const InputDecoration(labelText: 'First-time formal borrower'),
+                    items: const [
+                      DropdownMenuItem(value: 'yes', child: Text('Yes')),
+                      DropdownMenuItem(value: 'no', child: Text('No')),
+                      DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+                    ],
+                    onChanged: (value) => setDialogState(() => firstFormalBorrower = value),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'You can change or withdraw these details later. Withdrawing programme-measurement consent clears the stored voluntary inclusion attributes.',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Save details'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (submitted != true) return;
+
+    final attributes = <String, dynamic>{
+      if (gender != null) 'gender': gender,
+      if (ageCohort != null) 'age_cohort': ageCohort,
+      if (disabilityStatus != null) 'disability_status': disabilityStatus,
+      if (displacementStatus != null)
+        'refugee_or_displaced_status': displacementStatus,
+      if (ruralUrban != null) 'rural_urban': ruralUrban,
+      if (employmentCategory != null) 'employment_category': employmentCategory,
+      if (firstFormalBorrower == 'yes') 'first_time_formal_borrower': true,
+      if (firstFormalBorrower == 'no') 'first_time_formal_borrower': false,
+    };
+
+    await InclusiveFinanceApi.updateProfile(
+      programmeMeasurementConsent: true,
+      measurementAttributes: attributes,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Voluntary inclusion details updated.')),
+    );
+    await _reload();
+  }
+
   Future<void> _enrol(int programmeId, String programmeName) async {
     await InclusiveFinanceApi.enrol(programmeId);
     await InclusiveFinanceApi.recordCapabilityEvent(
@@ -338,13 +499,33 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
                       ),
                     ),
                   Card(
-                    child: SwitchListTile(
-                      value: consent,
-                      onChanged: _setMeasurementConsent,
-                      title: const Text('Help measure inclusion outcomes'),
-                      subtitle: const Text(
-                        'Optional. Programme reporting may use voluntary inclusion information in aggregate. These attributes are kept outside credit-risk decisioning.',
-                      ),
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          value: consent,
+                          onChanged: _setMeasurementConsent,
+                          title: const Text('Help measure inclusion outcomes'),
+                          subtitle: const Text(
+                            'Optional. Programme reporting may use voluntary inclusion information in aggregate. These attributes are kept outside credit-risk decisioning.',
+                          ),
+                        ),
+                        if (consent)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _editInclusionDetails(
+                                  (profile['measurement_attributes'] as Map?)
+                                          ?.cast<String, dynamic>() ??
+                                      <String, dynamic>{},
+                                ),
+                                icon: const Icon(Icons.tune),
+                                label: const Text('Update voluntary inclusion details'),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   Card(
