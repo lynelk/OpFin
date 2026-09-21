@@ -446,4 +446,37 @@ class InclusiveFinanceFoundationTest extends TestCase
         ]);
     }
 
+
+    public function test_provider_signal_cannot_reference_another_customers_consent(): void
+    {
+        $customer = User::factory()->create();
+        $otherCustomer = User::factory()->create();
+        $otherConsent = ConsentRecord::create([
+            'user_id' => $otherCustomer->id,
+            'purpose' => ConsentRecord::PURPOSE_CREDIT_PROCESSING,
+            'policy_version' => 'test-v1',
+            'status' => ConsentRecord::STATUS_GRANTED,
+            'channel' => 'app',
+            'granted_at' => now(),
+        ]);
+
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+
+        $this->postJson('/api/admin/inclusive-finance/signals', [
+            'user_id' => $customer->id,
+            'source_type' => 'partner',
+            'signal_key' => 'verified_revenue_consistency',
+            'signal_value' => 85,
+            'purpose' => 'credit_assessment',
+            'provider_reference' => 'PARTNER-CONSENT-MISMATCH-001',
+            'consent_record_id' => $otherConsent->id,
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('alternative_data_signals', [
+            'user_id' => $customer->id,
+            'provider_reference' => 'PARTNER-CONSENT-MISMATCH-001',
+        ]);
+    }
+
 }
