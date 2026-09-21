@@ -27,8 +27,8 @@ class InclusiveFinanceController extends Controller
             'measurement_attributes' => ['sometimes', 'array'],
             'measurement_attributes.gender' => ['nullable', 'string', 'max:80'],
             'measurement_attributes.age_cohort' => ['nullable', 'string', 'max:40'],
-            'measurement_attributes.disability_status' => ['nullable'],
-            'measurement_attributes.refugee_or_displaced_status' => ['nullable'],
+            'measurement_attributes.disability_status' => ['nullable', 'string', 'max:80'],
+            'measurement_attributes.refugee_or_displaced_status' => ['nullable', 'string', 'max:80'],
             'measurement_attributes.rural_urban' => ['nullable', 'string', 'max:40'],
             'measurement_attributes.employment_category' => ['nullable', 'string', 'max:80'],
             'measurement_attributes.first_time_formal_borrower' => ['nullable', 'boolean'],
@@ -81,9 +81,9 @@ class InclusiveFinanceController extends Controller
         return ApiResponse::success('Customer signal recorded outside credit decisioning.', $this->service->storeUserSignal($request->user(), $validated), 201);
     }
 
-    public function programmes(): JsonResponse
+    public function programmes(Request $request): JsonResponse
     {
-        return ApiResponse::success('Open inclusive-finance programmes loaded.', $this->service->programmes());
+        return ApiResponse::success('Open inclusive-finance programmes loaded.', $this->service->programmes($request->user()));
     }
 
     public function enrol(Request $request, int $programme): JsonResponse
@@ -191,7 +191,9 @@ class InclusiveFinanceController extends Controller
         $required = $partial ? 'sometimes' : 'required';
 
         return $request->validate([
-            'code' => [$required, 'string', 'max:80'],
+            'code' => $partial
+                ? ['sometimes', 'string', 'max:80']
+                : ['required', 'string', 'max:80', Rule::unique('inclusive_finance_programmes', 'code')],
             'name' => [$required, 'string', 'max:180'],
             'sponsor_space_id' => ['nullable', 'integer', 'exists:financial_spaces,id'],
             'partner_id' => ['nullable', 'integer', 'exists:partners,id'],
@@ -201,7 +203,9 @@ class InclusiveFinanceController extends Controller
             'product_config' => ['nullable', 'array'],
             'reporting_config' => ['nullable', 'array'],
             'starts_at' => ['nullable', 'date'],
-            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'ends_at' => $partial
+                ? ['nullable', 'date']
+                : ['nullable', 'date', 'after_or_equal:starts_at'],
         ]);
     }
 
