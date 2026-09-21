@@ -61,7 +61,7 @@ Home now exposes **Build financial resilience**. The mobile experience includes:
 
 - a financial-reputation stage that is explicitly not a second credit score;
 - current amount due/outstanding and practical capability guidance;
-- optional programme-measurement consent;
+- optional programme-measurement consent and editable voluntary inclusion details;
 - a fair-treatment explanation showing that programme demographics stay outside credit decisioning;
 - active inclusive-finance programmes and enrolment;
 - alternative credit-support evidence such as salary undertakings, guarantees, receivables and warehouse receipts.
@@ -71,6 +71,9 @@ Programme measurement is optional and is never required to borrow or manage mone
 Stolets remains a separate SME automation/digitisation product. The OpFin mobile app does not absorb POS, inventory or merchant-operation journeys merely because an approved external business signal may later be consumed with customer consent.
 
 ## Accessibility
+
+The app supports large-text preference, simple-language preference, reduced motion, semantic controls for platform screen readers and a branded high-contrast mode. These preferences change the customer experience without becoming underwriting inputs. Device-level VoiceOver/TalkBack and other assistive-technology claims remain subject to physical-device accessibility UAT.
+
 
 The app supports:
 
