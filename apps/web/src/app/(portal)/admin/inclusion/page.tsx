@@ -181,7 +181,7 @@ export default async function InclusionPage({
               <p className="eyebrow">REPORTING SCOPE</p>
               <h2>{selected ? selected.name : "All inclusive-finance programmes"}</h2>
               <p className="muted">
-                Cohorts smaller than {impact.privacy.minimum_cohort_size} people are suppressed and only consented programme-measurement profiles are included.
+                Only consented programme-measurement profiles are included. If any group in a dimension is below {impact.privacy.minimum_cohort_size}, that whole dimension is suppressed.
               </p>
             </div>
             {selected ? <Link className="button secondary" href="/admin/inclusion">All programmes</Link> : null}
@@ -217,7 +217,7 @@ export default async function InclusionPage({
           <section className="panel">
             <p className="muted">Privacy threshold</p>
             <div className="stat">{impact.privacy.minimum_cohort_size}</div>
-            <p className="muted">Smaller demographic cohorts are not returned.</p>
+            <p className="muted">Dimensions with a smaller group are withheld to reduce differencing risk.</p>
           </section>
         </div>
 
