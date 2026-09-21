@@ -315,4 +315,133 @@ class InclusiveFinanceFoundationTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.protected_or_measurement_attributes_used', false);
     }
+
+    public function test_programme_measurement_consent_preserves_auditable_grant_and_withdrawal_timestamps(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->patchJson('/api/inclusive-finance/profile', [
+            'service_preferences' => ['assisted_onboarding' => true],
+        ])->assertOk();
+
+        $this->assertDatabaseHas('inclusive_finance_profiles', [
+            'user_id' => $user->id,
+            'programme_measurement_consent' => false,
+            'consented_at' => null,
+            'withdrawn_at' => null,
+        ]);
+
+        $this->patchJson('/api/inclusive-finance/profile', [
+            'programme_measurement_consent' => true,
+            'measurement_attributes' => ['age_cohort' => '25_35'],
+        ])->assertOk();
+
+        $granted = DB::table('inclusive_finance_profiles')->where('user_id', $user->id)->first();
+        $this->assertNotNull($granted->consented_at);
+        $this->assertNull($granted->withdrawn_at);
+
+        $this->patchJson('/api/inclusive-finance/profile', [
+            'programme_measurement_consent' => false,
+        ])->assertOk();
+
+        $withdrawn = DB::table('inclusive_finance_profiles')->where('user_id', $user->id)->first();
+        $this->assertNotNull($withdrawn->consented_at);
+        $this->assertNotNull($withdrawn->withdrawn_at);
+        $this->assertNull($withdrawn->measurement_attributes);
+    }
+
+    public function test_protected_signal_aliases_cannot_be_promoted_to_risk_inputs(): void
+    {
+        $customer = User::factory()->create();
+        ConsentRecord::create([
+            'user_id' => $customer->id,
+            'purpose' => ConsentRecord::PURPOSE_CREDIT_PROCESSING,
+            'policy_version' => 'test-v1',
+            'status' => ConsentRecord::STATUS_GRANTED,
+            'channel' => 'app',
+            'granted_at' => now(),
+        ]);
+
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+
+        foreach (['customer_gender', 'applicant_disability_status', 'borrower_age', 'birth_date'] as $key) {
+            $signalId = $this->postJson('/api/admin/inclusive-finance/signals', [
+                'user_id' => $customer->id,
+                'source_type' => 'partner',
+                'signal_key' => $key,
+                'signal_value' => 'protected-value',
+                'purpose' => 'credit_assessment',
+                'provider_reference' => 'PROTECTED-'.strtoupper($key),
+            ])->assertCreated()->json('data.id');
+
+            $this->patchJson('/api/admin/inclusive-finance/signals/'.$signalId.'/verify', [
+                'risk_eligible' => true,
+            ])->assertStatus(422);
+        }
+    }
+
+    public function test_programme_codes_are_normalised_unique_and_effective_dates_remain_valid(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+
+        $programmeId = $this->postJson('/api/admin/inclusive-finance/programmes', [
+            'code' => 'bifs-case-01',
+            'name' => 'Case Normalisation Programme',
+            'status' => 'draft',
+            'starts_at' => '2026-09-21',
+            'ends_at' => '2026-09-30',
+        ])->assertCreated()
+            ->assertJsonPath('data.code', 'BIFS-CASE-01')
+            ->json('data.id');
+
+        $this->postJson('/api/admin/inclusive-finance/programmes', [
+            'code' => 'BIFS-CASE-01',
+            'name' => 'Duplicate Code',
+        ])->assertStatus(422);
+
+        $this->patchJson('/api/admin/inclusive-finance/programmes/'.$programmeId, [
+            'code' => 'bifs-case-02',
+        ])->assertOk()
+            ->assertJsonPath('data.code', 'BIFS-CASE-02');
+
+        $this->patchJson('/api/admin/inclusive-finance/programmes/'.$programmeId, [
+            'starts_at' => '2026-10-10',
+        ])->assertStatus(422);
+
+        $this->patchJson('/api/admin/inclusive-finance/programmes/'.$programmeId, [
+            'starts_at' => '2026-09-21',
+            'ends_at' => '2026-09-20',
+        ])->assertStatus(422);
+    }
+
+    public function test_expired_credit_support_evidence_cannot_be_verified(): void
+    {
+        $customer = User::factory()->create();
+        Sanctum::actingAs($customer);
+
+        $instrumentId = $this->postJson('/api/inclusive-finance/support-instruments', [
+            'instrument_type' => 'warehouse_receipt',
+            'provider_name' => 'Verified Warehouse',
+            'external_reference' => 'WR-EXPIRED-001',
+            'value_minor' => 750000,
+            'currency' => 'UGX',
+            'expires_at' => now()->subDay()->toDateString(),
+        ])->assertCreated()->json('data.id');
+
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+
+        $this->patchJson('/api/admin/inclusive-finance/support-instruments/'.$instrumentId.'/verify', [
+            'status' => 'verified',
+        ])->assertStatus(422);
+
+        $this->assertDatabaseHas('credit_support_instruments', [
+            'id' => $instrumentId,
+            'verification_status' => 'pending',
+        ]);
+    }
+
 }
