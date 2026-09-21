@@ -118,6 +118,16 @@ class InclusiveFinanceController extends Controller
         );
     }
 
+    public function exitProgramme(Request $request, int $programme): JsonResponse
+    {
+        return $this->audited(
+            'inclusive_finance.programme.exited',
+            $request,
+            fn () => $this->service->exitProgramme($request->user(), $programme),
+            ['programme_id' => $programme],
+        );
+    }
+
     public function supportInstruments(Request $request): JsonResponse
     {
         return ApiResponse::success('Credit-support instruments loaded.', $this->service->supportInstruments($request->user()));
