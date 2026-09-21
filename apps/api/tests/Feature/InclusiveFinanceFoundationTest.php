@@ -398,7 +398,7 @@ class InclusiveFinanceFoundationTest extends TestCase
             ->json('data.id');
 
         $this->postJson('/api/admin/inclusive-finance/programmes', [
-            'code' => 'BIFS-CASE-01',
+            'code' => 'bifs-case-01',
             'name' => 'Duplicate Code',
         ])->assertStatus(422);
 
