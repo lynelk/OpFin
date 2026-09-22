@@ -43,3 +43,33 @@ Use accessibility preferences for larger text, simple wording, reduced movement 
 
 ## Help and privacy
 Use Support for a problem or complaint. Permissions and consents can be reviewed in the account experience. Organisation membership never grants automatic access to private Personal Space data.
+
+## Financial health and programme outcomes
+
+### Financial health check-in
+
+From **Financial resilience**, select **Check in** under Financial health.
+
+You can optionally record:
+
+- income stability;
+- estimated days that accessible resources could cover essential expenses;
+- emergency savings;
+- whether repayments currently feel difficult to keep up with;
+- relevant insurance protection;
+- whether savings are increasing, stable or decreasing.
+
+OpFin returns a transparent status such as **Struggling**, **Stabilising**, **Resilient** or **Progressing**, together with the reasons used for that status.
+
+This is **not a credit score**. Completing or changing a financial-health check-in does not itself approve a loan, change a credit limit or change pricing.
+
+### Programme measurement
+
+If you voluntarily join an inclusive-finance programme, the programme may request additional outcome information such as livelihood, enterprise, work, economic-agency or community-finance evidence.
+
+Programme-linked outcome information is recorded only when:
+
+1. programme measurement consent is active; and
+2. you are actively enrolled in that programme.
+
+You may leave a programme through the existing programme controls. Historical evidence from your participation period may be retained for legitimate audit and aggregate programme reporting, but post-exit observations are not silently added to the programme.
