@@ -227,3 +227,59 @@ Programme outcome summaries report aggregate coverage and indicator observations
 A `programme_partner` account sees only programmes with an active explicit grant. Partner impact responses combine existing programme delivery metrics with the new outcome framework. No endpoint in the partner surface returns individual participant records.
 
 Dedicated partner identities must be provisioned explicitly. Do not convert a customer's financial account into a partner identity as a convenience shortcut.
+
+## Programme delivery and commercial completion contract
+
+### Metadata-driven instruments
+
+Programme instruments are server-authoritative. A client receives:
+
+- programme/instrument identity and version;
+- channel and locale availability;
+- measurement stage and due schedule;
+- typed questions;
+- reviewed translation or explicit English fallback;
+- validation metadata;
+- optional indicator mapping;
+- `credit_decision_eligible=false`.
+
+Clients must render the supplied question type rather than reimplement partner-specific questionnaires in code.
+
+### Channel parity
+
+App, Web, WhatsApp, USSD and assisted capture write through the same programme instrument/response model. WhatsApp uses a verified stateful conversation and USSD is intentionally limited to short instruments. Assisted capture stores the staff actor separately and never impersonates the participant.
+
+### Localisation
+
+Supported programme locale keys are currently:
+
+`en`, `sw`, `lg`, `nyn-ruk`, `fr`, `ar`, `ach`.
+
+Only reviewed translations are stored. If the requested locale is unavailable, clients show English and identify the fallback; the backend does not machine-generate programme text.
+
+### Financial-health enrichment
+
+The enrichment contract returns only evidence already recorded inside OpFin, with provenance and confidence context. Missing external information remains missing. Persisted enriched snapshots are `source_type=system_enriched` and `credit_decision_eligible=false`.
+
+### Commercial intelligence
+
+Commercial reporting separates recorded facts from absent data. CAC requires recorded acquisition cost and canonical acquisition attribution. Contribution uses recorded OpFin revenue and cost events; the downside view subtracts recorded principal-at-NPL exposure and is not labelled an expected-loss model.
+
+Commercial graduation is an observable analytics state, not an underwriting decision.
+
+### Programme-partner activation
+
+Partner activation requires:
+
+1. a valid unexpired invitation;
+2. invited phone match where specified;
+3. fresh OpFin phone verification token;
+4. a dedicated phone/email not used by another OpFin identity;
+5. a non-predictable six-digit PIN;
+6. accepted programme-access terms.
+
+Invitation tokens are hashed for matching and encrypted only to support authorised pending-delivery display. The reversible encrypted copy is cleared on acceptance.
+
+### Provider adapters
+
+Adapter configuration contains no external credentials. `credentials_configured` is only an explicit evidence flag that configuration exists in its proper service-scoped location. Programme measurement adapters additionally require subject programme-measurement consent and active enrolment. All ingested signals remain non-risk-eligible.
