@@ -66,3 +66,31 @@ A release is not certified until:
 10. documentation drift checks pass.
 
 External partner credentials, licences/approvals, live commercial agreements and production-provider certification are operational dependencies, not code that can be invented in the repository.
+
+## Impact & Inclusive Finance extension — 22 September 2026
+
+Implemented on the Impact & Inclusive Finance feature branch:
+
+- configurable, versioned impact indicator registry;
+- programme theory-of-change model;
+- programme indicator assignments, targets and reporting frequency;
+- baseline/follow-up/exit/post-programme observation stages;
+- customer financial-health and resilience snapshots with transparent status reasons;
+- optional livelihood, enterprise and dignified-work snapshots;
+- voluntary programme-only economic-agency/empowerment snapshots;
+- community-finance/VSLA evidence bridge that remains non-risk-eligible;
+- privacy-safe programme outcome aggregation;
+- stronger suppression that hides small participant counts as well as values;
+- dedicated programme-partner role and explicit programme-level grants;
+- aggregate-only partner impact portal;
+- admin Impact framework workspace;
+- customer mobile financial-health check-in;
+- API, user, training, operational and UAT documentation.
+
+Non-negotiable implementation boundary:
+
+- impact/programme data is `credit_decision_eligible=false`;
+- programme-linked participant measurement requires active consent and active enrolment;
+- programme frameworks do not alter credit eligibility, pricing or limits;
+- Stolets remains a separate SME operating platform and may only provide data through explicitly consented, governed interfaces;
+- external credentials, programme agreements, regulatory approvals and physical-device accessibility certification remain external activation matters, not values to fabricate in source code.
