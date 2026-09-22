@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter
   http: ^1.6.0
   intl: ^0.20.3
-  lottie: ^3.5.1
+  lottie: ^3.6.1
   shared_preferences: ^2.5.5
   flutter_secure_storage: ^11.2.0
   image_picker: ^1.1.2
