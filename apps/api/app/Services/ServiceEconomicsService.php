@@ -21,11 +21,7 @@ class ServiceEconomicsService
             ->where('request_reference', $data['request_reference'])
             ->first();
 
-        if ($existing) {
-            return $existing;
-        }
-
-        $providerGross = $this->integerOrNull($data['provider_gross_cost_minor'] ?? null);
+        $providerGross = $this->integerOrNull($data['provider_gross_cost_minor'] ?? ($existing->provider_gross_cost_minor ?? null));
         $providerDiscount = $this->integerOrNull($data['provider_discount_minor'] ?? null);
         $providerNet = $this->integerOrNull($data['provider_net_cost_minor'] ?? null);
         if ($providerNet === null && $providerGross !== null && $providerDiscount !== null) {
@@ -54,22 +50,23 @@ class ServiceEconomicsService
             $grossMargin = $netRevenue - $providerNet;
         }
 
-        $id = DB::table('service_economics_events')->insertGetId([
-            'public_id' => (string) Str::uuid(),
-            'user_id' => $data['user_id'] ?? null,
-            'financial_space_id' => $data['financial_space_id'] ?? null,
-            'partner_id' => $data['partner_id'] ?? null,
-            'partner_product_id' => $data['partner_product_id'] ?? null,
-            'commercial_agreement_id' => $data['commercial_agreement_id'] ?? null,
+        $values = [
+            'user_id' => $data['user_id'] ?? ($existing->user_id ?? null),
+            'financial_space_id' => $data['financial_space_id'] ?? ($existing->financial_space_id ?? null),
+            'partner_id' => $data['partner_id'] ?? ($existing->partner_id ?? null),
+            'partner_product_id' => $data['partner_product_id'] ?? ($existing->partner_product_id ?? null),
+            'commercial_agreement_id' => $data['commercial_agreement_id'] ?? ($existing->commercial_agreement_id ?? null),
             'service_code' => trim((string) $data['service_code']),
-            'capability_code' => isset($data['capability_code']) ? trim((string) $data['capability_code']) : null,
+            'capability_code' => isset($data['capability_code'])
+                ? trim((string) $data['capability_code'])
+                : ($existing->capability_code ?? null),
             'provider' => trim((string) $data['provider']),
             'route' => strtoupper(trim((string) $data['route'])),
-            'environment' => strtoupper(trim((string) ($data['environment'] ?? 'PRODUCTION'))),
+            'environment' => strtoupper(trim((string) ($data['environment'] ?? ($existing->environment ?? 'PRODUCTION')))),
             'request_reference' => trim((string) $data['request_reference']),
-            'provider_reference' => $data['provider_reference'] ?? null,
+            'provider_reference' => $data['provider_reference'] ?? ($existing->provider_reference ?? null),
             'status' => strtoupper(trim((string) $data['status'])),
-            'currency' => strtoupper(trim((string) ($data['currency'] ?? 'UGX'))),
+            'currency' => strtoupper(trim((string) ($data['currency'] ?? ($existing->currency ?? 'UGX')))),
             'provider_gross_cost_minor' => $providerGross,
             'provider_discount_minor' => $providerDiscount,
             'provider_net_cost_minor' => $providerNet,
@@ -79,16 +76,30 @@ class ServiceEconomicsService
             'cito_platform_fee_minor' => $citoFee,
             'opfin_platform_fee_minor' => $opfinFee,
             'tax_amount_minor' => $tax,
-            'net_settlement_to_provider_minor' => $this->integerOrNull($data['net_settlement_to_provider_minor'] ?? null),
+            'net_settlement_to_provider_minor' => $this->integerOrNull($data['net_settlement_to_provider_minor'] ?? ($existing->net_settlement_to_provider_minor ?? null)),
             'gross_revenue_minor' => $grossRevenue,
             'net_revenue_minor' => $netRevenue,
             'gross_margin_minor' => $grossMargin,
-            'price_book_version' => $data['price_book_version'] ?? null,
-            'contract_version' => $data['contract_version'] ?? null,
-            'reconciliation_reference' => $data['reconciliation_reference'] ?? null,
-            'metadata' => isset($data['metadata']) ? json_encode($data['metadata'], JSON_THROW_ON_ERROR) : null,
-            'occurred_at' => $data['occurred_at'] ?? now(),
-            'reconciled_at' => $data['reconciled_at'] ?? null,
+            'price_book_version' => $data['price_book_version'] ?? ($existing->price_book_version ?? null),
+            'contract_version' => $data['contract_version'] ?? ($existing->contract_version ?? null),
+            'reconciliation_reference' => $data['reconciliation_reference'] ?? ($existing->reconciliation_reference ?? null),
+            'metadata' => isset($data['metadata'])
+                ? json_encode(array_merge((array) json_decode((string) ($existing->metadata ?? '{}'), true), $data['metadata']), JSON_THROW_ON_ERROR)
+                : ($existing->metadata ?? null),
+            'occurred_at' => $data['occurred_at'] ?? ($existing->occurred_at ?? now()),
+            'reconciled_at' => $data['reconciled_at'] ?? ($existing->reconciled_at ?? null),
+            'updated_at' => now(),
+        ];
+
+        if ($existing) {
+            DB::table('service_economics_events')->where('id', $existing->id)->update($values);
+
+            return DB::table('service_economics_events')->where('id', $existing->id)->first();
+        }
+
+        $id = DB::table('service_economics_events')->insertGetId([
+            'public_id' => (string) Str::uuid(),
+            ...$values,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
