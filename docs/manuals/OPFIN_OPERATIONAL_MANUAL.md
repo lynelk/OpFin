@@ -4,7 +4,7 @@ Version: 21 September 2026
 Audience: OpFin operations, support, finance, compliance and authorised institutional administrators
 
 ## Operating model
-OpFin separates Person identity, Financial Spaces, membership/roles, capabilities, entitlements and product eligibility. CPay is the execution/reconciliation boundary where configured for money movement. Revenue events attribute commercial economics and do not replace the financial ledger.
+OpFin separates Person identity, Financial Spaces, membership/roles, capabilities, entitlements and product eligibility. Cito is the preferred third-party integration gateway and CPay is the preferred money-movement route, but OpFin remains independently operable through certified provider adapters. Revenue and service-economics events attribute commercial economics and do not replace the financial ledger.
 
 ## Daily controls
 Review health/readiness, worker and scheduler status, provider callbacks, reconciliation queues, failed financial actions, support cases, KYC/consent exceptions and security alerts. Never resolve a money-state exception by editing customer-facing status without provider/ledger evidence.
@@ -16,16 +16,18 @@ A person can belong to many Spaces. Validate role before any administrative acti
 Business/SACCO/Fund/Partner progression is profile → KYB → regulatory evidence → products → integration → certification. Do not activate regulated product distribution merely because a technical capability is enabled.
 
 ## Employer operations
-Employer is a capability on a Business Space. Employment relationships may support benefits or financial-wellness services, but employee Personal Space data remains private unless a specific lawful consent/process authorises data sharing.
+Employer is a capability on a Business Space. Employment relationships may support benefits or financial-wellness services, but employee Personal Space data remains private unless a specific lawful consent/process authorises data sharing. Verified positive employment behaviour may create a capped underwriting benefit. Missing, unavailable or negative behaviour information is neutral under this enrichment policy.
 
 ## Partner Catalogue
 Maintain partner status, product lifecycle, territory, eligibility, pricing/disclosures and integration configuration. Customer need/eligibility/suitability precedes commercial economics.
 
 ## Revenue operations
-Revenue event types include subscription, commission, revenue share, transaction, platform fee, API fee and servicing. Reconcile each applicable event to CPay/provider references and settlement evidence. Investigate duplicates through source idempotency rather than deleting evidence.
+Revenue event types include subscription, commission, revenue share, transaction, platform fee, API fee and servicing. Service-economics events separately capture provider cost, customer charge, customer/partner/Cito/OpFin fees, tax, provider settlement, net revenue and margin. Principal, premium and investment capital are not platform revenue. Reconcile each applicable event to provider references and settlement evidence. Investigate duplicates through source idempotency rather than deleting evidence.
+
+Use the admin reporting suite for service economics, capital/loan-book performance, insurance, savings/investments, positive employment-behaviour coverage and financial-account-behaviour coverage. Unknown commercial fields must remain visibly incomplete rather than being entered as zero.
 
 ## Incident handling
-For partner outage, preserve pending state, avoid duplicate execution, retry only under idempotent rules, reconcile provider truth, communicate customer-safe status and retain audit evidence. Escalate suspected financial-integrity or privacy incidents immediately.
+For partner outage, preserve pending state, avoid duplicate execution, retry only under idempotent rules, reconcile provider truth, communicate customer-safe status and retain audit evidence. When Cito is the primary route, an ambiguous failed/timed-out request must not automatically trigger the direct-provider backup; reconcile the original operation first, then explicitly switch route if required. Escalate suspected financial-integrity or privacy incidents immediately.
 
 ## Release operations
 A release requires migrations, API/client tests, cross-Space isolation, financial integrity/idempotency, partner failure/recovery, accessibility/mobile-completeness evidence, revenue reconciliation and documentation alignment. Production success is not a substitute for CI evidence.
