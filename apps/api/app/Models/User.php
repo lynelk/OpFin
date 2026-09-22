@@ -19,6 +19,8 @@ class User extends Authenticatable
 
     public const ROLE_EMPLOYER_ADMIN = 'employer_admin';
 
+    public const ROLE_PROGRAMME_PARTNER = 'programme_partner';
+
     public const ROLE_SUPPORT = 'support';
 
     public const ROLES = [
@@ -26,6 +28,7 @@ class User extends Authenticatable
         self::ROLE_OPERATIONS,
         self::ROLE_CUSTOMER,
         self::ROLE_EMPLOYER_ADMIN,
+        self::ROLE_PROGRAMME_PARTNER,
         self::ROLE_SUPPORT,
     ];
 
@@ -34,6 +37,7 @@ class User extends Authenticatable
         self::ROLE_OPERATIONS => ['profile.view', 'operations.view', 'audit.view', 'kyc.review', 'credit.review', 'reconciliation.manage', 'support.manage', 'compliance.report'],
         self::ROLE_CUSTOMER => ['profile.view', 'kyc.submit', 'consent.manage'],
         self::ROLE_EMPLOYER_ADMIN => ['profile.view', 'employer.view'],
+        self::ROLE_PROGRAMME_PARTNER => ['profile.view', 'programme.view'],
         self::ROLE_SUPPORT => ['profile.view', 'support.view', 'kyc.review', 'support.manage'],
     ];
 
