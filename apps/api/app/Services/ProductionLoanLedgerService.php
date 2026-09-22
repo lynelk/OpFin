@@ -50,10 +50,10 @@ class ProductionLoanLedgerService
 
         if ($deductedFeesMinor > 0) {
             $entries[] = [
-                'account_id' => $this->creditFeeClearingAccount($loan, $offer->currency)->id,
+                'account_id' => $this->creditFeeIncomeAccount($loan, $offer->currency)->id,
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $deductedFeesMinor,
-                'memo' => 'Disclosed deducted credit fees held in deferred-fee clearing pending recognition',
+                'memo' => 'Deducted credit fee income realised at provider-confirmed disbursement',
             ];
         }
 
@@ -143,10 +143,10 @@ class ProductionLoanLedgerService
 
         if ($deductedFeesMinor > 0) {
             $entries[] = [
-                'account_id' => $this->creditFeeClearingAccount($loan, $offer->currency)->id,
+                'account_id' => $this->creditFeeIncomeAccount($loan, $offer->currency)->id,
                 'direction' => LedgerEntry::DIRECTION_DEBIT,
                 'amount_minor' => $deductedFeesMinor,
-                'memo' => 'Deducted deferred-fee clearing reversed with provider reversal',
+                'memo' => 'Deducted credit fee income reversed with provider reversal',
             ];
         }
 
@@ -300,6 +300,21 @@ class ProductionLoanLedgerService
                     ? 'Financed fee receivable extinguished by customer repayment'
                     : 'Legacy cash allocated to disclosed credit fees pending accounting-policy recognition',
             ];
+
+            if ($transaction->loan?->credit_offer_id) {
+                $entries[] = [
+                    'account_id' => $this->creditFeeClearingAccount($transaction->loan, $currency)->id,
+                    'direction' => LedgerEntry::DIRECTION_DEBIT,
+                    'amount_minor' => $feesMinor,
+                    'memo' => 'Deferred financed credit fee released as the customer repays it',
+                ];
+                $entries[] = [
+                    'account_id' => $this->creditFeeIncomeAccount($transaction->loan, $currency)->id,
+                    'direction' => LedgerEntry::DIRECTION_CREDIT,
+                    'amount_minor' => $feesMinor,
+                    'memo' => 'Financed credit fee income realised on customer repayment',
+                ];
+            }
         }
         if ($suspenseMinor > 0) {
             $entries[] = [
@@ -471,6 +486,11 @@ class ProductionLoanLedgerService
     private function creditFeeClearingAccount(Loan $loan, string $currency): LedgerAccount
     {
         return $this->account('liability.credit_fee_clearing.product_'.$loan->loan_product_id, 'Credit fee clearing product '.$loan->loan_product_id, 'liability', $currency);
+    }
+
+    private function creditFeeIncomeAccount(Loan $loan, string $currency): LedgerAccount
+    {
+        return $this->account('income.credit_fees.product_'.$loan->loan_product_id, 'Credit fee income product '.$loan->loan_product_id, 'income', $currency);
     }
 
     private function providerCashAccount(string $provider, string $purpose, string $currency): LedgerAccount
