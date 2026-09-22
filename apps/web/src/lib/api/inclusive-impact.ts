@@ -63,7 +63,8 @@ export type ProgrammeFramework = {
 
 export type IndicatorSummary = {
   indicator: ImpactIndicator;
-  participant_count: number;
+  participant_count: number | null;
+  participant_observation_count: number | null;
   observation_count: number;
   institutional_observation_count: number;
   suppressed: boolean;
@@ -81,15 +82,22 @@ export type ProgrammeOutcomes = {
   theory_of_change?: ProgrammeTheoryOfChange | null;
   indicator_summaries: IndicatorSummary[];
   snapshot_coverage: {
-    financial_health_people: number;
-    livelihood_people: number;
-    empowerment_people: number;
-    community_finance_people: number;
+    financial_health_people: number | null;
+    livelihood_people: number | null;
+    empowerment_people: number | null;
+    community_finance_people: number | null;
+  };
+  snapshot_coverage_suppressed: {
+    financial_health_people: boolean;
+    livelihood_people: boolean;
+    empowerment_people: boolean;
+    community_finance_people: boolean;
   };
   privacy: {
     minimum_cohort_size: number;
     individual_records_exposed: false;
     small_participant_indicator_cohorts_suppressed: boolean;
+    small_snapshot_coverage_counts_suppressed: boolean;
   };
   causality_notice: string;
 };
