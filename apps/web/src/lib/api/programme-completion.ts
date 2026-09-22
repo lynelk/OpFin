@@ -487,6 +487,26 @@ export const programmeCompletionApi = {
       }
     ),
 
+  ingestAdapter: (
+    adapterId: number,
+    payload: {
+      user_id: number;
+      provider_reference: string;
+      signals: Record<string, unknown>;
+      observed_at?: string;
+      expires_at?: string;
+    },
+    token?: string
+  ) =>
+    request<Record<string, unknown>>(
+      `/admin/inclusive-finance/provider-adapters/${adapterId}/ingestions`,
+      token,
+      {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }
+    ),
+
   configureAdapter: (
     payload: {
       id?: number;
