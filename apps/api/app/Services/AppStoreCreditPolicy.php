@@ -16,6 +16,8 @@ class AppStoreCreditPolicy
 
     public const PREFERRED_FULL_REPAYMENT_DAYS = 90;
 
+    public function __construct(private readonly CreditCashFlowService $cashFlows) {}
+
     public function validateOffer(LoanApplication $application, array $pricing): array
     {
         if (! $this->isStoreChannel((string) ($application->distribution_channel ?? 'web'))) {
@@ -42,24 +44,42 @@ class AppStoreCreditPolicy
         $interest = (int) round($principal * ($termRatePercent / 100));
         $fees = (int) ($pricing['access_fee_minor'] ?? 0) + (int) ($pricing['disbursement_fee_minor'] ?? 0);
         $feeTreatment = (string) ($pricing['fee_treatment'] ?? 'financed');
+
+        if (! in_array($feeTreatment, ['financed', 'deducted'], true)) {
+            throw new InvalidArgumentException('Fee treatment must be financed or deducted.');
+        }
+        if ($fees < 0) {
+            throw new InvalidArgumentException('Credit fees cannot be negative.');
+        }
+
         $netDisbursement = $feeTreatment === 'deducted' ? $principal - $fees : $principal;
-        $totalRepayment = $principal + $interest + ($feeTreatment === 'financed' ? $fees : 0);
+        $repayableFees = $feeTreatment === 'financed' ? $fees : 0;
 
         if ($netDisbursement <= 0) {
             throw new InvalidArgumentException('The disclosed amount received must be positive before mobile-store loan compliance can be evaluated.');
         }
 
-        $financeCharge = $totalRepayment - $netDisbursement;
-        $equivalentApr = ($financeCharge / $netDisbursement) * (365 / $durationDays) * 100;
-        if (($application->distribution_channel ?? 'web') === 'app_store' && $equivalentApr > self::MAX_APR_PERCENT + 0.000001) {
+        $schedule = $this->cashFlows->repaymentSchedule(
+            $principal,
+            $interest,
+            $repayableFees,
+            $durationDays,
+            (string) $term->repayment_frequency,
+        );
+        $equivalentApr = $this->cashFlows->equivalentAnnualPercentageRate($netDisbursement, $schedule);
+
+        if (($application->distribution_channel ?? 'web') === 'app_store'
+            && $equivalentApr > self::MAX_APR_PERCENT + 0.000001) {
             throw new InvalidArgumentException('This credit product cannot be offered through the iOS App Store because its equivalent maximum APR, including fees, exceeds 36%.');
         }
 
         return [
             'equivalent_maximum_apr_percent' => round($equivalentApr, 6),
-            'first_payment_due_days_after_disbursement' => $this->frequencyDays((string) $term->repayment_frequency),
+            'apr_calculation_method' => CreditCashFlowService::APR_ALGORITHM_VERSION,
+            'schedule_calculation_method' => CreditCashFlowService::SCHEDULE_ALGORITHM_VERSION,
+            'first_payment_due_days_after_disbursement' => $schedule[0]['due_offset_days'],
             'full_repayment_due_days_after_disbursement' => $durationDays,
-            'mobile_store_policy_version' => 'personal-loan-store-v2',
+            'mobile_store_policy_version' => 'personal-loan-store-v3',
             'distribution_channel' => (string) $application->distribution_channel,
         ];
     }
@@ -75,18 +95,7 @@ class AppStoreCreditPolicy
             'daily' => 1,
             'weekly' => 7,
             'monthly' => 30,
-            default => throw new InvalidArgumentException('Unsupported interest cycle for App Store credit disclosure.'),
-        };
-    }
-
-    private function frequencyDays(string $frequency): int
-    {
-        return match (strtolower($frequency)) {
-            'daily' => 1,
-            'weekly' => 7,
-            'fortnightly' => 14,
-            'monthly' => 30,
-            default => throw new InvalidArgumentException('Unsupported repayment frequency for App Store credit disclosure.'),
+            default => throw new InvalidArgumentException('Unsupported interest cycle for mobile-store credit disclosure.'),
         };
     }
 }
