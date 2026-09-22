@@ -626,15 +626,59 @@ class FinancialIntegrityService
 
         $maxAgeDays = max(1, (int) config('opfin.accounting.impairment_max_age_days', 31));
         $allowanceExpected = [];
+        $writeOffs = Schema::hasTable('credit_write_offs')
+            ? DB::table('credit_write_offs')->get()->keyBy('loan_id')
+            : collect();
         $loans = DB::table('loans')
             ->whereNull('deleted_at')
             ->get(['id', 'loan_product_id', 'credit_offer_id', 'status']);
 
         foreach ($loans as $loan) {
-            $currentExposure = $loan->credit_offer_id
+            $legalPrincipalOutstanding = $loan->credit_offer_id
                 ? (int) ($productionExposure[$loan->id] ?? 0)
                 : (int) ($legacyExposure[$loan->id] ?? 0);
+            $writeOff = $writeOffs->get($loan->id);
+            $currentExposure = $writeOff ? 0 : $legalPrincipalOutstanding;
             $assessment = $latestByLoan[$loan->id] ?? null;
+
+            if ($writeOff) {
+                if (! $assessment
+                    || (int) $writeOff->impairment_assessment_id !== (int) $assessment->id
+                    || (string) $assessment->stage !== 'stage_3'
+                    || (int) $assessment->gross_exposure_minor !== (int) $writeOff->principal_written_off_minor
+                    || (int) $assessment->expected_credit_loss_minor !== (int) $writeOff->principal_written_off_minor) {
+                    $findings[] = $this->alert(
+                        $runId,
+                        'critical',
+                        'credit_write_off_impairment_basis_invalid',
+                        (string) $loan->id,
+                        'Written-off credit is not supported by its immutable 100% stage-3 impairment basis.',
+                        [
+                            'loan_id' => $loan->id,
+                            'write_off_id' => $writeOff->id,
+                            'impairment_assessment_id' => $assessment?->id,
+                            'write_off_impairment_assessment_id' => $writeOff->impairment_assessment_id,
+                            'principal_written_off_minor' => (int) $writeOff->principal_written_off_minor,
+                            'assessment_ecl_minor' => (int) ($assessment?->expected_credit_loss_minor ?? 0),
+                        ],
+                    );
+                }
+
+                if ($assessment) {
+                    $key = (int) $loan->loan_product_id.'|'.strtoupper((string) $assessment->currency);
+                    $allowanceExpected[$key] ??= [
+                        'product_id' => (int) $loan->loan_product_id,
+                        'currency' => strtoupper((string) $assessment->currency),
+                        'expected_minor' => 0,
+                    ];
+                    $allowanceExpected[$key]['expected_minor'] += max(
+                        0,
+                        (int) $assessment->expected_credit_loss_minor - (int) $writeOff->principal_written_off_minor,
+                    );
+                }
+
+                continue;
+            }
 
             if ($currentExposure > 0 && ! $assessment) {
                 $findings[] = $this->alert(
