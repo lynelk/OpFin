@@ -190,10 +190,13 @@ class InclusiveImpactFrameworkTest extends TestCase
 
         $this->getJson('/api/admin/inclusive-finance/programmes/'.$programmeId.'/outcomes')
             ->assertOk()
-            ->assertJsonPath('data.indicator_summaries.0.participant_count', 1)
+            ->assertJsonPath('data.indicator_summaries.0.participant_count', null)
+            ->assertJsonPath('data.indicator_summaries.0.participant_observation_count', null)
+            ->assertJsonPath('data.indicator_summaries.0.observation_count', 0)
             ->assertJsonPath('data.indicator_summaries.0.suppressed', true)
             ->assertJsonPath('data.privacy.minimum_cohort_size', 5)
-            ->assertJsonPath('data.privacy.individual_records_exposed', false);
+            ->assertJsonPath('data.privacy.individual_records_exposed', false)
+            ->assertJsonPath('data.privacy.small_snapshot_coverage_counts_suppressed', true);
     }
 
     public function test_institutional_observation_can_be_recorded_without_claiming_individual_participant_outcomes(): void
