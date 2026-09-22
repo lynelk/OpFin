@@ -88,6 +88,11 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
         $this->assertSame(1, $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.disbursement')->count());
         $this->assertSame(1, $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.repayment')->count());
         $this->assertDatabaseHas('audit_logs', ['event' => 'credit.repayment.fulfilled', 'subject_id' => $loan->id]);
+        $repayment = $repayment->fresh();
+        $this->assertSame(MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED, $repayment->product_accounting_status);
+        $this->assertSame(MobileMoneyTransaction::RECONCILIATION_PENDING, $repayment->reconciliation_status);
+        $this->assertNotNull($repayment->product_finality_applied_at);
+        $this->assertNull($repayment->provider_reconciled_at);
     }
 
     public function test_repayment_rejects_amount_above_exact_production_obligation(): void
@@ -176,8 +181,14 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             'id' => $matched->id,
             'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
         ]);
+        $this->assertNotNull($matched->fresh()->provider_reconciled_at);
         $this->assertDatabaseHas('mobile_money_transactions', [
             'id' => $mismatch->id,
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+        ]);
+        $this->assertNull($mismatch->fresh()->provider_reconciled_at);
+        $this->assertDatabaseHas('mobile_money_transactions', [
+            'id' => $missingProvider->id,
             'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
         ]);
     }
