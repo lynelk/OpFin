@@ -22,6 +22,7 @@ class PositiveEmploymentBehaviourService
             ->whereIn('purpose', ['credit_assessment', 'affordability'])
             ->where('verified', true)
             ->where('risk_eligible', true)
+            ->whereNotNull('consent_record_id')
             ->where(function ($query) {
                 $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
