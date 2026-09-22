@@ -193,14 +193,15 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
 
     private function reconciliationStatus(string $status): string
     {
-        return match ($status) {
-            MobileMoneyTransaction::STATUS_FAILED => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+        return in_array($status, [
+            MobileMoneyTransaction::STATUS_FAILED,
             MobileMoneyTransaction::STATUS_SUCCESSFUL,
             MobileMoneyTransaction::STATUS_REVERSED,
             MobileMoneyTransaction::STATUS_PENDING,
-            MobileMoneyTransaction::STATUS_PROCESSING => MobileMoneyTransaction::RECONCILIATION_PENDING,
-            default => MobileMoneyTransaction::RECONCILIATION_UNRECONCILED,
-        };
+            MobileMoneyTransaction::STATUS_PROCESSING,
+        ], true)
+            ? MobileMoneyTransaction::RECONCILIATION_PENDING
+            : MobileMoneyTransaction::RECONCILIATION_UNRECONCILED;
     }
 
     private function safePayload(array $payload, int $httpStatus): array
