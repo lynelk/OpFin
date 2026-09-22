@@ -95,6 +95,7 @@ class FoundationApiTest extends TestCase
             'operations',
             'customer',
             'employer_admin',
+            'programme_partner',
             'support',
         ], User::ROLES);
 
@@ -102,6 +103,7 @@ class FoundationApiTest extends TestCase
         $this->assertContains('operations.view', User::ROLE_PERMISSIONS['operations']);
         $this->assertContains('profile.view', User::ROLE_PERMISSIONS['customer']);
         $this->assertContains('employer.view', User::ROLE_PERMISSIONS['employer_admin']);
+        $this->assertContains('programme.view', User::ROLE_PERMISSIONS['programme_partner']);
         $this->assertContains('support.view', User::ROLE_PERMISSIONS['support']);
     }
 
