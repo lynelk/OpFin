@@ -2,12 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\CapitalMandate;
 use App\Models\ConsentRecord;
+use App\Models\CreditOffer;
 use App\Models\User;
+use App\Services\FundingPoolService;
 use App\Services\PositiveEmploymentBehaviourService;
 use App\Services\ServiceEconomicsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ProviderIndependenceReportingTest extends TestCase
@@ -114,5 +118,144 @@ class ProviderIndependenceReportingTest extends TestCase
         $this->assertSame(100, (int) $second->net_settlement_to_provider_minor);
         $this->assertSame('RECONCILED', $second->status);
         $this->assertDatabaseCount('service_economics_events', 1);
+    }    
+    public function test_funding_pool_reservation_deployment_release_and_reversal_are_idempotent(): void
+    {
+        $user = User::factory()->create();
+        $offer = $this->creditOfferWithFundingPool($user, 500, 1500);
+        $pool = CapitalMandate::findOrFail($offer->funding_pool_id);
+        $service = app(FundingPoolService::class);
+
+        $service->reserve($offer);
+        $service->reserve($offer->fresh());
+
+        $pool->refresh();
+        $this->assertSame(500, (int) $pool->reserved_capital_minor);
+        $this->assertSame(0, (int) $pool->deployed_capital_minor);
+
+        $service->commit($offer->fresh());
+        $service->commit($offer->fresh());
+
+        $pool->refresh();
+        $this->assertSame(0, (int) $pool->reserved_capital_minor);
+        $this->assertSame(500, (int) $pool->deployed_capital_minor);
+
+        $service->reverseCommitted($offer->fresh());
+        $service->reverseCommitted($offer->fresh());
+
+        $pool->refresh();
+        $this->assertSame(0, (int) $pool->reserved_capital_minor);
+        $this->assertSame(0, (int) $pool->deployed_capital_minor);
+
+        $releaseOffer = $this->creditOfferWithFundingPool($user, 300, 1000);
+        $releasePool = CapitalMandate::findOrFail($releaseOffer->funding_pool_id);
+
+        $service->reserve($releaseOffer);
+        $service->release($releaseOffer->fresh());
+        $service->release($releaseOffer->fresh());
+
+        $releasePool->refresh();
+        $this->assertSame(0, (int) $releasePool->reserved_capital_minor);
+        $this->assertSame(0, (int) $releasePool->deployed_capital_minor);
+    }
+
+    private function creditOfferWithFundingPool(User $user, int $principalMinor, int $committedMinor): CreditOffer
+    {
+        $now = now();
+        $institutionId = DB::table('institutions')->insertGetId([
+            'name' => 'Test Institution '.Str::random(6),
+            'address' => 'Kampala',
+            'phone' => '256700000001',
+            'email' => Str::lower(Str::random(8)).'@example.test',
+            'status' => 'Active',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $loanProductId = DB::table('loan_products')->insertGetId([
+            'name' => 'Test Product '.Str::random(6),
+            'type' => 'Cash',
+            'status' => 'Active',
+            'institution_id' => (string) $institutionId,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $termId = DB::table('loan_product_terms')->insertGetId([
+            'loan_product_id' => $loanProductId,
+            'interest_rate' => 2.8,
+            'interest_type' => 'Flat',
+            'interest_cycle' => 'Monthly',
+            'repayment_frequency' => 'Monthly',
+            'duration' => 30,
+            'status' => 'Active',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $applicationId = DB::table('loan_applications')->insertGetId([
+            'user_id' => $user->id,
+            'loan_product_id' => $loanProductId,
+            'loan_product_term_id' => $termId,
+            'institution_id' => $institutionId,
+            'amount' => (string) $principalMinor,
+            'status' => 'Approved',
+            'reason' => 'test',
+            'distribution_channel' => 'web',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $decisionId = DB::table('credit_decisions')->insertGetId([
+            'loan_application_id' => $applicationId,
+            'user_id' => $user->id,
+            'status' => 'approved',
+            'requested_amount_minor' => $principalMinor,
+            'approved_amount_minor' => $principalMinor,
+            'reason_codes' => json_encode(['TEST_APPROVAL'], JSON_THROW_ON_ERROR),
+            'decision_summary' => 'Test approval',
+            'decided_at' => $now,
+            'policy_version' => 'test-v1',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $pool = CapitalMandate::create([
+            'reference' => (string) Str::uuid(),
+            'owner_user_id' => $user->id,
+            'mandate_type' => 'private_loan_book',
+            'name' => 'Test Funding Pool '.Str::random(6),
+            'committed_capital_minor' => $committedMinor,
+            'deployed_capital_minor' => 0,
+            'reserved_capital_minor' => 0,
+            'status' => 'active',
+            'investment_policy' => ['test' => true],
+            'approved_by' => $user->id,
+            'approved_at' => $now,
+        ]);
+
+        return CreditOffer::create([
+            'loan_application_id' => $applicationId,
+            'credit_decision_id' => $decisionId,
+            'user_id' => $user->id,
+            'institution_id' => $institutionId,
+            'funding_pool_id' => $pool->id,
+            'created_by' => $user->id,
+            'offer_reference' => 'OPF-OFR-'.Str::upper(Str::random(16)),
+            'version' => 1,
+            'status' => CreditOffer::STATUS_OFFERED,
+            'currency' => 'UGX',
+            'principal_amount_minor' => $principalMinor,
+            'interest_amount_minor' => 0,
+            'fees_minor' => 0,
+            'net_disbursement_minor' => $principalMinor,
+            'total_repayment_minor' => $principalMinor,
+            'duration_days' => 30,
+            'interest_rate_percent' => 0,
+            'interest_cycle' => 'Monthly',
+            'interest_type' => 'Flat',
+            'repayment_frequency' => 'Monthly',
+            'fee_treatment' => 'financed',
+            'policy_version' => 'test-v1',
+            'pricing_snapshot' => ['test' => true],
+            'disclosure_snapshot' => ['test' => true],
+            'offered_at' => $now,
+            'expires_at' => $now->copy()->addHour(),
+        ]);
     }
 }
