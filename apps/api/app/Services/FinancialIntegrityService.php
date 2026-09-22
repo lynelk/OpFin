@@ -119,6 +119,7 @@ class FinancialIntegrityService
 
         $this->scanExpectedCreditPostings($runId, $findings);
         $this->scanCreditSubledgerReconciliation($runId, $findings);
+        $this->scanImpairmentCoverage($runId, $findings);
         $this->scanAssetEconomics($runId, $findings);
         $this->scanLongRangePaymentReconciliation($runId, $findings);
 
@@ -395,6 +396,33 @@ class FinancialIntegrityService
             }
         }
 
+        $financialAccounts = DB::table('ledger_accounts')
+            ->where(function ($query) {
+                $query->where('code', 'like', 'asset.loan_receivable.product_%')
+                    ->orWhere('code', 'like', 'asset.credit_fee_receivable.product_%')
+                    ->orWhere('code', 'like', 'liability.credit_fee_clearing.product_%')
+                    ->orWhere('code', 'like', 'income.interest.product_%')
+                    ->orWhere('code', 'like', 'income.credit_fees.product_%');
+            })
+            ->get(['code', 'currency']);
+
+        foreach ($financialAccounts as $account) {
+            if (! preg_match('/product_(\\d+)$/', (string) $account->code, $matches)) {
+                continue;
+            }
+            $productId = (int) $matches[1];
+            $currency = strtoupper((string) $account->currency);
+            $key = $productId.'|'.$currency;
+            $expected[$key] ??= [
+                'product_id' => $productId,
+                'currency' => $currency,
+                'principal_outstanding_minor' => 0,
+                'interest_realised_minor' => 0,
+                'financed_fee_outstanding_minor' => 0,
+                'fee_income_minor' => 0,
+            ];
+        }
+
         foreach ($expected as $row) {
             $productId = $row['product_id'];
             $currency = $row['currency'];
@@ -475,6 +503,193 @@ class FinancialIntegrityService
         $credits = (int) ($totals->credits ?? 0);
 
         return $normalDirection === 'debit' ? $debits - $credits : $credits - $debits;
+    }
+
+    private function scanImpairmentCoverage(int $runId, array &$findings): void
+    {
+        if (
+            ! Schema::hasTable('loan_impairment_assessments')
+            || ! Schema::hasTable('loans')
+            || ! Schema::hasTable('ledger_accounts')
+            || ! Schema::hasTable('ledger_entries')
+        ) {
+            return;
+        }
+
+        $productionExposure = Schema::hasTable('credit_repayment_schedule_items')
+            ? DB::table('credit_repayment_schedule_items')
+                ->select('loan_id')
+                ->selectRaw('SUM(principal_outstanding_minor + fees_outstanding_minor) AS exposure_minor')
+                ->groupBy('loan_id')
+                ->pluck('exposure_minor', 'loan_id')
+            : collect();
+
+        $legacyExposure = Schema::hasTable('loan_schedules')
+            ? DB::table('loan_schedules')
+                ->select('loan_id')
+                ->selectRaw('ROUND(SUM(principal_outstanding)) AS exposure_minor')
+                ->groupBy('loan_id')
+                ->pluck('exposure_minor', 'loan_id')
+            : collect();
+
+        $assessments = DB::table('loan_impairment_assessments')
+            ->orderBy('loan_id')
+            ->orderByDesc('as_of_date')
+            ->orderByDesc('id')
+            ->get();
+
+        $latestByLoan = [];
+        foreach ($assessments as $assessment) {
+            $latestByLoan[$assessment->loan_id] ??= $assessment;
+        }
+
+        $maxAgeDays = max(1, (int) config('opfin.accounting.impairment_max_age_days', 31));
+        $allowanceExpected = [];
+        $loans = DB::table('loans')
+            ->whereNull('deleted_at')
+            ->get(['id', 'loan_product_id', 'credit_offer_id', 'status']);
+
+        foreach ($loans as $loan) {
+            $currentExposure = $loan->credit_offer_id
+                ? (int) ($productionExposure[$loan->id] ?? 0)
+                : (int) ($legacyExposure[$loan->id] ?? 0);
+            $assessment = $latestByLoan[$loan->id] ?? null;
+
+            if ($currentExposure > 0 && ! $assessment) {
+                $findings[] = $this->alert(
+                    $runId,
+                    'high',
+                    'credit_impairment_assessment_missing',
+                    (string) $loan->id,
+                    'Outstanding credit exposure has no approved impairment assessment.',
+                    [
+                        'loan_id' => $loan->id,
+                        'loan_product_id' => $loan->loan_product_id,
+                        'current_recorded_exposure_minor' => $currentExposure,
+                    ],
+                );
+                continue;
+            }
+
+            if (! $assessment) {
+                continue;
+            }
+
+            $assessmentAgeDays = now()->startOfDay()->diffInDays(
+                \Carbon\Carbon::parse($assessment->as_of_date)->startOfDay(),
+                false,
+            );
+            if ($currentExposure > 0 && $assessmentAgeDays < -$maxAgeDays) {
+                $findings[] = $this->alert(
+                    $runId,
+                    'high',
+                    'credit_impairment_assessment_stale',
+                    (string) $loan->id,
+                    'Outstanding credit exposure has a stale impairment assessment.',
+                    [
+                        'loan_id' => $loan->id,
+                        'as_of_date' => $assessment->as_of_date,
+                        'maximum_age_days' => $maxAgeDays,
+                        'current_recorded_exposure_minor' => $currentExposure,
+                    ],
+                );
+            }
+
+            if ((int) $assessment->gross_exposure_minor !== $currentExposure) {
+                $findings[] = $this->alert(
+                    $runId,
+                    'high',
+                    'credit_impairment_exposure_changed',
+                    (string) $loan->id,
+                    'Recorded credit exposure changed after the latest impairment assessment; reassessment is required.',
+                    [
+                        'loan_id' => $loan->id,
+                        'assessment_exposure_minor' => (int) $assessment->gross_exposure_minor,
+                        'current_recorded_exposure_minor' => $currentExposure,
+                        'as_of_date' => $assessment->as_of_date,
+                    ],
+                );
+            }
+
+            if ((int) $assessment->expected_credit_loss_minor > $currentExposure) {
+                $findings[] = $this->alert(
+                    $runId,
+                    'critical',
+                    'credit_impairment_exceeds_exposure',
+                    (string) $loan->id,
+                    'Expected credit-loss allowance exceeds current recorded credit exposure.',
+                    [
+                        'loan_id' => $loan->id,
+                        'expected_credit_loss_minor' => (int) $assessment->expected_credit_loss_minor,
+                        'current_recorded_exposure_minor' => $currentExposure,
+                    ],
+                );
+            }
+
+            if (in_array((string) $loan->status, ['Cleared', 'Reversed'], true)
+                && (int) $assessment->expected_credit_loss_minor !== 0) {
+                $findings[] = $this->alert(
+                    $runId,
+                    'high',
+                    'credit_impairment_not_released',
+                    (string) $loan->id,
+                    'Cleared or reversed loan retains a non-zero expected credit-loss allowance.',
+                    [
+                        'loan_id' => $loan->id,
+                        'loan_status' => $loan->status,
+                        'expected_credit_loss_minor' => (int) $assessment->expected_credit_loss_minor,
+                    ],
+                );
+            }
+
+            $key = (int) $loan->loan_product_id.'|'.strtoupper((string) $assessment->currency);
+            $allowanceExpected[$key] ??= [
+                'product_id' => (int) $loan->loan_product_id,
+                'currency' => strtoupper((string) $assessment->currency),
+                'expected_minor' => 0,
+            ];
+            $allowanceExpected[$key]['expected_minor'] += (int) $assessment->expected_credit_loss_minor;
+        }
+
+        $allowanceAccounts = DB::table('ledger_accounts')
+            ->where('code', 'like', 'contra_asset.credit_loss_allowance.product_%')
+            ->get(['code', 'currency']);
+        foreach ($allowanceAccounts as $account) {
+            if (! preg_match('/product_(\\d+)$/', (string) $account->code, $matches)) {
+                continue;
+            }
+            $productId = (int) $matches[1];
+            $currency = strtoupper((string) $account->currency);
+            $key = $productId.'|'.$currency;
+            $allowanceExpected[$key] ??= [
+                'product_id' => $productId,
+                'currency' => $currency,
+                'expected_minor' => 0,
+            ];
+        }
+
+        foreach ($allowanceExpected as $row) {
+            $code = 'contra_asset.credit_loss_allowance.product_'.$row['product_id'];
+            $actual = $this->ledgerAccountBalance($code, $row['currency'], 'credit');
+            if ($actual === (int) $row['expected_minor']) {
+                continue;
+            }
+
+            $findings[] = $this->alert(
+                $runId,
+                'critical',
+                'credit_loss_allowance_ledger_mismatch',
+                $code.'|'.$row['currency'],
+                'Credit-loss allowance general-ledger balance does not reconcile to latest approved loan impairment assessments.',
+                [
+                    'product_id' => $row['product_id'],
+                    'currency' => $row['currency'],
+                    'expected_minor' => (int) $row['expected_minor'],
+                    'actual_minor' => $actual,
+                    'difference_minor' => $actual - (int) $row['expected_minor'],
+                ],
+            );
+        }
     }
 
     private function scanAssetEconomics(int $runId, array &$findings): void
