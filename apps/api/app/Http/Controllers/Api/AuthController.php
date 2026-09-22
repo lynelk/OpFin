@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Otp;
 use App\Models\User;
 use App\Services\CustomerCreditProfileService;
+use App\Services\CommercialInsightsService;
 use App\Services\SmsService;
 use App\Support\ApiResponse;
 use Carbon\Carbon;
@@ -15,12 +16,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
     public function __construct(
         protected SmsService $smsService,
         private readonly CustomerCreditProfileService $profiles,
+        private readonly CommercialInsightsService $commercialInsights,
     ) {}
 
     public function showDeleteForm()
@@ -85,6 +88,9 @@ class AuthController extends Controller
                 'terms_accepted' => 'nullable|accepted',
                 'preferred_language' => 'nullable|string|max:16',
                 'accessibility_preferences' => 'nullable|array',
+                'acquisition_channel' => ['nullable', Rule::in(CommercialInsightsService::ACQUISITION_CHANNELS)],
+                'acquisition_source' => 'nullable|string|max:120',
+                'acquisition_campaign' => 'nullable|string|max:160',
             ]);
 
             if ($validator->fails()) {
@@ -146,6 +152,17 @@ class AuthController extends Controller
             ]);
 
             $otpRecord?->delete();
+            $this->commercialInsights->recordAttribution($user, [
+                'acquisition_channel' => $request->input('acquisition_channel', 'other'),
+                'source' => $request->input('acquisition_source', 'unattributed_registration'),
+                'campaign' => $request->input('acquisition_campaign'),
+                'acquired_at' => now(),
+                'metadata' => [
+                    'capture' => 'registration',
+                    'explicit_channel' => $request->filled('acquisition_channel'),
+                ],
+            ]);
+
             $this->profiles->ensurePrimaryPhone($user);
             $this->profiles->refresh($user, false);
             $token = $this->createAccessToken($user);
