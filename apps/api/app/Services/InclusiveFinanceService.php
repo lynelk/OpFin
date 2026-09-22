@@ -770,6 +770,7 @@ class InclusiveFinanceService
         $forbiddenMarkers = ['GENDER', 'DISABILITY', 'REFUGEE', 'RURAL_URBAN', 'AGE_COHORT'];
         $forbiddenUsed = collect($reasons)->contains(function ($reason) use ($forbiddenMarkers) {
             $upper = strtoupper((string) $reason);
+
             return collect($forbiddenMarkers)->contains(fn ($marker) => str_contains($upper, $marker));
         });
 
@@ -1047,6 +1048,7 @@ class InclusiveFinanceService
             if (! array_key_exists($field, $context)) {
                 $results[] = null;
                 $reasons[] = 'ELIGIBILITY_INFORMATION_MISSING';
+
                 continue;
             }
 
