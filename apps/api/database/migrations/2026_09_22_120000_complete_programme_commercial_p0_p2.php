@@ -122,6 +122,7 @@ return new class extends Migration
             $table->string('invited_phone')->nullable();
             $table->string('invited_email')->nullable();
             $table->string('token_hash', 64)->unique();
+            $table->text('delivery_token_encrypted')->nullable();
             $table->string('access_level')->default('read_only')->index();
             $table->string('status')->default('pending')->index();
             $table->timestamp('expires_at')->index();
