@@ -96,6 +96,37 @@ export async function updateProgrammeTheoryAction(formData: FormData) {
   );
 }
 
+export async function grantProgrammePartnerAccessAction(formData: FormData) {
+  const programmeId = requiredProgrammeId(formData);
+  const token = await getAccessToken();
+  const partnerId = Number(value(formData, "partner_id"));
+  const userId = Number(value(formData, "user_id"));
+  const accessLevel = value(formData, "access_level") as
+    | "read_only"
+    | "auditor"
+    | "mel_officer"
+    | "programme_admin";
+
+  try {
+    await inclusiveImpactApi.grantPartnerAccess(
+      {
+        programme_id: programmeId,
+        partner_id: partnerId,
+        user_id: userId,
+        access_level: accessLevel,
+        status: "active"
+      },
+      token
+    );
+  } catch (error) {
+    redirectError(programmeId, error);
+  }
+
+  redirect(
+    `/admin/inclusion/framework?programme_id=${programmeId}&status=partner-access-granted`
+  );
+}
+
 export async function assignImpactIndicatorAction(formData: FormData) {
   const programmeId = requiredProgrammeId(formData);
   const token = await getAccessToken();
