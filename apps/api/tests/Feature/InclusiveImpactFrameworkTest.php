@@ -255,6 +255,56 @@ class InclusiveImpactFrameworkTest extends TestCase
             ->assertStatus(403);
     }
 
+    public function test_programme_partner_grant_is_exactly_programme_scoped_and_aggregate_only(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $partnerUser = User::factory()->create(['role' => User::ROLE_PROGRAMME_PARTNER]);
+        $partnerId = DB::table('partners')->insertGetId([
+            'code' => 'IMPACT-PARTNER-'.strtoupper(substr(bin2hex(random_bytes(3)), 0, 6)),
+            'name' => 'Impact Programme Partner',
+            'partner_type' => 'development_programme',
+            'country' => 'UG',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Sanctum::actingAs($admin);
+        $programmeId = $this->postJson('/api/admin/inclusive-finance/programmes', [
+            'code' => 'PARTNER-SCOPE-'.strtoupper(substr(bin2hex(random_bytes(3)), 0, 6)),
+            'name' => 'Partner Scope Programme',
+            'partner_id' => $partnerId,
+            'status' => 'active',
+        ])->assertCreated()->json('data.id');
+
+        $otherProgrammeId = $this->createProgrammeAsCurrentAdmin();
+
+        $this->postJson('/api/admin/inclusive-finance/partner-access', [
+            'programme_id' => $programmeId,
+            'partner_id' => $partnerId,
+            'user_id' => $partnerUser->id,
+            'access_level' => 'mel_officer',
+        ])->assertCreated()
+            ->assertJsonPath('data.programme_id', $programmeId)
+            ->assertJsonPath('data.can_view_individual_records', false);
+
+        Sanctum::actingAs($partnerUser);
+        $this->getJson('/api/partner/inclusive-finance/programmes')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.programmes')
+            ->assertJsonPath('data.programmes.0.id', $programmeId)
+            ->assertJsonPath('data.programmes.0.can_view_individual_records', false);
+
+        $this->getJson('/api/partner/inclusive-finance/programmes/'.$programmeId.'/impact')
+            ->assertOk()
+            ->assertJsonPath('data.access_boundary.programme_scoped', true)
+            ->assertJsonPath('data.access_boundary.individual_records_exposed', false)
+            ->assertJsonPath('data.outcomes.privacy.individual_records_exposed', false);
+
+        $this->getJson('/api/partner/inclusive-finance/programmes/'.$otherProgrammeId.'/impact')
+            ->assertStatus(422);
+    }
+
     private function createProgramme(): int
     {
         $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
