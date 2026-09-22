@@ -143,9 +143,16 @@ Read `current-endpoints.md` for request/response notes and `frontend-backend-con
 | OpFin plans | `GET /api/plans` |
 | Subscribe a Space | `POST /api/financial-spaces/{space}/subscription` |
 | Record revenue event | `POST /api/admin/revenue-events` |
-| Reconcile revenue / CPay | `POST /api/admin/revenue-events/{event}/reconcile` |
+| Reconcile revenue/provider settlement | `POST /api/admin/revenue-events/{event}/reconcile` |
+| Record/enrich service economics | `POST /api/admin/service-economics-events` |
+| Service economics report | `GET /api/admin/reports/service-economics` |
+| Capital & loan-book report | `GET /api/admin/reports/capital-loan-book` |
+| Insurance report | `GET /api/admin/reports/insurance` |
+| Savings & investment report | `GET /api/admin/reports/savings-investments` |
+| Positive employment behaviour report | `GET /api/admin/reports/employment-positive-behaviour` |
+| Financial account behaviour report | `GET /api/admin/reports/financial-account-behaviour` |
 
-**Design contract:** one person may belong to many Spaces; Employer is a Business capability; permission, entitlement and eligibility are separate; Personal Space data is not exposed to employers/groups merely because a relationship exists.
+**Design contract:** one person may belong to many Spaces; Employer is a Business capability; permission, entitlement and eligibility are separate; Personal Space data is not exposed to employers/groups merely because a relationship exists. Cito is the preferred third-party integration gateway but OpFin remains independently operable. Verified positive employer behaviour may create a capped benefit; missing or negative employer-behaviour data is neutral.
 
 ## Inclusive finance and programme delivery
 
