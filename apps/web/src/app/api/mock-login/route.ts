@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { UserRole } from "@/lib/types";
 
-const allowedRoles: UserRole[] = ["customer", "platform_admin", "operations", "support", "employer_admin"];
+const allowedRoles: UserRole[] = ["customer", "platform_admin", "operations", "support", "employer_admin", "programme_partner"];
 const roleNames: Record<UserRole, string> = {
   customer: "Demo Customer",
   platform_admin: "Platform Admin",
   operations: "Operations User",
   support: "Support User",
-  employer_admin: "Employer Admin"
+  employer_admin: "Employer Admin",
+  programme_partner: "Programme Partner"
 };
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8;
@@ -34,7 +35,12 @@ export function GET(request: NextRequest) {
 
   const role = request.nextUrl.searchParams.get("role") as UserRole | null;
   const safeRole = allowedRoles.includes(role ?? "customer") ? role ?? "customer" : "customer";
-  const next = safeInternalPath(request.nextUrl.searchParams.get("next"));
+  const requestedNext = request.nextUrl.searchParams.get("next");
+  const next = requestedNext
+    ? safeInternalPath(requestedNext)
+    : safeRole === "programme_partner"
+      ? "/partner/impact"
+      : "/dashboard";
   const response = NextResponse.redirect(new URL(next, request.url));
 
   response.cookies.set("opfin_access_token", `sandbox-${crypto.randomUUID()}`, SESSION_COOKIE_OPTIONS);
