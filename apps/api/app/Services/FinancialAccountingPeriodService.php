@@ -46,8 +46,8 @@ class FinancialAccountingPeriodService
         if ($start->gt($end)) {
             throw new InvalidArgumentException('Accounting-period start cannot be after its end.');
         }
-        if ($end->isFuture()) {
-            throw new InvalidArgumentException('A future accounting period cannot be closed.');
+        if ($end->copy()->startOfDay()->greaterThanOrEqualTo(now()->startOfDay())) {
+            throw new InvalidArgumentException('An accounting period can be closed only after its end date has fully elapsed.');
         }
         if (trim($reason) === '') {
             throw new InvalidArgumentException('Accounting-period close requires a documented reason.');
