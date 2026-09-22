@@ -552,7 +552,7 @@ class FinancialIntegrityService
         $productionExposure = Schema::hasTable('credit_repayment_schedule_items')
             ? DB::table('credit_repayment_schedule_items')
                 ->select('loan_id')
-                ->selectRaw('SUM(principal_outstanding_minor + fees_outstanding_minor) AS exposure_minor')
+                ->selectRaw('SUM(principal_outstanding_minor) AS exposure_minor')
                 ->groupBy('loan_id')
                 ->pluck('exposure_minor', 'loan_id')
             : collect();
