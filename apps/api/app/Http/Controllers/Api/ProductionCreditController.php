@@ -8,6 +8,7 @@ use App\Models\CreditDecision;
 use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Services\AuditLogger;
+use App\Services\CreditCashFlowService;
 use App\Services\ProductionCreditDecisionService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,8 @@ class ProductionCreditController extends Controller
 {
     public function __construct(
         private readonly ProductionCreditDecisionService $decisionService,
-        private readonly AuditLogger $auditLogger
+        private readonly AuditLogger $auditLogger,
+        private readonly CreditCashFlowService $cashFlows,
     ) {}
 
     public function storeCrbReport(Request $request): JsonResponse
@@ -202,6 +204,32 @@ class ProductionCreditController extends Controller
         }
 
         $duration = (int) $term->duration;
+        if (strcasecmp((string) $term->interest_type, 'Flat') === 0) {
+            $cycleDays = match (strtolower((string) $term->interest_cycle)) {
+                'daily' => 1,
+                'weekly' => 7,
+                'monthly' => 30,
+                default => throw new \InvalidArgumentException('Unsupported interest cycle for affordability projection.'),
+            };
+            $termRatePercent = ((float) $term->interest_rate / $cycleDays) * $duration;
+            $interestMinor = (int) round($approvedAmountMinor * ($termRatePercent / 100));
+            $schedule = $this->cashFlows->repaymentSchedule(
+                $approvedAmountMinor,
+                $interestMinor,
+                0,
+                $duration,
+                (string) $term->repayment_frequency,
+            );
+
+            $dueWithinThirtyDays = (int) collect($schedule)
+                ->filter(fn (array $item) => $item['due_offset_days'] <= 30)
+                ->sum('total_due_minor');
+            $totalRepaymentMinor = $approvedAmountMinor + $interestMinor;
+            $averageThirtyDayBurden = (int) ceil($totalRepaymentMinor * min(30, $duration) / $duration);
+
+            return max($dueWithinThirtyDays, $averageThirtyDayBurden);
+        }
+
         $installments = Loan::getInstallments($duration, (string) $term->repayment_frequency);
         $repaymentMinor = Loan::getRepaymentAmount(
             (float) $term->interest_rate / 100,
