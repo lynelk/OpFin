@@ -241,7 +241,10 @@ export default async function InclusionPage({
                       <h3>{programme.name}</h3>
                       <p className="muted">{programme.code}</p>
                     </div>
-                    <Link className="button secondary" href={`/admin/inclusion?programme_id=${programme.id}`}>View outcomes</Link>
+                    <div className="case-list">
+                      <Link className="button secondary" href={`/admin/inclusion?programme_id=${programme.id}`}>View outcomes</Link>
+                      <Link className="button secondary" href={`/admin/inclusion/framework?programme_id=${programme.id}`}>Impact framework</Link>
+                    </div>
                   </div>
                   <p>
                     <strong>{programme.enrolled_people ?? 0}</strong> enrolled
