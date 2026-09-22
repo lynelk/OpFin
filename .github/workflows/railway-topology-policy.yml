@@ -18,6 +18,6 @@ jobs:
   policy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Enforce approved Railway topology
         run: python3 ops/railway/check_topology_policy.py
