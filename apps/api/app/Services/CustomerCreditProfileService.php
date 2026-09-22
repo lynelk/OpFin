@@ -16,7 +16,10 @@ use Illuminate\Support\Facades\Schema;
 
 class CustomerCreditProfileService
 {
-    public function __construct(private readonly ExternalScoringService $externalScoring) {}
+    public function __construct(
+        private readonly ExternalScoringService $externalScoring,
+        private readonly PositiveEmploymentBehaviourService $employmentBehaviour,
+    ) {}
 
     public function ensurePrimaryPhone(User $user): CustomerPhoneNumber
     {
@@ -121,7 +124,14 @@ class CustomerCreditProfileService
             $weighted += ((float) $component->score) * $weight;
             $weightReady += $weight;
         }
-        $composite = $weightReady > 0 ? round($weighted / $weightReady, 2) : 0.0;
+        $baseComposite = $weightReady > 0 ? round($weighted / $weightReady, 2) : 0.0;
+        $employmentBenefit = $this->employmentBehaviour->assess($user);
+        $composite = min(100, round($baseComposite + (float) $employmentBenefit['uplift_points'], 2));
+        $componentBreakdown = $this->breakdown($components);
+        $componentBreakdown['positive_employment_behaviour'] = [
+            'base_composite_score' => $baseComposite,
+            ...$employmentBenefit,
+        ];
 
         $latestCrb = CrbReport::query()->where('user_id', $user->id)->latest('received_at')->first();
         $adverse = $latestCrb?->status === CrbReport::STATUS_ADVERSE;
@@ -154,6 +164,9 @@ class CustomerCreditProfileService
         if ($components->firstWhere('source', 'third_party')) {
             $explanations[] = 'Approved partner information is included in your score.';
         }
+        if ((float) $employmentBenefit['uplift_points'] > 0) {
+            $explanations[] = 'Verified positive workplace information has provided a small capped uplift. Missing workplace information does not reduce your score.';
+        }
 
         return CreditProfile::updateOrCreate(
             ['user_id' => $user->id],
@@ -171,15 +184,16 @@ class CustomerCreditProfileService
                 'total_outstanding_minor' => $outstanding,
                 'next_due_date' => $this->nextDueDate($user),
                 'model_version' => (string) config('opfin.credit.model_version', 'composite-v1'),
-                'component_breakdown' => $this->breakdown($components),
-                'reason_codes' => array_values(array_filter([
+                'component_breakdown' => $componentBreakdown,
+                'reason_codes' => array_values(array_unique(array_filter([
                     'IDENTITY_VERIFIED',
                     'PRIMARY_PHONE_VERIFIED',
                     $secondaryVerified ? 'SECONDARY_PHONE_VERIFIED' : null,
                     $coverage < 100 ? 'PARTIAL_EXTERNAL_DATA_COVERAGE' : 'FULL_SCORING_COVERAGE',
                     $adverse ? 'CRB_ADVERSE_HISTORY' : 'CRB_ACCEPTABLE',
                     $hasActiveLoan ? 'ACTIVE_LOAN_MUST_BE_CLEARED' : null,
-                ])),
+                    ...($employmentBenefit['reason_codes'] ?? []),
+                ]))),
                 'customer_explanations' => $explanations,
                 'scored_at' => now(),
                 'expires_at' => now()->addDays(30),
