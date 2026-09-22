@@ -3,6 +3,14 @@
 return [
     'default_country' => env('OPFIN_DEFAULT_COUNTRY', 'UG'),
 
+    'integrations' => [
+        // auto = prefer Cito when configured, otherwise use the direct adapter. A failed
+        // or ambiguous Cito call never silently triggers a second paid provider request.
+        'external_service_route' => env('OPFIN_EXTERNAL_SERVICE_ROUTE', 'auto'),
+        'direct_provider_fallback_enabled' => (bool) env('OPFIN_DIRECT_PROVIDER_FALLBACK_ENABLED', true),
+        'silent_failover_enabled' => false,
+    ],
+
     'credit' => [
         'max_debt_service_ratio_percent' => (float) env('OPFIN_MAX_DSR_PERCENT', 35),
         'affordability_formula' => 'estimated_monthly_obligation_minor / verified_monthly_income_minor * 100',
@@ -15,6 +23,17 @@ return [
             'mno' => 25,
             'third_party' => 15,
             'internal' => 20,
+        ],
+        'positive_employment_behaviour' => [
+            // Benefit-only enrichment: missing, unavailable or negative HR information is neutral.
+            'max_uplift_points' => (float) env('OPFIN_EMPLOYMENT_BEHAVIOUR_MAX_UPLIFT', 5),
+            'signals' => [
+                'attendance_reliability' => 1.0,
+                'positive_performance' => 1.5,
+                'employment_progression' => 1.0,
+                'recognition' => 0.5,
+                'workplace_reliability' => 1.0,
+            ],
         ],
         'limit_bands' => [
             'Very strong' => ['min_score' => 85, 'limit_minor' => 500000],
@@ -71,8 +90,8 @@ return [
         'financial_shock_centre' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'save' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'licensed_savings_partner_products'],
         'savings_partner_products' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'partner_product_activation'],
-        'savings_contributions' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'cpay_collection_and_partner_confirmation'],
-        'savings_withdrawals' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'partner_withdrawal_and_cpay_payout'],
+        'savings_contributions' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'governed_payment_route_and_partner_confirmation'],
+        'savings_withdrawals' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'partner_withdrawal_and_governed_payment_route'],
         'insurance' => [
             'status' => 'DORMANT_READY',
             'owner' => 'opfin',
@@ -81,7 +100,7 @@ return [
             'external_gate' => 'licensed_insurer_underwriter_products',
         ],
         'protection_enrollment' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'insurer_issuance'],
-        'protection_premiums' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'cpay_collection_and_insurer_confirmation'],
+        'protection_premiums' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'governed_payment_route_and_insurer_confirmation'],
         'protection_claims' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'insurer_claim_adjudication'],
         'investments' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'licensed_investment_provider_custody_and_settlement'],
         'household_finance' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
@@ -155,8 +174,17 @@ return [
             'external_gate' => 'capital_provider_and_regulatory_activation',
         ],
         'partner_distribution' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'partner_due_diligence_contract_and_credentials'],
-        'payments' => ['status' => 'AVAILABLE', 'owner' => 'cpay'],
-        'payment_reconciliation' => ['status' => 'AVAILABLE', 'owner' => 'cpay'],
+        'payments' => [
+            'status' => 'AVAILABLE',
+            'owner' => 'opfin',
+            'primary_gateway' => 'cpay_via_cito',
+            'fallback' => 'certified_direct_provider_adapter',
+        ],
+        'payment_reconciliation' => [
+            'status' => 'AVAILABLE',
+            'owner' => 'opfin',
+            'provider_evidence' => 'cpay_or_certified_direct_provider',
+        ],
         'product_factory' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'workflow_engine' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'rules_engine' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
@@ -173,6 +201,8 @@ return [
             'languages' => ['en'],
             'payment_platform' => 'cpay',
             'payment_status' => 'PRODUCTION',
+            'payment_primary_route' => 'cito_cpay',
+            'payment_fallback_policy' => 'certified_direct_provider_adapter',
         ],
     ],
 ];
