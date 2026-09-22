@@ -211,6 +211,19 @@ export default async function ProgrammeDeliveryPage({
           </section>
         ) : null}
 
+        {selected ? (
+          <section className="panel">
+            <p className="eyebrow">MEL EXPORTS</p>
+            <h2>Aggregate programme report pack</h2>
+            <div className="case-list">
+              <a className="button secondary" href={"/api/programme-export/" + selected.id + "/csv"}>CSV</a>
+              <a className="button secondary" href={"/api/programme-export/" + selected.id + "/xlsx"}>XLSX</a>
+              <a className="button secondary" href={"/api/programme-export/" + selected.id + "/zip"}>ZIP report pack</a>
+            </div>
+            <p className="muted">Individual participant records are not exported. Small cohorts remain suppressed.</p>
+          </section>
+        ) : null}
+
         <section className="panel">
           <p className="eyebrow">INSTRUMENT REGISTER</p>
           <h2>Configured check-ins</h2>
