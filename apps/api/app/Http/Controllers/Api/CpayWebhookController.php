@@ -9,6 +9,7 @@ use App\Services\ProductionCreditOfferService;
 use App\Services\ProductionRepaymentService;
 use App\Services\ProtectionService;
 use App\Services\SavingsService;
+use App\Services\SubscriptionBillingService;
 use App\Support\ApiResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -26,6 +27,7 @@ class CpayWebhookController extends Controller
         ProductionRepaymentService $repayments,
         SavingsService $savings,
         ProtectionService $protection,
+        SubscriptionBillingService $subscriptions,
     ): JsonResponse {
         $rawBody = $request->getContent();
 
@@ -51,6 +53,7 @@ class CpayWebhookController extends Controller
             $repaidLoan = $repayments->syncCollectionState($transaction);
             $savingsMovement = $savings->syncMobileMoney($transaction);
             $premiumPayment = $protection->syncMobileMoney($transaction);
+            $subscriptionInvoice = $subscriptions->sync($transaction);
         } catch (InvalidArgumentException $exception) {
             $status = $exception->getMessage() === 'Invalid mobile money webhook signature.' ? 401 : 409;
 
@@ -65,6 +68,7 @@ class CpayWebhookController extends Controller
             'loan_id' => $disbursedLoan?->id ?? $settledLoan?->id ?? $repaidLoan?->id,
             'savings_movement_id' => $savingsMovement?->id,
             'protection_premium_payment_id' => $premiumPayment?->id,
+            'subscription_invoice_id' => $subscriptionInvoice?->id,
             'direction' => $transaction->direction,
             'reconciliation_status' => $transaction->fresh()->reconciliation_status,
         ]);
