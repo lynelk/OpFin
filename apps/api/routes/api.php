@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\GuarantorController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\InclusiveFinanceController;
+use App\Http\Controllers\Api\InclusiveImpactController;
 use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
