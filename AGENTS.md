@@ -4,7 +4,7 @@
 
 - `apps/api` owns identity, consent, eligibility, credit profiles, financial decisions, obligations, ledger postings, provider finality and reconciliation.
 - `apps/web` and `apps/client` consume authenticated API contracts and never connect directly to PostgreSQL.
-- CPay remains the only production money-movement adapter unless an explicitly approved architecture change says otherwise.
+- CPay is the preferred production money-movement adapter. OpFin must remain independently operable and may use an explicitly configured, production-certified direct provider adapter as a controlled fallback. Never enable a direct provider without a real contract, credentials, certification and reconciliation path.
 - A provider acknowledgement is not accounting finality.
 - Secrets remain service-scoped and are never exposed to web or client builds.
 - External KYC, CRB, MNO and third-party scoring results must be attributable to their source. Missing provider data must never be replaced with invented scores.
