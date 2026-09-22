@@ -269,6 +269,28 @@ export const inclusiveImpactApi = {
       }
     ),
 
+  grantPartnerAccess: (
+    payload: {
+      programme_id: number;
+      partner_id: number;
+      user_id: number;
+      access_level: "read_only" | "auditor" | "mel_officer" | "programme_admin";
+      status?: "active" | "revoked";
+    },
+    token?: string
+  ) =>
+    request<{
+      programme_id: number;
+      partner_id: number;
+      user_id: number;
+      access_level: string;
+      status: string;
+      can_view_individual_records: false;
+    }>("/admin/inclusive-finance/partner-access", token, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+
   partnerImpact: (programmeId: number, token?: string) =>
     request<PartnerImpact>(
       `/partner/inclusive-finance/programmes/${programmeId}/impact`,
