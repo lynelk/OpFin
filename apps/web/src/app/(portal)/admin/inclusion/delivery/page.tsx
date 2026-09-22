@@ -6,6 +6,7 @@ import {
   configureProviderAdapterAction,
   createProgrammeInstrumentAction,
   generateProgrammeFollowUpsAction,
+  ingestProviderEvidenceAction,
   inviteProgrammePartnerAction,
   revokeProgrammePartnerAccessAction
 } from "@/app/programme-completion-actions";
@@ -462,6 +463,39 @@ export default async function ProgrammeDeliveryPage({
             </div>
           )}
         </section>
+
+        {selected && adapters.adapters.length > 0 ? (
+          <section className="panel">
+            <p className="eyebrow">PROVIDER EVIDENCE</p>
+            <h2>Ingest an authorised provider payload</h2>
+            <p className="muted">
+              Use this only for evidence received through an approved provider process. Signal keys must match
+              the adapter allow-list. Ingestion verifies provenance but never marks a signal risk-eligible.
+            </p>
+            <form action={ingestProviderEvidenceAction} className="form-grid">
+              <input type="hidden" name="programme_id" value={selected.id} />
+              <div className="field">
+                <label htmlFor="adapter_id_ingest">Adapter</label>
+                <select id="adapter_id_ingest" name="adapter_id">
+                  {adapters.adapters.map((adapter) => (
+                    <option value={adapter.id} key={adapter.id}>
+                      {adapter.name} · {adapter.status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field"><label htmlFor="user_id_ingest">Subject user ID</label><input id="user_id_ingest" name="user_id" type="number" min="1" required /></div>
+              <div className="field"><label htmlFor="provider_reference">Provider reference</label><input id="provider_reference" name="provider_reference" required /></div>
+              <div className="field">
+                <label htmlFor="signals">Signals, one key=value per line</label>
+                <textarea id="signals" name="signals" rows={6} placeholder={'verified_monthly_income_minor=1500000\nbusiness_monthly_sales_minor=2500000'} required />
+              </div>
+              <div className="field"><label htmlFor="observed_at_ingest">Observed at</label><input id="observed_at_ingest" name="observed_at" type="datetime-local" /></div>
+              <div className="field"><label htmlFor="expires_at_ingest">Expires at</label><input id="expires_at_ingest" name="expires_at" type="datetime-local" /></div>
+              <button className="button" type="submit">Ingest provider evidence</button>
+            </form>
+          </section>
+        ) : null}
 
         <section className="panel">
           <h2>Configured provider adapters</h2>
