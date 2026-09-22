@@ -169,3 +169,32 @@ Read `current-endpoints.md` for request/response notes and `frontend-backend-con
 | Admin fair-treatment assessment | POST /api/admin/inclusive-finance/fair-treatment/{application}/assess |
 
 Voluntary inclusion fields are for service adaptation/programme measurement and do not feed credit risk. Programme participation, provider-signal verification and alternative collateral evidence do not automatically change a credit decision. See `docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md`.
+
+## Impact & outcomes quick reference
+
+### Customer
+
+- `GET /api/inclusive-finance/impact/financial-health`
+- `POST /api/inclusive-finance/impact/financial-health`
+- `POST /api/inclusive-finance/impact/livelihood`
+- `POST /api/inclusive-finance/impact/empowerment`
+- `GET /api/inclusive-finance/impact/community-finance`
+- `POST /api/inclusive-finance/impact/community-finance`
+
+### Platform operations
+
+- `GET|POST /api/admin/inclusive-finance/indicators`
+- `PATCH /api/admin/inclusive-finance/indicators/{indicator}`
+- `GET /api/admin/inclusive-finance/programmes/{programme}/framework`
+- `PUT /api/admin/inclusive-finance/programmes/{programme}/theory-of-change`
+- `POST /api/admin/inclusive-finance/programmes/{programme}/indicators`
+- `POST /api/admin/inclusive-finance/programmes/{programme}/observations`
+- `GET /api/admin/inclusive-finance/programmes/{programme}/outcomes`
+- `POST /api/admin/inclusive-finance/partner-access`
+
+### Programme partner
+
+- `GET /api/partner/inclusive-finance/programmes`
+- `GET /api/partner/inclusive-finance/programmes/{programme}/impact`
+
+Impact and programme-measurement data remains non-credit-eligible. Partner reporting is aggregate-only and programme-scoped.
