@@ -198,3 +198,33 @@ Voluntary inclusion fields are for service adaptation/programme measurement and 
 - `GET /api/partner/inclusive-finance/programmes/{programme}/impact`
 
 Impact and programme-measurement data remains non-credit-eligible. Partner reporting is aggregate-only and programme-scoped.
+
+## Programme completion quick reference
+
+Customer:
+- `GET /api/inclusive-finance/programme-check-ins`
+- `POST /api/inclusive-finance/programme-check-ins/{instrument}/responses`
+- `GET|POST /api/inclusive-finance/impact/financial-health/enrichment`
+
+Programme operations:
+- `GET|POST /api/admin/inclusive-finance/instruments`
+- `POST /api/admin/inclusive-finance/instruments/{instrument}/questions`
+- `PUT /api/admin/inclusive-finance/questions/{question}/translations`
+- `GET /api/admin/inclusive-finance/operations`
+- `GET /api/admin/inclusive-finance/templates`
+- `POST /api/admin/inclusive-finance/programmes/{programme}/templates`
+- `GET /api/admin/inclusive-finance/programmes/{programme}/partner-users`
+- `POST /api/admin/inclusive-finance/partner-invitations`
+- `GET /api/admin/inclusive-finance/programmes/{programme}/exports/{csv|xlsx|zip}`
+
+Commercial:
+- `POST /api/admin/commercial/customers/{user}/attribution`
+- `POST /api/admin/commercial/costs`
+- `GET /api/admin/commercial/dashboard`
+- `GET|POST /api/admin/commercial/graduations...`
+
+Provider evidence:
+- `GET|POST /api/admin/inclusive-finance/provider-adapters`
+- `POST /api/admin/inclusive-finance/provider-adapters/{adapter}/ingestions`
+
+Programme responses, enriched health snapshots and provider programme evidence do not automatically become credit inputs.
