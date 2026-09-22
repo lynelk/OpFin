@@ -64,6 +64,12 @@ return [
         'password' => env('CRB_CLIENT_SECRET'),
     ],
 
+    'efris' => [
+        'url' => env('EFRIS_URL'),
+        'token' => env('EFRIS_TOKEN'),
+        'tin' => env('EFRIS_TIN'),
+    ],
+
     'credit_reference_reporting' => [
         'url' => env('CREDIT_REFERENCE_REPORTING_URL'),
         'token' => env('CREDIT_REFERENCE_REPORTING_TOKEN'),
