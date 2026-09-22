@@ -16,6 +16,24 @@ class ServiceEconomicsService
             }
         }
 
+        foreach ([
+            'provider_gross_cost_minor',
+            'provider_discount_minor',
+            'provider_net_cost_minor',
+            'customer_service_charge_minor',
+            'customer_platform_fee_minor',
+            'partner_commission_minor',
+            'cito_platform_fee_minor',
+            'opfin_platform_fee_minor',
+            'tax_amount_minor',
+            'net_settlement_to_provider_minor',
+            'gross_revenue_minor',
+        ] as $field) {
+            if (array_key_exists($field, $data) && $data[$field] !== null && (int) $data[$field] < 0) {
+                throw new \InvalidArgumentException("{$field} cannot be negative.");
+            }
+        }
+
         $existing = DB::table('service_economics_events')
             ->where('service_code', $data['service_code'])
             ->where('request_reference', $data['request_reference'])
