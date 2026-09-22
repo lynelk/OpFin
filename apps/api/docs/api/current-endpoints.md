@@ -360,3 +360,76 @@ Requires the dedicated `programme_partner` role and an active `programme_partner
 | GET | `/api/partner/inclusive-finance/programmes/{programme}/impact` | Return existing delivery metrics plus privacy-safe outcome evidence for the granted programme. Individual customer records are not exposed. |
 
 The partner endpoint is reporting-only in this release. Access-level labels (`read_only`, `auditor`, `mel_officer`, `programme_admin`) describe governance scope but do not bypass the aggregate-only API boundary.
+
+## 23. Programme Delivery and Commercial Completion
+
+### Customer programme delivery
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/inclusive-finance/programme-check-ins?channel=app|web|whatsapp|ussd&locale=...` | Return only due programme instruments enabled for the selected channel. Measurement instruments are hidden after programme-measurement consent withdrawal. |
+| POST | `/api/inclusive-finance/programme-check-ins/{instrument}/responses` | Submit a typed programme response using the same consent/enrolment boundary across App/Web/channel integrations. |
+| POST | `/api/inclusive-finance/programme-follow-ups/{schedule}/open` | Mark a customer-owned follow-up as opened. |
+| GET | `/api/inclusive-finance/impact/financial-health/enrichment` | Preview a transparent financial-health snapshot from recorded OpFin financial-life evidence. |
+| POST | `/api/inclusive-finance/impact/financial-health/enrichment` | Persist the enriched non-credit financial-health snapshot. |
+
+### Programme partner activation
+
+Public, throttled:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/programme-partner/invitations/accept` | Activate a dedicated programme-partner identity using an invitation token, a separately verified phone verification token, accepted programme-access terms and a non-predictable six-digit PIN. |
+
+The invited phone must match the invitation when one was specified. Existing customer phones/emails cannot be repurposed as partner identities.
+
+### Programme operations
+
+Requires `platform_admin` or `operations`.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET/POST | `/api/admin/inclusive-finance/instruments` | List/create metadata-driven programme instruments. |
+| PATCH | `/api/admin/inclusive-finance/instruments/{instrument}` | Update lifecycle/channels/locales/schedule configuration. |
+| POST | `/api/admin/inclusive-finance/instruments/{instrument}/questions` | Add a typed question and optional indicator mapping. |
+| PUT | `/api/admin/inclusive-finance/questions/{question}/translations` | Add/update a reviewed locale translation. OpFin never machine-invents a missing programme translation. |
+| POST | `/api/admin/inclusive-finance/follow-ups/generate` | Reconcile scheduled baseline/follow-up/exit measurement tasks. |
+| GET | `/api/admin/inclusive-finance/operations` | Due/overdue/completed follow-up and data-quality operations view. |
+| POST | `/api/admin/inclusive-finance/instruments/{instrument}/assisted-responses` | Authorised assisted capture while recording the operator separately from the participant. |
+| GET | `/api/admin/inclusive-finance/templates` | List reusable programme templates. |
+| POST | `/api/admin/inclusive-finance/programmes/{programme}/templates` | Apply a template as editable draft programme configuration. |
+| GET | `/api/admin/inclusive-finance/programmes/{programme}/partner-users` | List programme-scoped partner users and pending invitations. |
+| POST | `/api/admin/inclusive-finance/partner-invitations` | Create a programme-partner invitation. Delivery is not fabricated; the token is stored encrypted and available only while pending/unexpired. |
+| DELETE | `/api/admin/inclusive-finance/programmes/{programme}/partner-users/{user}` | Revoke programme access. |
+| GET | `/api/admin/inclusive-finance/programmes/{programme}/exports/{format}` | Download aggregate CSV, XLSX or ZIP report-pack output with cohort suppression preserved. |
+
+### Commercial intelligence
+
+Requires `platform_admin` or `operations`.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/admin/commercial/customers/{user}/attribution` | Record/update canonical customer-acquisition attribution. |
+| POST | `/api/admin/commercial/costs` | Record governed acquisition/KYC/CRB/payment/support/funding/collection/programme-delivery cost truth. |
+| GET | `/api/admin/commercial/dashboard` | Report acquisition, funnel, repeat usage, NPL/overdue outcomes, recorded revenue/cost and contribution. |
+| POST | `/api/admin/commercial/graduations/evaluate` | Re-evaluate programme-to-commercial graduation evidence. |
+| GET | `/api/admin/commercial/graduations` | Return graduation rate and transparent criteria. Graduation is analytics-only. |
+
+New registrations create a canonical acquisition record. If no source was explicitly supplied the record is marked `other / unattributed_registration`, rather than inventing a marketing source. Analytics capture failure does not block customer onboarding.
+
+### Provider adapter governance
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET/POST | `/api/admin/inclusive-finance/provider-adapters` | List/configure gnuGrid/CRB, MNO, employer, VSLA, Stolets or other governed adapter definitions. |
+| POST | `/api/admin/inclusive-finance/provider-adapters/{adapter}/ingestions` | Ingest allow-listed provider evidence with provider reference/provenance. |
+
+An adapter cannot become active unless real credentials/configuration and legal basis are explicitly confirmed. No external secret is stored in the adapter registry. Provider evidence is inserted as verified provenance but remains `risk_eligible=false`; any future underwriting use must still pass the existing alternative-data consent/policy gate.
+
+### Programme-partner exports
+
+A programme-partner with an active explicit programme grant may use:
+
+`GET /api/partner/inclusive-finance/programmes/{programme}/exports/{format}`
+
+The export remains programme-scoped, aggregate-only and privacy-suppressed.
