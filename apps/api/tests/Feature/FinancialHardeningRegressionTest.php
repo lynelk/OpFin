@@ -42,7 +42,11 @@ class FinancialHardeningRegressionTest extends TestCase
 
         $loan = $service->syncDisbursementState($payment->fresh());
         $this->assertNotNull($loan);
-        $this->assertSame(MobileMoneyTransaction::RECONCILIATION_MATCHED, $payment->fresh()->reconciliation_status);
+        $payment = $payment->fresh();
+        $this->assertSame(MobileMoneyTransaction::RECONCILIATION_PENDING, $payment->reconciliation_status);
+        $this->assertSame(MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED, $payment->product_accounting_status);
+        $this->assertNotNull($payment->product_finality_applied_at);
+        $this->assertNull($payment->provider_reconciled_at);
 
         $ledger = $this->app['db']->table('ledger_transactions')
             ->where('reference', 'loan.disbursement:credit-offer:'.$offer->offer_reference)
