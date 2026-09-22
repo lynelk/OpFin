@@ -233,6 +233,8 @@ class MobileMoneyService
             'source_id' => Arr::get($attributes, 'source_id'),
             'savings_movement_id' => Arr::get($attributes, 'savings_movement_id'),
             'protection_premium_payment_id' => Arr::get($attributes, 'protection_premium_payment_id'),
+            'early_settlement_quote_id' => Arr::get($attributes, 'early_settlement_quote_id'),
+            'billing_invoice_id' => Arr::get($attributes, 'billing_invoice_id'),
         ];
 
         return hash('sha256', json_encode($instruction, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -309,7 +311,9 @@ class MobileMoneyService
             $locked->update(array_merge([
                 'provider_reference' => $response->providerReference ?? $locked->provider_reference,
                 'status' => $response->status,
-                'reconciliation_status' => $response->reconciliationStatus,
+                'reconciliation_status' => $locked->statement_reconciliation_status === MobileMoneyTransaction::STATEMENT_MATCHED
+                    ? MobileMoneyTransaction::RECONCILIATION_MATCHED
+                    : MobileMoneyTransaction::RECONCILIATION_PENDING,
                 'failure_reason' => $response->successful ? $locked->failure_reason : $response->message,
                 'provider_payload' => $response->raw,
             ], $extra));
