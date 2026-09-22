@@ -78,6 +78,7 @@ return new class extends Migration
             $table->unsignedBigInteger('fees_due_minor')->default(0);
             $table->unsignedBigInteger('settlement_fee_minor')->default(0);
             $table->unsignedBigInteger('unearned_interest_rebate_minor')->default(0);
+            $table->unsignedBigInteger('unearned_fee_rebate_minor')->default(0);
             $table->unsignedBigInteger('total_settlement_minor');
             $table->char('currency', 3)->default('UGX');
             $table->json('policy_snapshot')->nullable();
