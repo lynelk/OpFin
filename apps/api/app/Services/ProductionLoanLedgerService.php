@@ -338,6 +338,55 @@ class ProductionLoanLedgerService
         return $posted;
     }
 
+    public function reverseRepayment(Transaction $transaction): ?LedgerTransaction
+    {
+        $originalReference = $this->ledgerReference('loan.repayment', $transaction);
+        $reversalReference = $this->ledgerReference('loan.repayment.reversal', $transaction);
+
+        if (LedgerTransaction::query()->where('reference', $reversalReference)->exists()) {
+            return null;
+        }
+
+        $original = LedgerTransaction::query()->with('entries')->where('reference', $originalReference)->first();
+        if (! $original) {
+            throw new \InvalidArgumentException('Cannot reverse a repayment that has no original immutable ledger posting.');
+        }
+
+        $entries = $original->entries->map(function (LedgerEntry $entry) {
+            return [
+                'account_id' => (int) $entry->ledger_account_id,
+                'direction' => $entry->direction === LedgerEntry::DIRECTION_DEBIT
+                    ? LedgerEntry::DIRECTION_CREDIT
+                    : LedgerEntry::DIRECTION_DEBIT,
+                'amount_minor' => (int) $entry->amount_minor,
+                'memo' => 'Append-only reversal of repayment ledger entry '.$entry->id,
+            ];
+        })->all();
+
+        $posted = $this->ledgerService->post(
+            $reversalReference,
+            'loan.repayment.reversal',
+            $transaction,
+            $entries,
+            null,
+            (string) $original->currency,
+            [
+                'reverses_reference' => $originalReference,
+                'loan_id' => $transaction->loan_id,
+                'legacy_transaction_id' => $transaction->id,
+                'original_ledger_transaction_id' => $original->id,
+            ],
+        );
+
+        $this->auditLogger->record('ledger.loan_repayment.reversed', null, $posted, [
+            'loan_id' => $transaction->loan_id,
+            'transaction_id' => $transaction->id,
+            'reverses_reference' => $originalReference,
+        ]);
+
+        return $posted;
+    }
+
     private function creditDisbursementComponents(CreditOffer $offer): array
     {
         $principalMinor = (int) $offer->principal_amount_minor;
