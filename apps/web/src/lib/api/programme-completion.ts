@@ -232,6 +232,92 @@ export const programmeCompletionApi = {
       }
     ),
 
+  createInstrument: (
+    payload: {
+      programme_id: number;
+      code: string;
+      name: string;
+      description?: string;
+      outcome_domain: string;
+      default_measurement_stage?: string;
+      consent_classification?: string;
+      channels: string[];
+      default_locale?: string;
+      supported_locales?: string[];
+      schedule_config?: Array<{ stage: string; offset_days: number }>;
+      status?: string;
+      version?: string;
+    },
+    token?: string
+  ) =>
+    request<ProgrammeInstrument>("/admin/inclusive-finance/instruments", token, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+
+  addQuestion: (
+    instrumentId: number,
+    payload: {
+      code: string;
+      prompt: string;
+      help_text?: string;
+      indicator_definition_id?: number;
+      answer_type: string;
+      required?: boolean;
+      sort_order?: number;
+      options?: string[];
+      validation_rules?: Record<string, unknown>;
+      verification_source?: string;
+    },
+    token?: string
+  ) =>
+    request<ProgrammeQuestion>(
+      `/admin/inclusive-finance/instruments/${instrumentId}/questions`,
+      token,
+      {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }
+    ),
+
+  upsertTranslation: (
+    questionId: number,
+    payload: {
+      locale: string;
+      prompt: string;
+      help_text?: string;
+      options?: string[];
+    },
+    token?: string
+  ) =>
+    request<Record<string, unknown>>(
+      `/admin/inclusive-finance/questions/${questionId}/translations`,
+      token,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      }
+    ),
+
+  assistedCapture: (
+    instrumentId: number,
+    payload: {
+      user_id: number;
+      schedule_id?: number;
+      locale?: string;
+      answers: Array<{ question_id: number; value: unknown }>;
+    },
+    token?: string
+  ) =>
+    request<Record<string, unknown>>(
+      `/admin/inclusive-finance/instruments/${instrumentId}/assisted-responses`,
+      token,
+      {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }
+    ),
+
   operations: (programmeId?: number, token?: string) =>
     request<ProgrammeOperations>(
       `/admin/inclusive-finance/operations${programmeId ? `?programme_id=${programmeId}` : ""}`,
@@ -321,6 +407,44 @@ export const programmeCompletionApi = {
     }>(
       `/admin/inclusive-finance/provider-adapters${programmeId ? `?programme_id=${programmeId}` : ""}`,
       token
+    ),
+
+  recordCommercialCost: (
+    payload: {
+      cost_type: string;
+      channel?: string;
+      programme_id?: number;
+      amount_minor: number;
+      currency?: string;
+      quantity?: number;
+      source_reference?: string;
+      occurred_at?: string;
+    },
+    token?: string
+  ) =>
+    request<Record<string, unknown>>("/admin/commercial/costs", token, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+
+  recordAttribution: (
+    userId: number,
+    payload: {
+      acquisition_channel: string;
+      source?: string;
+      campaign?: string;
+      programme_id?: number;
+      acquired_at?: string;
+    },
+    token?: string
+  ) =>
+    request<Record<string, unknown>>(
+      `/admin/commercial/customers/${userId}/attribution`,
+      token,
+      {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }
     ),
 
   configureAdapter: (
