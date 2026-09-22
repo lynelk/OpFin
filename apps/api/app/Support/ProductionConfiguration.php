@@ -20,9 +20,13 @@ class ProductionConfiguration
         }
 
         $provider = strtolower(trim((string) ($config['mobile_money_provider'] ?? '')));
-        if ($provider !== 'cpay') {
+        if ($provider === 'mock' || $provider === '') {
+            throw new RuntimeException('Production money movement cannot use the mock or an empty provider.');
+        }
+
+        if (($config['mobile_money_provider_certified'] ?? false) !== true) {
             throw new RuntimeException(
-                'Production money movement must use CPay. Set MOBILE_MONEY_PROVIDER=cpay; direct MTN/Airtel/mock routing is not allowed in OpFin.'
+                "Production money-movement provider '{$provider}' is not marked as certified. CPay is the preferred route; any direct adapter requires explicit production certification."
             );
         }
 
