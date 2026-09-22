@@ -133,6 +133,8 @@ class FinancialIntegrityService
             );
         }
 
+        $this->resolveAbsentAlerts($runId, $findings, $scope);
+
         $canonical = json_encode($findings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $status = collect($findings)->contains(fn ($finding) => ($finding['severity'] ?? null) === 'critical')
             ? 'critical'
@@ -531,6 +533,36 @@ class FinancialIntegrityService
                         'provider_transaction_id' => $payment?->id,
                     ]);
             }
+        }
+    }
+
+    private function resolveAbsentAlerts(int $runId, array $findings, string $scope): void
+    {
+        if ($scope !== 'platform' || ! Schema::hasTable('financial_integrity_alerts')) {
+            return;
+        }
+
+        $observed = collect($findings)
+            ->mapWithKeys(fn (array $finding) => [
+                ($finding['type'] ?? '').'|'.($finding['reference'] ?? '') => true,
+            ]);
+
+        $open = DB::table('financial_integrity_alerts')->where('status', 'open')->get(['id', 'type', 'reference']);
+        foreach ($open as $alert) {
+            $key = (string) $alert->type.'|'.(string) ($alert->reference ?? '');
+            if ($observed->has($key)) {
+                continue;
+            }
+
+            DB::table('financial_integrity_alerts')->where('id', $alert->id)->update([
+                'status' => 'resolved',
+                'resolution_evidence' => json_encode([
+                    'resolved_by_integrity_run_id' => $runId,
+                    'reason' => 'The finding was not reproduced by the subsequent complete platform integrity audit.',
+                ]),
+                'resolved_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
     }
 
