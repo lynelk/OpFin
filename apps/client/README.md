@@ -152,3 +152,17 @@ Current mobile behaviour:
 The API also supports programme-linked livelihood, dignified-work, economic-agency and community-finance observations. These richer programme check-ins are deliberately not forced into the normal customer journey. Programme-linked outcome capture requires active measurement consent and enrolment and should be surfaced only where a configured programme genuinely needs it.
 
 Physical VoiceOver/TalkBack, large-text, reduced-motion and touch-target verification remains a release/UAT requirement before making certification-level accessibility claims.
+
+## Programme check-ins and recorded-data financial health
+
+The Flutter Financial resilience journey now exposes:
+
+- due programme check-ins rendered dynamically from the API;
+- typed questions without partner-specific app builds;
+- reviewed locale content with explicit English fallback;
+- programme measurement notices and non-credit boundaries;
+- optional **Use recorded data** financial-health enrichment.
+
+The App never invents missing provider data or translations. Programme questions are not hard-coded into the lending journey and disappear when programme-measurement consent is withdrawn.
+
+WhatsApp, USSD and assisted capture use the same server-side instrument/response model; they are not separate financial logic.
