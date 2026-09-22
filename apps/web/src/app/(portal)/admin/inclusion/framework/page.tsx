@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   assignImpactIndicatorAction,
   createImpactIndicatorAction,
+  grantProgrammePartnerAccessAction,
   updateProgrammeTheoryAction
 } from "@/app/inclusion-impact-actions";
 import { Screen, StateNotice } from "@/components/Screen";
@@ -74,6 +75,9 @@ export default async function InclusionFrameworkPage({
         ) : null}
         {params?.status === "indicator-assigned" ? (
           <StateNotice state="success" message="Indicator assigned to the programme." />
+        ) : null}
+        {params?.status === "partner-access-granted" ? (
+          <StateNotice state="success" message="Programme partner access granted." />
         ) : null}
         {params?.message ? (
           <StateNotice
@@ -317,6 +321,42 @@ export default async function InclusionFrameworkPage({
             </div>
           )}
           <p className="muted">{outcomes.causality_notice}</p>
+        </section>
+
+        <section className="panel">
+          <p className="eyebrow">PARTNER ACCESS</p>
+          <h2>Grant programme-scoped reporting access</h2>
+          <p className="muted">
+            The partner must already be configured on this programme, and the target user must be a dedicated
+            programme-partner account. The grant is aggregate-only and never exposes individual customer records.
+          </p>
+          <form action={grantProgrammePartnerAccessAction} className="form-grid">
+            <input type="hidden" name="programme_id" value={selected.id} />
+            <div className="field">
+              <label htmlFor="partner_id">Partner ID</label>
+              <input
+                id="partner_id"
+                name="partner_id"
+                inputMode="numeric"
+                defaultValue={selected.partner_id ?? ""}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="user_id">Programme-partner user ID</label>
+              <input id="user_id" name="user_id" inputMode="numeric" required />
+            </div>
+            <div className="field">
+              <label htmlFor="access_level">Access level</label>
+              <select id="access_level" name="access_level" defaultValue="read_only">
+                <option value="read_only">Read only</option>
+                <option value="auditor">Auditor</option>
+                <option value="mel_officer">MEL officer</option>
+                <option value="programme_admin">Programme administrator</option>
+              </select>
+            </div>
+            <button className="button" type="submit">Grant programme access</button>
+          </form>
         </section>
 
         <section className="panel">
