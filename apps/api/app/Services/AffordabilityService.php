@@ -41,8 +41,9 @@ class AffordabilityService
                 'detail' => $exception->getMessage(),
             ];
         }
-        $externalObligation = $this->verifiedMonthlyObligationMinor($user) ?? 0;
-        $effective = max($externalObligation, $existing + $proposed);
+        $externalNetOfOpfin = $this->verifiedExternalObligationNetOfOpfinMinor($user);
+        $externalObligation = $externalNetOfOpfin ?? ($this->verifiedMonthlyObligationMinor($user) ?? 0);
+        $effective = $externalObligation + $existing + $proposed;
         $dsr = round(($effective / $incomeMinor) * 100, 2);
         $maximum = (float) config('opfin.credit.max_debt_service_ratio_percent', 35);
 
@@ -58,6 +59,7 @@ class AffordabilityService
             'existing_thirty_day_debt_service_minor' => $existing,
             'proposed_thirty_day_debt_service_minor' => $proposed,
             'verified_external_obligation_minor' => $externalObligation,
+            'external_obligation_is_net_of_opfin' => $externalNetOfOpfin !== null,
         ];
     }
 
@@ -69,6 +71,11 @@ class AffordabilityService
     private function verifiedMonthlyObligationMinor(User $user): ?int
     {
         return $this->valueFromExternalComponents($user, 'verified_monthly_obligation_minor');
+    }
+
+    private function verifiedExternalObligationNetOfOpfinMinor(User $user): ?int
+    {
+        return $this->valueFromExternalComponents($user, 'verified_external_obligation_excluding_opfin_minor');
     }
 
     private function valueFromExternalComponents(User $user, string $key): ?int
@@ -159,4 +166,5 @@ class AffordabilityService
         $quote = $this->economics->quoteForApplication($application, $approvedAmountMinor, $pricing);
 
         return $this->economics->debtServiceWithinDays($quote, 30);
-    }}
+    }
+}
