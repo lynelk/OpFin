@@ -15,7 +15,8 @@ export async function AppShell({ children }: Readonly<{ children: ReactNode }>) 
   const groups = [
     ["customer", "Your money"],
     ["admin", "Operations"],
-    ["employer", "Institutional"]
+    ["employer", "Institutional"],
+    ["partner", "Programme"]
   ] as const;
 
   return (
