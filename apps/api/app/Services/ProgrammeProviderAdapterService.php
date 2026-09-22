@@ -124,6 +124,14 @@ class ProgrammeProviderAdapterService
             if (! $profile || ! $profile->programme_measurement_consent) {
                 throw new InvalidArgumentException('Programme measurement consent is required for this provider adapter.');
             }
+
+            if ($adapter->programme_id && ! DB::table('inclusive_finance_enrolments')
+                ->where('programme_id', $adapter->programme_id)
+                ->where('user_id', $subject->id)
+                ->where('status', 'enrolled')
+                ->exists()) {
+                throw new InvalidArgumentException('Active programme enrolment is required for programme-measurement provider evidence.');
+            }
         }
 
         $signals = $data['signals'] ?? [];
