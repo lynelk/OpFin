@@ -106,6 +106,37 @@ export type PartnerProgramme = {
   can_view_individual_records: false;
 };
 
+export type CreateImpactIndicator = {
+  code: string;
+  name: string;
+  description?: string;
+  outcome_domain: string;
+  value_type: string;
+  unit?: string;
+  calculation_methodology?: string;
+  verification_required?: boolean;
+  frequency?: string;
+  baseline_required?: boolean;
+  privacy_classification?: "programme_measurement" | "aggregate_only" | "operational";
+  framework?: string;
+  framework_version?: string;
+  disaggregation_dimensions?: string[];
+};
+
+export type UpdateProgrammeTheory = {
+  problem_statement?: string;
+  inputs?: string[];
+  interventions?: string[];
+  outputs?: string[];
+  outcomes?: string[];
+  impact?: string[];
+  assumptions?: string[];
+  risks?: string[];
+  evidence_sources?: string[];
+  version?: string;
+  status?: "draft" | "active" | "retired";
+};
+
 export type PartnerImpact = {
   delivery: InclusiveFinanceImpact;
   outcomes: ProgrammeOutcomes;
@@ -196,6 +227,46 @@ export const inclusiveImpactApi = {
     request<{ programmes: PartnerProgramme[] }>(
       "/partner/inclusive-finance/programmes",
       token
+    ),
+
+  createIndicator: (payload: CreateImpactIndicator, token?: string) =>
+    request<ImpactIndicator>("/admin/inclusive-finance/indicators", token, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+
+  updateProgrammeTheory: (
+    programmeId: number,
+    payload: UpdateProgrammeTheory,
+    token?: string
+  ) =>
+    request<ProgrammeFramework>(
+      `/admin/inclusive-finance/programmes/${programmeId}/theory-of-change`,
+      token,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload)
+      }
+    ),
+
+  assignIndicator: (
+    programmeId: number,
+    payload: {
+      indicator_definition_id: number;
+      target_numeric?: number;
+      target_text?: string;
+      reporting_frequency?: string;
+      baseline_required?: boolean;
+    },
+    token?: string
+  ) =>
+    request<ProgrammeFramework>(
+      `/admin/inclusive-finance/programmes/${programmeId}/indicators`,
+      token,
+      {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }
     ),
 
   partnerImpact: (programmeId: number, token?: string) =>
