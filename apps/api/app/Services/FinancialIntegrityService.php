@@ -152,6 +152,7 @@ class FinancialIntegrityService
         $this->scanExpectedCreditPostings($runId, $findings);
         $this->scanCreditSubledgerReconciliation($runId, $findings);
         $this->scanImpairmentCoverage($runId, $findings);
+        $this->scanProviderSettlementEvidence($runId, $findings);
         $this->scanAssetEconomics($runId, $findings);
         $this->scanLongRangePaymentReconciliation($runId, $findings);
 
@@ -721,6 +722,114 @@ class FinancialIntegrityService
                     'difference_minor' => $actual - (int) $row['expected_minor'],
                 ],
             );
+        }
+    }
+
+    private function scanProviderSettlementEvidence(int $runId, array &$findings): void
+    {
+        if (
+            ! Schema::hasTable('provider_settlement_batches')
+            || ! Schema::hasTable('reconciliation_runs')
+            || ! Schema::hasTable('reconciliation_items')
+            || ! Schema::hasTable('mobile_money_transactions')
+        ) {
+            return;
+        }
+
+        $runs = DB::table('reconciliation_runs')
+            ->where('status', 'completed')
+            ->get(['id', 'provider', 'business_date', 'summary']);
+
+        foreach ($runs as $run) {
+            $summary = (array) json_decode((string) ($run->summary ?? '{}'), true);
+            if ((int) ($summary['exception_count'] ?? 0) !== 0 || (int) ($summary['pending_provider_match_count'] ?? 0) !== 0) {
+                continue;
+            }
+
+            $movements = DB::table('reconciliation_items as i')
+                ->join('mobile_money_transactions as m', 'm.id', '=', 'i.mobile_money_transaction_id')
+                ->where('i.reconciliation_run_id', $run->id)
+                ->where('i.status', 'matched')
+                ->where('m.status', MobileMoneyTransaction::STATUS_SUCCESSFUL)
+                ->select('m.id', 'm.direction', 'm.currency', 'm.amount_minor')
+                ->get()
+                ->groupBy(fn ($row) => strtoupper((string) $row->currency));
+
+            foreach ($movements as $currency => $currencyMovements) {
+                $collections = (int) $currencyMovements
+                    ->where('direction', MobileMoneyTransaction::DIRECTION_COLLECTION)
+                    ->sum('amount_minor');
+                $disbursements = (int) $currencyMovements
+                    ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)
+                    ->sum('amount_minor');
+
+                if ($collections === 0 && $disbursements === 0) {
+                    continue;
+                }
+
+                $batch = DB::table('provider_settlement_batches')
+                    ->where('reconciliation_run_id', $run->id)
+                    ->where('currency', $currency)
+                    ->first();
+
+                if (! $batch) {
+                    $findings[] = $this->alert(
+                        $runId,
+                        'high',
+                        'provider_settlement_missing',
+                        $run->id.'|'.$currency,
+                        'Completed exception-free provider reconciliation has successful money movements but no bank-settlement batch.',
+                        [
+                            'reconciliation_run_id' => $run->id,
+                            'provider' => $run->provider,
+                            'business_date' => $run->business_date,
+                            'currency' => $currency,
+                            'collections_minor' => $collections,
+                            'disbursements_minor' => $disbursements,
+                        ],
+                    );
+                    continue;
+                }
+
+                $expectedNet = $collections - $disbursements - (int) $batch->provider_fee_minor;
+                $evidenceJson = json_encode(
+                    json_decode((string) $batch->evidence, true) ?? [],
+                    JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
+                );
+                $ledgerExists = DB::table('ledger_transactions')
+                    ->where('id', $batch->ledger_transaction_id)
+                    ->where('reference', 'provider.settlement:'.$batch->id)
+                    ->exists();
+
+                if (
+                    (int) $batch->collections_minor !== $collections
+                    || (int) $batch->disbursements_minor !== $disbursements
+                    || (int) $batch->bank_net_settlement_minor !== $expectedNet
+                    || hash('sha256', $evidenceJson) !== $batch->evidence_hash
+                    || ! $ledgerExists
+                ) {
+                    $findings[] = $this->alert(
+                        $runId,
+                        'critical',
+                        'provider_settlement_evidence_mismatch',
+                        (string) $batch->id,
+                        'Provider settlement batch does not reconcile to matched provider movements, its evidence hash, or its immutable ledger posting.',
+                        [
+                            'settlement_batch_id' => $batch->id,
+                            'reconciliation_run_id' => $run->id,
+                            'currency' => $currency,
+                            'expected_collections_minor' => $collections,
+                            'recorded_collections_minor' => (int) $batch->collections_minor,
+                            'expected_disbursements_minor' => $disbursements,
+                            'recorded_disbursements_minor' => (int) $batch->disbursements_minor,
+                            'expected_bank_net_settlement_minor' => $expectedNet,
+                            'recorded_bank_net_settlement_minor' => (int) $batch->bank_net_settlement_minor,
+                            'evidence_hash_valid' => hash('sha256', $evidenceJson) === $batch->evidence_hash,
+                            'ledger_posting_present' => $ledgerExists,
+                        ],
+                    );
+                }
+            }
         }
     }
 
