@@ -249,6 +249,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/inclusive-finance/instruments/{instrument}/assisted-responses', [ProgrammeCompletionController::class, 'assistedCapture']);
     Route::get('/admin/inclusive-finance/templates', [ProgrammeCompletionController::class, 'templates']);
     Route::post('/admin/inclusive-finance/programmes/{programme}/templates', [ProgrammeCompletionController::class, 'applyTemplate']);
+    Route::get('/admin/inclusive-finance/programmes/{programme}/partner-users', [ProgrammeCompletionController::class, 'partnerUsers']);
     Route::post('/admin/inclusive-finance/partner-invitations', [ProgrammeCompletionController::class, 'invitePartner']);
     Route::delete('/admin/inclusive-finance/programmes/{programme}/partner-users/{user}', [ProgrammeCompletionController::class, 'revokePartnerAccess']);
     Route::post('/admin/commercial/customers/{user}/attribution', [ProgrammeCompletionController::class, 'recordAttribution']);
