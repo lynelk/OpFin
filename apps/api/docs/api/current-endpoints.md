@@ -318,3 +318,45 @@ Admin/operations routes:
 Programme-measurement attributes are technically separate from credit-decision inputs. Customer-reported signals are never risk eligible. Provider signals require provenance and active credit-processing consent before they may even become eligible for an approved scoring/product policy. Protected demographic/accessibility fields and non-credit-purpose signals cannot be promoted to risk inputs. Eligibility does not automatically alter the Composite Score.
 
 Programme participation rules use an explicit allow-list. Missing voluntary inclusion information produces an incomplete eligibility result; OpFin does not infer it. Impact cohort reporting includes only consented programme-measurement profiles and suppresses an entire inclusion dimension when any bucket is smaller than five, reducing differencing risk. Credit outcomes and participant capability events are scoped to the enrolment-to-exit window, while participant capability events remain separate from direct programme events. Exited participants remain in historical programme totals without extending the outcome window beyond their recorded exit. Alternative collateral verification records evidence; it does not automatically approve a loan or alter pricing. Expired support evidence cannot be verified. Programme codes are normalised case-insensitively and programme effective dates must remain internally valid. Automated fair-treatment assessment is limited to decision reason-code review and is not external-model fairness certification.
+
+## Inclusive Impact & Outcomes
+
+The impact layer extends inclusive-finance programme delivery without changing the credit-decision boundary. All impact, financial-health, livelihood, empowerment and community-finance records created by these routes are non-credit-eligible unless data is independently introduced through the governed alternative-data/scoring path.
+
+### Customer routes
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/inclusive-finance/impact/financial-health` | Return the customer's transparent financial-health check-in history. |
+| POST | `/api/inclusive-finance/impact/financial-health` | Record a personal or programme-linked financial-health check-in. Programme-linked observations require active programme measurement consent and enrolment. |
+| POST | `/api/inclusive-finance/impact/livelihood` | Record optional livelihood, enterprise and dignified-work observations. Programme-linked observations require active measurement consent and enrolment. |
+| POST | `/api/inclusive-finance/impact/empowerment` | Record voluntary programme-only economic-agency observations. Active measurement consent and enrolment are required. |
+| GET | `/api/inclusive-finance/impact/community-finance` | Return the customer's community-finance evidence. |
+| POST | `/api/inclusive-finance/impact/community-finance` | Record customer-reported savings-group/community-finance evidence. Customer-reported evidence remains non-risk-eligible. |
+
+### Platform administration routes
+
+Requires `platform_admin` or `operations`.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/admin/inclusive-finance/indicators` | List the configurable OpFin impact indicator registry. |
+| POST | `/api/admin/inclusive-finance/indicators` | Create an impact indicator. Indicators are always created with `credit_decision_eligible=false`. |
+| PATCH | `/api/admin/inclusive-finance/indicators/{indicator}` | Update an indicator definition without changing the credit boundary. |
+| GET | `/api/admin/inclusive-finance/programmes/{programme}/framework` | Read the programme theory of change and assigned indicators. |
+| PUT | `/api/admin/inclusive-finance/programmes/{programme}/theory-of-change` | Create or update inputs, interventions, outputs, outcomes, impact, assumptions, risks and evidence sources. |
+| POST | `/api/admin/inclusive-finance/programmes/{programme}/indicators` | Assign a registry indicator and optional target/reporting configuration to a programme. |
+| POST | `/api/admin/inclusive-finance/programmes/{programme}/observations` | Record an authorised participant or institutional observation. Participant observations require active programme measurement consent and enrolment. |
+| GET | `/api/admin/inclusive-finance/programmes/{programme}/outcomes` | Return privacy-safe indicator summaries and measurement coverage. Participant cohorts below five are suppressed. |
+| POST | `/api/admin/inclusive-finance/partner-access` | Grant a dedicated `programme_partner` user aggregate, programme-scoped access for the partner configured on that programme. |
+
+### Programme-partner routes
+
+Requires the dedicated `programme_partner` role and an active `programme_partner_access` grant.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/partner/inclusive-finance/programmes` | List only programmes explicitly granted to the current partner account. |
+| GET | `/api/partner/inclusive-finance/programmes/{programme}/impact` | Return existing delivery metrics plus privacy-safe outcome evidence for the granted programme. Individual customer records are not exposed. |
+
+The partner endpoint is reporting-only in this release. Access-level labels (`read_only`, `auditor`, `mel_officer`, `programme_admin`) describe governance scope but do not bypass the aggregate-only API boundary.

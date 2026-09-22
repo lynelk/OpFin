@@ -7,6 +7,7 @@ import { navigationItems } from "@/lib/navigation";
 
 export async function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const session = await getCurrentSession();
+  const homeHref = session.role === "programme_partner" ? "/partner/impact" : "/dashboard";
   const visibleItems = navigationItems.filter((item) => {
     if (!canSeeGroup(session.role, item.group)) return false;
     return !item.roles || item.roles.includes(session.role);
@@ -15,13 +16,14 @@ export async function AppShell({ children }: Readonly<{ children: ReactNode }>) 
   const groups = [
     ["customer", "Your money"],
     ["admin", "Operations"],
-    ["employer", "Institutional"]
+    ["employer", "Institutional"],
+    ["partner", "Programme"]
   ] as const;
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <Link className="brand" href="/dashboard" aria-label="OpFin home">
+        <Link className="brand" href={homeHref} aria-label="OpFin home">
           <span className="brand-mark"><OpFinSymbol reverse /></span>
           <span>OpFin</span>
         </Link>

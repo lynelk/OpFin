@@ -69,6 +69,36 @@ class InclusiveFinanceApi {
   static Future<Map<String, dynamic>> capability() =>
       _request('/inclusive-finance/capability');
 
+  static Future<Map<String, dynamic>> financialHealth() =>
+      _request('/inclusive-finance/impact/financial-health');
+
+  static Future<Map<String, dynamic>> recordFinancialHealth({
+    String? incomeStability,
+    int? essentialExpenseCoverageDays,
+    int? emergencySavingsMinor,
+    int? monthlyIncomeMinor,
+    bool? repaymentStress,
+    bool? insuranceProtection,
+    String? savingsDirection,
+  }) =>
+      _request(
+        '/inclusive-finance/impact/financial-health',
+        method: 'POST',
+        body: {
+          'measurement_stage': 'check_in',
+          if (incomeStability != null) 'income_stability': incomeStability,
+          if (essentialExpenseCoverageDays != null)
+            'essential_expense_coverage_days': essentialExpenseCoverageDays,
+          if (emergencySavingsMinor != null)
+            'emergency_savings_minor': emergencySavingsMinor,
+          if (monthlyIncomeMinor != null) 'monthly_income_minor': monthlyIncomeMinor,
+          if (repaymentStress != null) 'repayment_stress': repaymentStress,
+          if (insuranceProtection != null)
+            'insurance_protection': insuranceProtection,
+          if (savingsDirection != null) 'savings_direction': savingsDirection,
+        },
+      );
+
   static Future<Map<String, dynamic>> fairTreatment() =>
       _request('/inclusive-finance/fair-treatment');
 

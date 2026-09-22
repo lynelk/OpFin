@@ -47,3 +47,30 @@ Demonstrate adding support evidence such as a salary undertaking, guarantee, rec
 
 ## Module 12 — Accessibility preferences
 Demonstrate larger text, simple wording, reduced movement and high contrast. Where available on the test device, demonstrate VoiceOver/TalkBack against the same core journey. Never claim certification for an assistive device that has not completed physical-device UAT.
+
+## Training module: Impact and outcome measurement
+
+### Learning objectives
+
+After this module, a trainee should be able to:
+
+- distinguish OpFin financial health from credit scoring;
+- explain why programme measurement is optional;
+- identify when programme-linked observations may be recorded;
+- explain small-cohort suppression;
+- describe the difference between measured change and proven causal impact;
+- explain the programme-partner reporting boundary.
+
+### Practice exercise
+
+1. Sign in as a customer and open Financial resilience.
+2. Complete a financial-health check-in.
+3. Confirm the result includes a transparent status and reasons.
+4. Confirm the interface states that the result is not a credit score.
+5. With programme measurement consent off, attempt a programme-linked outcome capture through the API/UAT fixture and confirm it is rejected.
+6. Enable consent, enrol in an eligible test programme and repeat the authorised programme observation.
+7. As an operator, configure a theory of change and assign an impact indicator.
+8. Record fewer than five participant observations and confirm the partner outcome surface suppresses the participant count and values.
+9. Record an institutional aggregate observation and confirm it can be reported without exposing participant records.
+
+Never train users or partners to interpret a programme outcome as proof that OpFin caused that outcome unless the evaluation design independently supports causal attribution.

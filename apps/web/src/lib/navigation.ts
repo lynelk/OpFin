@@ -1,6 +1,6 @@
 import type { UserRole } from "./types";
 
-export type NavGroup = "customer" | "admin" | "employer";
+export type NavGroup = "customer" | "admin" | "employer" | "partner";
 
 export type NavItem = {
   href: string;
@@ -30,5 +30,6 @@ export const navigationItems: NavItem[] = [
   { href: "/admin/inclusion", label: "Inclusion & programmes", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/audit-trail", label: "Audit trail", group: "admin", roles: ["platform_admin", "operations", "support"] },
 
-  { href: "/employer", label: "OpFin Work", group: "employer", roles: ["platform_admin", "employer_admin"] }
+  { href: "/employer", label: "OpFin Work", group: "employer", roles: ["platform_admin", "employer_admin"] },
+  { href: "/partner/impact", label: "Programme impact", group: "partner", roles: ["programme_partner"] }
 ];

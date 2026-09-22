@@ -136,3 +136,19 @@ GitHub Actions must remain disabled. Build and validate on an authorised local r
 ### Release contract guard
 
 Run `python3 ../../scripts/verify-android-release-contract.py` from `apps/client` (or `python3 scripts/verify-android-release-contract.py` from repository root) before any Android release build. The standard repository layout validation also runs this guard. It protects the existing Play application ID, API 37 compile requirement, launcher resolution, minimum release target, sensitive backup/cleartext controls and launch permission boundary without requiring the private signing key.
+
+## Financial health and impact check-ins
+
+The **Financial resilience** experience now includes a short customer financial-health check-in.
+
+Current mobile behaviour:
+
+- loads the latest transparent financial-health status alongside reputation and credit position;
+- lets the customer report income stability, essential-expense coverage, emergency savings, repayment stress, insurance protection and savings direction;
+- explains that the result is a wellbeing/resilience indicator, not a credit score;
+- keeps the check-in outside credit eligibility, pricing and limit decisions;
+- continues to make programme measurement consent optional.
+
+The API also supports programme-linked livelihood, dignified-work, economic-agency and community-finance observations. These richer programme check-ins are deliberately not forced into the normal customer journey. Programme-linked outcome capture requires active measurement consent and enrolment and should be surfaced only where a configured programme genuinely needs it.
+
+Physical VoiceOver/TalkBack, large-text, reduced-motion and touch-target verification remains a release/UAT requirement before making certification-level accessibility claims.

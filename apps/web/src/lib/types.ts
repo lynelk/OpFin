@@ -1,4 +1,4 @@
-export type UserRole = "customer" | "platform_admin" | "operations" | "support" | "employer_admin";
+export type UserRole = "customer" | "platform_admin" | "operations" | "support" | "employer_admin" | "programme_partner";
 
 export type Session = {
   role: UserRole;

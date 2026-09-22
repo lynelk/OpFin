@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\GuarantorController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\InclusiveFinanceController;
+use App\Http\Controllers\Api\InclusiveImpactController;
 use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
@@ -104,6 +105,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/inclusive-finance/support-instruments', [InclusiveFinanceController::class, 'supportInstruments']);
     Route::post('/inclusive-finance/support-instruments', [InclusiveFinanceController::class, 'storeSupportInstrument']);
     Route::get('/inclusive-finance/fair-treatment', [InclusiveFinanceController::class, 'fairTreatment']);
+    Route::get('/inclusive-finance/impact/financial-health', [InclusiveImpactController::class, 'financialHealth']);
+    Route::post('/inclusive-finance/impact/financial-health', [InclusiveImpactController::class, 'recordFinancialHealth']);
+    Route::post('/inclusive-finance/impact/livelihood', [InclusiveImpactController::class, 'recordLivelihood']);
+    Route::post('/inclusive-finance/impact/empowerment', [InclusiveImpactController::class, 'recordEmpowerment']);
+    Route::get('/inclusive-finance/impact/community-finance', [InclusiveImpactController::class, 'communityFinance']);
+    Route::post('/inclusive-finance/impact/community-finance', [InclusiveImpactController::class, 'recordCommunityFinance']);
 
     Route::get('/security-centre', [V5P0PlatformController::class, 'security']);
     Route::patch('/security-centre', [V5P0PlatformController::class, 'updateSecurity']);
@@ -216,6 +223,15 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::patch('/admin/inclusive-finance/signals/{signal}/verify', [InclusiveFinanceController::class, 'verifySignal']);
     Route::patch('/admin/inclusive-finance/support-instruments/{instrument}/verify', [InclusiveFinanceController::class, 'verifySupportInstrument']);
     Route::post('/admin/inclusive-finance/fair-treatment/{application}/assess', [InclusiveFinanceController::class, 'assessApplication']);
+    Route::get('/admin/inclusive-finance/indicators', [InclusiveImpactController::class, 'indicatorRegister']);
+    Route::post('/admin/inclusive-finance/indicators', [InclusiveImpactController::class, 'createIndicator']);
+    Route::patch('/admin/inclusive-finance/indicators/{indicator}', [InclusiveImpactController::class, 'updateIndicator']);
+    Route::get('/admin/inclusive-finance/programmes/{programme}/framework', [InclusiveImpactController::class, 'adminProgrammeFramework']);
+    Route::put('/admin/inclusive-finance/programmes/{programme}/theory-of-change', [InclusiveImpactController::class, 'updateProgrammeTheory']);
+    Route::post('/admin/inclusive-finance/programmes/{programme}/indicators', [InclusiveImpactController::class, 'assignIndicator']);
+    Route::post('/admin/inclusive-finance/programmes/{programme}/observations', [InclusiveImpactController::class, 'recordObservation']);
+    Route::get('/admin/inclusive-finance/programmes/{programme}/outcomes', [InclusiveImpactController::class, 'programmeOutcomes']);
+    Route::post('/admin/inclusive-finance/partner-access', [InclusiveImpactController::class, 'grantPartnerAccess']);
     Route::post('/admin/revenue-events', [PlatformCommerceController::class, 'recordRevenue']);
     Route::post('/admin/revenue-events/{event}/reconcile', [PlatformCommerceController::class, 'reconcileRevenue']);
     Route::get('/admin/umra/credit-reporting', [UmraComplianceController::class, 'creditReporting']);
@@ -249,6 +265,11 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/protection-premiums/{payment}/confirm', [SaveProtectionOperationsController::class, 'confirmPremium']);
     Route::post('/admin/protection-policies/{policy}/issue', [SaveProtectionOperationsController::class, 'issuePolicy']);
     Route::patch('/admin/protection-claims/{claim}', [SaveProtectionOperationsController::class, 'updateClaim']);
+});
+
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:programme_partner'])->group(function () {
+    Route::get('/partner/inclusive-finance/programmes', [InclusiveImpactController::class, 'partnerProgrammes']);
+    Route::get('/partner/inclusive-finance/programmes/{programme}/impact', [InclusiveImpactController::class, 'partnerImpact']);
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations,support'])->group(function () {

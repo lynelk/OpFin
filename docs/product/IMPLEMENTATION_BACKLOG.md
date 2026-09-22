@@ -81,3 +81,32 @@ Updated: 21 September 2026
 
 ## Definition of done
 A slice is not done until API, client experience, permissions, audit, accessibility, failure states, automated tests, documentation and production acceptance evidence are complete.
+
+## Impact & Inclusive Finance activation backlog
+
+The core Impact & Inclusive Finance implementation is now coded. Remaining work is activation/evidence rather than inventing more core product surface.
+
+### External/programme activation
+
+- agree programme-specific theories of change, KPI definitions, baselines and targets with each actual implementation partner;
+- execute the relevant programme, data-processing and legal agreements;
+- provision dedicated programme-partner identities only for authorised users;
+- activate real provider integrations only with genuine credentials/contracts;
+- configure verified external community-finance or enterprise signals only through governed provider integrations.
+
+### Validation and field evidence
+
+- run the full API/web/client release gates;
+- apply production database migration only through the normal controlled release process;
+- complete physical-device accessibility/UAT before certification-level claims;
+- validate actual programme questionnaires with intended participants, including low-literacy and assisted-channel use;
+- confirm localisation requirements per live programme before exposing translated outcome instruments.
+
+### Deliberately not in scope
+
+- full VSLA accounting;
+- NGO grant/project management;
+- POS/inventory/purchasing;
+- donor-specific application forks;
+- automatic causal-impact claims;
+- automatic use of programme demographics or impact observations in underwriting.

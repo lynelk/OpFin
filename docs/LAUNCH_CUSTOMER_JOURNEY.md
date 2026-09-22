@@ -257,3 +257,21 @@ Savings, investments, peer lending, SACCO/community capital, insurance and asset
 ## 15. Source-of-truth APIs
 
 Key current endpoints are documented in `apps/api/docs/api/current-endpoints.md`. Customer clients must use API-returned profile, options, offers, wallets and payment state rather than maintaining independent lending rules.
+
+## Financial resilience and health check-in
+
+**Financial resilience** remains an extended journey rather than a new primary navigation destination.
+
+The experience now combines:
+
+1. financial-reputation progress;
+2. current credit position;
+3. a short optional financial-health check-in;
+4. practical capability guidance;
+5. voluntary inclusion/programme consent;
+6. eligible programme participation;
+7. alternative credit-support evidence.
+
+The financial-health check-in is deliberately separate from underwriting. It returns a transparent wellbeing status and reasons, and the customer is told that it is not a credit score.
+
+Richer livelihood, dignified-work, empowerment and community-finance observations are programme capabilities rather than compulsory launch onboarding questions. They should only appear in a customer journey when an authorised programme genuinely requires them and programme measurement consent is active.

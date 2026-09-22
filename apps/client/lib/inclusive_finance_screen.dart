@@ -23,6 +23,7 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
     final values = await Future.wait([
       InclusiveFinanceApi.profile(),
       InclusiveFinanceApi.capability(),
+      InclusiveFinanceApi.financialHealth(),
       InclusiveFinanceApi.fairTreatment(),
       InclusiveFinanceApi.programmes(),
       InclusiveFinanceApi.supportInstruments(),
@@ -42,9 +43,10 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
     return {
       'profile': values[0],
       'capability': capability,
-      'fair_treatment': values[2],
-      'programmes': values[3],
-      'support_instruments': values[4],
+      'financial_health': values[2],
+      'fair_treatment': values[3],
+      'programmes': values[4],
+      'support_instruments': values[5],
     };
   }
 
@@ -242,6 +244,131 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
     await _reload();
   }
 
+  Future<void> _updateFinancialHealth() async {
+    var incomeStability = 'variable';
+    var savingsDirection = 'stable';
+    var repaymentStress = false;
+    var insuranceProtection = false;
+    final coverageDays = TextEditingController();
+    final emergencySavings = TextEditingController();
+
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Financial health check-in'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'This check-in helps you understand resilience. It is not a credit score and does not change your loan eligibility, price or limit.',
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: incomeStability,
+                  decoration: const InputDecoration(labelText: 'Income stability'),
+                  items: const [
+                    DropdownMenuItem(value: 'stable', child: Text('Stable')),
+                    DropdownMenuItem(value: 'variable', child: Text('Variable')),
+                    DropdownMenuItem(value: 'seasonal', child: Text('Seasonal')),
+                    DropdownMenuItem(value: 'none', child: Text('No current income')),
+                    DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => incomeStability = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: coverageDays,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Days your essential expenses are covered',
+                    helperText: 'Estimate how long current accessible resources could cover essentials.',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: emergencySavings,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Emergency savings in UGX'),
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: repaymentStress,
+                  onChanged: (value) => setDialogState(() => repaymentStress = value),
+                  title: const Text('I am struggling to keep up with repayments'),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: insuranceProtection,
+                  onChanged: (value) => setDialogState(() => insuranceProtection = value),
+                  title: const Text('I currently have relevant insurance protection'),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: savingsDirection,
+                  decoration: const InputDecoration(labelText: 'Savings direction'),
+                  items: const [
+                    DropdownMenuItem(value: 'increasing', child: Text('Increasing')),
+                    DropdownMenuItem(value: 'stable', child: Text('About the same')),
+                    DropdownMenuItem(value: 'decreasing', child: Text('Decreasing')),
+                    DropdownMenuItem(value: 'none', child: Text('No savings')),
+                    DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => savingsDirection = value);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Save check-in'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (submitted != true) {
+      coverageDays.dispose();
+      emergencySavings.dispose();
+      return;
+    }
+
+    final coverage = int.tryParse(coverageDays.text.trim());
+    final savings = int.tryParse(emergencySavings.text.replaceAll(',', '').trim());
+    coverageDays.dispose();
+    emergencySavings.dispose();
+
+    await InclusiveFinanceApi.recordFinancialHealth(
+      incomeStability: incomeStability,
+      essentialExpenseCoverageDays: coverage,
+      emergencySavingsMinor: savings,
+      repaymentStress: repaymentStress,
+      insuranceProtection: insuranceProtection,
+      savingsDirection: savingsDirection,
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Financial health check-in saved.')),
+    );
+    await _reload();
+  }
+
   Future<void> _enrol(int programmeId, String programmeName) async {
     await InclusiveFinanceApi.enrol(programmeId);
     await InclusiveFinanceApi.recordCapabilityEvent(
@@ -430,6 +557,10 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
                   (capability['financial_position'] as Map?)
                           ?.cast<String, dynamic>() ??
                       {};
+              final financialHealth =
+                  (data['financial_health'] as Map?)?.cast<String, dynamic>() ?? {};
+              final latestFinancialHealth =
+                  (financialHealth['latest'] as Map?)?.cast<String, dynamic>() ?? {};
               final fair =
                   (data['fair_treatment'] as Map?)?.cast<String, dynamic>() ?? {};
               final programmesData =
@@ -497,6 +628,54 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
                           Text('Total outstanding: ${_moneyText(position['total_outstanding_minor'])}'),
                           if (position['next_due_date'] != null)
                             Text('Next due date: ${position['next_due_date']}'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Financial health',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: _updateFinancialHealth,
+                                icon: const Icon(Icons.monitor_heart_outlined),
+                                label: const Text('Check in'),
+                              ),
+                            ],
+                          ),
+                          if (latestFinancialHealth.isEmpty)
+                            const Text(
+                              'Complete a short check-in to understand your current resilience. This is separate from credit scoring.',
+                            )
+                          else ...[
+                            Text(
+                              _titleCase(
+                                latestFinancialHealth['financial_health_status']?.toString() ??
+                                    'stabilising',
+                              ),
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 6),
+                            ...((latestFinancialHealth['status_reasons'] as List?) ?? const [])
+                                .map((reason) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Text('• $reason'),
+                                    )),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'This status is a transparent wellbeing indicator, not a credit score.',
+                            ),
+                          ],
                         ],
                       ),
                     ),

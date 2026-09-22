@@ -1,7 +1,7 @@
 # Inclusive Finance and Programme Delivery Framework
 
 Status: Canonical product and implementation contract  
-Updated: 21 September 2026  
+Updated: 22 September 2026  
 Language: English (United Kingdom)
 
 ## Purpose
@@ -244,6 +244,123 @@ Invalid examples:
 - treating Stolets business operations as an OpFin module;
 - presenting OpFin as "Stolets for finance";
 - exposing one product's customer data to the other merely because the same person has accounts in both.
+
+## 12. OpFin Impact & Outcomes extension
+
+The impact extension makes programme strategy and monitoring configurable around OpFin without turning OpFin into a donor project-management system.
+
+### 12.1 Indicator Registry
+
+The `impact_indicator_definitions` register stores versioned, reusable programme indicators with:
+
+- code and definition;
+- outcome domain;
+- value type and unit;
+- calculation methodology;
+- collection method and source;
+- verification requirement;
+- frequency and baseline requirement;
+- privacy classification;
+- framework/version;
+- disaggregation dimensions;
+- valid-from/valid-to lifecycle.
+
+Supported outcome domains are:
+
+1. access and inclusion;
+2. financial health and resilience;
+3. livelihood and enterprise;
+4. dignified work;
+5. agency and economic empowerment;
+6. market systems;
+7. optional climate/resilience classification.
+
+Indicators are measurement artefacts. The implementation forces `credit_decision_eligible=false`; configuring an indicator never alters credit eligibility, pricing, score or limit.
+
+### 12.2 Programme Theory of Change
+
+Each inclusive-finance programme can maintain a versioned theory of change:
+
+**problem → inputs → interventions → outputs → outcomes → longer-term impact**
+
+Assumptions, risks and evidence sources are recorded alongside the pathway. Programme-specific terminology and targets are configuration, not permanent OpFin domain concepts. This allows Mastercard Foundation-, FSD-, CARE-, government-, employer- or other partner-aligned programmes to use the same platform without hard-coding any partner's strategy into OpFin.
+
+### 12.3 Financial health and resilience
+
+Customers can complete a short financial-health check-in that records transparent resilience indicators such as:
+
+- income stability;
+- essential-expense coverage;
+- emergency savings;
+- monthly income/debt-service context where provided;
+- repayment stress;
+- relevant insurance protection;
+- recent financial shocks;
+- savings direction.
+
+The customer-facing status is deliberately transparent:
+
+- `struggling`;
+- `stabilising`;
+- `resilient`;
+- `progressing`.
+
+The status is not a probability-of-default model or second credit score. The API exposes the reasons behind the classification and explicitly marks the snapshot non-credit-eligible.
+
+### 12.4 Livelihood, enterprise and dignified-work outcomes
+
+Optional outcome snapshots support:
+
+- employment/self-employment state;
+- business activity and continuity;
+- income/revenue;
+- productive assets;
+- workers;
+- jobs created/retained;
+- income reliability;
+- weekly work hours;
+- self-reported work satisfaction, dignity and sense of purpose.
+
+Programme-linked records require active programme measurement consent and active enrolment. These observations describe measured outcomes; they do not prove causality by themselves.
+
+### 12.5 Economic agency and empowerment
+
+Programme-only voluntary observations can record:
+
+- control over income;
+- control over savings;
+- financial decision-making role;
+- control over productive assets;
+- independent use of financial services;
+- personal device/account access;
+- financial confidence;
+- group participation.
+
+These fields remain measurement-only and cannot be introduced into credit decisioning by programme configuration.
+
+### 12.6 Community finance bridge
+
+The `community_finance_evidence` record supports portable evidence from VSLAs, savings groups and other community-finance arrangements without turning OpFin into group-accounting software.
+
+Customer-reported evidence may include membership state, savings balance, contribution streak, completed group loans, repayment history, leadership role and guarantee capacity. It remains `credit_decision_eligible=false`.
+
+If an approved programme later wants a verified group-derived signal to influence underwriting, that signal must separately pass through OpFin's governed alternative-data pathway with explicit credit-processing consent, provider provenance, verification and an approved scoring/product policy.
+
+### 12.7 Programme MEL and partner portal
+
+Programme observations support baseline, 30-day, 90-day, 6-month, 12-month, 24-month, exit, post-programme and general check-in stages.
+
+The reporting layer separates:
+
+- participant observations;
+- institutional/market-system observations;
+- system-of-record delivery outcomes;
+- direct programme events;
+- contextual capability events.
+
+Participant outcome cohorts smaller than five are suppressed. Boolean/category distributions are also withheld where a small subgroup would recreate differencing risk.
+
+Dedicated `programme_partner` accounts receive explicit programme-level grants. The partner portal is aggregate-only in this release and does not expose individual participant records. Access labels support read-only, auditor, MEL officer and programme administrator governance, but none bypasses the aggregate reporting boundary.
 
 ## Production activation gates
 

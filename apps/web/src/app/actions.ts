@@ -36,7 +36,8 @@ function redirectWith(path: string, params: Record<string, string>) {
 export async function loginAction(formData: FormData) {
   const phone = value(formData, "phone");
   const password = value(formData, "password");
-  const next = safeInternalPath(value(formData, "next") || "/dashboard");
+  const requestedNext = value(formData, "next");
+  let next = safeInternalPath(requestedNext || "/dashboard");
 
   try {
     const response = await opfinApi.login(phone, password);
@@ -46,6 +47,10 @@ export async function loginAction(formData: FormData) {
     cookieStore.set("opfin_access_token", data.access_token, SESSION_COOKIE_OPTIONS);
     cookieStore.set("opfin_role", data.user.role, SESSION_COOKIE_OPTIONS);
     cookieStore.set("opfin_name", encodeURIComponent(data.user.name), SESSION_COOKIE_OPTIONS);
+
+    if (!requestedNext && data.user.role === "programme_partner") {
+      next = "/partner/impact";
+    }
   } catch (error) {
     if (error instanceof OpfinApiError) {
       redirectWith("/login", { error: error.kind, message: error.message, next });
