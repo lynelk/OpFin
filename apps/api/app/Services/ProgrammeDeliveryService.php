@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -541,6 +542,7 @@ class ProgrammeDeliveryService
             'schedule.due_at',
             'schedule.completed_at',
             'schedule.measurement_stage',
+            'instrument.id as instrument_id',
             'instrument.name as instrument_name',
             'enrolment.programme_id',
             'enrolment.user_id',
@@ -575,6 +577,7 @@ class ProgrammeDeliveryService
                 'id' => (int) $row->id,
                 'programme_id' => (int) $row->programme_id,
                 'user_id' => (int) $row->user_id,
+                'instrument_id' => (int) $row->instrument_id,
                 'instrument_name' => $row->instrument_name,
                 'measurement_stage' => $row->measurement_stage,
                 'due_at' => $row->due_at,
@@ -674,6 +677,7 @@ class ProgrammeDeliveryService
             'invited_phone' => $data['invited_phone'] ?? null,
             'invited_email' => $data['invited_email'] ?? null,
             'token_hash' => hash('sha256', $token),
+            'delivery_token_encrypted' => Crypt::encryptString($token),
             'access_level' => $data['access_level'] ?? 'read_only',
             'status' => 'pending',
             'expires_at' => $data['expires_at'] ?? now()->addDays(7),
@@ -758,6 +762,86 @@ class ProgrammeDeliveryService
         });
     }
 
+    public function partnerUsers(int $programmeId): array
+    {
+        if (! DB::table('inclusive_finance_programmes')->where('id', $programmeId)->exists()) {
+            throw new InvalidArgumentException('Programme not found.');
+        }
+
+        $users = DB::table('programme_partner_access as access')
+            ->join('users', 'users.id', '=', 'access.user_id')
+            ->where('access.programme_id', $programmeId)
+            ->orderByDesc('access.granted_at')
+            ->select([
+                'access.user_id',
+                'access.partner_id',
+                'access.access_level',
+                'access.status',
+                'access.granted_at',
+                'access.revoked_at',
+                'users.name',
+                'users.phone',
+                'users.email',
+            ])
+            ->get()
+            ->map(fn ($row) => [
+                'user_id' => (int) $row->user_id,
+                'partner_id' => (int) $row->partner_id,
+                'name' => $row->name,
+                'phone' => $row->phone,
+                'email' => $row->email,
+                'access_level' => $row->access_level,
+                'status' => $row->status,
+                'granted_at' => $row->granted_at,
+                'revoked_at' => $row->revoked_at,
+                'individual_records_exposed' => false,
+            ])
+            ->values()
+            ->all();
+
+        $invitations = DB::table('programme_partner_invitations')
+            ->where('programme_id', $programmeId)
+            ->whereIn('status', ['pending', 'accepted'])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($row) {
+                $expired = now()->greaterThan(Carbon::parse($row->expires_at));
+                $activationToken = null;
+
+                if ($row->status === 'pending' && ! $expired && $row->delivery_token_encrypted) {
+                    try {
+                        $activationToken = Crypt::decryptString($row->delivery_token_encrypted);
+                    } catch (\Throwable) {
+                        $activationToken = null;
+                    }
+                }
+
+                return [
+                    'id' => (int) $row->id,
+                    'partner_id' => (int) $row->partner_id,
+                    'invited_name' => $row->invited_name,
+                    'invited_phone' => $row->invited_phone,
+                    'invited_email' => $row->invited_email,
+                    'access_level' => $row->access_level,
+                    'status' => $expired && $row->status === 'pending' ? 'expired' : $row->status,
+                    'expires_at' => $row->expires_at,
+                    'accepted_at' => $row->accepted_at,
+                    'accepted_user_id' => $row->accepted_user_id ? (int) $row->accepted_user_id : null,
+                    'activation_token' => $activationToken,
+                    'delivery_status' => 'not_sent',
+                ];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'programme_id' => $programmeId,
+            'users' => $users,
+            'invitations' => $invitations,
+            'access_boundary' => 'Programme-partner identities are dedicated and programme-scoped. Individual participant records remain unavailable.',
+        ];
+    }
+
     public function revokePartnerAccess(int $programmeId, int $userId): array
     {
         $updated = DB::table('programme_partner_access')
@@ -779,16 +863,22 @@ class ProgrammeDeliveryService
 
     public function markOpened(User $user, int $scheduleId): void
     {
-        DB::table('programme_follow_up_schedules as schedule')
+        $ownedSchedule = DB::table('programme_follow_up_schedules as schedule')
             ->join('inclusive_finance_enrolments as enrolment', 'enrolment.id', '=', 'schedule.enrolment_id')
             ->where('schedule.id', $scheduleId)
             ->where('enrolment.user_id', $user->id)
             ->whereIn('schedule.status', ['scheduled', 'due', 'overdue'])
-            ->update([
-                'schedule.status' => 'opened',
-                'schedule.opened_at' => now(),
-                'schedule.updated_at' => now(),
-            ]);
+            ->value('schedule.id');
+
+        if (! $ownedSchedule) {
+            throw new InvalidArgumentException('Programme follow-up is not available for this customer.');
+        }
+
+        DB::table('programme_follow_up_schedules')->where('id', $ownedSchedule)->update([
+            'status' => 'opened',
+            'opened_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function generateFollowUpsForUser(User $user): void
