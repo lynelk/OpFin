@@ -61,12 +61,20 @@ return new class extends Migration
             $table->json('economics_config')->nullable()->after('disclosure_payload');
         });
 
+        Schema::table('capital_mandates', function (Blueprint $table) {
+            $table->bigInteger('reserved_capital_minor')->default(0)->after('deployed_capital_minor');
+        });
+
         Schema::table('credit_offers', function (Blueprint $table) {
             $table->foreignId('funding_pool_id')
                 ->nullable()
                 ->after('institution_id')
                 ->constrained('capital_mandates')
                 ->nullOnDelete();
+            $table->timestamp('funding_reserved_at')->nullable();
+            $table->timestamp('funding_committed_at')->nullable();
+            $table->timestamp('funding_released_at')->nullable();
+            $table->timestamp('funding_reversed_at')->nullable();
             $table->index(['funding_pool_id', 'status'], 'credit_offers_funding_pool_status_idx');
         });
 
@@ -99,7 +107,17 @@ return new class extends Migration
         Schema::table('credit_offers', function (Blueprint $table) {
             $table->dropForeign(['funding_pool_id']);
             $table->dropIndex('credit_offers_funding_pool_status_idx');
-            $table->dropColumn('funding_pool_id');
+            $table->dropColumn([
+                'funding_pool_id',
+                'funding_reserved_at',
+                'funding_committed_at',
+                'funding_released_at',
+                'funding_reversed_at',
+            ]);
+        });
+
+        Schema::table('capital_mandates', function (Blueprint $table) {
+            $table->dropColumn('reserved_capital_minor');
         });
 
         Schema::dropIfExists('service_economics_events');
