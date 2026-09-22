@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class RegulatoryReportingService
 {
+    public function __construct(private readonly RegulatoryFinancialReconciliationService $financialReconciliation) {}
+
     public const PROFILES = [
         'fia_annual_compliance' => 'FIA',
         'fia_large_cash_transactions' => 'FIA',
@@ -49,12 +51,32 @@ class RegulatoryReportingService
         };
 
         $validation = $this->validate($reportType, $payload, $start, $end);
+        $financialReportTypes = [
+            'umra_books_and_records',
+            'umra_npl_interest_controls',
+            'umra_transaction_receipts',
+            'payment_integrity_oversight',
+            'fia_large_cash_transactions',
+            'fia_suspicious_activity_register',
+            'fia_annual_compliance',
+        ];
+        $financialEvidence = in_array($reportType, $financialReportTypes, true)
+            ? $this->financialReconciliation->assess($start, $end)
+            : null;
+        if ($financialEvidence !== null) {
+            $payload['financial_reconciliation'] = $financialEvidence;
+            $validation['financial_reconciliation'] = $financialEvidence;
+        }
         $canonical = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
         $key = ['report_type' => $reportType, 'period_start' => $start->toDateString(), 'period_end' => $end->toDateString()];
 
         DB::table('regulatory_report_runs')->updateOrInsert($key, [
             'regulator' => self::PROFILES[$reportType],
-            'status' => $validation['valid'] ? 'validated' : 'validation_failed',
+            'status' => ! $validation['valid']
+                ? 'validation_failed'
+                : ($financialEvidence !== null
+                    ? ($financialEvidence['passed'] ? 'financially_reconciled' : 'reconciliation_failed')
+                    : 'validated'),
             'payload' => $canonical,
             'validation_results' => json_encode($validation),
             'payload_hash' => hash('sha256', $canonical),
