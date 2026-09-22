@@ -157,3 +157,35 @@ Customers should understand:
 Staff must not tell customers that gender, disability status, refugee/displacement status or other programme-measurement attributes improve a credit score or guarantee approval.
 
 Accessibility training should demonstrate large text, simple wording, reduced motion, high contrast and device screen-reader use. Physical-device UAT remains required before claiming support for a specific assistive technology or device.
+
+## Impact and programme measurement
+
+### Customer guidance
+
+Financial-health check-ins are optional personal-finance tools. Explain the status using the displayed reasons and never describe it as a credit score, approval indicator or loan-limit signal.
+
+Where a check-in is linked to an inclusive-finance programme:
+
+1. confirm programme measurement consent is active;
+2. confirm the customer is actively enrolled;
+3. explain what will be measured and why;
+4. capture only the information required for the configured programme;
+5. remind the customer that programme measurement does not automatically change credit eligibility, pricing or limits.
+
+Livelihood, dignified-work, agency/empowerment and community-finance questions must not be inserted into the standard borrowing journey merely because the platform can store them.
+
+### Operator guidance
+
+Programme operators configure:
+
+- theory of change;
+- indicator registry entries;
+- programme indicator assignments and targets;
+- authorised observations;
+- partner reporting access.
+
+Use programme-specific language as configuration. Do not hard-code external partner terminology into OpFin's core credit or personal-finance domain.
+
+### Programme-partner guidance
+
+Dedicated programme-partner users receive aggregate reporting only. They may review programme delivery, outcome coverage and configured indicators for programmes explicitly assigned to them. Small participant cohorts are suppressed and individual customer records are not exposed.
