@@ -1,6 +1,6 @@
 # Current API endpoints
 
-Updated against the registered canonical platform routes on **21 September 2026**. Routes remain subject to the middleware and role gates in source.
+Updated against the registered canonical platform routes on **22 September 2026**. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:
 
@@ -116,6 +116,10 @@ Typical profile data includes:
 - setup state and `next_action`
 
 Do not replace unavailable external data with made-up score values.
+
+External credit-data routing is provider-independent: OpFin prefers Cito when configured and otherwise can use the direct provider adapter. A failed or ambiguous Cito request does not silently trigger a second direct paid enquiry. Operations must reconcile the original request before explicitly selecting the direct route.
+
+Verified positive employer behaviour may provide a small capped score uplift. Missing, unavailable, customer-declined or negative employer-behaviour data is neutral and does not reduce the base Composite Score or its data-coverage calculation.
 
 ## 6. Credit applications and offers
 
@@ -274,16 +278,27 @@ These endpoints are Space-scoped. Cross-Space access is denied unless an active 
 
 Permission, entitlement and product/regulatory eligibility are separate gates. Commercial economics must not determine financial-health advice.
 
-## 20. Revenue events and CPay reconciliation
+## 20. Revenue, service economics and partner reporting
 
 Operations/admin routes:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | POST | `/api/admin/revenue-events` | Record idempotent subscription, commission, revenue-share, transaction, platform/API or servicing revenue |
-| POST | `/api/admin/revenue-events/{event}/reconcile` | Attach CPay and reconciliation references and settle/reconcile the event |
+| POST | `/api/admin/revenue-events/{event}/reconcile` | Attach provider/reconciliation references and settle/reconcile the revenue event |
+| POST | `/api/admin/service-economics-events` | Record or enrich one idempotent external-service economics event |
+| GET | `/api/admin/reports/service-economics` | Provider/customer/partner/Cito/OpFin fee, cost, tax, settlement and margin report |
+| GET | `/api/admin/reports/capital-loan-book` | Capital/funding-pool and loan-book performance report |
+| GET | `/api/admin/reports/insurance` | Insurance policy, premium, settlement, claims and economics report |
+| GET | `/api/admin/reports/savings-investments` | Savings/investment movement, custody/commitment and economics report |
+| GET | `/api/admin/reports/employment-positive-behaviour` | Aggregate positive-only employer enrichment report |
+| GET | `/api/admin/reports/financial-account-behaviour` | Aggregate linked-account and verified financial-behaviour coverage report |
 
-CPay remains the approved execution/reconciliation boundary where money movement is required. Revenue events attribute commercial economics; they are not a replacement financial ledger.
+Report routes accept optional `from` and `to` dates. The service-economics report also accepts `service_code`, `provider`, `route` and `environment` filters.
+
+Cito/CPay is the preferred third-party/payment route, not an availability dependency. A production direct money-movement adapter is permitted only when explicitly configured and marked certified. Provider execution never replaces OpFin product-state, ledger, finality and reconciliation controls.
+
+Service economics distinguishes pass-through principal/premium/capital from revenue. A known zero is stored as `0`; an unknown commercial amount remains `null` and appears as an incompleteness count rather than being guessed.
 
 ## 21. Inclusive finance, programme delivery and alternative credit support
 
