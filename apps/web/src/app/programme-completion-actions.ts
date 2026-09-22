@@ -119,7 +119,7 @@ export async function inviteProgrammePartnerAction(formData: FormData) {
   const partnerId = Number(value(formData, "partner_id"));
 
   try {
-    const result = await programmeCompletionApi.invitePartner(
+    await programmeCompletionApi.invitePartner(
       {
         programme_id: programmeId,
         partner_id: partnerId,
@@ -132,7 +132,7 @@ export async function inviteProgrammePartnerAction(formData: FormData) {
     );
 
     redirect(
-      `/admin/inclusion/delivery?programme_id=${programmeId}&status=partner-invited&activation_token=${encodeURIComponent(result.activation_token)}`
+      `/admin/inclusion/delivery?programme_id=${programmeId}&status=partner-invited`
     );
   } catch (error) {
     errorRedirect(`/admin/inclusion/delivery?programme_id=${programmeId}`, error);
@@ -246,6 +246,78 @@ export async function addQuestionTranslationAction(formData: FormData) {
   }
 
   redirect(`/admin/inclusion/delivery?programme_id=${programmeId}&status=translation-saved`);
+}
+
+export async function revokeProgrammePartnerAccessAction(formData: FormData) {
+  const token = await getAccessToken();
+  const programmeId = Number(value(formData, "programme_id"));
+  const userId = Number(value(formData, "user_id"));
+
+  try {
+    await programmeCompletionApi.revokePartnerAccess(programmeId, userId, token);
+  } catch (error) {
+    errorRedirect(`/admin/inclusion/delivery?programme_id=${programmeId}`, error);
+  }
+
+  redirect(`/admin/inclusion/delivery?programme_id=${programmeId}&status=partner-access-revoked`);
+}
+
+export async function submitAssistedProgrammeCheckInAction(formData: FormData) {
+  const token = await getAccessToken();
+  const programmeId = Number(value(formData, "programme_id"));
+  const instrumentId = Number(value(formData, "instrument_id"));
+  const userId = Number(value(formData, "user_id"));
+  const scheduleIdRaw = value(formData, "schedule_id");
+  const locale = value(formData, "locale") || undefined;
+  const questionIds = value(formData, "question_ids")
+    .split(",")
+    .map((item) => Number(item))
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  const answers: Array<{ question_id: number; value: unknown }> = [];
+  for (const questionId of questionIds) {
+    const type = value(formData, `question_type_${questionId}`);
+    const key = `question_${questionId}`;
+    if (type === "multi_choice") {
+      const selected = list(formData, key);
+      if (selected.length) answers.push({ question_id: questionId, value: selected });
+      continue;
+    }
+
+    const raw = value(formData, key);
+    if (!raw) continue;
+    let parsed: unknown = raw;
+    if (type === "boolean") parsed = raw === "true";
+    if (type === "integer" || type === "currency_minor") {
+      const number = Number(raw.replaceAll(",", ""));
+      parsed = Number.isFinite(number) ? Math.trunc(number) : raw;
+    }
+    if (type === "decimal") {
+      const number = Number(raw.replaceAll(",", ""));
+      parsed = Number.isFinite(number) ? number : raw;
+    }
+    answers.push({ question_id: questionId, value: parsed });
+  }
+
+  try {
+    await programmeCompletionApi.assistedCapture(
+      instrumentId,
+      {
+        user_id: userId,
+        schedule_id: scheduleIdRaw ? Number(scheduleIdRaw) : undefined,
+        locale,
+        answers
+      },
+      token
+    );
+  } catch (error) {
+    errorRedirect(
+      `/admin/inclusion/assisted?instrument_id=${instrumentId}&schedule_id=${scheduleIdRaw}&user_id=${userId}&programme_id=${programmeId}`,
+      error
+    );
+  }
+
+  redirect(`/admin/inclusion/delivery?programme_id=${programmeId}&status=assisted-checkin-saved`);
 }
 
 export async function configureProviderAdapterAction(formData: FormData) {
