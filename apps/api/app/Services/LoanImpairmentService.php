@@ -10,6 +10,7 @@ use App\Models\LoanImpairmentAssessment;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 class LoanImpairmentService
@@ -50,6 +51,13 @@ class LoanImpairmentService
             $loan, $asOf, $expectedCreditLossMinor, $stage, $policyVersion, $evidence, $actor
         ) {
             $lockedLoan = Loan::query()->lockForUpdate()->findOrFail($loan->id);
+            if (Schema::hasTable('credit_write_offs')
+                && DB::table('credit_write_offs')->where('loan_id', $lockedLoan->id)->exists()) {
+                throw new InvalidArgumentException(
+                    'Written-off loans retain their final stage-3 assessment as write-off evidence; do not post a new impairment adjustment.'
+                );
+            }
+
             $latest = LoanImpairmentAssessment::query()
                 ->where('loan_id', $lockedLoan->id)
                 ->orderByDesc('as_of_date')
