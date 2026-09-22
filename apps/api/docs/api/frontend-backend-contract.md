@@ -181,3 +181,49 @@ Client rules:
 - high-contrast mode is an accessibility preference, not a claim of physical-device certification.
 
 **OpFin/Stolets boundary:** Stolets remains a separate SME automation, digitisation and commerce product. A future Stolets-derived signal can enter OpFin only through an explicit, consented and governed provider interface. Clients must not merge the products, databases or user journeys.
+
+## Inclusive impact contract
+
+### Financial-health check-ins
+
+`GET /api/inclusive-finance/impact/financial-health` returns:
+
+- `latest` and recent `history`;
+- a transparent `financial_health_status` of `struggling`, `stabilising`, `resilient` or `progressing`;
+- human-readable `status_reasons`;
+- `is_credit_score=false`;
+- `credit_decision_eligible=false`.
+
+The classification is a wellbeing/resilience aid, not a probability-of-default model. Client surfaces must not imply that the status approves, declines, prices or changes a credit limit.
+
+Programme-linked check-ins, livelihood observations and empowerment observations require both:
+
+1. active programme measurement consent; and
+2. active enrolment in the referenced programme.
+
+### Programme framework contract
+
+The admin framework endpoint returns:
+
+- programme identity/lifecycle;
+- optional theory of change;
+- assigned indicator definitions;
+- programme targets/reporting configuration;
+- a measurement-boundary notice.
+
+Indicator definitions include outcome domain, value type, unit, calculation methodology, provenance expectations, verification requirements, frequency, privacy classification, framework/version and disaggregation dimensions. The API always returns `credit_decision_eligible=false`.
+
+### Outcome reporting and privacy
+
+Programme outcome summaries report aggregate coverage and indicator observations. For participant-specific indicators:
+
+- distinct participant count below five suppresses participant values;
+- boolean or category distributions are additionally withheld where releasing a small subgroup would reintroduce differencing risk;
+- institutional/aggregate observations can be reported separately from participant evidence;
+- the API states that observed change must not be described as programme-caused unless the evaluation design supports causal attribution.
+
+### Programme partner contract
+
+A `programme_partner` account sees only programmes with an active explicit grant. Partner impact responses combine existing programme delivery metrics with the new outcome framework. No endpoint in the partner surface returns individual participant records.
+
+Dedicated partner identities must be provisioned explicitly. Do not convert a customer's financial account into a partner identity as a convenience shortcut.
