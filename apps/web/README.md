@@ -110,3 +110,15 @@ A dedicated `programme_partner` role has a separate **Programme impact** navigat
 - cannot alter credit policy through the impact workspace.
 
 The operator must configure a programme's partner before granting access, and the target account must already be a dedicated programme-partner identity. Do not repurpose an ordinary customer's account as a partner login.
+
+## Programme delivery and commercial performance
+
+New web surfaces:
+
+- **More → Programme check-ins** for customer Web follow-ups;
+- **Admin → Programme delivery** for instruments, templates, translations, schedules, assisted capture, partner users, exports and provider-adapter governance;
+- **Admin → Commercial performance** for acquisition, funnel, portfolio outcomes, recorded unit economics and programme-to-commercial graduation;
+- **Programme partner activation** for invitation + phone OTP + dedicated PIN onboarding;
+- programme-partner/admin export proxy that downloads aggregate CSV/XLSX/ZIP evidence without exposing API bearer tokens.
+
+Programme-partner activation tokens are never passed through admin redirect query strings. Pending tokens are stored encrypted at rest for authorised delivery and cleared when accepted.
