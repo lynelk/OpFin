@@ -33,6 +33,8 @@ return [
     ],
 
     'regulatory' => [
+        'licence_class' => env('OPFIN_REGULATORY_LICENCE_CLASS', ''),
+        'jurisdiction_country' => env('OPFIN_REGULATORY_COUNTRY', env('OPFIN_DEFAULT_COUNTRY', 'UG')),
         'credit_reporting_due_days' => (int) env('UMRA_CREDIT_REPORTING_DUE_DAYS', 30),
         'complaint_resolution_days' => (int) env('UMRA_COMPLAINT_RESOLUTION_DAYS', 30),
         'enforce_umra_npl_cap' => (bool) env('UMRA_ENFORCE_NPL_CAP', true),
@@ -43,6 +45,12 @@ return [
         'complaints_email' => env('OPFIN_COMPLAINTS_EMAIL'),
         'complaints_phone' => env('OPFIN_COMPLAINTS_PHONE'),
         'complaints_url' => env('OPFIN_COMPLAINTS_URL'),
+    ],
+
+    'accounting' => [
+        'fee_recognition_policy_type' => env('OPFIN_FEE_RECOGNITION_POLICY_TYPE', 'credit_fee_recognition'),
+        'tax_policy_type' => env('OPFIN_TAX_POLICY_TYPE', 'tax'),
+        'efris_enabled' => (bool) env('OPFIN_EFRIS_ENABLED', false),
     ],
 
     'customer_experience' => [
