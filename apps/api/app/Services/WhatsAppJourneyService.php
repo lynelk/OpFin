@@ -20,11 +20,18 @@ class WhatsAppJourneyService
 
     private readonly IdentityVerificationService $identityVerification;
 
-    public function __construct(SmsService $smsService, CustomerCreditProfileService $profiles, IdentityVerificationService $identityVerification)
-    {
+    private readonly ProgrammeDeliveryService $programmes;
+
+    public function __construct(
+        SmsService $smsService,
+        CustomerCreditProfileService $profiles,
+        IdentityVerificationService $identityVerification,
+        ProgrammeDeliveryService $programmes,
+    ) {
         $this->smsService = $smsService;
         $this->profiles = $profiles;
         $this->identityVerification = $identityVerification;
+        $this->programmes = $programmes;
     }
 
     public function handle(string $phone, string $body, ?string $providerMessageId = null): array
@@ -59,12 +66,24 @@ class WhatsAppJourneyService
             return $this->respond($conversation->id, 'We could not match this session to an active OpFin account.', 'blocked');
         }
 
+        if ($conversation->journey === 'programme_checkin') {
+            return $this->handleProgrammeCheckInInput($conversation, $user, $normalized);
+        }
+
         if (preg_match('/^(HELP|MENU)$/i', $normalized)) {
             return $this->respond(
                 $conversation->id,
-                'You can use: STATUS, LIMIT, PROFILE, KYC, BORROW <amount>, REPAY, CONSENTS, GRANT CREDIT CONSENT, REVOKE CREDIT CONSENT, SUPPORT <message>, and LOGOUT. We never ask you to send your OpFin PIN in WhatsApp.',
+                'You can use: STATUS, LIMIT, PROFILE, KYC, CHECKIN, BORROW <amount>, REPAY, CONSENTS, GRANT CREDIT CONSENT, REVOKE CREDIT CONSENT, SUPPORT <message>, and LOGOUT. We never ask you to send your OpFin PIN in WhatsApp.',
                 'verified'
             );
+        }
+
+        if (strcasecmp($normalized, 'CHECKIN') === 0) {
+            return $this->startProgrammeCheckIn($conversation, $user);
+        }
+
+        if (preg_match('/^CHECKIN\s+(\d+)$/i', $normalized, $matches)) {
+            return $this->selectProgrammeCheckIn($conversation, $user, (int) $matches[1]);
         }
 
         if (strcasecmp($normalized, 'STATUS') === 0) {
@@ -360,6 +379,271 @@ class WhatsAppJourneyService
         }
 
         return $this->respond($conversation->id, 'Send KYC to restart identity verification.', 'verified');
+    }
+
+    private function startProgrammeCheckIn(object $conversation, User $user): array
+    {
+        try {
+            $state = $this->programmes->dueInstruments($user, 'whatsapp', $user->preferred_language ?? 'en');
+        } catch (\InvalidArgumentException $exception) {
+            return $this->respond($conversation->id, $exception->getMessage(), 'verified');
+        }
+
+        $instruments = $state['instruments'] ?? [];
+        if ($instruments === []) {
+            return $this->respond($conversation->id, 'You have no programme check-in due right now.', 'verified');
+        }
+
+        if (count($instruments) === 1) {
+            return $this->beginProgrammeCheckIn($conversation, $user, $instruments[0], $state['locale'] ?? 'en');
+        }
+
+        $lines = ['Choose a programme check-in by sending CHECKIN followed by the number:'];
+        foreach (array_slice($instruments, 0, 8) as $index => $instrument) {
+            $lines[] = ($index + 1).'. '.($instrument['name'] ?? 'Check-in');
+        }
+
+        return $this->respond($conversation->id, implode("\n", $lines), 'verified');
+    }
+
+    private function selectProgrammeCheckIn(object $conversation, User $user, int $selection): array
+    {
+        try {
+            $state = $this->programmes->dueInstruments($user, 'whatsapp', $user->preferred_language ?? 'en');
+        } catch (\InvalidArgumentException $exception) {
+            return $this->respond($conversation->id, $exception->getMessage(), 'verified');
+        }
+
+        $instruments = array_values($state['instruments'] ?? []);
+        $index = $selection - 1;
+        if (! isset($instruments[$index])) {
+            return $this->respond($conversation->id, 'That programme check-in number is not available. Send CHECKIN to see the current list.', 'verified');
+        }
+
+        return $this->beginProgrammeCheckIn($conversation, $user, $instruments[$index], $state['locale'] ?? 'en');
+    }
+
+    private function beginProgrammeCheckIn(object $conversation, User $user, array $instrument, string $locale): array
+    {
+        $questions = array_values($instrument['questions'] ?? []);
+        if ($questions === []) {
+            return $this->respond($conversation->id, 'This programme check-in has no active questions.', 'verified');
+        }
+
+        $context = [
+            'instrument_id' => (int) $instrument['id'],
+            'schedule_id' => isset($instrument['schedule']['id']) ? (int) $instrument['schedule']['id'] : null,
+            'question_index' => 0,
+            'answers' => [],
+            'locale' => $locale,
+            'instrument_name' => $instrument['name'] ?? 'Programme check-in',
+        ];
+
+        DB::table('whatsapp_conversations')->where('id', $conversation->id)->update([
+            'journey' => 'programme_checkin',
+            'context' => json_encode($context, JSON_THROW_ON_ERROR),
+            'updated_at' => now(),
+        ]);
+
+        if ($context['schedule_id']) {
+            $this->programmes->markOpened($user, $context['schedule_id']);
+        }
+
+        return $this->respond(
+            $conversation->id,
+            ($context['instrument_name'])."\n".$this->whatsappQuestionPrompt($questions[0], 1, count($questions)),
+            'verified'
+        );
+    }
+
+    private function handleProgrammeCheckInInput(object $conversation, User $user, string $input): array
+    {
+        if (strcasecmp($input, 'CANCEL') === 0) {
+            DB::table('whatsapp_conversations')->where('id', $conversation->id)->update([
+                'journey' => null,
+                'context' => null,
+                'updated_at' => now(),
+            ]);
+
+            return $this->respond($conversation->id, 'Programme check-in cancelled. You can send CHECKIN later.', 'verified');
+        }
+
+        $context = is_array($conversation->context)
+            ? $conversation->context
+            : (json_decode((string) $conversation->context, true) ?: []);
+
+        $instrumentId = (int) ($context['instrument_id'] ?? 0);
+        if ($instrumentId <= 0) {
+            DB::table('whatsapp_conversations')->where('id', $conversation->id)->update([
+                'journey' => null,
+                'context' => null,
+                'updated_at' => now(),
+            ]);
+
+            return $this->respond($conversation->id, 'This programme check-in expired. Send CHECKIN to start again.', 'verified');
+        }
+
+        $state = $this->programmes->dueInstruments($user, 'whatsapp', $context['locale'] ?? 'en');
+        $instrument = collect($state['instruments'] ?? [])->first(fn ($item) => (int) ($item['id'] ?? 0) === $instrumentId);
+
+        if (! $instrument) {
+            DB::table('whatsapp_conversations')->where('id', $conversation->id)->update([
+                'journey' => null,
+                'context' => null,
+                'updated_at' => now(),
+            ]);
+
+            return $this->respond($conversation->id, 'This programme check-in is no longer due. Send CHECKIN to see current items.', 'verified');
+        }
+
+        $questions = array_values($instrument['questions'] ?? []);
+        $index = (int) ($context['question_index'] ?? 0);
+        if (! isset($questions[$index])) {
+            return $this->respond($conversation->id, 'This programme check-in needs to be restarted. Send CANCEL, then CHECKIN.', 'verified');
+        }
+
+        try {
+            $value = $this->parseWhatsappAnswer($questions[$index], $input);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->respond(
+                $conversation->id,
+                $exception->getMessage()."\n".$this->whatsappQuestionPrompt($questions[$index], $index + 1, count($questions)),
+                'verified'
+            );
+        }
+
+        $answers = $context['answers'] ?? [];
+        $answers[] = ['question_id' => (int) $questions[$index]['id'], 'value' => $value];
+        $nextIndex = $index + 1;
+
+        if ($nextIndex < count($questions)) {
+            $context['answers'] = $answers;
+            $context['question_index'] = $nextIndex;
+            DB::table('whatsapp_conversations')->where('id', $conversation->id)->update([
+                'context' => json_encode($context, JSON_THROW_ON_ERROR),
+                'updated_at' => now(),
+            ]);
+
+            return $this->respond(
+                $conversation->id,
+                $this->whatsappQuestionPrompt($questions[$nextIndex], $nextIndex + 1, count($questions)),
+                'verified'
+            );
+        }
+
+        try {
+            $this->programmes->submitResponse(
+                $user,
+                $instrumentId,
+                $answers,
+                'whatsapp',
+                $context['locale'] ?? 'en',
+                $context['schedule_id'] ?? null,
+            );
+        } catch (\InvalidArgumentException $exception) {
+            DB::table('whatsapp_conversations')->where('id', $conversation->id)->update([
+                'journey' => null,
+                'context' => null,
+                'updated_at' => now(),
+            ]);
+
+            return $this->respond($conversation->id, $exception->getMessage(), 'verified');
+        }
+
+        DB::table('whatsapp_conversations')->where('id', $conversation->id)->update([
+            'journey' => null,
+            'context' => null,
+            'updated_at' => now(),
+        ]);
+
+        return $this->respond($conversation->id, 'Programme check-in saved. Thank you. Send CHECKIN to see whether anything else is due.', 'verified');
+    }
+
+    private function whatsappQuestionPrompt(array $question, int $position, int $total): string
+    {
+        $prompt = $position.'/'.$total.' '.($question['prompt'] ?? 'Question');
+        $options = $question['options'] ?? [];
+
+        if (($question['answer_type'] ?? null) === 'boolean') {
+            return $prompt."\nReply YES or NO. Send CANCEL to stop.";
+        }
+
+        if (($question['answer_type'] ?? null) === 'single_choice') {
+            $lines = [$prompt];
+            foreach ($options as $index => $option) {
+                $lines[] = ($index + 1).'. '.$option;
+            }
+            $lines[] = 'Reply with the number. Send CANCEL to stop.';
+
+            return implode("\n", $lines);
+        }
+
+        if (($question['answer_type'] ?? null) === 'multi_choice') {
+            $lines = [$prompt];
+            foreach ($options as $index => $option) {
+                $lines[] = ($index + 1).'. '.$option;
+            }
+            $lines[] = 'Reply with numbers separated by commas. Send CANCEL to stop.';
+
+            return implode("\n", $lines);
+        }
+
+        return $prompt."\nReply with your answer. Send CANCEL to stop.";
+    }
+
+    private function parseWhatsappAnswer(array $question, string $raw): mixed
+    {
+        $raw = trim($raw);
+        $type = $question['answer_type'] ?? 'text';
+        $options = array_values($question['options'] ?? []);
+
+        if ($type === 'boolean') {
+            if (preg_match('/^(YES|Y|1)$/i', $raw)) {
+                return true;
+            }
+            if (preg_match('/^(NO|N|2)$/i', $raw)) {
+                return false;
+            }
+
+            throw new \InvalidArgumentException('Please reply YES or NO.');
+        }
+
+        if ($type === 'single_choice') {
+            if (ctype_digit($raw)) {
+                $index = ((int) $raw) - 1;
+                if (isset($options[$index])) {
+                    return $options[$index];
+                }
+            }
+            foreach ($options as $option) {
+                if (strcasecmp((string) $option, $raw) === 0) {
+                    return $option;
+                }
+            }
+
+            throw new \InvalidArgumentException('Please choose one of the listed options.');
+        }
+
+        if ($type === 'multi_choice') {
+            $selected = [];
+            foreach (preg_split('/\s*,\s*/', $raw) ?: [] as $part) {
+                $index = ((int) $part) - 1;
+                if (! isset($options[$index])) {
+                    throw new \InvalidArgumentException('Please use the listed option numbers separated by commas.');
+                }
+                $selected[] = $options[$index];
+            }
+
+            return array_values(array_unique($selected));
+        }
+
+        if (in_array($type, ['integer', 'decimal', 'currency_minor'], true) && ! is_numeric(str_replace(',', '', $raw))) {
+            throw new \InvalidArgumentException('Please reply with a number.');
+        }
+
+        return in_array($type, ['integer', 'decimal', 'currency_minor'], true)
+            ? str_replace(',', '', $raw)
+            : $raw;
     }
 
     private function setKycContext(int $conversationId, int $caseId, string $step): void
