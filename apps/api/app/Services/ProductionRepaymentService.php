@@ -15,12 +15,13 @@ use InvalidArgumentException;
 
 class ProductionRepaymentService
 {
-    public const ALLOCATION_POLICY_VERSION = 'oldest-due-interest-fees-principal-v1';
+    public const ALLOCATION_POLICY_VERSION = 'default-interest-then-oldest-due-interest-fees-principal-v2';
 
     public function __construct(
         private readonly MobileMoneyService $mobileMoney,
         private readonly LoanService $loanService,
         private readonly ProductionLoanLedgerService $productionLoanLedgerService,
+        private readonly DefaultInterestService $defaultInterest,
         private readonly AuditLogger $auditLogger,
         private readonly CreditReferenceReportingService $creditReporting,
         private readonly TransactionReceiptService $receipts,
@@ -175,6 +176,8 @@ class ProductionRepaymentService
             $ledgerReference = 'loan.repayment:'.$transaction->reference;
             if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
                 $mobileMoney->update([
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_EXCEPTION,
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_EXCEPTION,
                     'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                     'failure_reason' => 'Provider reversed a previously posted repayment. Automatic schedule rewriting is blocked until exact allocation reversal evidence is available.',
                 ]);
@@ -196,7 +199,11 @@ class ProductionRepaymentService
 
         $ledgerReference = 'loan.repayment:'.$transaction->reference;
         if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
-            $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+            $mobileMoney->update([
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                'accounting_posted_at' => now(),
+                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+            ]);
 
             return $loan->fresh();
         }
@@ -204,7 +211,11 @@ class ProductionRepaymentService
         if (! $loan->credit_offer_id) {
             $this->loanService->processSuccessfulTransaction($transaction);
             if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
-                $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                $mobileMoney->update([
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                'accounting_posted_at' => now(),
+                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+            ]);
                 $this->receipts->issue($mobileMoney->fresh(), 'loan_repayment');
             }
 
@@ -215,7 +226,11 @@ class ProductionRepaymentService
             $lockedLoan = Loan::query()->lockForUpdate()->findOrFail($loan->id);
 
             if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
-                $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                $mobileMoney->update([
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                'accounting_posted_at' => now(),
+                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+            ]);
 
                 return $lockedLoan;
             }
@@ -242,13 +257,18 @@ class ProductionRepaymentService
                 $allocation['interest_minor'],
                 $allocation['principal_minor'],
                 $allocation['fees_minor'],
+                $allocation['default_interest_minor'],
             );
 
             if ($this->outstandingMinor($lockedLoan) === 0) {
                 $lockedLoan->update(['status' => 'Cleared']);
             }
 
-            $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+            $mobileMoney->update([
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                'accounting_posted_at' => now(),
+                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+            ]);
             $this->auditLogger->record('credit.repayment.fulfilled', null, $lockedLoan, [
                 'mobile_money_transaction_id' => $mobileMoney->id,
                 'provider_reference' => $mobileMoney->provider_reference,
@@ -256,6 +276,7 @@ class ProductionRepaymentService
                 'principal_minor' => $allocation['principal_minor'],
                 'interest_minor' => $allocation['interest_minor'],
                 'fees_minor' => $allocation['fees_minor'],
+                'default_interest_minor' => $allocation['default_interest_minor'],
                 'allocation_policy_version' => self::ALLOCATION_POLICY_VERSION,
             ]);
 
@@ -275,7 +296,8 @@ class ProductionRepaymentService
         if ($loan->credit_offer_id) {
             return (int) CreditRepaymentScheduleItem::query()
                 ->where('loan_id', $loan->id)
-                ->sum('total_outstanding_minor');
+                ->sum('total_outstanding_minor')
+                + $this->defaultInterest->outstandingMinor($loan);
         }
 
         return (int) round((float) $loan->schedules()->sum('total_outstanding'));
@@ -284,9 +306,15 @@ class ProductionRepaymentService
     private function applyProductionAllocation(Loan $loan, int $amountMinor): array
     {
         $remaining = $amountMinor;
+        $defaultInterestPaid = min($remaining, $this->defaultInterest->outstandingMinor($loan));
+        $remaining -= $defaultInterestPaid;
         $interestPaid = 0;
         $feesPaid = 0;
         $principalPaid = 0;
+
+        if ($defaultInterestPaid > 0) {
+            $loan->increment('default_interest_paid_minor', $defaultInterestPaid);
+        }
 
         $items = CreditRepaymentScheduleItem::query()
             ->where('loan_id', $loan->id)
@@ -338,6 +366,7 @@ class ProductionRepaymentService
             'principal_minor' => $principalPaid,
             'interest_minor' => $interestPaid,
             'fees_minor' => $feesPaid,
+            'default_interest_minor' => $defaultInterestPaid,
         ];
     }
 
