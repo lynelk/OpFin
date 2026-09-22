@@ -36,6 +36,9 @@ class LoanImpairmentService
         if ($expectedCreditLossMinor < 0) {
             throw new InvalidArgumentException('Expected credit loss cannot be negative.');
         }
+        if ($asOf->isFuture()) {
+            throw new InvalidArgumentException('Impairment assessment date cannot be in the future.');
+        }
         if ($policyVersion === '') {
             throw new InvalidArgumentException('Impairment assessment requires an approved policy version.');
         }
