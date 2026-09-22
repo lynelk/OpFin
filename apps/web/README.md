@@ -1,6 +1,6 @@
 # OpFin web application
 
-Updated: 18 September 2026
+Updated: 21 September 2026
 
 The Next.js web application provides customer and operational/admin experiences for the OpFin monorepo. It is a client of `apps/api`; it does not own authoritative credit calculations, balances, ledger state, provider finality or regulatory reporting logic.
 
@@ -82,3 +82,11 @@ When a web screen changes a customer/admin workflow, update the relevant web/cur
 ## 20 September 2026 product-surface update
 
 Financial Spaces are now part of the canonical OpFin experience. One person may access Personal, Household, Savings Group and authorised organisation contexts without creating separate identities. Individuals and Savings Groups remain mobile-complete; Web provides enhanced analysis and institutional workspace capabilities. The customer proposition is to understand, manage, plan and improve money, with borrowing as one capability rather than the product boundary.
+
+## Inclusive-finance operations — 21 September 2026
+
+The **Inclusion & programmes** operations surface reports configured inclusive-finance programmes, enrolments, credit outcomes, NPL state, capability/programme events and consented cohorts. Cohorts smaller than five are suppressed. Voluntary programme-measurement attributes remain outside credit-risk decisioning.
+
+Stolets remains a separate product. This dashboard does not make Stolets data part of OpFin; any future cross-product signal must arrive through an explicit, consented and governed provider contract.
+
+The Inclusion & programmes surface also provides programme creation with explicit participation rules for age cohort, gender, disability inclusion, refugee/displacement status, geography category, employment category, first-time formal borrower status and KYC state. These rules govern programme participation only and are not written into the credit-scoring model.

@@ -5,6 +5,7 @@ import 'package:opfin/credit_offers_screen.dart';
 import 'package:opfin/financial_spaces_screen.dart';
 import 'package:opfin/connected_financial_life_screen.dart';
 import 'package:opfin/kyc_setup_screen.dart';
+import 'package:opfin/inclusive_finance_screen.dart';
 import 'package:opfin/loan_application_screen.dart';
 import 'package:opfin/loan_applications_screen.dart';
 import 'package:opfin/loan_repayment_screen.dart';
@@ -177,6 +178,12 @@ class _HomePageState extends State<_HomePage>{
           subtitle:const Text('Accounts, goals, household, business and community context.'),
           trailing:const Icon(Icons.chevron_right),
           onTap:()=>_open(const ConnectedFinancialLifeScreen()))),
+        Card(child:ListTile(
+          leading:const Icon(Icons.health_and_safety_outlined),
+          title:const Text('Build financial resilience',style:TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:const Text('Financial capability, reputation, fair treatment, programmes and alternative credit support.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>_open(const InclusiveFinanceScreen()))),
         if(setup['secondary_phone_verified']!=true)
           Card(child:ListTile(
             leading:const Icon(Icons.add_call),

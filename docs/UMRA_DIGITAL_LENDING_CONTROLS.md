@@ -1,6 +1,6 @@
 # UMRA digital-lending controls
 
-Updated: 18 September 2026
+Updated: 21 September 2026
 
 This document maps the OpFin product/system controls implemented against the January 2024 Uganda Microfinance Regulatory Authority Digital Lending Guidelines. It does not claim that source code alone proves licensing or regulatory approval.
 
@@ -31,6 +31,18 @@ Controls:
 - blocked-consent and blocked-data-quality states.
 
 The adapter is provider-neutral and configured through `CREDIT_REFERENCE_REPORTING_*`. Production must configure the applicable authorised credit-reference mechanism and validate its exact schema/certification requirements before activation.
+
+## Inclusive-finance and alternative-data guardrails
+
+The inclusive-finance foundation does not create a second underwriting system. Voluntary programme-measurement attributes such as gender, age cohort, disability status, refugee/displacement status and rural/urban classification are stored separately from the credit profile and are prohibited as credit-risk inputs.
+
+Customer-reported signals remain non-risk eligible. Independently sourced provider signals begin non-risk eligible and require provenance, active credit-processing consent and operator verification before they can even be marked eligible for a separately approved scoring/product policy. That marker alone does not alter the Composite Score, limit, price or approval.
+
+Alternative credit-support evidence, including warehouse receipts and guarantees, begins pending. Verification records provenance/evidence only. Expired evidence cannot be verified, and a governed lending policy must explicitly recognise a verified instrument before it may affect a credit decision.
+
+The automated fair-treatment assessment currently checks decision reason codes for prohibited inclusion markers. It is an operational evidence control, not certification that an external model/provider is fair or regulator-approved.
+
+No source-code flag substitutes for provider credentials, UMRA or other regulatory approvals, programme agreements, legal/data-processing arrangements or production certification.
 
 ## Loan disclosures
 

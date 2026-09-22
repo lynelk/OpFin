@@ -6,21 +6,25 @@ class AccessibilitySettings {
     this.largeText = false,
     this.reducedMotion = false,
     this.simpleLanguage = true,
+    this.highContrast = false,
   });
 
   final bool largeText;
   final bool reducedMotion;
   final bool simpleLanguage;
+  final bool highContrast;
 
   AccessibilitySettings copyWith({
     bool? largeText,
     bool? reducedMotion,
     bool? simpleLanguage,
+    bool? highContrast,
   }) =>
       AccessibilitySettings(
         largeText: largeText ?? this.largeText,
         reducedMotion: reducedMotion ?? this.reducedMotion,
         simpleLanguage: simpleLanguage ?? this.simpleLanguage,
+        highContrast: highContrast ?? this.highContrast,
       );
 }
 
@@ -34,6 +38,7 @@ abstract final class OpFinAccessibility {
       largeText: prefs.getBool('opfin_large_text') ?? false,
       reducedMotion: prefs.getBool('opfin_reduced_motion') ?? false,
       simpleLanguage: prefs.getBool('opfin_simple_language') ?? true,
+      highContrast: prefs.getBool('opfin_high_contrast') ?? false,
     );
   }
 
@@ -44,6 +49,7 @@ abstract final class OpFinAccessibility {
       prefs.setBool('opfin_large_text', value.largeText),
       prefs.setBool('opfin_reduced_motion', value.reducedMotion),
       prefs.setBool('opfin_simple_language', value.simpleLanguage),
+      prefs.setBool('opfin_high_contrast', value.highContrast),
     ]);
   }
 }

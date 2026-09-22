@@ -1,6 +1,6 @@
 # OpFin training and user-guide foundation
 
-Updated: 18 September 2026
+Updated: 21 September 2026
 
 This document defines the reusable source material for staff training, customer guides, FAQs and onboarding content. It is not a script that must be copied word-for-word. Training material should use plain British English and preserve the product/control meaning.
 
@@ -138,3 +138,22 @@ The four maintained manuals under `docs/manuals/` now supersede this file as the
 Training must now introduce **one identity, many Financial Spaces** before product-specific services. A learner should understand My Money/Personal Space, Savings Group and authorised organisation contexts; that membership does not expose Personal Space data; and that additional verification appears progressively when the activity requires it. Individuals and Savings Groups should be trained to complete normal journeys in the App without depending on Web.
 
 Whole-product modules should cover everyday money, budgeting/goals, assets, debt/receivables, net position/safe-to-spend, savings groups, partner products and support before or alongside the existing responsible-credit modules below.
+
+
+## Inclusive-finance and resilience training — 21 September 2026
+
+Training must now cover **Build financial resilience** as a normal OpFin journey.
+
+Customers should understand:
+
+- financial reputation is a progress pathway based on verified identity and actual financial behaviour; it is not a second credit score;
+- capability guidance is practical education and does not override affordability or product eligibility;
+- programme-measurement participation is optional;
+- voluntary inclusion details can be updated or withdrawn and are kept outside credit-risk decisioning;
+- some programmes may have participation criteria; missing voluntary information is not silently inferred;
+- alternative credit-support evidence such as salary undertakings, guarantees, receivables or warehouse receipts must be independently verified and recognised by the product policy before it can affect a financial product;
+- a verified support instrument is not the same thing as an approved loan.
+
+Staff must not tell customers that gender, disability status, refugee/displacement status or other programme-measurement attributes improve a credit score or guarantee approval.
+
+Accessibility training should demonstrate large text, simple wording, reduced motion, high contrast and device screen-reader use. Physical-device UAT remains required before claiming support for a specific assistive technology or device.

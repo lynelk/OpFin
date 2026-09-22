@@ -1,6 +1,6 @@
 # OpFin API quick reference
 
-Updated: 20 September 2026
+Updated: 21 September 2026
 
 This is a task-oriented index. Exact registered routes remain authoritative in Laravel.
 
@@ -146,3 +146,26 @@ Read `current-endpoints.md` for request/response notes and `frontend-backend-con
 | Reconcile revenue / CPay | `POST /api/admin/revenue-events/{event}/reconcile` |
 
 **Design contract:** one person may belong to many Spaces; Employer is a Business capability; permission, entitlement and eligibility are separate; Personal Space data is not exposed to employers/groups merely because a relationship exists.
+
+## Inclusive finance and programme delivery
+
+| Task | Method / endpoint |
+| --- | --- |
+| Inclusion/profile consent | GET/PATCH /api/inclusive-finance/profile |
+| Capability guidance | GET /api/inclusive-finance/capability |
+| Capability evidence | POST /api/inclusive-finance/capability/events |
+| Financial reputation pathway | GET /api/inclusive-finance/reputation |
+| Alternative-data signals | GET/POST /api/inclusive-finance/signals |
+| Open programmes | GET /api/inclusive-finance/programmes |
+| Programme enrolment | POST /api/inclusive-finance/programmes/{programme}/enrol |
+| Leave programme | DELETE /api/inclusive-finance/programmes/{programme}/enrol |
+| Alternative collateral/support | GET/POST /api/inclusive-finance/support-instruments |
+| Fair-treatment explanation | GET /api/inclusive-finance/fair-treatment |
+| Admin programme register | GET /api/admin/inclusive-finance/programmes |
+| Admin impact summary | GET /api/admin/inclusive-finance/impact |
+| Admin programme configuration | POST/PATCH /api/admin/inclusive-finance/programmes[/{programme}] |
+| Admin provider-signal governance | POST /api/admin/inclusive-finance/signals; PATCH /api/admin/inclusive-finance/signals/{signal}/verify |
+| Admin support verification | PATCH /api/admin/inclusive-finance/support-instruments/{instrument}/verify |
+| Admin fair-treatment assessment | POST /api/admin/inclusive-finance/fair-treatment/{application}/assess |
+
+Voluntary inclusion fields are for service adaptation/programme measurement and do not feed credit risk. Programme participation, provider-signal verification and alternative collateral evidence do not automatically change a credit decision. See `docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md`.

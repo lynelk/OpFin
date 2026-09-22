@@ -18,7 +18,8 @@ Key product rules:
 - App, WhatsApp and USSD use the same server-authoritative profile and financial state.
 - High-impact financial actions require authenticated confirmation; a PIN is never requested in WhatsApp or USSD.
 - Launch mobile navigation is `Home | Borrow | Activity | More`; non-launch products remain capability-gated rather than crowding the primary experience.
-- Accessibility is part of the core journey: large text, screen readers, reduced motion, simple language and assisted identity verification are supported without lowering assurance.
+- Accessibility is part of the core journey: large text, screen readers, reduced motion, simple language, high contrast and assisted identity verification are supported without lowering assurance.
+- Financial resilience adds contextual capability guidance, a non-score financial-reputation pathway, optional inclusion measurement, inclusive-finance programmes and alternative credit-support evidence without converting demographic attributes into underwriting inputs.
 
 See `docs/LAUNCH_CUSTOMER_JOURNEY.md` for the complete cross-channel contract and `docs/UMRA_DIGITAL_LENDING_CONTROLS.md` for the implemented digital-lending compliance controls.
 
@@ -72,10 +73,11 @@ Training manuals and user guides should be derived from `docs/TRAINING_AND_USER_
 CI checks documentation drift when backend routes/contracts or customer/admin workflows change.
 
 
-## Current product documentation (20 September 2026)
+## Current product documentation (21 September 2026)
 
 - [Canonical Product Blueprint](docs/product/OPFIN_PRODUCT_BLUEPRINT.md)
 - [Financial Spaces domain model](docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md)
+- [Inclusive Finance and Programme Delivery Framework](docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md)
 - [User Manual](docs/manuals/OPFIN_USER_MANUAL.md)
 - [Training Manual](docs/manuals/OPFIN_TRAINING_MANUAL.md)
 - [Operational Manual](docs/manuals/OPFIN_OPERATIONAL_MANUAL.md)
@@ -83,4 +85,4 @@ CI checks documentation drift when backend routes/contracts or customer/admin wo
 - [Current API endpoints](apps/api/docs/api/current-endpoints.md)
 - [API quick reference](apps/api/docs/api/API_QUICK_REFERENCE.md)
 
-These documents describe the current Financial Spaces architecture and supersede April-era prompt packs/architecture drafts for operational and training use.
+These documents describe the current Financial Spaces and inclusive-finance architecture and supersede April-era prompt packs/architecture drafts for operational and training use. Stolets remains a separate SME automation/digitisation product; any cross-product use is an explicit, consented integration rather than a merged product boundary.

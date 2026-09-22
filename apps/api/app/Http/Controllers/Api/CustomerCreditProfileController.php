@@ -78,6 +78,7 @@ class CustomerCreditProfileController extends Controller
             'screen_reader_optimised' => 'nullable|boolean',
             'reduced_motion' => 'nullable|boolean',
             'audio_guidance' => 'nullable|boolean',
+            'high_contrast' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {

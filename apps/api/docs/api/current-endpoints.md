@@ -1,6 +1,6 @@
 # Current API endpoints
 
-Updated against the registered canonical platform routes on **20 September 2026**. Routes remain subject to the middleware and role gates in source.
+Updated against the registered canonical platform routes on **21 September 2026**. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:
 
@@ -182,7 +182,7 @@ HTTP 202 means the collection request was accepted, not that repayment is econom
 | POST | `/api/support-cases` | Create support/assisted-KYC case |
 | PATCH | `/api/accessibility-preferences` | Persist language/access preferences |
 
-Accessibility preferences include simple language, large text, screen-reader optimisation and reduced motion.
+Accessibility preferences include simple language, large text, screen-reader optimisation, reduced motion and high contrast. High-contrast support is a software preference and does not by itself constitute supported-device accessibility certification.
 
 ## 9. WhatsApp and USSD
 
@@ -284,3 +284,37 @@ Operations/admin routes:
 | POST | `/api/admin/revenue-events/{event}/reconcile` | Attach CPay and reconciliation references and settle/reconcile the event |
 
 CPay remains the approved execution/reconciliation boundary where money movement is required. Revenue events attribute commercial economics; they are not a replacement financial ledger.
+
+## 21. Inclusive finance, programme delivery and alternative credit support
+
+Customer routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET/PATCH | /api/inclusive-finance/profile | Read/update optional programme-measurement consent and service preferences |
+| GET | /api/inclusive-finance/capability | Contextual financial-capability guidance and current credit position |
+| POST | /api/inclusive-finance/capability/events | Record guidance/intervention/outcome evidence |
+| GET | /api/inclusive-finance/reputation | Non-score financial-reputation pathway |
+| GET/POST | /api/inclusive-finance/signals | Read or submit customer-reported non-risk signals |
+| GET | /api/inclusive-finance/programmes | List active programmes |
+| POST | /api/inclusive-finance/programmes/{programme}/enrol | Enrol in an open programme |
+| DELETE | /api/inclusive-finance/programmes/{programme}/enrol | End the signed-in customer’s programme participation idempotently |
+| GET/POST | /api/inclusive-finance/support-instruments | Read or submit alternative credit-support evidence |
+| GET | /api/inclusive-finance/fair-treatment | Explain the governed credit-decision boundary |
+
+Admin/operations routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | /api/admin/inclusive-finance/programmes | Programme register with enrolment counts |
+| GET | /api/admin/inclusive-finance/impact | Aggregate programme outcomes; optional programme_id query filter |
+| POST | /api/admin/inclusive-finance/programmes | Create programme configuration |
+| PATCH | /api/admin/inclusive-finance/programmes/{programme} | Update programme lifecycle/configuration |
+| POST | /api/admin/inclusive-finance/signals | Ingest independently verifiable provider signal |
+| PATCH | /api/admin/inclusive-finance/signals/{signal}/verify | Verify signal and, where permitted, mark it eligible for a governed risk model |
+| PATCH | /api/admin/inclusive-finance/support-instruments/{instrument}/verify | Verify/reject alternative collateral or guarantee evidence |
+| POST | /api/admin/inclusive-finance/fair-treatment/{application}/assess | Persist a fair-treatment decision review |
+
+Programme-measurement attributes are technically separate from credit-decision inputs. Customer-reported signals are never risk eligible. Provider signals require provenance and active credit-processing consent before they may even become eligible for an approved scoring/product policy. Protected demographic/accessibility fields and non-credit-purpose signals cannot be promoted to risk inputs. Eligibility does not automatically alter the Composite Score.
+
+Programme participation rules use an explicit allow-list. Missing voluntary inclusion information produces an incomplete eligibility result; OpFin does not infer it. Impact cohort reporting includes only consented programme-measurement profiles and suppresses an entire inclusion dimension when any bucket is smaller than five, reducing differencing risk. Credit outcomes and participant capability events are scoped to the enrolment-to-exit window, while participant capability events remain separate from direct programme events. Exited participants remain in historical programme totals without extending the outcome window beyond their recorded exit. Alternative collateral verification records evidence; it does not automatically approve a loan or alter pricing. Expired support evidence cannot be verified. Programme codes are normalised case-insensitively and programme effective dates must remain internally valid. Automated fair-treatment assessment is limited to decision reason-code review and is not external-model fairness certification.

@@ -90,6 +90,65 @@ abstract final class OpFinTheme {
       progressIndicatorTheme: const ProgressIndicatorThemeData(color: OpFinColors.indigo),
     );
   }
+  static ThemeData get highContrastLight {
+    final base = light;
+    const scheme = ColorScheme.light(
+      primary: OpFinColors.indigoStrong,
+      onPrimary: OpFinColors.white,
+      primaryContainer: OpFinColors.white,
+      onPrimaryContainer: OpFinColors.ink,
+      secondary: OpFinColors.ink,
+      onSecondary: OpFinColors.white,
+      secondaryContainer: OpFinColors.white,
+      onSecondaryContainer: OpFinColors.ink,
+      surface: OpFinColors.white,
+      onSurface: OpFinColors.ink,
+      onSurfaceVariant: OpFinColors.ink,
+      outline: OpFinColors.ink,
+      outlineVariant: OpFinColors.muted,
+      error: OpFinColors.danger,
+      onError: OpFinColors.white,
+    );
+
+    return base.copyWith(
+      colorScheme: scheme,
+      scaffoldBackgroundColor: OpFinColors.white,
+      dividerColor: OpFinColors.ink,
+      focusColor: OpFinColors.apricot,
+      cardTheme: CardThemeData(
+        color: OpFinColors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: OpFinColors.ink, width: 2),
+        ),
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        labelStyle: const TextStyle(color: OpFinColors.ink),
+        hintStyle: const TextStyle(color: OpFinColors.ink),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: OpFinColors.ink, width: 2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: OpFinColors.indigoStrong, width: 3),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: OpFinColors.indigoStrong,
+          minimumSize: const Size(48, 48),
+          side: const BorderSide(color: OpFinColors.ink, width: 2),
+        ),
+      ),
+      navigationBarTheme: const NavigationBarThemeData(
+        backgroundColor: OpFinColors.white,
+        indicatorColor: OpFinColors.apricot,
+      ),
+    );
+  }
 }
 
 class OpFinSymbol extends StatelessWidget {
