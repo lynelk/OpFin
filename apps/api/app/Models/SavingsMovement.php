@@ -28,6 +28,10 @@ class SavingsMovement extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    public const STATUS_REVERSED = 'reversed';
+
+    public const STATUS_REVERSAL_EXCEPTION = 'reversal_exception';
+
     protected $fillable = [
         'savings_goal_id',
         'user_id',
