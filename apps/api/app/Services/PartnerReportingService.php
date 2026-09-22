@@ -87,6 +87,8 @@ class PartnerReportingService
                 'capital_mandates.status',
                 'capital_mandates.committed_capital_minor',
                 'capital_mandates.deployed_capital_minor',
+                'capital_mandates.reserved_capital_minor',
+                DB::raw('GREATEST(capital_mandates.committed_capital_minor - capital_mandates.deployed_capital_minor - capital_mandates.reserved_capital_minor, 0) as available_capital_minor'),
                 DB::raw('COUNT(loans.id) as loan_count'),
                 DB::raw('COALESCE(SUM(loans.amount), 0) as originated_principal_minor'),
                 DB::raw('SUM(CASE WHEN loans.non_performing_at IS NOT NULL THEN 1 ELSE 0 END) as non_performing_loans'),
@@ -99,6 +101,7 @@ class PartnerReportingService
                 'capital_mandates.status',
                 'capital_mandates.committed_capital_minor',
                 'capital_mandates.deployed_capital_minor',
+                'capital_mandates.reserved_capital_minor',
             )
             ->orderBy('capital_mandates.id')
             ->get();
@@ -109,10 +112,12 @@ class PartnerReportingService
                 'pools' => DB::table('capital_mandates')->count(),
                 'committed_capital_minor' => (int) DB::table('capital_mandates')->sum('committed_capital_minor'),
                 'deployed_capital_minor' => (int) DB::table('capital_mandates')->sum('deployed_capital_minor'),
+                'reserved_capital_minor' => (int) DB::table('capital_mandates')->sum('reserved_capital_minor'),
                 'available_capital_minor' => max(
                     0,
                     (int) DB::table('capital_mandates')->sum('committed_capital_minor')
-                    - (int) DB::table('capital_mandates')->sum('deployed_capital_minor'),
+                    - (int) DB::table('capital_mandates')->sum('deployed_capital_minor')
+                    - (int) DB::table('capital_mandates')->sum('reserved_capital_minor'),
                 ),
             ],
             'origination' => [
