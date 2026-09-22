@@ -12,7 +12,10 @@ class PartnerReportingService
         $query = DB::table('service_economics_events')->whereBetween('occurred_at', [$start, $end]);
         foreach (['service_code', 'provider', 'route', 'environment'] as $field) {
             if (! empty($filters[$field])) {
-                $query->where($field, $filters[$field]);
+                $value = in_array($field, ['route', 'environment'], true)
+                    ? strtoupper((string) $filters[$field])
+                    : $filters[$field];
+                $query->where($field, $value);
             }
         }
 
@@ -88,7 +91,6 @@ class PartnerReportingService
                 'capital_mandates.committed_capital_minor',
                 'capital_mandates.deployed_capital_minor',
                 'capital_mandates.reserved_capital_minor',
-                DB::raw('GREATEST(capital_mandates.committed_capital_minor - capital_mandates.deployed_capital_minor - capital_mandates.reserved_capital_minor, 0) as available_capital_minor'),
                 DB::raw('COUNT(loans.id) as loan_count'),
                 DB::raw('COALESCE(SUM(loans.amount), 0) as originated_principal_minor'),
                 DB::raw('SUM(CASE WHEN loans.non_performing_at IS NOT NULL THEN 1 ELSE 0 END) as non_performing_loans'),
@@ -104,7 +106,17 @@ class PartnerReportingService
                 'capital_mandates.reserved_capital_minor',
             )
             ->orderBy('capital_mandates.id')
-            ->get();
+            ->get()
+            ->map(function ($pool) {
+                $pool->available_capital_minor = max(
+                    0,
+                    (int) $pool->committed_capital_minor
+                    - (int) $pool->deployed_capital_minor
+                    - (int) $pool->reserved_capital_minor,
+                );
+
+                return $pool;
+            });
 
         return [
             'period' => $this->period($start, $end),
