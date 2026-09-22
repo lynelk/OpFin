@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CreditOffer;
+use App\Models\CreditWriteOff;
 use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
@@ -268,6 +269,12 @@ class ProductionLoanLedgerService
 
         $provider = $this->paymentProvider($transaction);
         $currency = $this->transactionCurrency($transaction);
+        $loan = $transaction->loan;
+        if (! $loan) {
+            throw new \InvalidArgumentException('Repayment ledger posting requires a loan.');
+        }
+        $writtenOff = CreditWriteOff::query()->where('loan_id', $loan->id)->exists();
+
         $entries = [[
             'account_id' => $this->providerCashAccount($provider, 'collection', $currency)->id,
             'direction' => LedgerEntry::DIRECTION_DEBIT,
@@ -277,10 +284,14 @@ class ProductionLoanLedgerService
 
         if ($principalMinor > 0) {
             $entries[] = [
-                'account_id' => $this->loanReceivableAccount($transaction->loan, $currency)->id,
+                'account_id' => $writtenOff
+                    ? $this->creditRecoveryIncomeAccount($loan, $currency)->id
+                    : $this->loanReceivableAccount($loan, $currency)->id,
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $principalMinor,
-                'memo' => 'Loan principal repaid',
+                'memo' => $writtenOff
+                    ? 'Cash recovery of previously written-off loan principal'
+                    : 'Loan principal repaid',
             ];
         }
         if ($interestMinor > 0) {
@@ -292,28 +303,37 @@ class ProductionLoanLedgerService
             ];
         }
         if ($feesMinor > 0) {
-            $entries[] = [
-                'account_id' => $this->repaymentFeeAccount($transaction->loan, $currency)->id,
-                'direction' => LedgerEntry::DIRECTION_CREDIT,
-                'amount_minor' => $feesMinor,
-                'memo' => $transaction->loan?->credit_offer_id
-                    ? 'Financed fee receivable extinguished by customer repayment'
-                    : 'Legacy cash allocated to disclosed credit fees pending accounting-policy recognition',
-            ];
-
-            if ($transaction->loan?->credit_offer_id) {
+            if ($writtenOff) {
                 $entries[] = [
-                    'account_id' => $this->creditFeeClearingAccount($transaction->loan, $currency)->id,
-                    'direction' => LedgerEntry::DIRECTION_DEBIT,
-                    'amount_minor' => $feesMinor,
-                    'memo' => 'Deferred financed credit fee released as the customer repays it',
-                ];
-                $entries[] = [
-                    'account_id' => $this->creditFeeIncomeAccount($transaction->loan, $currency)->id,
+                    'account_id' => $this->creditFeeIncomeAccount($loan, $currency)->id,
                     'direction' => LedgerEntry::DIRECTION_CREDIT,
                     'amount_minor' => $feesMinor,
-                    'memo' => 'Financed credit fee income realised on customer repayment',
+                    'memo' => 'Cash recovery of previously written-off financed fee',
                 ];
+            } else {
+                $entries[] = [
+                    'account_id' => $this->repaymentFeeAccount($loan, $currency)->id,
+                    'direction' => LedgerEntry::DIRECTION_CREDIT,
+                    'amount_minor' => $feesMinor,
+                    'memo' => $loan->credit_offer_id
+                        ? 'Financed fee receivable extinguished by customer repayment'
+                        : 'Legacy cash allocated to disclosed credit fees pending accounting-policy recognition',
+                ];
+
+                if ($loan->credit_offer_id) {
+                    $entries[] = [
+                        'account_id' => $this->creditFeeClearingAccount($loan, $currency)->id,
+                        'direction' => LedgerEntry::DIRECTION_DEBIT,
+                        'amount_minor' => $feesMinor,
+                        'memo' => 'Deferred financed credit fee released as the customer repays it',
+                    ];
+                    $entries[] = [
+                        'account_id' => $this->creditFeeIncomeAccount($loan, $currency)->id,
+                        'direction' => LedgerEntry::DIRECTION_CREDIT,
+                        'amount_minor' => $feesMinor,
+                        'memo' => 'Financed credit fee income realised on customer repayment',
+                    ];
+                }
             }
         }
         if ($suspenseMinor > 0) {
@@ -340,6 +360,7 @@ class ProductionLoanLedgerService
                 'interest_minor' => $interestMinor,
                 'fees_minor' => $feesMinor,
                 'suspense_minor' => $suspenseMinor,
+                'written_off_recovery' => $writtenOff,
             ]
         );
 
@@ -491,6 +512,11 @@ class ProductionLoanLedgerService
     private function creditFeeIncomeAccount(Loan $loan, string $currency): LedgerAccount
     {
         return $this->account('income.credit_fees.product_'.$loan->loan_product_id, 'Credit fee income product '.$loan->loan_product_id, 'income', $currency);
+    }
+
+    private function creditRecoveryIncomeAccount(Loan $loan, string $currency): LedgerAccount
+    {
+        return $this->account('income.credit_recovery.product_'.$loan->loan_product_id, 'Credit recovery income product '.$loan->loan_product_id, 'income', $currency);
     }
 
     private function providerCashAccount(string $provider, string $purpose, string $currency): LedgerAccount
