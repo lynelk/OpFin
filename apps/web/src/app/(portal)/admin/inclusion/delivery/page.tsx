@@ -6,7 +6,8 @@ import {
   configureProviderAdapterAction,
   createProgrammeInstrumentAction,
   generateProgrammeFollowUpsAction,
-  inviteProgrammePartnerAction
+  inviteProgrammePartnerAction,
+  revokeProgrammePartnerAccessAction
 } from "@/app/programme-completion-actions";
 import { Screen, StateNotice } from "@/components/Screen";
 import { inclusiveFinanceApi } from "@/lib/api/inclusive-finance";
@@ -38,11 +39,14 @@ export default async function ProgrammeDeliveryPage({
       register.programmes.find((programme) => programme.id === parsed) ??
       register.programmes[0];
 
-    const [operations, instruments, templates, adapters] = await Promise.all([
+    const [operations, instruments, templates, adapters, partnerUsers] = await Promise.all([
       programmeCompletionApi.operations(selected?.id, token),
       programmeCompletionApi.instruments(selected?.id, token),
       programmeCompletionApi.templates(token),
-      programmeCompletionApi.adapters(token, selected?.id)
+      programmeCompletionApi.adapters(token, selected?.id),
+      selected
+        ? programmeCompletionApi.partnerUsers(selected.id, token)
+        : Promise.resolve({ programme_id: 0, users: [], invitations: [], access_boundary: "" })
     ]);
 
     return (
@@ -58,17 +62,6 @@ export default async function ProgrammeDeliveryPage({
             state={params.error === "validation" ? "validation" : "server"}
             message={params.message}
           />
-        ) : null}
-        {params?.activation_token ? (
-          <section className="panel">
-            <p className="eyebrow">PARTNER INVITATION</p>
-            <h2>Activation token created</h2>
-            <p className="muted">
-              Deliver this token to the authorised invitee through an approved secure channel. OpFin has not
-              pretended to send an email or SMS.
-            </p>
-            <code>{params.activation_token}</code>
-          </section>
         ) : null}
 
         <section className="panel">
@@ -368,6 +361,61 @@ export default async function ProgrammeDeliveryPage({
           </div>
         ) : null}
 
+        {selected ? (
+          <section className="panel">
+            <p className="eyebrow">PARTNER USER REGISTER</p>
+            <h2>Programme-scoped access</h2>
+            <p className="muted">{partnerUsers.access_boundary}</p>
+            {partnerUsers.invitations.length > 0 ? (
+              <div className="case-list">
+                {partnerUsers.invitations.map((invitation) => (
+                  <article className="case-card" key={"invite:" + invitation.id}>
+                    <div className="case-card-head">
+                      <div>
+                        <strong>{invitation.invited_name}</strong>
+                        <p className="muted">Invitation · {humanise(invitation.access_level)}</p>
+                      </div>
+                      <span className="badge">{invitation.status}</span>
+                    </div>
+                    {invitation.activation_token ? (
+                      <>
+                        <p className="muted">
+                          One-time activation token. Deliver it through an approved secure channel. It is stored encrypted at rest and disappears after acceptance or expiry.
+                        </p>
+                        <code>{invitation.activation_token}</code>
+                      </>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            ) : null}
+            {partnerUsers.users.length === 0 ? (
+              <p className="muted">No active or historical programme-partner accounts are registered yet.</p>
+            ) : (
+              <div className="case-list">
+                {partnerUsers.users.map((user) => (
+                  <article className="case-card" key={"partner:" + user.user_id}>
+                    <div className="case-card-head">
+                      <div>
+                        <strong>{user.name}</strong>
+                        <p className="muted">{humanise(user.access_level)} · {user.phone}</p>
+                      </div>
+                      <span className="badge">{user.status}</span>
+                    </div>
+                    {user.status === "active" ? (
+                      <form action={revokeProgrammePartnerAccessAction}>
+                        <input type="hidden" name="programme_id" value={selected.id} />
+                        <input type="hidden" name="user_id" value={user.user_id} />
+                        <button className="button secondary" type="submit">Revoke access</button>
+                      </form>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+
         <section className="panel">
           <p className="eyebrow">FOLLOW-UP QUEUE</p>
           <h2>Due, overdue and completed measurements</h2>
@@ -388,7 +436,7 @@ export default async function ProgrammeDeliveryPage({
                     <Link
                       className="button secondary"
                       href={"/admin/inclusion/assisted?instrument_id=" +
-                        instruments.instruments.find((instrument) => instrument.name === item.instrument_name)?.id +
+                        item.instrument_id +
                         "&schedule_id=" + item.id +
                         "&user_id=" + item.user_id +
                         "&programme_id=" + item.programme_id}
