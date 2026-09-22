@@ -94,14 +94,46 @@ class FinancialIntegrityService
                 ->where(function ($query) {
                     $query->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_EXCEPTION)
                         ->orWhere(function ($query) {
-                            $query->whereIn('status', [MobileMoneyTransaction::STATUS_SUCCESSFUL, MobileMoneyTransaction::STATUS_REVERSED])
-                                ->where('reconciliation_status', '!=', MobileMoneyTransaction::RECONCILIATION_MATCHED);
+                            $query->whereIn('status', [
+                                MobileMoneyTransaction::STATUS_SUCCESSFUL,
+                                MobileMoneyTransaction::STATUS_FAILED,
+                                MobileMoneyTransaction::STATUS_REVERSED,
+                            ])->where('reconciliation_status', '!=', MobileMoneyTransaction::RECONCILIATION_MATCHED);
+                        })
+                        ->orWhere(function ($query) {
+                            $query->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_MATCHED)
+                                ->whereNull('provider_reconciled_at');
                         });
                 })->count();
 
             if ($paymentExceptions > 0) {
                 $findings[] = $this->alert($runId, 'high', 'payment_reconciliation_exception', null,
-                    'Successful, reversed or explicitly excepted payment records are not fully reconciled.', ['count' => $paymentExceptions]);
+                    'Terminal or explicitly excepted payment records are not fully supported by independent provider reconciliation evidence.', ['count' => $paymentExceptions]);
+            }
+
+            $falseMatches = MobileMoneyTransaction::query()
+                ->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_MATCHED)
+                ->whereNull('provider_reconciled_at')
+                ->count();
+            if ($falseMatches > 0) {
+                $findings[] = $this->alert($runId, 'critical', 'payment_false_reconciliation_match', null,
+                    'Payment records are marked reconciled without independent provider-reconciliation evidence.', ['count' => $falseMatches]);
+            }
+
+            $creditAccountingExceptions = MobileMoneyTransaction::query()
+                ->where(function ($query) {
+                    $query->whereNotNull('credit_offer_id')->orWhereNotNull('loan_id');
+                })
+                ->whereIn('status', [
+                    MobileMoneyTransaction::STATUS_SUCCESSFUL,
+                    MobileMoneyTransaction::STATUS_FAILED,
+                    MobileMoneyTransaction::STATUS_REVERSED,
+                ])
+                ->where('product_accounting_status', '!=', MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED)
+                ->count();
+            if ($creditAccountingExceptions > 0) {
+                $findings[] = $this->alert($runId, 'critical', 'credit_product_accounting_incomplete', null,
+                    'Terminal credit money movements have not completed their required product-accounting transition.', ['count' => $creditAccountingExceptions]);
             }
 
             $duplicateProviderRefs = MobileMoneyTransaction::query()
