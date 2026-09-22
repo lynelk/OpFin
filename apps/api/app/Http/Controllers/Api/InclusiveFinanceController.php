@@ -320,5 +320,4 @@ class InclusiveFinanceController extends Controller
             return ApiResponse::error($exception->getMessage(), 422);
         }
     }
-
 }
