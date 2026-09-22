@@ -1,7 +1,7 @@
 # OpFin Product Blueprint
 
 Status: Canonical product contract  
-Updated: 21 September 2026  
+Updated: 22 September 2026  
 Language: English (United Kingdom)
 
 ## Product position
@@ -19,7 +19,7 @@ OpFin is a financial operating platform with embedded financial services. It hel
 7. **Channel continuity.** App, Web, Workspace, Partner, USSD, WhatsApp/SMS and assisted channels use the same server-authoritative identity and domain state.
 8. **Advice is independent of commercial incentives.** Need, eligibility and suitability precede product ranking and revenue calculation.
 9. **Capability-based monetisation.** Essential financial management remains accessible; subscriptions buy additional depth, automation, scale or convenience.
-10. **Reuse financial infrastructure.** OpFin owns financial intent, experience, intelligence and orchestration. CPay/Cito executes and reconciles money movement where that boundary applies.
+10. **Independent operation with preferred gateways.** OpFin owns customer/product state, financial intent, experience, intelligence, ledger, servicing and reconciliation. Cito is the preferred third-party integration gateway and CPay is the preferred payment route, but neither is a mandatory runtime dependency. Certified direct-provider adapters remain controlled fallbacks.
 
 ## Canonical layers
 
@@ -57,7 +57,7 @@ Financial health, safe-to-spend, forecasts, scenarios, alerts, explanations and 
 - Access: USSD, WhatsApp/SMS and assisted journeys.
 
 ### Partnerships
-SACCOs, insurers/brokers, fund managers, banks/MFIs, CRBs, employers, payment providers, cooperatives and other approved providers connect through a standard Partner Catalogue and adapters.
+SACCOs, insurers/brokers, fund managers, banks/MFIs, CRBs, employers, payment providers, cooperatives and other approved providers connect through a standard Partner Catalogue and provider-neutral adapters. Cito is the primary integration point; each service retains a controlled direct-provider adapter where the underlying provider contract permits it.
 
 ### Monetisation
 Subscriptions, commissions, revenue share, transaction economics, SaaS/platform fees, API/integration fees and servicing/administration income. Commercial terms are downstream of customer need and eligibility.
@@ -85,14 +85,18 @@ OpFin supports inclusive-finance programmes through a deliberately separate meas
 
 The platform provides financial-capability guidance, a non-score financial-reputation pathway, governed alternative-data provenance, configurable programme enrolment, alternative credit-support evidence and privacy-suppressed impact reporting. Existing affordability, CRB, consent, credit reason-code, UMRA, hardship and partner controls remain authoritative rather than being duplicated.
 
+Verified positive employment behaviour may create a small capped underwriting benefit when consented, independently verifiable and risk-eligible. Missing, unavailable, declined or negative employment-behaviour information is neutral and must not reduce the base Composite Score or data-coverage calculation.
+
 **Product boundary:** Stolets is a separate SME automation, digitisation and commerce product. OpFin may consume an explicitly consented, approved external signal from Stolets or refer a customer to it, but OpFin does not absorb POS, inventory, purchasing or merchant-operations functions. Shared infrastructure does not create shared product identity.
 
 See product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md for the canonical programme and data-governance rules.
 
 ## Revenue integrity
 
-Revenue events must be attributable to customer/Space, partner, product, commercial agreement, gross amount, OpFin share, partner share, tax, settlement state and reconciliation reference. Advice and financial-health calculations must not use commission/revenue-share preference as a recommendation signal.
+Revenue events must be attributable to customer/Space, partner, product, commercial agreement, gross amount, OpFin share, partner share, tax, settlement state and reconciliation reference. Every commercially relevant third-party service also emits a service-economics record covering provider cost, customer charge, customer/partner/Cito/OpFin fees, tax, provider settlement, net revenue and margin where known. Principal, premium and investment capital are not automatically treated as revenue. Advice and financial-health calculations must not use commission/revenue-share preference as a recommendation signal.
+
+The canonical reporting contract is `PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md`, including the Stolets Financial Passport, Financial Account Behaviour Report, Capital & Loan Book Performance Report, Insurance Product/Premium/Claims Report, Savings & Investment Partner Report and Universal Service Economics & Revenue Report.
 
 ## Delivery rule
 
-Implementation proceeds by vertical journey slices and reuses working production components. Existing identity, consent, credit, savings/protection, financial-wellbeing, ledger/reconciliation, CPay adapter, community-finance and channel foundations are migrated or adapted rather than rewritten without evidence.
+Implementation proceeds by vertical journey slices and reuses working production components. Existing identity, consent, credit, savings/protection, financial-wellbeing, ledger/reconciliation, governed provider adapters, community-finance and channel foundations are migrated or adapted rather than rewritten without evidence.
