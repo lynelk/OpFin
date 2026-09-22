@@ -30,6 +30,12 @@ class MobileMoneyTransaction extends Model
 
     public const RECONCILIATION_EXCEPTION = 'exception';
 
+    public const PRODUCT_ACCOUNTING_PENDING = 'pending';
+
+    public const PRODUCT_ACCOUNTING_APPLIED = 'applied';
+
+    public const PRODUCT_ACCOUNTING_EXCEPTION = 'exception';
+
     protected $fillable = [
         'transaction_id',
         'credit_offer_id',
@@ -46,6 +52,9 @@ class MobileMoneyTransaction extends Model
         'provider_reference',
         'status',
         'reconciliation_status',
+        'product_accounting_status',
+        'product_finality_applied_at',
+        'provider_reconciled_at',
         'failure_reason',
         'retry_count',
         'max_retries',
@@ -66,6 +75,8 @@ class MobileMoneyTransaction extends Model
             'next_retry_at' => 'datetime',
             'webhook_received_at' => 'datetime',
             'last_status_checked_at' => 'datetime',
+            'product_finality_applied_at' => 'datetime',
+            'provider_reconciled_at' => 'datetime',
             'metadata' => 'array',
             'provider_payload' => 'array',
         ];
