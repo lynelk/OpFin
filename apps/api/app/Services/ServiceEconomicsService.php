@@ -22,30 +22,30 @@ class ServiceEconomicsService
             ->first();
 
         $providerGross = $this->integerOrNull($data['provider_gross_cost_minor'] ?? ($existing->provider_gross_cost_minor ?? null));
-        $providerDiscount = $this->integerOrNull($data['provider_discount_minor'] ?? null);
-        $providerNet = $this->integerOrNull($data['provider_net_cost_minor'] ?? null);
+        $providerDiscount = $this->integerOrNull($data['provider_discount_minor'] ?? ($existing->provider_discount_minor ?? null));
+        $providerNet = $this->integerOrNull($data['provider_net_cost_minor'] ?? ($existing->provider_net_cost_minor ?? null));
         if ($providerNet === null && $providerGross !== null && $providerDiscount !== null) {
             $providerNet = $providerGross - $providerDiscount;
         }
 
-        $customerServiceCharge = $this->integerOrNull($data['customer_service_charge_minor'] ?? null);
-        $customerPlatformFee = $this->integerOrNull($data['customer_platform_fee_minor'] ?? null);
-        $partnerCommission = $this->integerOrNull($data['partner_commission_minor'] ?? null);
-        $citoFee = $this->integerOrNull($data['cito_platform_fee_minor'] ?? null);
-        $opfinFee = $this->integerOrNull($data['opfin_platform_fee_minor'] ?? null);
-        $tax = $this->integerOrNull($data['tax_amount_minor'] ?? null);
+        $customerServiceCharge = $this->integerOrNull($data['customer_service_charge_minor'] ?? ($existing->customer_service_charge_minor ?? null));
+        $customerPlatformFee = $this->integerOrNull($data['customer_platform_fee_minor'] ?? ($existing->customer_platform_fee_minor ?? null));
+        $partnerCommission = $this->integerOrNull($data['partner_commission_minor'] ?? ($existing->partner_commission_minor ?? null));
+        $citoFee = $this->integerOrNull($data['cito_platform_fee_minor'] ?? ($existing->cito_platform_fee_minor ?? null));
+        $opfinFee = $this->integerOrNull($data['opfin_platform_fee_minor'] ?? ($existing->opfin_platform_fee_minor ?? null));
+        $tax = $this->integerOrNull($data['tax_amount_minor'] ?? ($existing->tax_amount_minor ?? null));
 
-        $grossRevenue = $this->integerOrNull($data['gross_revenue_minor'] ?? null);
+        $grossRevenue = $this->integerOrNull($data['gross_revenue_minor'] ?? ($existing->gross_revenue_minor ?? null));
         if ($grossRevenue === null && $this->allKnown([$customerServiceCharge, $customerPlatformFee, $partnerCommission, $citoFee, $opfinFee])) {
             $grossRevenue = $customerServiceCharge + $customerPlatformFee + $partnerCommission + $citoFee + $opfinFee;
         }
 
-        $netRevenue = $this->integerOrNull($data['net_revenue_minor'] ?? null);
+        $netRevenue = $this->integerOrNull($data['net_revenue_minor'] ?? ($existing->net_revenue_minor ?? null));
         if ($netRevenue === null && $grossRevenue !== null && $tax !== null) {
             $netRevenue = $grossRevenue - $tax;
         }
 
-        $grossMargin = $this->integerOrNull($data['gross_margin_minor'] ?? null);
+        $grossMargin = $this->integerOrNull($data['gross_margin_minor'] ?? ($existing->gross_margin_minor ?? null));
         if ($grossMargin === null && $netRevenue !== null && $providerNet !== null) {
             $grossMargin = $netRevenue - $providerNet;
         }
