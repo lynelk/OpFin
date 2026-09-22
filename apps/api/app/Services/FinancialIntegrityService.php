@@ -118,6 +118,7 @@ class FinancialIntegrityService
         }
 
         $this->scanExpectedCreditPostings($runId, $findings);
+        $this->scanCreditSubledgerReconciliation($runId, $findings);
         $this->scanAssetEconomics($runId, $findings);
         $this->scanLongRangePaymentReconciliation($runId, $findings);
 
@@ -261,7 +262,7 @@ class FinancialIntegrityService
         $this->expect($expected, 'cash.'.strtolower((string) $transaction->provider).'.disbursement', $reversal ? 'debit' : 'credit', $cash);
 
         if ($offer->fee_treatment === 'deducted' && $fees > 0) {
-            $this->expect($expected, 'liability.credit_fee_clearing.product_'.$loanProductId, $reversal ? 'debit' : 'credit', $fees);
+            $this->expect($expected, 'income.credit_fees.product_'.$loanProductId, $reversal ? 'debit' : 'credit', $fees);
         }
         if ($offer->fee_treatment === 'financed' && $fees > 0) {
             $this->expect($expected, 'asset.credit_fee_receivable.product_'.$loanProductId, $reversal ? 'credit' : 'debit', $fees);
@@ -301,6 +302,177 @@ class FinancialIntegrityService
             return;
         }
         $expected[$code.'|'.$direction] = ($expected[$code.'|'.$direction] ?? 0) + $amountMinor;
+    }
+
+    private function scanCreditSubledgerReconciliation(int $runId, array &$findings): void
+    {
+        if (
+            ! Schema::hasTable('loans')
+            || ! Schema::hasTable('ledger_accounts')
+            || ! Schema::hasTable('ledger_entries')
+            || ! Schema::hasTable('credit_repayment_schedule_items')
+            || ! Schema::hasTable('credit_offers')
+        ) {
+            return;
+        }
+
+        $expected = [];
+        $production = DB::table('loans as l')
+            ->join('credit_offers as o', 'o.id', '=', 'l.credit_offer_id')
+            ->join('credit_repayment_schedule_items as s', 's.loan_id', '=', 'l.id')
+            ->whereNull('l.deleted_at')
+            ->whereNotIn('l.status', ['Reversed'])
+            ->select('l.loan_product_id', 'o.currency')
+            ->selectRaw('SUM(s.principal_outstanding_minor) AS principal_outstanding_minor')
+            ->selectRaw('SUM(s.interest_minor - s.interest_outstanding_minor) AS interest_realised_minor')
+            ->selectRaw('SUM(s.fees_outstanding_minor) AS financed_fee_outstanding_minor')
+            ->selectRaw('SUM(s.fees_minor - s.fees_outstanding_minor) AS financed_fee_realised_minor')
+            ->groupBy('l.loan_product_id', 'o.currency')
+            ->get();
+
+        foreach ($production as $row) {
+            $key = (int) $row->loan_product_id.'|'.strtoupper((string) $row->currency);
+            $expected[$key] = [
+                'product_id' => (int) $row->loan_product_id,
+                'currency' => strtoupper((string) $row->currency),
+                'principal_outstanding_minor' => (int) $row->principal_outstanding_minor,
+                'interest_realised_minor' => (int) $row->interest_realised_minor,
+                'financed_fee_outstanding_minor' => (int) $row->financed_fee_outstanding_minor,
+                'fee_income_minor' => (int) $row->financed_fee_realised_minor,
+            ];
+        }
+
+        $deductedFees = DB::table('loans as l')
+            ->join('credit_offers as o', 'o.id', '=', 'l.credit_offer_id')
+            ->whereNull('l.deleted_at')
+            ->whereNotIn('l.status', ['Reversed'])
+            ->where('o.fee_treatment', 'deducted')
+            ->select('l.loan_product_id', 'o.currency')
+            ->selectRaw('SUM(o.fees_minor) AS deducted_fee_income_minor')
+            ->groupBy('l.loan_product_id', 'o.currency')
+            ->get();
+
+        foreach ($deductedFees as $row) {
+            $key = (int) $row->loan_product_id.'|'.strtoupper((string) $row->currency);
+            $expected[$key] ??= [
+                'product_id' => (int) $row->loan_product_id,
+                'currency' => strtoupper((string) $row->currency),
+                'principal_outstanding_minor' => 0,
+                'interest_realised_minor' => 0,
+                'financed_fee_outstanding_minor' => 0,
+                'fee_income_minor' => 0,
+            ];
+            $expected[$key]['fee_income_minor'] += (int) $row->deducted_fee_income_minor;
+        }
+
+        if (Schema::hasTable('loan_schedules')) {
+            $legacyCurrency = strtoupper((string) config('services.mobile_money.currency', 'UGX'));
+            $legacy = DB::table('loans as l')
+                ->join('loan_schedules as s', 's.loan_id', '=', 'l.id')
+                ->whereNull('l.credit_offer_id')
+                ->whereNull('l.deleted_at')
+                ->whereNotIn('l.status', ['Reversed'])
+                ->select('l.loan_product_id')
+                ->selectRaw('ROUND(SUM(s.principal_outstanding)) AS principal_outstanding_minor')
+                ->selectRaw('ROUND(SUM(s.interest - s.interest_outstanding)) AS interest_realised_minor')
+                ->groupBy('l.loan_product_id')
+                ->get();
+
+            foreach ($legacy as $row) {
+                $key = (int) $row->loan_product_id.'|'.$legacyCurrency;
+                $expected[$key] ??= [
+                    'product_id' => (int) $row->loan_product_id,
+                    'currency' => $legacyCurrency,
+                    'principal_outstanding_minor' => 0,
+                    'interest_realised_minor' => 0,
+                    'financed_fee_outstanding_minor' => 0,
+                    'fee_income_minor' => 0,
+                ];
+                $expected[$key]['principal_outstanding_minor'] += (int) $row->principal_outstanding_minor;
+                $expected[$key]['interest_realised_minor'] += (int) $row->interest_realised_minor;
+            }
+        }
+
+        foreach ($expected as $row) {
+            $productId = $row['product_id'];
+            $currency = $row['currency'];
+            $checks = [
+                [
+                    'type' => 'credit_principal_subledger_mismatch',
+                    'code' => 'asset.loan_receivable.product_'.$productId,
+                    'normal' => 'debit',
+                    'expected' => $row['principal_outstanding_minor'],
+                    'description' => 'Loan-principal general-ledger balance does not reconcile to the loan subledger.',
+                ],
+                [
+                    'type' => 'credit_fee_receivable_subledger_mismatch',
+                    'code' => 'asset.credit_fee_receivable.product_'.$productId,
+                    'normal' => 'debit',
+                    'expected' => $row['financed_fee_outstanding_minor'],
+                    'description' => 'Financed-fee receivable does not reconcile to outstanding financed fees.',
+                ],
+                [
+                    'type' => 'credit_fee_clearing_subledger_mismatch',
+                    'code' => 'liability.credit_fee_clearing.product_'.$productId,
+                    'normal' => 'credit',
+                    'expected' => $row['financed_fee_outstanding_minor'],
+                    'description' => 'Deferred financed-fee clearing does not reconcile to outstanding financed fees.',
+                ],
+                [
+                    'type' => 'interest_income_subledger_mismatch',
+                    'code' => 'income.interest.product_'.$productId,
+                    'normal' => 'credit',
+                    'expected' => $row['interest_realised_minor'],
+                    'description' => 'Realised interest income does not reconcile to customer repayment allocations.',
+                ],
+                [
+                    'type' => 'credit_fee_income_subledger_mismatch',
+                    'code' => 'income.credit_fees.product_'.$productId,
+                    'normal' => 'credit',
+                    'expected' => $row['fee_income_minor'],
+                    'description' => 'Realised credit-fee income does not reconcile to deducted and repaid financed fees.',
+                ],
+            ];
+
+            foreach ($checks as $check) {
+                $actual = $this->ledgerAccountBalance($check['code'], $currency, $check['normal']);
+                if ($actual === (int) $check['expected']) {
+                    continue;
+                }
+
+                $findings[] = $this->alert(
+                    $runId,
+                    'critical',
+                    $check['type'],
+                    $check['code'].'|'.$currency,
+                    $check['description'],
+                    [
+                        'product_id' => $productId,
+                        'currency' => $currency,
+                        'account_code' => $check['code'],
+                        'expected_minor' => (int) $check['expected'],
+                        'actual_minor' => $actual,
+                        'difference_minor' => $actual - (int) $check['expected'],
+                    ],
+                );
+            }
+        }
+    }
+
+    private function ledgerAccountBalance(string $code, string $currency, string $normalDirection): int
+    {
+        $totals = DB::table('ledger_entries as e')
+            ->join('ledger_accounts as a', 'a.id', '=', 'e.ledger_account_id')
+            ->where('a.code', $code)
+            ->where('a.currency', strtoupper($currency))
+            ->selectRaw("COALESCE(SUM(CASE WHEN e.direction = 'debit' THEN e.amount_minor ELSE 0 END), 0) AS debits")
+            ->selectRaw("COALESCE(SUM(CASE WHEN e.direction = 'credit' THEN e.amount_minor ELSE 0 END), 0) AS credits")
+            ->first();
+
+        $debits = (int) ($totals->debits ?? 0);
+        $credits = (int) ($totals->credits ?? 0);
+
+        return $normalDirection === 'debit' ? $debits - $credits : $credits - $debits;
     }
 
     private function scanAssetEconomics(int $runId, array &$findings): void
