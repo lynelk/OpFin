@@ -159,7 +159,7 @@ class ProductionCreditOfferService
                         'treatment' => $feeTreatment,
                     ],
                     'total_cost_of_credit_minor' => $totalCostOfCreditMinor,
-                    'first_payment_due_days_after_disbursement' => $this->frequencyDays((string) $term->repayment_frequency),
+                    'first_payment_due_days_after_disbursement' => (int) ($quote['schedule'][0]['due_offset_days'] ?? $durationDays),
                     'final_payment_due_days_after_disbursement' => $durationDays,
                     'simple_annualised_cost_percent' => $quote['simple_annualised_cost_percent'],
                     'schedule' => $quote['schedule'],
@@ -316,7 +316,11 @@ class ProductionCreditOfferService
 
             $application = LoanApplication::query()->findOrFail($offer->loan_application_id);
             $disbursedAt = now();
-            $firstDueDate = $disbursedAt->copy()->addDays($this->frequencyDays($offer->repayment_frequency));
+            $firstDueOffset = (int) ($offer->pricing_snapshot['schedule'][0]['due_offset_days'] ?? 0);
+            if ($firstDueOffset <= 0) {
+                throw new InvalidArgumentException('The accepted offer is missing a valid first-payment due offset.');
+            }
+            $firstDueDate = $disbursedAt->copy()->addDays($firstDueOffset);
             $loan = Loan::withoutEvents(function () use ($application, $offer, $firstDueDate, $disbursedAt) {
                 $loan = new Loan;
                 $loan->forceFill([
@@ -335,12 +339,7 @@ class ProductionCreditOfferService
                     'repayment_start_date' => $firstDueDate->toDateString(),
                     'umra_npl_cap_enforcement_enabled' => (bool) config('opfin.regulatory.enforce_umra_npl_cap', true),
                     'initial_interest_minor' => $offer->interest_amount_minor,
-                    'default_interest_cap_minor' => $offer->pricing_snapshot['default_interest_rules']['cap_percent_of_initial_interest'] ?? null
-                        ? (int) floor(
-                            (int) $offer->interest_amount_minor
-                            * ((float) $offer->pricing_snapshot['default_interest_rules']['cap_percent_of_initial_interest'] / 100)
-                        )
-                        : null,
+                    'default_interest_cap_minor' => null,
                     'default_interest_policy_snapshot' => $offer->pricing_snapshot['regulatory_policy'] ?? null,
                 ]);
                 $loan->save();
@@ -392,10 +391,9 @@ class ProductionCreditOfferService
                     ]);
                 } else {
                     $lockedTransaction->update([
-                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
-                    'accounting_posted_at' => now(),
-                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
-                ]);
+                        'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
+                        'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                    ]);
                 }
 
                 return null;
@@ -406,6 +404,7 @@ class ProductionCreditOfferService
             $totalOutstanding = (int) $schedule->sum('total_outstanding_minor');
             if ($totalOutstanding !== $totalDue) {
                 $lockedTransaction->update([
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_EXCEPTION,
                     'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                     'failure_reason' => 'Disbursement reversed after repayment activity; automatic economic reversal is blocked and operations review is required.',
                 ]);
@@ -484,16 +483,6 @@ class ProductionCreditOfferService
                 'status' => CreditRepaymentScheduleItem::STATUS_DUE,
             ]);
         }
-    }
-
-    private function allocate(int $total, int $count, int $position): int
-    {
-        if ($total < 0 || $count <= 0 || $position < 1 || $position > $count) {
-            throw new InvalidArgumentException('Invalid production monetary allocation parameters.');
-        }
-        $base = intdiv($total, $count);
-
-        return $position === $count ? $base + ($total % $count) : $base;
     }
 
 }
