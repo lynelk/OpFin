@@ -1,6 +1,6 @@
 # OpFin mobile application
 
-Updated: 21 September 2026
+Updated: 22 September 2026
 
 The Flutter application is OpFin's primary customer mobile experience. It deliberately presents a simple borrower journey while the API keeps identity, scoring, affordability, accounting, reconciliation and regulatory complexity behind the interface.
 
@@ -126,6 +126,14 @@ Financial Spaces are now part of the canonical OpFin experience. One person may 
 
 Android builds require compile SDK 37 because the secure-storage dependency requires that API level. The target SDK remains 36 and the minimum supported Android version remains the Flutter-configured minimum. Install the Android 37 platform in local SDK environments before compiling; CI can provision it through Gradle when SDK licences are already accepted.
 
+## Android device compatibility
+
+Camera access is used for direct KYC capture, but a rear camera and autofocus are explicitly optional for installation. Without these declarations, Google Play infers a required rear camera from the CAMERA permission and filters out otherwise supported devices. Keep both camera feature declarations set to `android:required="false"`; the release-contract guard checks this.
+
+Account access and existing-account management remain available on devices without a rear camera. Customers who cannot capture the required evidence should use **Verify your identity → I need help with this step → Request assistance**. A support request is not identity verification or credit approval: the API retains the normal identity-evidence, consent and eligibility requirements. Camera permission and the restrictions on gallery/storage permissions remain in place.
+
+Before rollout, test a front-camera-only device and the assisted path on a device without usable camera access. Confirm that the newly uploaded bundle's required features no longer contain `android.hardware.camera` and compare Play's supported-device counts with the previous production release. Build 17 was uploaded as a draft with the camera filter; build 18 is the compatibility replacement. Actual Play support must be checked after uploading the new signed AAB.
+
 ## Android Play identity and signing
 
 The existing Play Store application ID is `org.rotaryo.opfin` under **Core-Synergies**, verified in Play Console on 20 September 2026. The Kotlin namespace remains `co.opfin.app`; the manifest names its activity explicitly. Android updates must retain the Play application ID and use the registered upload key.
@@ -135,7 +143,7 @@ GitHub Actions must remain disabled. Build and validate on an authorised local r
 
 ### Release contract guard
 
-Run `python3 ../../scripts/verify-android-release-contract.py` from `apps/client` (or `python3 scripts/verify-android-release-contract.py` from repository root) before any Android release build. The standard repository layout validation also runs this guard. It protects the existing Play application ID, API 37 compile requirement, launcher resolution, minimum release target, sensitive backup/cleartext controls and launch permission boundary without requiring the private signing key.
+Run `python3 ../../scripts/verify-android-release-contract.py` from `apps/client` (or `python3 scripts/verify-android-release-contract.py` from repository root) before any Android release build. The standard repository layout validation also runs this guard. It protects the existing Play application ID, API 37 compile requirement, launcher resolution, minimum release target, sensitive backup/cleartext controls, optional camera features and launch permission boundary without requiring the private signing key.
 
 ## Financial health and impact check-ins
 
