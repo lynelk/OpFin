@@ -29,6 +29,8 @@ class FinancialIntegrityService
         $orphanEntries = 0;
         $duplicateReferences = 0;
         $paymentExceptions = 0;
+        $paymentAccountingExceptions = 0;
+        $paymentStatementExceptions = 0;
 
         if (Schema::hasTable('ledger_transactions') && Schema::hasTable('ledger_entries')) {
             $balances = DB::table('ledger_transactions as t')
@@ -90,19 +92,30 @@ class FinancialIntegrityService
         }
 
         if (Schema::hasTable('mobile_money_transactions')) {
-            $paymentExceptions = MobileMoneyTransaction::query()
-                ->where(function ($query) {
-                    $query->where('reconciliation_status', MobileMoneyTransaction::RECONCILIATION_EXCEPTION)
-                        ->orWhere(function ($query) {
-                            $query->whereIn('status', [MobileMoneyTransaction::STATUS_SUCCESSFUL, MobileMoneyTransaction::STATUS_REVERSED])
-                                ->where('reconciliation_status', '!=', MobileMoneyTransaction::RECONCILIATION_MATCHED);
-                        });
-                })->count();
+            $paymentAccountingExceptions = MobileMoneyTransaction::query()
+                ->whereIn('status', [MobileMoneyTransaction::STATUS_SUCCESSFUL, MobileMoneyTransaction::STATUS_REVERSED])
+                ->whereNotIn('accounting_status', [
+                    MobileMoneyTransaction::ACCOUNTING_POSTED,
+                    MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
+                ])
+                ->count();
 
-            if ($paymentExceptions > 0) {
-                $findings[] = $this->alert($runId, 'high', 'payment_reconciliation_exception', null,
-                    'Successful, reversed or explicitly excepted payment records are not fully reconciled.', ['count' => $paymentExceptions]);
+            if ($paymentAccountingExceptions > 0) {
+                $findings[] = $this->alert($runId, 'critical', 'payment_accounting_exception', null,
+                    'Provider-final money movements exist without completed internal accounting.', ['count' => $paymentAccountingExceptions]);
             }
+
+            $paymentStatementExceptions = MobileMoneyTransaction::query()
+                ->whereIn('status', [MobileMoneyTransaction::STATUS_SUCCESSFUL, MobileMoneyTransaction::STATUS_REVERSED])
+                ->where('statement_reconciliation_status', '!=', MobileMoneyTransaction::STATEMENT_MATCHED)
+                ->count();
+
+            if ($paymentStatementExceptions > 0) {
+                $findings[] = $this->alert($runId, 'high', 'payment_statement_reconciliation_exception', null,
+                    'Provider-final money movements have not been independently matched to provider statement evidence.', ['count' => $paymentStatementExceptions]);
+            }
+
+            $paymentExceptions = $paymentAccountingExceptions + $paymentStatementExceptions;
 
             $duplicateProviderRefs = MobileMoneyTransaction::query()
                 ->whereNotNull('provider_reference')->select('provider', 'provider_reference')
