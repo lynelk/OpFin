@@ -166,6 +166,17 @@ export default async function ProgrammeImpactPage({
         </section>
 
         <section className="panel">
+          <p className="eyebrow">REPORT EXPORTS</p>
+          <h2>Download aggregate programme evidence</h2>
+          <div className="case-list">
+            <a className="button secondary" href={"/api/programme-export/" + selected.id + "/csv"}>CSV</a>
+            <a className="button secondary" href={"/api/programme-export/" + selected.id + "/xlsx"}>XLSX</a>
+            <a className="button secondary" href={"/api/programme-export/" + selected.id + "/zip"}>Report pack</a>
+          </div>
+          <p className="muted">Exports preserve the same programme scope, privacy suppression and causal-attribution warning as this portal.</p>
+        </section>
+
+        <section className="panel">
           <p className="eyebrow">ACCESS BOUNDARY</p>
           <h2>Privacy-safe by design</h2>
           <p className="muted">
