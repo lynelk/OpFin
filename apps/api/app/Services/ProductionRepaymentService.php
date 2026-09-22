@@ -176,6 +176,13 @@ class ProductionRepaymentService
         }
 
         if ($mobileMoney->status !== MobileMoneyTransaction::STATUS_SUCCESSFUL) {
+            if ($mobileMoney->status === MobileMoneyTransaction::STATUS_FAILED) {
+                $mobileMoney->update([
+                    'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED,
+                    'product_finality_applied_at' => now(),
+                ]);
+            }
+
             return $loan;
         }
 
@@ -185,13 +192,15 @@ class ProductionRepaymentService
             $suspenseMinor = (int) (($existingLedger->metadata ?? [])['suspense_minor'] ?? 0);
             if ($suspenseMinor > 0) {
                 $mobileMoney->update([
-                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+                    'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED,
+                    'product_finality_applied_at' => $mobileMoney->product_finality_applied_at ?? now(),
                     'failure_reason' => 'Collected funds remain in customer repayment suspense pending refund or approved resolution.',
                 ]);
                 $transaction->update(['status' => 'Exception']);
             } else {
                 $mobileMoney->update([
-                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+                    'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED,
+                    'product_finality_applied_at' => $mobileMoney->product_finality_applied_at ?? now(),
                     'failure_reason' => null,
                 ]);
             }
@@ -202,8 +211,16 @@ class ProductionRepaymentService
         if (! $loan->credit_offer_id) {
             $this->loanService->processSuccessfulTransaction($transaction);
             if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
-                $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                $mobileMoney->update([
+                    'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED,
+                    'product_finality_applied_at' => now(),
+                ]);
                 $this->receipts->issue($mobileMoney->fresh(), 'loan_repayment');
+            } else {
+                $mobileMoney->update([
+                    'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_EXCEPTION,
+                    'failure_reason' => 'Legacy repayment completed without its expected production ledger posting.',
+                ]);
             }
 
             return $loan->fresh();
@@ -213,7 +230,10 @@ class ProductionRepaymentService
             $lockedLoan = Loan::query()->lockForUpdate()->findOrFail($loan->id);
 
             if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
-                $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                $mobileMoney->update([
+                    'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED,
+                    'product_finality_applied_at' => $mobileMoney->product_finality_applied_at ?? now(),
+                ]);
 
                 return $lockedLoan;
             }
@@ -222,7 +242,8 @@ class ProductionRepaymentService
             if ($mobileMoney->amount_minor > $outstanding) {
                 $this->productionLoanLedgerService->postRepayment($transaction, 0, 0, 0);
                 $mobileMoney->update([
-                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+                    'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED,
+                    'product_finality_applied_at' => now(),
                     'failure_reason' => 'Successful collection exceeds the current product obligation. The full collection is held in customer repayment suspense pending refund or approved resolution.',
                 ]);
                 $transaction->update(['status' => 'Exception']);
@@ -252,7 +273,10 @@ class ProductionRepaymentService
                 $lockedLoan->update(['status' => 'Cleared']);
             }
 
-            $mobileMoney->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+            $mobileMoney->update([
+                'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED,
+                'product_finality_applied_at' => now(),
+            ]);
             $this->auditLogger->record('credit.repayment.fulfilled', null, $lockedLoan, [
                 'mobile_money_transaction_id' => $mobileMoney->id,
                 'provider_reference' => $mobileMoney->provider_reference,
@@ -379,7 +403,8 @@ class ProductionRepaymentService
 
         if (! $originalLedger) {
             $mobileMoney->update([
-                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+                'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED,
+                'product_finality_applied_at' => now(),
                 'failure_reason' => null,
             ]);
             $transaction->update(['status' => 'REVERSED']);
@@ -389,7 +414,8 @@ class ProductionRepaymentService
 
         if (LedgerTransaction::query()->where('reference', $reversalReference)->exists()) {
             $mobileMoney->update([
-                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+                'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED,
+                'product_finality_applied_at' => $mobileMoney->product_finality_applied_at ?? now(),
                 'failure_reason' => null,
             ]);
             $transaction->update(['status' => 'REVERSED']);
@@ -465,7 +491,8 @@ class ProductionRepaymentService
             }
 
             $mobileMoney->update([
-                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+                'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_APPLIED,
+                'product_finality_applied_at' => now(),
                 'failure_reason' => null,
             ]);
             $transaction->update(['status' => 'REVERSED']);
@@ -495,7 +522,7 @@ class ProductionRepaymentService
         string $reason,
     ): Loan {
         $mobileMoney->update([
-            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+            'product_accounting_status' => MobileMoneyTransaction::PRODUCT_ACCOUNTING_EXCEPTION,
             'failure_reason' => $reason,
         ]);
         $transaction->update(['status' => 'Exception']);
