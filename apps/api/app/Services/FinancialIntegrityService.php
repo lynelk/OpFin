@@ -356,12 +356,13 @@ class FinancialIntegrityService
         $production = DB::table('loans as l')
             ->join('credit_offers as o', 'o.id', '=', 'l.credit_offer_id')
             ->join('credit_repayment_schedule_items as s', 's.loan_id', '=', 'l.id')
+            ->leftJoin('credit_write_offs as w', 'w.loan_id', '=', 'l.id')
             ->whereNull('l.deleted_at')
             ->whereNotIn('l.status', ['Reversed'])
             ->select('l.loan_product_id', 'o.currency')
-            ->selectRaw('SUM(s.principal_outstanding_minor) AS principal_outstanding_minor')
+            ->selectRaw('SUM(CASE WHEN w.id IS NULL THEN s.principal_outstanding_minor ELSE 0 END) AS principal_outstanding_minor')
             ->selectRaw('SUM(s.interest_minor - s.interest_outstanding_minor) AS interest_realised_minor')
-            ->selectRaw('SUM(s.fees_outstanding_minor) AS financed_fee_outstanding_minor')
+            ->selectRaw('SUM(CASE WHEN w.id IS NULL THEN s.fees_outstanding_minor ELSE 0 END) AS financed_fee_outstanding_minor')
             ->selectRaw('SUM(s.fees_minor - s.fees_outstanding_minor) AS financed_fee_realised_minor')
             ->groupBy('l.loan_product_id', 'o.currency')
             ->get();
@@ -375,6 +376,7 @@ class FinancialIntegrityService
                 'interest_realised_minor' => (int) $row->interest_realised_minor,
                 'financed_fee_outstanding_minor' => (int) $row->financed_fee_outstanding_minor,
                 'fee_income_minor' => (int) $row->financed_fee_realised_minor,
+                'recovery_income_minor' => 0,
             ];
         }
 
@@ -397,6 +399,7 @@ class FinancialIntegrityService
                 'interest_realised_minor' => 0,
                 'financed_fee_outstanding_minor' => 0,
                 'fee_income_minor' => 0,
+                'recovery_income_minor' => 0,
             ];
             $expected[$key]['fee_income_minor'] += (int) $row->deducted_fee_income_minor;
         }
@@ -405,11 +408,12 @@ class FinancialIntegrityService
             $legacyCurrency = strtoupper((string) config('services.mobile_money.currency', 'UGX'));
             $legacy = DB::table('loans as l')
                 ->join('loan_schedules as s', 's.loan_id', '=', 'l.id')
+                ->leftJoin('credit_write_offs as w', 'w.loan_id', '=', 'l.id')
                 ->whereNull('l.credit_offer_id')
                 ->whereNull('l.deleted_at')
                 ->whereNotIn('l.status', ['Reversed'])
                 ->select('l.loan_product_id')
-                ->selectRaw('ROUND(SUM(s.principal_outstanding)) AS principal_outstanding_minor')
+                ->selectRaw('ROUND(SUM(CASE WHEN w.id IS NULL THEN s.principal_outstanding ELSE 0 END)) AS principal_outstanding_minor')
                 ->selectRaw('ROUND(SUM(s.interest - s.interest_outstanding)) AS interest_realised_minor')
                 ->groupBy('l.loan_product_id')
                 ->get();
@@ -423,6 +427,7 @@ class FinancialIntegrityService
                     'interest_realised_minor' => 0,
                     'financed_fee_outstanding_minor' => 0,
                     'fee_income_minor' => 0,
+                    'recovery_income_minor' => 0,
                 ];
                 $expected[$key]['principal_outstanding_minor'] += (int) $row->principal_outstanding_minor;
                 $expected[$key]['interest_realised_minor'] += (int) $row->interest_realised_minor;
@@ -435,7 +440,8 @@ class FinancialIntegrityService
                     ->orWhere('code', 'like', 'asset.credit_fee_receivable.product_%')
                     ->orWhere('code', 'like', 'liability.credit_fee_clearing.product_%')
                     ->orWhere('code', 'like', 'income.interest.product_%')
-                    ->orWhere('code', 'like', 'income.credit_fees.product_%');
+                    ->orWhere('code', 'like', 'income.credit_fees.product_%')
+                    ->orWhere('code', 'like', 'income.credit_recovery.product_%');
             })
             ->get(['code', 'currency']);
 
@@ -453,7 +459,42 @@ class FinancialIntegrityService
                 'interest_realised_minor' => 0,
                 'financed_fee_outstanding_minor' => 0,
                 'fee_income_minor' => 0,
+                'recovery_income_minor' => 0,
             ];
+        }
+
+        $writeOffRecoveries = DB::table('credit_write_offs as w')
+            ->join('loans as l', 'l.id', '=', 'w.loan_id')
+            ->leftJoin('credit_offers as o', 'o.id', '=', 'l.credit_offer_id')
+            ->whereNull('l.deleted_at')
+            ->get([
+                'w.loan_id',
+                'w.principal_written_off_minor',
+                'w.currency',
+                'l.loan_product_id',
+                'l.credit_offer_id',
+            ]);
+
+        foreach ($writeOffRecoveries as $writeOff) {
+            $currentPrincipal = $writeOff->credit_offer_id
+                ? (int) DB::table('credit_repayment_schedule_items')
+                    ->where('loan_id', $writeOff->loan_id)
+                    ->sum('principal_outstanding_minor')
+                : (int) round((float) DB::table('loan_schedules')
+                    ->where('loan_id', $writeOff->loan_id)
+                    ->sum('principal_outstanding'));
+            $recovered = max(0, (int) $writeOff->principal_written_off_minor - $currentPrincipal);
+            $key = (int) $writeOff->loan_product_id.'|'.strtoupper((string) $writeOff->currency);
+            $expected[$key] ??= [
+                'product_id' => (int) $writeOff->loan_product_id,
+                'currency' => strtoupper((string) $writeOff->currency),
+                'principal_outstanding_minor' => 0,
+                'interest_realised_minor' => 0,
+                'financed_fee_outstanding_minor' => 0,
+                'fee_income_minor' => 0,
+                'recovery_income_minor' => 0,
+            ];
+            $expected[$key]['recovery_income_minor'] += $recovered;
         }
 
         foreach ($expected as $row) {
@@ -494,6 +535,13 @@ class FinancialIntegrityService
                     'normal' => 'credit',
                     'expected' => $row['fee_income_minor'],
                     'description' => 'Realised credit-fee income does not reconcile to deducted and repaid financed fees.',
+                ],
+                [
+                    'type' => 'credit_recovery_income_subledger_mismatch',
+                    'code' => 'income.credit_recovery.product_'.$productId,
+                    'normal' => 'credit',
+                    'expected' => $row['recovery_income_minor'],
+                    'description' => 'Written-off principal recovery income does not reconcile to reductions in written-off legal balances.',
                 ],
             ];
 
