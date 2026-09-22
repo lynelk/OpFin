@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\Otp;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -712,6 +713,25 @@ class ProgrammeDeliveryService
         $phone = trim($data['phone']);
         $email = isset($data['email']) ? trim($data['email']) : null;
 
+        if ($invitation->invited_phone && trim((string) $invitation->invited_phone) !== $phone) {
+            throw new InvalidArgumentException('The activation phone must match the number on the programme invitation.');
+        }
+        if ($invitation->invited_email && $email && strcasecmp(trim((string) $invitation->invited_email), $email) !== 0) {
+            throw new InvalidArgumentException('The activation email must match the address on the programme invitation.');
+        }
+
+        $otpRecord = Otp::where('phone', $phone)->first();
+        $verificationToken = (string) ($data['verification_token'] ?? '');
+        $verifiedPhone = $otpRecord
+            && $otpRecord->verified_at
+            && $otpRecord->verification_token_hash
+            && now()->lte($otpRecord->verified_at->copy()->addMinutes(10))
+            && hash_equals($otpRecord->verification_token_hash, hash('sha256', $verificationToken));
+
+        if (! $verifiedPhone) {
+            throw new InvalidArgumentException('Verify the invited phone number with an OpFin OTP before activating the programme-partner account.');
+        }
+
         if (User::withoutGlobalScopes()->where('phone', $phone)->exists()) {
             throw new InvalidArgumentException('A dedicated programme-partner account must use a phone number not already attached to another OpFin account.');
         }
@@ -731,6 +751,8 @@ class ProgrammeDeliveryService
                 'preferred_language' => $this->normaliseLocale($data['preferred_language'] ?? 'en'),
                 'phone_verified_at' => now(),
             ]);
+
+            $otpRecord?->delete();
 
             DB::table('programme_partner_access')->insert([
                 'programme_id' => $invitation->programme_id,
