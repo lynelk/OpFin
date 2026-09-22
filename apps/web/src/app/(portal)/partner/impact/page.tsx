@@ -87,17 +87,23 @@ export default async function ProgrammeImpactPage({
           </section>
           <section className="panel">
             <p className="muted">Financial-health coverage</p>
-            <div className="stat">{outcomes.snapshot_coverage.financial_health_people}</div>
+            <div className="stat">
+              {outcomes.snapshot_coverage.financial_health_people ?? "Suppressed"}
+            </div>
             <p className="muted">Distinct participants with recorded check-ins.</p>
           </section>
           <section className="panel">
             <p className="muted">Livelihood coverage</p>
-            <div className="stat">{outcomes.snapshot_coverage.livelihood_people}</div>
+            <div className="stat">
+              {outcomes.snapshot_coverage.livelihood_people ?? "Suppressed"}
+            </div>
             <p className="muted">Distinct participants with livelihood observations.</p>
           </section>
           <section className="panel">
             <p className="muted">Empowerment coverage</p>
-            <div className="stat">{outcomes.snapshot_coverage.empowerment_people}</div>
+            <div className="stat">
+              {outcomes.snapshot_coverage.empowerment_people ?? "Suppressed"}
+            </div>
             <p className="muted">Voluntary programme-measurement observations only.</p>
           </section>
         </div>
@@ -148,7 +154,7 @@ export default async function ProgrammeImpactPage({
                     </p>
                   ) : (
                     <p className="muted">
-                      Participants {summary.participant_count}
+                      Participants {summary.participant_count ?? 0}
                       {summary.average_numeric !== undefined ? ` · Average ${summary.average_numeric}` : ""}
                       {summary.latest_observed_at ? ` · Latest ${summary.latest_observed_at}` : ""}
                     </p>
