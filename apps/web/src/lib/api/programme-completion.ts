@@ -57,6 +57,7 @@ export type ProgrammeOperations = {
     id: number;
     programme_id: number;
     user_id: number;
+    instrument_id: number;
     instrument_name: string;
     measurement_stage: string;
     due_at: string;
@@ -360,6 +361,45 @@ export const programmeCompletionApi = {
         method: "POST",
         body: JSON.stringify(programmeId ? { programme_id: programmeId } : {})
       }
+    ),
+
+  partnerUsers: (programmeId: number, token?: string) =>
+    request<{
+      programme_id: number;
+      users: Array<{
+        user_id: number;
+        partner_id: number;
+        name: string;
+        phone: string;
+        email?: string | null;
+        access_level: string;
+        status: string;
+        granted_at?: string | null;
+        revoked_at?: string | null;
+        individual_records_exposed: false;
+      }>;
+      invitations: Array<{
+        id: number;
+        partner_id: number;
+        invited_name: string;
+        invited_phone?: string | null;
+        invited_email?: string | null;
+        access_level: string;
+        status: string;
+        expires_at: string;
+        accepted_at?: string | null;
+        accepted_user_id?: number | null;
+        activation_token?: string | null;
+        delivery_status: string;
+      }>;
+      access_boundary: string;
+    }>(`/admin/inclusive-finance/programmes/${programmeId}/partner-users`, token),
+
+  revokePartnerAccess: (programmeId: number, userId: number, token?: string) =>
+    request<{ programme_id: number; user_id: number; revoked: boolean }>(
+      `/admin/inclusive-finance/programmes/${programmeId}/partner-users/${userId}`,
+      token,
+      { method: "DELETE" }
     ),
 
   invitePartner: (
