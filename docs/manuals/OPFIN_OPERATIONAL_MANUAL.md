@@ -49,3 +49,43 @@ Use aggregate programme reporting for enrolments, applications, decision outcome
 
 ## Accessibility operations
 Support staff should know how to guide customers to large text, simple wording, reduced motion and high contrast. Screen-reader and other assistive-technology behaviour must be physically tested on supported devices before certification or public claims.
+
+## Operating the Impact & Inclusive Finance layer
+
+### Programme configuration
+
+Platform operations may configure an inclusive-finance programme, then use **Inclusion & programmes → Impact framework** to maintain:
+
+- the programme theory of change;
+- reusable indicator definitions;
+- programme indicator assignments;
+- targets and reporting frequency;
+- authorised outcome observations;
+- dedicated programme-partner access.
+
+Programme-specific wording belongs in programme configuration. Do not alter core OpFin credit logic to mirror a partner's reporting terminology.
+
+### Data-governance controls
+
+The following controls are mandatory:
+
+- impact indicators and snapshots remain `credit_decision_eligible=false`;
+- programme-linked participant observations require active measurement consent and active enrolment;
+- sensitive participant outcome cohorts below five are suppressed, including counts that would reveal the cohort size;
+- partner users receive aggregate programme-scoped access only;
+- partner identities are dedicated accounts and must not be created by repurposing customer financial accounts;
+- community-finance evidence recorded by customers remains self-reported and non-risk-eligible;
+- any future use of verified community/partner data in underwriting must use the separate governed alternative-data pathway;
+- outcome reports describe measured change; causal claims require an evaluation design that supports them.
+
+### Partner access
+
+Before granting partner access:
+
+1. verify the programme has the intended `partner_id`;
+2. verify the user is a dedicated `programme_partner` identity;
+3. select the intended access-level label;
+4. confirm the grant applies only to the intended programme;
+5. verify the partner portal exposes aggregate data only.
+
+Access-level labels do not expand the API beyond the aggregate-only boundary in this release.
