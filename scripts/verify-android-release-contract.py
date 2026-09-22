@@ -36,6 +36,11 @@ require("android.permission.CAMERA" in permissions, "CAMERA permission is requir
 for forbidden in ("android.permission.READ_SMS", "android.permission.READ_CONTACTS", "android.permission.READ_CALL_LOG",
                   "android.permission.READ_EXTERNAL_STORAGE", "android.permission.MANAGE_EXTERNAL_STORAGE"):
     require(forbidden not in permissions, f"Forbidden launch permission present: {forbidden}")
+features = {node.get(android + "name"): node.get(android + "required")
+            for node in manifest.findall("uses-feature")}
+for optional_camera in ("android.hardware.camera", "android.hardware.camera.autofocus"):
+    require(features.get(optional_camera) == "false",
+            f"{optional_camera} must be optional so Play does not filter devices by camera hardware")
 application = manifest.find("application")
 require(application is not None, "Android application element is missing")
 if application is not None:
