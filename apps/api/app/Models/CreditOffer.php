@@ -70,6 +70,10 @@ class CreditOffer extends Model
             'expires_at' => 'datetime',
             'accepted_at' => 'datetime',
             'withdrawn_at' => 'datetime',
+            'funding_reserved_at' => 'datetime',
+            'funding_committed_at' => 'datetime',
+            'funding_released_at' => 'datetime',
+            'funding_reversed_at' => 'datetime',
         ];
     }
 
