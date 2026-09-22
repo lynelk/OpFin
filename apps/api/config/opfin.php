@@ -32,6 +32,12 @@ return [
         ],
     ],
 
+    'accounting' => [
+        // Maximum age of a finance/risk-approved impairment assessment before integrity close is blocked.
+        // The system never invents ECL rates; assessment amounts and policy evidence remain finance/risk inputs.
+        'impairment_max_age_days' => (int) env('OPFIN_IMPAIRMENT_MAX_AGE_DAYS', 31),
+    ],
+
     'regulatory' => [
         'credit_reporting_due_days' => (int) env('UMRA_CREDIT_REPORTING_DUE_DAYS', 30),
         'complaint_resolution_days' => (int) env('UMRA_COMPLAINT_RESOLUTION_DAYS', 30),
