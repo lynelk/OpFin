@@ -150,4 +150,53 @@ class InclusiveFinanceApi {
           if (outcome != null) 'outcome': outcome,
         },
       );
+
+  static Future<Map<String, dynamic>> dueProgrammeCheckIns({
+    String channel = 'app',
+    String? locale,
+  }) {
+    final query = <String, String>{'channel': channel};
+    if (locale != null && locale.isNotEmpty) query['locale'] = locale;
+    final uri = Uri(path: '/inclusive-finance/programme-check-ins', queryParameters: query);
+    return _request(uri.toString());
+  }
+
+  static Future<Map<String, dynamic>> submitProgrammeCheckIn({
+    required int instrumentId,
+    required List<Map<String, dynamic>> answers,
+    int? scheduleId,
+    String channel = 'app',
+    String? locale,
+  }) =>
+      _request(
+        '/inclusive-finance/programme-check-ins/$instrumentId/responses',
+        method: 'POST',
+        body: {
+          if (scheduleId != null) 'schedule_id': scheduleId,
+          'channel': channel,
+          if (locale != null) 'locale': locale,
+          'answers': answers,
+        },
+      );
+
+  static Future<Map<String, dynamic>> markProgrammeFollowUpOpened(int scheduleId) =>
+      _request(
+        '/inclusive-finance/programme-follow-ups/$scheduleId/open',
+        method: 'POST',
+      );
+
+  static Future<Map<String, dynamic>> financialHealthEnrichmentPreview() =>
+      _request('/inclusive-finance/impact/financial-health/enrichment');
+
+  static Future<Map<String, dynamic>> recordFinancialHealthEnrichment({
+    int? programmeId,
+  }) =>
+      _request(
+        '/inclusive-finance/impact/financial-health/enrichment',
+        method: 'POST',
+        body: {
+          if (programmeId != null) 'programme_id': programmeId,
+        },
+      );
+
 }
