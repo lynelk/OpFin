@@ -43,6 +43,8 @@ class CommercialInsightsService
 
     public function recordAttribution(User $subject, array $data, ?User $actor = null): array
     {
+        $existing = DB::table('customer_acquisition_attributions')->where('user_id', $subject->id)->first();
+
         DB::table('customer_acquisition_attributions')->updateOrInsert(
             ['user_id' => $subject->id],
             [
@@ -53,7 +55,7 @@ class CommercialInsightsService
                 'acquired_at' => $data['acquired_at'] ?? $subject->created_at ?? now(),
                 'metadata' => isset($data['metadata']) ? json_encode($data['metadata']) : null,
                 'recorded_by' => $actor?->id,
-                'created_at' => now(),
+                'created_at' => $existing?->created_at ?? now(),
                 'updated_at' => now(),
             ],
         );
