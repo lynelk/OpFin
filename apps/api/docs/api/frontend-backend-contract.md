@@ -72,7 +72,9 @@ Primary UI may show:
 
 Detailed component breakdown is progressive disclosure. Do not show internal probability-of-default values as a primary customer metric.
 
-A missing score is **pending/not ready**, never zero.
+`component_breakdown.positive_employment_behaviour` is a benefit-only enrichment object. It may show a capped uplift from verified positive employer signals. The client must never interpret missing, unavailable or negative employer-behaviour data as a deduction; those states are neutral by policy. The base composite value remains available inside that breakdown for explanation.
+
+A missing score is **pending/not ready**, never zero. External source routing is also not a client concern: Cito is preferred when configured, while an explicitly selected direct provider may be used as backup. Clients consume the same OpFin profile contract either way.
 
 ## 6. Loan request
 
@@ -87,6 +89,8 @@ The request is not an offer and does not move money.
 The offer endpoint is the pricing source of truth. Display the supplied amount received, interest, fees, total repayment, duration/frequency and store-policy disclosure values.
 
 Accept using the exact `disclosure_hash`, a verified `wallet_id`, and explicit `credit_reporting_consent: true`. The reporting consent is stored as a separate versioned consent purpose and external bureau submission is blocked when consent is absent.
+
+The internal `funding_pool_id` is an operations/capital-provenance field and is not a customer-facing recommendation signal. Customers receive the contractual credit terms, not internal capital-allocation mechanics.
 
 Do not say "disbursed" until provider success is confirmed.
 
