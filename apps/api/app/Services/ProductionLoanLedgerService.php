@@ -251,6 +251,7 @@ class ProductionLoanLedgerService
         int|float $interestPaid,
         int|float $principalPaid,
         int|float $feesPaid = 0,
+        int|float $defaultInterestPaid = 0,
     ): ?LedgerTransaction {
         $reference = $this->ledgerReference('loan.repayment', $transaction);
         if (LedgerTransaction::where('reference', $reference)->exists()) {
@@ -261,7 +262,8 @@ class ProductionLoanLedgerService
         $interestMinor = $this->toMinorUnits($interestPaid);
         $principalMinor = $this->toMinorUnits($principalPaid);
         $feesMinor = $this->toMinorUnits($feesPaid);
-        $suspenseMinor = $amountMinor - $interestMinor - $principalMinor - $feesMinor;
+        $defaultInterestMinor = $this->toMinorUnits($defaultInterestPaid);
+        $suspenseMinor = $amountMinor - $interestMinor - $principalMinor - $feesMinor - $defaultInterestMinor;
         if ($suspenseMinor < 0) {
             throw new \InvalidArgumentException('Repayment ledger components exceed the collected amount.');
         }
@@ -281,6 +283,14 @@ class ProductionLoanLedgerService
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $principalMinor,
                 'memo' => 'Loan principal repaid',
+            ];
+        }
+        if ($defaultInterestMinor > 0) {
+            $entries[] = [
+                'account_id' => $this->defaultInterestReceivableAccount($transaction->loan, $currency)->id,
+                'direction' => LedgerEntry::DIRECTION_CREDIT,
+                'amount_minor' => $defaultInterestMinor,
+                'memo' => 'Accrued default-interest receivable settled',
             ];
         }
         if ($interestMinor > 0) {
@@ -324,6 +334,7 @@ class ProductionLoanLedgerService
                 'principal_minor' => $principalMinor,
                 'interest_minor' => $interestMinor,
                 'fees_minor' => $feesMinor,
+                'default_interest_minor' => $defaultInterestMinor,
                 'suspense_minor' => $suspenseMinor,
             ]
         );
@@ -412,6 +423,20 @@ class ProductionLoanLedgerService
     private function creditFeeReceivableAccount(Loan $loan, string $currency): LedgerAccount
     {
         return $this->account('asset.credit_fee_receivable.product_'.$loan->loan_product_id, 'Credit fee receivable product '.$loan->loan_product_id, 'asset', $currency);
+    }
+
+    private function defaultInterestReceivableAccount(?Loan $loan, string $currency): LedgerAccount
+    {
+        if (! $loan) {
+            throw new \InvalidArgumentException('Default-interest repayment posting requires a loan.');
+        }
+
+        return $this->account(
+            'asset.default_interest_receivable.product_'.$loan->loan_product_id,
+            'Default interest receivable product '.$loan->loan_product_id,
+            'asset',
+            $currency,
+        );
     }
 
     private function interestIncomeAccount(Loan $loan, string $currency): LedgerAccount
