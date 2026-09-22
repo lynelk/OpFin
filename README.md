@@ -12,7 +12,7 @@ Key product rules:
 
 - A second phone is optional.
 - KYC captures NIN, National ID front and back, and a photo of the customer holding the ID.
-- CRB, MNO, approved third-party and internal behaviour inputs remain separate score components and feed a decomposable OpFin Composite Score.
+- CRB, MNO, approved third-party and internal behaviour inputs remain separate score components and feed a decomposable OpFin Composite Score. Verified positive employer behaviour may add a small capped benefit; missing or negative employer-behaviour data is neutral.
 - The customer sees the composite score, understandable explanations, available loan limit, amount due and next payment date. Internal probability-of-default values remain internal.
 - Limits are profile-level, not multiplied by wallets or phone numbers.
 - App, WhatsApp and USSD use the same server-authoritative profile and financial state.
@@ -37,7 +37,7 @@ The historical source imports remain in Git history. This repository is the curr
 ## Financial and security boundaries
 
 - `apps/api` owns identity, consent, eligibility, decisioning, obligations, provider finality, ledger posting and reconciliation.
-- CPay is the production money-movement boundary unless deliberately changed and revalidated.
+- Cito is the preferred third-party integration gateway and CPay is the preferred production money-movement route. OpFin remains independently operable; a direct production adapter is allowed only when explicitly configured, genuinely contracted/certified and reconcilable.
 - Provider acknowledgement is not financial finality.
 - External scoring/KYC sources may be unavailable; OpFin records that state instead of inventing data.
 - KYC evidence belongs on private persistent/object storage in production.
@@ -78,6 +78,7 @@ CI checks documentation drift when backend routes/contracts or customer/admin wo
 - [Canonical Product Blueprint](docs/product/OPFIN_PRODUCT_BLUEPRINT.md)
 - [Financial Spaces domain model](docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md)
 - [Inclusive Finance and Programme Delivery Framework](docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md)
+- [Partner Financial, Compliance and Service Reporting Standard](docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md)
 - [User Manual](docs/manuals/OPFIN_USER_MANUAL.md)
 - [Training Manual](docs/manuals/OPFIN_TRAINING_MANUAL.md)
 - [Operational Manual](docs/manuals/OPFIN_OPERATIONAL_MANUAL.md)
