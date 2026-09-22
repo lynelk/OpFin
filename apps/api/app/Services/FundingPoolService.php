@@ -9,6 +9,8 @@ use RuntimeException;
 
 class FundingPoolService
 {
+    public function __construct(private readonly AuditLogger $auditLogger) {}
+
     private const BLOCKED_STATUSES = [
         'draft',
         'paused',
@@ -64,6 +66,10 @@ class FundingPoolService
             ]);
 
             $lockedOffer->forceFill(['funding_reserved_at' => now()])->save();
+            $this->auditLogger->record('funding_pool.capital_reserved', null, $lockedOffer, [
+                'funding_pool_id' => $pool->id,
+                'principal_minor' => (int) $lockedOffer->principal_amount_minor,
+            ]);
 
             return $lockedOffer->fresh();
         });
@@ -100,6 +106,10 @@ class FundingPoolService
             ]);
 
             $lockedOffer->forceFill(['funding_committed_at' => now()])->save();
+            $this->auditLogger->record('funding_pool.capital_deployed', null, $lockedOffer, [
+                'funding_pool_id' => $pool->id,
+                'principal_minor' => $principal,
+            ]);
 
             return $lockedOffer->fresh();
         });
@@ -132,6 +142,10 @@ class FundingPoolService
             ]);
 
             $lockedOffer->forceFill(['funding_released_at' => now()])->save();
+            $this->auditLogger->record('funding_pool.capital_released', null, $lockedOffer, [
+                'funding_pool_id' => $pool->id,
+                'principal_minor' => $principal,
+            ]);
 
             return $lockedOffer->fresh();
         });
@@ -149,7 +163,27 @@ class FundingPoolService
                 return $lockedOffer;
             }
             if (! $lockedOffer->funding_committed_at) {
-                return $this->release($lockedOffer);
+                if (! $lockedOffer->funding_reserved_at || $lockedOffer->funding_released_at) {
+                    return $lockedOffer;
+                }
+
+                $principal = (int) $lockedOffer->principal_amount_minor;
+                $pool = DB::table('capital_mandates')->where('id', $lockedOffer->funding_pool_id)->lockForUpdate()->first();
+                if (! $pool || (int) $pool->reserved_capital_minor < $principal) {
+                    throw new RuntimeException('Funding reservation cannot be reversed automatically; financial integrity review is required.');
+                }
+
+                DB::table('capital_mandates')->where('id', $pool->id)->update([
+                    'reserved_capital_minor' => (int) $pool->reserved_capital_minor - $principal,
+                    'updated_at' => now(),
+                ]);
+                $lockedOffer->forceFill(['funding_released_at' => now(), 'funding_reversed_at' => now()])->save();
+                $this->auditLogger->record('funding_pool.reservation_reversed', null, $lockedOffer, [
+                    'funding_pool_id' => $pool->id,
+                    'principal_minor' => $principal,
+                ]);
+
+                return $lockedOffer->fresh();
             }
 
             $principal = (int) $lockedOffer->principal_amount_minor;
@@ -167,6 +201,10 @@ class FundingPoolService
             ]);
 
             $lockedOffer->forceFill(['funding_reversed_at' => now()])->save();
+            $this->auditLogger->record('funding_pool.deployment_reversed', null, $lockedOffer, [
+                'funding_pool_id' => $pool->id,
+                'principal_minor' => $principal,
+            ]);
 
             return $lockedOffer->fresh();
         });
