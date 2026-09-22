@@ -30,7 +30,7 @@ export async function getAccessToken(): Promise<string | undefined> {
 export function canSeeGroup(role: UserRole, group: NavGroup): boolean {
   if (group === "admin") return ["platform_admin", "operations", "support"].includes(role);
   if (group === "employer") return role === "employer_admin" || role === "platform_admin";
-  if (group === "partner") return role === "programme_partner" || role === "platform_admin";
+  if (group === "partner") return role === "programme_partner";
   if (group === "customer") return role === "customer" || role === "platform_admin";
   return true;
 }
