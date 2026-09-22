@@ -147,13 +147,9 @@ class LoanImpairmentService
     public function grossRecordedExposureMinor(Loan $loan): int
     {
         if ($loan->credit_offer_id) {
-            $row = DB::table('credit_repayment_schedule_items')
+            return (int) DB::table('credit_repayment_schedule_items')
                 ->where('loan_id', $loan->id)
-                ->selectRaw('COALESCE(SUM(principal_outstanding_minor), 0) AS principal_minor')
-                ->selectRaw('COALESCE(SUM(fees_outstanding_minor), 0) AS financed_fee_minor')
-                ->first();
-
-            return (int) ($row->principal_minor ?? 0) + (int) ($row->financed_fee_minor ?? 0);
+                ->sum('principal_outstanding_minor');
         }
 
         return (int) round((float) DB::table('loan_schedules')
