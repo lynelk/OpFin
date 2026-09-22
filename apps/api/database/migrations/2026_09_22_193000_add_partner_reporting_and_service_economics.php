@@ -53,6 +53,14 @@ return new class extends Migration
             $table->index(['provider', 'route', 'occurred_at'], 'service_economics_provider_route_time');
         });
 
+        Schema::table('savings_products', function (Blueprint $table) {
+            $table->json('economics_config')->nullable()->after('disclosures');
+        });
+
+        Schema::table('protection_products', function (Blueprint $table) {
+            $table->json('economics_config')->nullable()->after('disclosure_payload');
+        });
+
         Schema::table('loans', function (Blueprint $table) {
             $table->foreignId('funding_pool_id')
                 ->nullable()
@@ -65,6 +73,14 @@ return new class extends Migration
 
     public function down(): void
     {
+        Schema::table('protection_products', function (Blueprint $table) {
+            $table->dropColumn('economics_config');
+        });
+
+        Schema::table('savings_products', function (Blueprint $table) {
+            $table->dropColumn('economics_config');
+        });
+
         Schema::table('loans', function (Blueprint $table) {
             $table->dropForeign(['funding_pool_id']);
             $table->dropIndex('loans_funding_pool_status_idx');
