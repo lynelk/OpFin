@@ -368,6 +368,57 @@ export async function configureProviderAdapterAction(formData: FormData) {
   );
 }
 
+export async function ingestProviderEvidenceAction(formData: FormData) {
+  const token = await getAccessToken();
+  const programmeId = Number(value(formData, "programme_id"));
+  const adapterId = Number(value(formData, "adapter_id"));
+  const userId = Number(value(formData, "user_id"));
+  const signals: Record<string, unknown> = {};
+
+  for (const line of value(formData, "signals").split("\n")) {
+    const separator = line.indexOf("=");
+    if (separator <= 0) continue;
+    const key = line.slice(0, separator).trim();
+    const raw = line.slice(separator + 1).trim();
+    if (!key) continue;
+
+    let parsed: unknown = raw;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = raw;
+    }
+    signals[key] = parsed;
+  }
+
+  try {
+    await programmeCompletionApi.ingestAdapter(
+      adapterId,
+      {
+        user_id: userId,
+        provider_reference: value(formData, "provider_reference"),
+        signals,
+        observed_at: value(formData, "observed_at") || undefined,
+        expires_at: value(formData, "expires_at") || undefined
+      },
+      token
+    );
+  } catch (error) {
+    errorRedirect(
+      programmeId
+        ? `/admin/inclusion/delivery?programme_id=${programmeId}`
+        : "/admin/inclusion/delivery",
+      error
+    );
+  }
+
+  redirect(
+    programmeId
+      ? `/admin/inclusion/delivery?programme_id=${programmeId}&status=provider-evidence-ingested`
+      : "/admin/inclusion/delivery?status=provider-evidence-ingested"
+  );
+}
+
 export async function recordCommercialCostAction(formData: FormData) {
   const token = await getAccessToken();
   try {
