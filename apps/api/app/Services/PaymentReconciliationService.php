@@ -165,10 +165,12 @@ class PaymentReconciliationService
                 if ($status === ReconciliationItem::STATUS_MATCHED) {
                     $systemTransaction->update([
                         'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+                        'provider_reconciled_at' => now(),
                     ]);
                 } else {
                     $systemTransaction->update([
                         'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+                        'provider_reconciled_at' => null,
                     ]);
                 }
 
@@ -194,6 +196,12 @@ class PaymentReconciliationService
         }
 
         DB::transaction(function () use ($run, $actor) {
+            $missingTransactionIds = ReconciliationItem::query()
+                ->where('reconciliation_run_id', $run->id)
+                ->where('status', ReconciliationItem::STATUS_REQUIRES_PROVIDER_MATCH)
+                ->whereNotNull('mobile_money_transaction_id')
+                ->pluck('mobile_money_transaction_id');
+
             ReconciliationItem::query()
                 ->where('reconciliation_run_id', $run->id)
                 ->where('status', ReconciliationItem::STATUS_REQUIRES_PROVIDER_MATCH)
@@ -202,6 +210,15 @@ class PaymentReconciliationService
                     'exception_type' => ReconciliationItem::EXCEPTION_MISSING_PROVIDER_RECORD,
                     'notes' => 'No provider statement record matched this OpFin payment before run completion.',
                 ]);
+
+            if ($missingTransactionIds->isNotEmpty()) {
+                MobileMoneyTransaction::query()
+                    ->whereIn('id', $missingTransactionIds)
+                    ->update([
+                        'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+                        'provider_reconciled_at' => null,
+                    ]);
+            }
 
             $this->refreshSummary($run);
             $run->update([
@@ -344,6 +361,7 @@ class PaymentReconciliationService
                 );
                 $systemTransaction->update([
                     'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+                    'provider_reconciled_at' => null,
                 ]);
             }
         }
