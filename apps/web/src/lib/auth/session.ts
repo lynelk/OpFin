@@ -7,7 +7,8 @@ const roleNames: Record<UserRole, string> = {
   platform_admin: "Platform Admin",
   operations: "Operations User",
   support: "Support User",
-  employer_admin: "Employer Admin"
+  employer_admin: "Employer Admin",
+  programme_partner: "Programme Partner"
 };
 
 export async function getCurrentSession(): Promise<Session> {
@@ -29,5 +30,7 @@ export async function getAccessToken(): Promise<string | undefined> {
 export function canSeeGroup(role: UserRole, group: NavGroup): boolean {
   if (group === "admin") return ["platform_admin", "operations", "support"].includes(role);
   if (group === "employer") return role === "employer_admin" || role === "platform_admin";
+  if (group === "partner") return role === "programme_partner" || role === "platform_admin";
+  if (group === "customer") return role === "customer" || role === "platform_admin";
   return true;
 }
