@@ -25,6 +25,7 @@ class CreditOffer extends Model
         'credit_decision_id',
         'user_id',
         'institution_id',
+        'funding_pool_id',
         'created_by',
         'offer_reference',
         'version',
@@ -90,6 +91,11 @@ class CreditOffer extends Model
     public function institution()
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    public function fundingPool()
+    {
+        return $this->belongsTo(CapitalMandate::class, 'funding_pool_id');
     }
 
     public function mobileMoneyTransactions()
