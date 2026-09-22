@@ -716,7 +716,7 @@ class ProgrammeDeliveryService
         if ($invitation->invited_phone && trim((string) $invitation->invited_phone) !== $phone) {
             throw new InvalidArgumentException('The activation phone must match the number on the programme invitation.');
         }
-        if ($invitation->invited_email && $email && strcasecmp(trim((string) $invitation->invited_email), $email) !== 0) {
+        if ($invitation->invited_email && (! $email || strcasecmp(trim((string) $invitation->invited_email), $email) !== 0)) {
             throw new InvalidArgumentException('The activation email must match the address on the programme invitation.');
         }
 
@@ -738,8 +738,11 @@ class ProgrammeDeliveryService
         if ($email && User::withoutGlobalScopes()->where('email', $email)->exists()) {
             throw new InvalidArgumentException('A dedicated programme-partner account must use an email address not already attached to another OpFin account.');
         }
+        if ($this->weakPin((string) $data['pin'])) {
+            throw new InvalidArgumentException('Choose a less predictable 6-digit PIN.');
+        }
 
-        return DB::transaction(function () use ($data, $invitation, $phone, $email) {
+        return DB::transaction(function () use ($data, $invitation, $phone, $email, $otpRecord) {
             $user = User::withoutGlobalScopes()->create([
                 'name' => trim($data['name']),
                 'first_name' => trim($data['first_name'] ?? $data['name']),
@@ -771,6 +774,7 @@ class ProgrammeDeliveryService
                 'status' => 'accepted',
                 'accepted_at' => now(),
                 'accepted_user_id' => $user->id,
+                'delivery_token_encrypted' => null,
                 'updated_at' => now(),
             ]);
 
@@ -1343,6 +1347,12 @@ class ProgrammeDeliveryService
                 ]],
             ],
         ];
+    }
+
+    private function weakPin(string $pin): bool
+    {
+        return preg_match('/^(\\d)\\1{5}$/', $pin) === 1
+            || in_array($pin, ['012345', '123456', '234567', '345678', '456789', '987654', '876543', '765432', '654321', '543210'], true);
     }
 
     private function json(?string $value): array
