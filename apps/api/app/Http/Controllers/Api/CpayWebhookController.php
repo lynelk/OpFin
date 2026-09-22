@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\EarlySettlementService;
 use App\Services\MobileMoney\MobileMoneyService;
 use App\Services\ProductionCreditOfferService;
 use App\Services\ProductionRepaymentService;
@@ -21,6 +22,7 @@ class CpayWebhookController extends Controller
         Request $request,
         MobileMoneyService $mobileMoney,
         ProductionCreditOfferService $creditOffers,
+        EarlySettlementService $earlySettlements,
         ProductionRepaymentService $repayments,
         SavingsService $savings,
         ProtectionService $protection,
@@ -45,6 +47,7 @@ class CpayWebhookController extends Controller
                 rawBody: $rawBody,
             );
             $disbursedLoan = $creditOffers->syncDisbursementState($transaction);
+            $settledLoan = $earlySettlements->sync($transaction);
             $repaidLoan = $repayments->syncCollectionState($transaction);
             $savingsMovement = $savings->syncMobileMoney($transaction);
             $premiumPayment = $protection->syncMobileMoney($transaction);
@@ -59,7 +62,7 @@ class CpayWebhookController extends Controller
         return ApiResponse::success('CPay callback accepted.', [
             'reference' => $transaction->internal_reference,
             'status' => $transaction->status,
-            'loan_id' => $disbursedLoan?->id ?? $repaidLoan?->id,
+            'loan_id' => $disbursedLoan?->id ?? $settledLoan?->id ?? $repaidLoan?->id,
             'savings_movement_id' => $savingsMovement?->id,
             'protection_premium_payment_id' => $premiumPayment?->id,
             'direction' => $transaction->direction,
