@@ -1,6 +1,6 @@
 # Current API endpoints
 
-Updated against the registered canonical platform routes on **21 September 2026**. Routes remain subject to the middleware and role gates in source.
+Updated against the registered canonical platform routes on **22 September 2026**. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:
 
@@ -161,6 +161,8 @@ A successful acceptance records a separate versioned `credit_information_reporti
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | POST | `/api/loans/{loan_id}/repay` | Initiate full/partial collection from verified repayment wallet |
+| POST | `/api/loans/{loan}/early-settlement-quote` | Freeze a governed early-settlement quote using earned interest, eligible fees/rebates and current default-interest state |
+| POST | `/api/early-settlement-quotes/{quote}/settle` | Collect exactly the frozen settlement amount and close the loan only after provider finality |
 
 Required idempotency key is accepted in the `Idempotency-Key` header or body.
 
@@ -224,8 +226,10 @@ Admin/operations:
 | GET | `/api/admin/umra/credit-reporting` | Credit-information exchange register/status |
 | POST | `/api/admin/umra/credit-reporting/submit` | Submit eligible pending outbound reports |
 | POST | `/api/admin/umra/loans/{loan}/evaluate-npl` | Evaluate/update UMRA NPL controls |
-| POST | `/api/admin/umra/loans/{loan}/default-interest` | Accrue default interest within configured cap |
-| PATCH | `/api/admin/umra/loans/{loan}/npl-enforcement` | Explicitly enable/disable per-loan cap enforcement while retaining tracking |
+| POST | `/api/admin/umra/loans/{loan}/default-interest` | Recalculate default interest from governed rate, outstanding principal and elapsed time; optional `as_of_date` only |
+| PATCH | `/api/admin/umra/loans/{loan}/npl-enforcement` | Change enforcement state; disabling requires an approved maker-checker financial-control override |
+| POST | `/api/admin/financial-controls/loans/{loan}/overrides` | Request a time-bounded financial-control override with evidence |
+| POST | `/api/admin/financial-controls/overrides/{override}/approve` | Independent checker approval; self-approval is prohibited |
 | GET | `/api/admin/umra/term-changes` | Credit-term governance register |
 | POST | `/api/admin/umra/product-terms/{term}/changes` | Submit governed term change |
 | POST | `/api/admin/umra/term-changes/{change}/approve` | Maker-checker approval; interest change requires prior UMRA evidence |
@@ -270,7 +274,7 @@ These endpoints are Space-scoped. Cross-Space access is denied unless an active 
 | --- | --- | --- |
 | GET | `/api/marketplace/products` | Active eligible-market partner catalogue surface |
 | GET | `/api/plans` | Active OpFin plans |
-| POST | `/api/financial-spaces/{space}/subscription` | Activate plan entitlements for an authorised Space |
+| POST | `/api/financial-spaces/{space}/subscription` | Create/continue a subscription contract and, for paid plans, collect a governed invoice before activating entitlements |
 
 Permission, entitlement and product/regulatory eligibility are separate gates. Commercial economics must not determine financial-health advice.
 
@@ -280,10 +284,10 @@ Operations/admin routes:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| POST | `/api/admin/revenue-events` | Record idempotent subscription, commission, revenue-share, transaction, platform/API or servicing revenue |
-| POST | `/api/admin/revenue-events/{event}/reconcile` | Attach CPay and reconciliation references and settle/reconcile the event |
+| POST | `/api/admin/revenue-events` | Accrue a uniquely identified commercial revenue occurrence; OpFin/partner/tax economics are calculated by governed policy and posted to the canonical ledger |
+| POST | `/api/admin/revenue-events/{event}/reconcile` | Settle an accrued revenue receivable against an actual successful money-movement record; free-form settlement assertions are not accepted |
 
-CPay remains the approved execution/reconciliation boundary where money movement is required. Revenue events attribute commercial economics; they are not a replacement financial ledger.
+Paid subscriptions follow contract → invoice → tax → CPay finality → revenue ledger → entitlement activation. Provider-statement reconciliation remains a separate finality state. Revenue, partner payable and tax payable are canonical ledger postings, not editable reporting labels.
 
 ## 21. Inclusive finance, programme delivery and alternative credit support
 
