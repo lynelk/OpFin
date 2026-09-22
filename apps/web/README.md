@@ -90,3 +90,23 @@ The **Inclusion & programmes** operations surface reports configured inclusive-f
 Stolets remains a separate product. This dashboard does not make Stolets data part of OpFin; any future cross-product signal must arrive through an explicit, consented and governed provider contract.
 
 The Inclusion & programmes surface also provides programme creation with explicit participation rules for age cohort, gender, disability inclusion, refugee/displacement status, geography category, employment category, first-time formal borrower status and KYC state. These rules govern programme participation only and are not written into the credit-scoring model.
+
+## Impact framework and programme-partner portal
+
+Platform operators now have an **Impact framework** workspace under Inclusion & programmes. It supports:
+
+- versioned programme theories of change;
+- reusable impact indicator definitions;
+- outcome domains, units, methodologies, sources and verification requirements;
+- programme targets/reporting frequencies;
+- privacy-safe outcome summaries;
+- explicit programme-partner access grants.
+
+A dedicated `programme_partner` role has a separate **Programme impact** navigation group. Partner accounts:
+
+- see only programmes explicitly granted to them;
+- receive aggregate delivery and outcome evidence;
+- never receive individual participant records from the partner surface;
+- cannot alter credit policy through the impact workspace.
+
+The operator must configure a programme's partner before granting access, and the target account must already be a dedicated programme-partner identity. Do not repurpose an ordinary customer's account as a partner login.
