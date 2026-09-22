@@ -263,6 +263,18 @@ class ProgrammeCompletionController extends Controller
         );
     }
 
+    public function partnerUsers(int $programme): JsonResponse
+    {
+        try {
+            return ApiResponse::success(
+                'Programme partner users loaded.',
+                $this->delivery->partnerUsers($programme),
+            );
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), 422);
+        }
+    }
+
     public function invitePartner(Request $request): JsonResponse
     {
         $validated = $request->validate([
