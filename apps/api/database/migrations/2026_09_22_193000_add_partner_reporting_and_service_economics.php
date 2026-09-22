@@ -61,6 +61,15 @@ return new class extends Migration
             $table->json('economics_config')->nullable()->after('disclosure_payload');
         });
 
+        Schema::table('credit_offers', function (Blueprint $table) {
+            $table->foreignId('funding_pool_id')
+                ->nullable()
+                ->after('institution_id')
+                ->constrained('capital_mandates')
+                ->nullOnDelete();
+            $table->index(['funding_pool_id', 'status'], 'credit_offers_funding_pool_status_idx');
+        });
+
         Schema::table('loans', function (Blueprint $table) {
             $table->foreignId('funding_pool_id')
                 ->nullable()
@@ -84,6 +93,12 @@ return new class extends Migration
         Schema::table('loans', function (Blueprint $table) {
             $table->dropForeign(['funding_pool_id']);
             $table->dropIndex('loans_funding_pool_status_idx');
+            $table->dropColumn('funding_pool_id');
+        });
+
+        Schema::table('credit_offers', function (Blueprint $table) {
+            $table->dropForeign(['funding_pool_id']);
+            $table->dropIndex('credit_offers_funding_pool_status_idx');
             $table->dropColumn('funding_pool_id');
         });
 
