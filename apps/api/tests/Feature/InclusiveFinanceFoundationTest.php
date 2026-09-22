@@ -446,7 +446,6 @@ class InclusiveFinanceFoundationTest extends TestCase
         ]);
     }
 
-
     public function test_provider_signal_cannot_reference_another_customers_consent(): void
     {
         $customer = User::factory()->create();
@@ -478,7 +477,6 @@ class InclusiveFinanceFoundationTest extends TestCase
             'provider_reference' => 'PARTNER-CONSENT-MISMATCH-001',
         ]);
     }
-
 
     public function test_programme_exit_is_idempotent_and_preserves_the_historical_reporting_window(): void
     {
@@ -533,5 +531,4 @@ class InclusiveFinanceFoundationTest extends TestCase
             ->assertJsonMissingPath('data.participant_capability_events.action_taken')
             ->assertJsonPath('data.impact_events.programme_exited', 1);
     }
-
 }
