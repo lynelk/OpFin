@@ -31,5 +31,5 @@ export const navigationItems: NavItem[] = [
   { href: "/admin/audit-trail", label: "Audit trail", group: "admin", roles: ["platform_admin", "operations", "support"] },
 
   { href: "/employer", label: "OpFin Work", group: "employer", roles: ["platform_admin", "employer_admin"] },
-  { href: "/partner/impact", label: "Programme impact", group: "partner", roles: ["platform_admin", "programme_partner"] }
+  { href: "/partner/impact", label: "Programme impact", group: "partner", roles: ["programme_partner"] }
 ];
