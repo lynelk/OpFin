@@ -85,13 +85,14 @@ USSD uses the same borrower state but cannot capture identity photos. Confirm ca
 
 ## Provider/source outage
 
-For CRB, MNO, third-party scoring or identity provider outage:
+For Cito, CRB, MNO, third-party scoring or identity-provider outage:
 
 - retain source status as unavailable/error/pending;
 - do not substitute arbitrary scores/results;
 - keep customer wording simple and recoverable;
 - refer decisions where mandatory inputs are missing;
-- record outage timestamps/provider references for reconciliation and incident review.
+- record outage timestamps/provider references for reconciliation and incident review;
+- when Cito is primary, never fire the direct-provider backup after an ambiguous request until the original request is reconciled; switch `OPFIN_EXTERNAL_SERVICE_ROUTE=direct` only as an explicit operational action after confirming duplicate-enquiry risk.
 
 ## Accessibility support
 
@@ -182,6 +183,8 @@ The system generates evidence; the responsible regulated officer remains account
 
 When investigating any non-credit financial record, identify the Financial Space first, then actor membership/role, capability, entitlement and eligibility. Never infer cross-Space authority from the fact that the same person participates in both Spaces. Employer/group administrators do not receive Personal Space visibility by relationship alone.
 
-For Partner Catalogue and subscription/revenue operations, keep recommendation/financial-health logic upstream of commercial terms. Revenue Events are idempotent commercial attribution records and must reconcile to the applicable CPay/provider evidence; they are not a substitute ledger.
+For Partner Catalogue and subscription/revenue operations, keep recommendation/financial-health logic upstream of commercial terms. Revenue Events are idempotent commercial attribution records and must reconcile to applicable provider evidence; they are not a substitute ledger.
+
+Service Economics Events use one idempotent service/request reference and may be enriched as actual provider cost, customer/partner/platform fees, tax and settlement evidence become available. A known zero is `0`; unknown is `null`. Use the admin partner-reporting endpoints to investigate service profitability, capital/funding provenance, insurance, savings/investments and data-coverage controls.
 
 For institutional onboarding, treat profile → KYB → regulatory evidence → products → integration → certification as progressive stages. Technical capability activation does not replace regulatory/provider approval.
