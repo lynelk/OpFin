@@ -161,6 +161,9 @@ class ProductionRepaymentService
         if (! $transaction || ! $loan) {
             return null;
         }
+        if (($mobileMoney->metadata['purpose'] ?? null) === 'early_settlement') {
+            return $loan;
+        }
 
         $transaction->update([
             'external_reference' => $mobileMoney->provider_reference,
