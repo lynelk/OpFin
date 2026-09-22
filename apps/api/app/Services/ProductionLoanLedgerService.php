@@ -205,7 +205,7 @@ class ProductionLoanLedgerService
 
         $amountMinor = $this->toMinorUnits($transaction->amount);
         $provider = $this->paymentProvider($transaction);
-        $currency = 'UGX';
+        $currency = $this->transactionCurrency($transaction);
         $posted = $this->ledgerService->post(
             $reference,
             'loan.disbursement',
@@ -267,7 +267,7 @@ class ProductionLoanLedgerService
         }
 
         $provider = $this->paymentProvider($transaction);
-        $currency = 'UGX';
+        $currency = $this->transactionCurrency($transaction);
         $entries = [[
             'account_id' => $this->providerCashAccount($provider, 'collection', $currency)->id,
             'direction' => LedgerEntry::DIRECTION_DEBIT,
@@ -438,14 +438,35 @@ class ProductionLoanLedgerService
         return ucfirst(strtolower((string) ($provider ?: $transaction->network ?: 'unknown')));
     }
 
+    private function transactionCurrency(Transaction $transaction): string
+    {
+        $paymentCurrency = MobileMoneyTransaction::query()
+            ->where('transaction_id', $transaction->id)
+            ->latest('id')
+            ->value('currency');
+        if ($paymentCurrency) {
+            return strtoupper((string) $paymentCurrency);
+        }
+
+        $loan = $transaction->loan;
+        if ($loan?->credit_offer_id) {
+            $offerCurrency = CreditOffer::query()->whereKey($loan->credit_offer_id)->value('currency');
+            if ($offerCurrency) {
+                return strtoupper((string) $offerCurrency);
+            }
+        }
+
+        return strtoupper((string) config('services.mobile_money.currency', 'UGX'));
+    }
+
     private function account(string $code, string $name, string $type, string $currency): LedgerAccount
     {
         $currency = strtoupper($currency);
-        $existing = LedgerAccount::query()->where('code', $code)->first();
+        $existing = LedgerAccount::query()
+            ->where('code', $code)
+            ->where('currency', $currency)
+            ->first();
         if ($existing) {
-            if (strtoupper((string) $existing->currency) !== $currency) {
-                throw new \InvalidArgumentException("Ledger account {$code} is bound to {$existing->currency}; cross-currency reuse is not allowed.");
-            }
             if (! $existing->is_active) {
                 throw new \InvalidArgumentException("Ledger account {$code} is inactive.");
             }
