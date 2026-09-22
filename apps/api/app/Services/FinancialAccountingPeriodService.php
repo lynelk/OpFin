@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\FinancialAccountingPeriod;
 use App\Models\User;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -82,8 +83,8 @@ class FinancialAccountingPeriodService
                 throw new InvalidArgumentException('Accounting-period close is blocked while critical or high financial-integrity alerts remain open.');
             }
 
-            $periodEnd = now()->parse($endDate)->endOfDay();
-            if (now()->parse($integrityRun->completed_at)->lt($periodEnd)) {
+            $periodEnd = Carbon::parse($endDate)->endOfDay();
+            if (Carbon::parse($integrityRun->completed_at)->lt($periodEnd)) {
                 throw new InvalidArgumentException('Accounting-period close requires integrity evidence generated after the end of the period.');
             }
 
