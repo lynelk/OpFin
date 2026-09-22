@@ -152,16 +152,20 @@ class AuthController extends Controller
             ]);
 
             $otpRecord?->delete();
-            $this->commercialInsights->recordAttribution($user, [
-                'acquisition_channel' => $request->input('acquisition_channel', 'other'),
-                'source' => $request->input('acquisition_source', 'unattributed_registration'),
-                'campaign' => $request->input('acquisition_campaign'),
-                'acquired_at' => now(),
-                'metadata' => [
-                    'capture' => 'registration',
-                    'explicit_channel' => $request->filled('acquisition_channel'),
-                ],
-            ]);
+            try {
+                $this->commercialInsights->recordAttribution($user, [
+                    'acquisition_channel' => $request->input('acquisition_channel', 'other'),
+                    'source' => $request->input('acquisition_source', 'unattributed_registration'),
+                    'campaign' => $request->input('acquisition_campaign'),
+                    'acquired_at' => now(),
+                    'metadata' => [
+                        'capture' => 'registration',
+                        'explicit_channel' => $request->filled('acquisition_channel'),
+                    ],
+                ]);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
 
             $this->profiles->ensurePrimaryPhone($user);
             $this->profiles->refresh($user, false);
