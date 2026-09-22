@@ -306,10 +306,28 @@ class MobileMoneyService
                 ->firstOrFail();
 
             $this->assertProviderTransition($locked, $response->status);
+
+            $nextProviderReference = $response->providerReference ?? $locked->provider_reference;
+            $providerEvidenceChanged = $locked->status !== $response->status
+                || (string) ($locked->provider_reference ?? '') !== (string) ($nextProviderReference ?? '');
+
+            $nextReconciliationStatus = $locked->reconciliation_status;
+            $providerReconciledAt = $locked->provider_reconciled_at;
+            if ($providerEvidenceChanged) {
+                $nextReconciliationStatus = MobileMoneyTransaction::RECONCILIATION_PENDING;
+                $providerReconciledAt = null;
+            } elseif (! in_array($locked->reconciliation_status, [
+                MobileMoneyTransaction::RECONCILIATION_MATCHED,
+                MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+            ], true)) {
+                $nextReconciliationStatus = $response->reconciliationStatus;
+            }
+
             $locked->update(array_merge([
-                'provider_reference' => $response->providerReference ?? $locked->provider_reference,
+                'provider_reference' => $nextProviderReference,
                 'status' => $response->status,
-                'reconciliation_status' => $response->reconciliationStatus,
+                'reconciliation_status' => $nextReconciliationStatus,
+                'provider_reconciled_at' => $providerReconciledAt,
                 'failure_reason' => $response->successful ? $locked->failure_reason : $response->message,
                 'provider_payload' => $response->raw,
             ], $extra));
