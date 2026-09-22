@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CustomerCreditProfileController;
 use App\Http\Controllers\Api\CustomerPhoneController;
 use App\Http\Controllers\Api\CustomerSupportController;
 use App\Http\Controllers\Api\CustomerWalletController;
+use App\Http\Controllers\Api\EarlySettlementController;
 use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\FinancialSpaceController;
@@ -180,6 +181,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/loan-applications/{id}/status', [LoanApplicationController::class, 'updateStatus'])->middleware('audit.sensitive:loan_application.status_updated');
     Route::patch('/transactions/{id}/approve', [TransactionController::class, 'approve'])->middleware('audit.sensitive:transaction.approved');
     Route::post('/loans/{loan_id}/repay', [LoanRepaymentController::class, 'repay']);
+    Route::post('/loans/{loan}/early-settlement-quote', [EarlySettlementController::class, 'quote']);
+    Route::post('/early-settlement-quotes/{quote}/settle', [EarlySettlementController::class, 'settle']);
     Route::get('/products', [LoanApplicationController::class, 'getProducts']);
     Route::get('/institutions', [LoanApplicationController::class, 'getInstitutions']);
     Route::get('/product-terms/{product}', [LoanApplicationController::class, 'getProductTerms']);
