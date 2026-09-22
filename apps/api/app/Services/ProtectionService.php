@@ -225,6 +225,50 @@ class ProtectionService
             if ($payment->policy->status !== ProtectionPolicy::STATUS_ACTIVE) {
                 $payment->policy->update(['status' => ProtectionPolicy::STATUS_PREMIUM_DUE]);
             }
+            $mobileMoney->update(['accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED]);
+
+            return $payment->fresh(['policy.product', 'mobileMoneyTransaction']);
+        }
+
+        if ($mobileMoney->status === MobileMoneyTransaction::STATUS_REVERSED) {
+            $collectionPosted = \App\Models\LedgerTransaction::query()
+                ->where('reference', 'protection.premium_collection:'.$payment->payment_reference)->exists();
+            $insurerSettled = \App\Models\LedgerTransaction::query()
+                ->where('reference', 'protection.premium_settlement:'.$payment->payment_reference)->exists();
+
+            if ($collectionPosted) {
+                $this->ledger->reverseProtectionPremiumCollection(
+                    $payment->fresh(['policy.product', 'mobileMoneyTransaction']),
+                    $mobileMoney,
+                    $insurerSettled,
+                );
+                $payment->update([
+                    'status' => $insurerSettled
+                        ? ProtectionPremiumPayment::STATUS_REVERSAL_EXCEPTION
+                        : ProtectionPremiumPayment::STATUS_REVERSED,
+                    'metadata' => array_merge($payment->metadata ?? [], [
+                        'provider_reversed_at' => now()->toIso8601String(),
+                        'insurer_recovery_required' => $insurerSettled,
+                    ]),
+                ]);
+                if ($payment->policy->status !== ProtectionPolicy::STATUS_ACTIVE) {
+                    $payment->policy->update(['status' => ProtectionPolicy::STATUS_PREMIUM_DUE]);
+                }
+                $mobileMoney->update([
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                    'accounting_posted_at' => now(),
+                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                ]);
+            } else {
+                $payment->update(['status' => ProtectionPremiumPayment::STATUS_REVERSED]);
+                $mobileMoney->update(['accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED]);
+            }
+
+            $this->auditLogger->record('protection.premium.money_movement_reversed', null, $payment, [
+                'mobile_money_transaction_id' => $mobileMoney->id,
+                'provider_reference' => $mobileMoney->provider_reference,
+                'insurer_already_settled' => $insurerSettled,
+            ]);
 
             return $payment->fresh(['policy.product', 'mobileMoneyTransaction']);
         }
@@ -240,6 +284,12 @@ class ProtectionService
             ]);
             $this->ledger->postProtectionPremiumCollection($payment->fresh(['policy.product', 'mobileMoneyTransaction']), $mobileMoney);
         }
+
+        $mobileMoney->update([
+            'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+            'accounting_posted_at' => now(),
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+        ]);
 
         $this->auditLogger->record('protection.premium.money_movement_synchronized', null, $payment, [
             'mobile_money_transaction_id' => $mobileMoney->id,
