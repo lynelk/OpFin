@@ -41,3 +41,80 @@ Record tester, build/commit, environment, date, evidence and result for every ca
 
 ## Release decision
 Do not sign off with unresolved Critical/High defects in identity, permissions, financial integrity, privacy, money movement, reconciliation or required mobile completeness. Record medium/low exceptions with owner and accepted disposition.
+
+## UAT suite: Impact & Inclusive Finance
+
+### IMP-01 Financial-health separation from credit
+
+**Objective:** Verify financial-health check-ins cannot become underwriting inputs.
+
+**Procedure:**
+
+1. Complete a financial-health check-in as a customer.
+2. Confirm the API response returns `is_credit_score=false` and `credit_decision_eligible=false`.
+3. Change check-in inputs so the displayed health status changes.
+4. Verify no credit score, limit, pricing or approval state changes solely because of the check-in.
+
+**Expected result:** The financial-health status changes transparently while credit decisioning remains unaffected.
+
+### IMP-02 Programme measurement consent
+
+**Objective:** Verify programme-linked outcome capture requires explicit consent and active enrolment.
+
+**Procedure:**
+
+1. With programme measurement consent off, submit a programme-linked health or empowerment observation.
+2. Confirm the API rejects it.
+3. Turn consent on but remain unenrolled.
+4. Confirm it is still rejected.
+5. Enrol and repeat.
+
+**Expected result:** Only the consented, actively enrolled state accepts the programme-linked observation.
+
+### IMP-03 Small-cohort privacy
+
+**Objective:** Verify sensitive programme outcome cohorts below five cannot be inferred from partner reporting.
+
+**Procedure:**
+
+1. Assign an indicator to a programme.
+2. Record participant observations for one to four distinct participants.
+3. Open the partner impact view.
+
+**Expected result:** Participant values, participant count, participant observation count and participant-only latest timestamp are suppressed. Coverage cards display **Suppressed** where the underlying distinct-person count is one to four.
+
+### IMP-04 Programme-partner isolation
+
+**Objective:** Verify a programme partner cannot view unassigned programmes.
+
+**Procedure:**
+
+1. Sign in with a dedicated programme-partner account with no grants.
+2. Confirm the programme register is empty.
+3. Attempt to open a programme impact endpoint directly.
+4. Grant access to exactly one configured partner programme.
+5. Confirm only that programme becomes available.
+
+**Expected result:** Access remains programme-scoped and no individual customer records are returned.
+
+### IMP-05 Theory of change and indicator governance
+
+**Objective:** Verify programme strategy can be configured without altering OpFin core decisioning.
+
+**Procedure:**
+
+1. Configure a theory of change.
+2. Create and assign an indicator.
+3. Confirm the indicator is returned as `credit_decision_eligible=false`.
+4. Record participant and institutional observations.
+5. Confirm the outcome view distinguishes participant and institutional evidence.
+
+**Expected result:** Programme strategy and MEL can be configured independently of credit policy.
+
+### IMP-06 Causality language
+
+**Objective:** Prevent unsupported impact claims.
+
+**Procedure:** Review admin and partner outcome pages.
+
+**Expected result:** The interface states that measured programme observations do not prove programme causality unless the evaluation design supports causal attribution.
