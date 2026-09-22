@@ -592,11 +592,14 @@ class InclusiveImpactService
 
             $summary = [
                 'indicator' => $indicator,
-                'participant_count' => $participantCount,
-                'observation_count' => $rows->count(),
+                'participant_count' => $suppressed ? null : $participantCount,
+                'participant_observation_count' => $suppressed ? null : $participantRows->count(),
                 'institutional_observation_count' => $institutionalRows->count(),
+                'observation_count' => $suppressed ? $institutionalRows->count() : $rows->count(),
                 'suppressed' => $suppressed,
-                'latest_observed_at' => $rows->max('observed_at'),
+                'latest_observed_at' => $suppressed
+                    ? $institutionalRows->max('observed_at')
+                    : $rows->max('observed_at'),
             ];
 
             if (! $suppressed && $participantRows->isNotEmpty()) {
@@ -640,20 +643,32 @@ class InclusiveImpactService
             $summaries[] = $summary;
         }
 
+        $coverageCounts = [
+            'financial_health_people' => $this->distinctProgrammePeople('financial_health_snapshots', $programmeId),
+            'livelihood_people' => $this->distinctProgrammePeople('livelihood_outcome_snapshots', $programmeId),
+            'empowerment_people' => $this->distinctProgrammePeople('empowerment_outcome_snapshots', $programmeId),
+            'community_finance_people' => $this->distinctProgrammePeople('community_finance_evidence', $programmeId),
+        ];
+
+        $snapshotCoverage = [];
+        $snapshotCoverageSuppressed = [];
+        foreach ($coverageCounts as $key => $count) {
+            $suppressed = $count > 0 && $count < self::MINIMUM_COHORT_SIZE;
+            $snapshotCoverage[$key] = $suppressed ? null : $count;
+            $snapshotCoverageSuppressed[$key] = $suppressed;
+        }
+
         return [
             'programme' => $framework['programme'],
             'theory_of_change' => $framework['theory_of_change'],
             'indicator_summaries' => $summaries,
-            'snapshot_coverage' => [
-                'financial_health_people' => $this->distinctProgrammePeople('financial_health_snapshots', $programmeId),
-                'livelihood_people' => $this->distinctProgrammePeople('livelihood_outcome_snapshots', $programmeId),
-                'empowerment_people' => $this->distinctProgrammePeople('empowerment_outcome_snapshots', $programmeId),
-                'community_finance_people' => $this->distinctProgrammePeople('community_finance_evidence', $programmeId),
-            ],
+            'snapshot_coverage' => $snapshotCoverage,
+            'snapshot_coverage_suppressed' => $snapshotCoverageSuppressed,
             'privacy' => [
                 'minimum_cohort_size' => self::MINIMUM_COHORT_SIZE,
                 'individual_records_exposed' => false,
                 'small_participant_indicator_cohorts_suppressed' => true,
+                'small_snapshot_coverage_counts_suppressed' => true,
             ],
             'causality_notice' => 'Programme observations describe measured change and coverage. They must not be described as programme-caused unless the evaluation design supports causal attribution.',
         ];
