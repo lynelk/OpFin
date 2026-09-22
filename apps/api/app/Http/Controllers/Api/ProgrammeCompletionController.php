@@ -305,7 +305,9 @@ class ProgrammeCompletionController extends Controller
             'last_name' => ['nullable', 'string', 'max:120'],
             'phone' => ['required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:255'],
+            'verification_token' => ['required', 'string', 'size:64'],
             'pin' => ['required', 'digits:6', 'confirmed'],
+            'terms_accepted' => ['required', 'accepted'],
             'preferred_language' => ['nullable', 'string', 'max:16'],
         ]);
 
