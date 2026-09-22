@@ -23,6 +23,7 @@ class ProductionCreditOfferService
         private readonly AuditLogger $auditLogger,
         private readonly CreditReferenceReportingService $creditReporting,
         private readonly TransactionReceiptService $receipts,
+        private readonly CreditCashFlowService $cashFlows,
     ) {}
 
     public function createOffer(LoanApplication $application, User $actor, array $pricing): CreditOffer
@@ -75,6 +76,15 @@ class ProductionCreditOfferService
         $netDisbursementMinor = $feeTreatment === 'deducted' ? $principalMinor - $feesMinor : $principalMinor;
         $repayableFeesMinor = $feeTreatment === 'financed' ? $feesMinor : 0;
         $totalRepaymentMinor = $principalMinor + $interestMinor + $repayableFeesMinor;
+        $repaymentSchedule = $this->cashFlows->repaymentSchedule(
+            $principalMinor,
+            $interestMinor,
+            $repayableFeesMinor,
+            $durationDays,
+            (string) $term->repayment_frequency,
+        );
+        $effectiveAprPercent = $this->cashFlows->equivalentAnnualPercentageRate($netDisbursementMinor, $repaymentSchedule);
+        $firstPaymentDueDays = $repaymentSchedule[0]['due_offset_days'];
         $totalCostOfCreditMinor = $interestMinor + $feesMinor;
         $defaultInterestRate = max(0, (float) ($term->default_interest_rate ?? 0));
         $defaultInterestCapMinor = intdiv($interestMinor, 2);
@@ -97,6 +107,7 @@ class ProductionCreditOfferService
             $accessFeeMinor, $disbursementFeeMinor, $netDisbursementMinor, $totalRepaymentMinor,
             $durationDays, $ratePercent, $termRatePercent, $feeTreatment, $expiresInMinutes,
             $totalCostOfCreditMinor, $defaultInterestRate, $defaultInterestCapMinor, $complaintsProcedure, $regulatedIdentity,
+            $effectiveAprPercent, $firstPaymentDueDays,
         ) {
             CreditOffer::query()->where('loan_application_id', $application->id)
                 ->where('status', CreditOffer::STATUS_OFFERED)->where('expires_at', '<=', now())
@@ -135,6 +146,8 @@ class ProductionCreditOfferService
                 'policy_version' => (string) $decision->policy_version,
                 'pricing_snapshot' => [
                     'algorithm_version' => 'flat-v1',
+                    'schedule_algorithm_version' => CreditCashFlowService::SCHEDULE_ALGORITHM_VERSION,
+                    'apr_algorithm_version' => CreditCashFlowService::APR_ALGORITHM_VERSION,
                     'product_term_id' => $term->id,
                     'configured_rate_percent' => $ratePercent,
                     'configured_interest_cycle' => (string) $term->interest_cycle,
@@ -171,7 +184,10 @@ class ProductionCreditOfferService
                         'treatment' => $feeTreatment,
                     ],
                     'total_cost_of_credit_minor' => $totalCostOfCreditMinor,
-                    'first_payment_due_days_after_disbursement' => $this->frequencyDays((string) $term->repayment_frequency),
+                    'equivalent_apr_percent' => round($effectiveAprPercent, 6),
+                    'apr_calculation_method' => CreditCashFlowService::APR_ALGORITHM_VERSION,
+                    'schedule_calculation_method' => CreditCashFlowService::SCHEDULE_ALGORITHM_VERSION,
+                    'first_payment_due_days_after_disbursement' => $firstPaymentDueDays,
                     'final_payment_due_days_after_disbursement' => $durationDays,
                     'default_and_penalty_terms' => [
                         'default_interest_rate_percent' => $defaultInterestRate,
@@ -313,7 +329,15 @@ class ProductionCreditOfferService
 
             $application = LoanApplication::query()->findOrFail($offer->loan_application_id);
             $disbursedAt = now();
-            $firstDueDate = $disbursedAt->copy()->addDays($this->frequencyDays($offer->repayment_frequency));
+            $repayableFeesMinor = $offer->fee_treatment === 'financed' ? (int) $offer->fees_minor : 0;
+            $contractualSchedule = $this->cashFlows->repaymentSchedule(
+                (int) $offer->principal_amount_minor,
+                (int) $offer->interest_amount_minor,
+                $repayableFeesMinor,
+                (int) $offer->duration_days,
+                (string) $offer->repayment_frequency,
+            );
+            $firstDueDate = $disbursedAt->copy()->addDays($contractualSchedule[0]['due_offset_days']);
             $loan = Loan::withoutEvents(function () use ($application, $offer, $firstDueDate, $disbursedAt) {
                 $loan = new Loan;
                 $loan->forceFill([
@@ -431,41 +455,32 @@ class ProductionCreditOfferService
 
     private function createExactSchedule(Loan $loan, CreditOffer $offer, $anchor): void
     {
-        $frequencyDays = $this->frequencyDays($offer->repayment_frequency);
-        $installments = max(1, (int) ceil($offer->duration_days / $frequencyDays));
-        $repayableFeesMinor = $offer->fee_treatment === 'financed' ? $offer->fees_minor : 0;
-        for ($installment = 1; $installment <= $installments; $installment++) {
-            $principal = $this->allocate($offer->principal_amount_minor, $installments, $installment);
-            $interest = $this->allocate($offer->interest_amount_minor, $installments, $installment);
-            $fees = $this->allocate($repayableFeesMinor, $installments, $installment);
-            $dueOffsetDays = min($offer->duration_days, $installment * $frequencyDays);
-            $total = $principal + $interest + $fees;
+        $repayableFeesMinor = $offer->fee_treatment === 'financed' ? (int) $offer->fees_minor : 0;
+        $schedule = $this->cashFlows->repaymentSchedule(
+            (int) $offer->principal_amount_minor,
+            (int) $offer->interest_amount_minor,
+            $repayableFeesMinor,
+            (int) $offer->duration_days,
+            (string) $offer->repayment_frequency,
+        );
+
+        foreach ($schedule as $item) {
             CreditRepaymentScheduleItem::create([
                 'loan_id' => $loan->id,
                 'credit_offer_id' => $offer->id,
-                'installment_number' => $installment,
-                'due_date' => $anchor->copy()->addDays($dueOffsetDays)->toDateString(),
-                'principal_minor' => $principal,
-                'interest_minor' => $interest,
-                'fees_minor' => $fees,
-                'total_due_minor' => $total,
-                'principal_outstanding_minor' => $principal,
-                'interest_outstanding_minor' => $interest,
-                'fees_outstanding_minor' => $fees,
-                'total_outstanding_minor' => $total,
+                'installment_number' => $item['installment_number'],
+                'due_date' => $anchor->copy()->addDays($item['due_offset_days'])->toDateString(),
+                'principal_minor' => $item['principal_minor'],
+                'interest_minor' => $item['interest_minor'],
+                'fees_minor' => $item['fees_minor'],
+                'total_due_minor' => $item['total_due_minor'],
+                'principal_outstanding_minor' => $item['principal_minor'],
+                'interest_outstanding_minor' => $item['interest_minor'],
+                'fees_outstanding_minor' => $item['fees_minor'],
+                'total_outstanding_minor' => $item['total_due_minor'],
                 'status' => CreditRepaymentScheduleItem::STATUS_DUE,
             ]);
         }
-    }
-
-    private function allocate(int $total, int $count, int $position): int
-    {
-        if ($total < 0 || $count <= 0 || $position < 1 || $position > $count) {
-            throw new InvalidArgumentException('Invalid production monetary allocation parameters.');
-        }
-        $base = intdiv($total, $count);
-
-        return $position === $count ? $base + ($total % $count) : $base;
     }
 
     private function cycleDays(string $cycle): int
