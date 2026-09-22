@@ -1,7 +1,7 @@
 # OpFin Product Blueprint
 
 Status: Canonical product contract  
-Updated: 21 September 2026  
+Updated: 22 September 2026  
 Language: English (United Kingdom)
 
 ## Product position
@@ -60,7 +60,21 @@ Financial health, safe-to-spend, forecasts, scenarios, alerts, explanations and 
 SACCOs, insurers/brokers, fund managers, banks/MFIs, CRBs, employers, payment providers, cooperatives and other approved providers connect through a standard Partner Catalogue and adapters.
 
 ### Monetisation
-Subscriptions, commissions, revenue share, transaction economics, SaaS/platform fees, API/integration fees and servicing/administration income. Commercial terms are downstream of customer need and eligibility.
+OpFin is not economically dependent on lending. Monetisation is multi-sided and capability based:
+
+- **Customers:** optional premium financial-management automation, advanced analytics/planning and convenience services; essential Individual and Savings Group management remains accessible.
+- **Employers and organisations:** per-organisation and/or per-active-member subscriptions, financial-wellness programme administration, payroll/benefit integrations and approved servicing fees.
+- **Credit:** interest margin and disclosed fees only where the applicable licence/product policy permits them.
+- **Savings, investments and protection:** partner-paid distribution, administration, referral or AUM-linked economics where lawful and contractually agreed; customer assets remain partner/custody controlled.
+- **Payments and remittance:** orchestration/transaction/FX economics only where OpFin or the executing regulated partner is authorised and the commercial agreement permits it.
+- **Partner marketplace:** product distribution, servicing and revenue share with banks/MFIs, SACCOs, insurers/brokers, investment/fund managers and other approved partners.
+- **Platform/API:** integration setup, API usage, SaaS/platform access and managed-service fees for institutional partners.
+- **Participatory/asset/community finance:** administration and servicing income only after the relevant governance, custody and regulatory gates are activated.
+- **Data/insights:** privacy-safe institutional analytics may be monetised only from permitted aggregate/derived insights; OpFin does not sell customers' personal data.
+
+Every revenue stream has an activation gate. A forecast may model a future stream, but production revenue is recognised only after the applicable regulatory, contractual, provider, tax and accounting controls are active.
+
+Commercial terms remain downstream of customer need, eligibility and suitability.
 
 ### Controls
 KYC/KYB, consent, role-based permissions, entitlements, eligibility, maker-checker where required, audit, idempotency, ledger integrity, reconciliation, data protection and country policy.
