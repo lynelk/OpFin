@@ -20,6 +20,7 @@ class ProtectionService
         private readonly MobileMoneyService $mobileMoney,
         private readonly SaveProtectionLedgerService $ledger,
         private readonly AuditLogger $auditLogger,
+        private readonly ServiceEconomicsService $economics,
     ) {}
 
     public function activeProducts(string $countryCode): mixed
@@ -174,6 +175,8 @@ class ProtectionService
             $policy->update(['status' => ProtectionPolicy::STATUS_PREMIUM_PENDING]);
         }
 
+        $this->recordPremiumEconomics($payment->fresh(['policy.product']), 'REQUESTED');
+
         try {
             $mobileMoney = $this->mobileMoney->collect([
                 'user_id' => $user->id,
@@ -197,6 +200,7 @@ class ProtectionService
             if ($policy->status !== ProtectionPolicy::STATUS_ACTIVE) {
                 $policy->update(['status' => ProtectionPolicy::STATUS_PREMIUM_DUE]);
             }
+            $this->recordPremiumEconomics($payment->fresh(['policy.product']), 'ERROR');
             throw $exception;
         }
 
@@ -225,6 +229,7 @@ class ProtectionService
             if ($payment->policy->status !== ProtectionPolicy::STATUS_ACTIVE) {
                 $payment->policy->update(['status' => ProtectionPolicy::STATUS_PREMIUM_DUE]);
             }
+            $this->recordPremiumEconomics($payment->fresh(['policy.product']), 'FAILED', $mobileMoney);
 
             return $payment->fresh(['policy.product', 'mobileMoneyTransaction']);
         }
@@ -245,6 +250,12 @@ class ProtectionService
             'mobile_money_transaction_id' => $mobileMoney->id,
             'mobile_money_status' => $mobileMoney->status,
         ]);
+        $this->recordPremiumEconomics(
+            $payment->fresh(['policy.product']),
+            'COLLECTED',
+            $mobileMoney,
+            $mobileMoney->provider_reference,
+        );
 
         return $payment->fresh(['policy.product', 'mobileMoneyTransaction']);
     }
@@ -290,6 +301,14 @@ class ProtectionService
             'partner_reference' => $partnerReference,
             'partner_evidence_hash' => strtolower($evidenceHash),
         ]);
+        $configuredSettlement = $payment->policy->product->economics_config['net_settlement_to_provider_minor'] ?? null;
+        $this->recordPremiumEconomics(
+            $payment,
+            'RECONCILED',
+            $payment->mobileMoneyTransaction,
+            $partnerReference,
+            $configuredSettlement !== null ? (int) $configuredSettlement : (int) $payment->amount_minor,
+        );
 
         return $payment;
     }
@@ -445,6 +464,52 @@ class ProtectionService
         ]);
 
         return $claim->fresh('policy.product');
+    }
+
+    private function recordPremiumEconomics(
+        ProtectionPremiumPayment $payment,
+        string $status,
+        ?MobileMoneyTransaction $moneyMovement = null,
+        ?string $providerReference = null,
+        ?int $netSettlementMinor = null,
+    ): void {
+        $payment->loadMissing('policy.product');
+        $product = $payment->policy->product;
+        $config = (array) ($product->economics_config ?? []);
+
+        $this->economics->record([
+            'user_id' => $payment->user_id,
+            'service_code' => 'insurance',
+            'capability_code' => 'premium_collection_and_settlement',
+            'provider' => $product->insurer_name,
+            'route' => 'DIRECT_PARTNER',
+            'environment' => app()->environment('production') ? 'PRODUCTION' : 'SANDBOX',
+            'request_reference' => $payment->payment_reference,
+            'provider_reference' => $providerReference ?: $payment->partner_reference,
+            'status' => $status,
+            'currency' => $payment->currency,
+            'provider_gross_cost_minor' => $config['provider_gross_cost_minor'] ?? null,
+            'provider_discount_minor' => $config['provider_discount_minor'] ?? null,
+            'customer_service_charge_minor' => $config['customer_service_charge_minor'] ?? null,
+            'customer_platform_fee_minor' => $config['customer_platform_fee_minor'] ?? null,
+            'partner_commission_minor' => $config['partner_commission_minor'] ?? null,
+            'cito_platform_fee_minor' => $config['cito_platform_fee_minor'] ?? null,
+            'opfin_platform_fee_minor' => $config['opfin_platform_fee_minor'] ?? null,
+            'tax_amount_minor' => $config['tax_amount_minor'] ?? null,
+            'net_settlement_to_provider_minor' => $netSettlementMinor,
+            'price_book_version' => $config['price_book_version'] ?? null,
+            'contract_version' => $config['contract_version'] ?? null,
+            'reconciliation_reference' => $status === 'RECONCILED' ? $payment->partner_reference : null,
+            'reconciled_at' => $status === 'RECONCILED' ? now() : null,
+            'metadata' => [
+                'premium_principal_minor' => (int) $payment->amount_minor,
+                'policy_reference' => $payment->policy->policy_reference,
+                'product_code' => $product->code,
+                'money_movement_provider' => $moneyMovement?->provider,
+                'money_movement_reference' => $moneyMovement?->provider_reference,
+                'premium_is_not_platform_revenue' => true,
+            ],
+        ]);
     }
 
     private function premiumPeriod(ProtectionPolicy $policy): array
