@@ -236,6 +236,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/revenue-events', [PlatformCommerceController::class, 'recordRevenue']);
     Route::post('/admin/revenue-events/{event}/reconcile', [PlatformCommerceController::class, 'reconcileRevenue']);
 
+    Route::post('/admin/service-economics-events', [PartnerReportingController::class, 'recordServiceEconomics']);
     Route::get('/admin/reports/service-economics', [PartnerReportingController::class, 'serviceEconomics']);
     Route::get('/admin/reports/capital-loan-book', [PartnerReportingController::class, 'capitalLoanBook']);
     Route::get('/admin/reports/insurance', [PartnerReportingController::class, 'insurance']);
