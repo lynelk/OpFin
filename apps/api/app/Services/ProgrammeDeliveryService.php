@@ -252,6 +252,8 @@ class ProgrammeDeliveryService
         }
 
         $locale = $this->normaliseLocale($locale ?: $user->preferred_language ?: 'en');
+        $profile = DB::table('inclusive_finance_profiles')->where('user_id', $user->id)->first();
+        $measurementConsent = (bool) ($profile?->programme_measurement_consent ?? false);
         $this->generateFollowUpsForUser($user);
 
         $rows = DB::table('programme_follow_up_schedules as schedule')
@@ -274,8 +276,13 @@ class ProgrammeDeliveryService
                 'programme.name as programme_name',
             ])
             ->get()
-            ->filter(function ($row) use ($channel) {
-                return in_array($channel, $this->json($row->channels), true);
+            ->filter(function ($row) use ($channel, $measurementConsent) {
+                if (! in_array($channel, $this->json($row->channels), true)) {
+                    return false;
+                }
+
+                return $row->consent_classification !== 'programme_measurement'
+                    || $measurementConsent;
             })
             ->map(function ($row) use ($locale) {
                 $payload = $this->instrumentPayload($row, false, $locale);
