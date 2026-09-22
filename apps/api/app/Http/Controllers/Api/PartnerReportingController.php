@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditLogger;
 use App\Services\PartnerReportingService;
 use App\Services\ServiceEconomicsService;
 use App\Support\ApiResponse;
@@ -15,6 +16,7 @@ class PartnerReportingController extends Controller
     public function __construct(
         private readonly PartnerReportingService $reports,
         private readonly ServiceEconomicsService $economics,
+        private readonly AuditLogger $auditLogger,
     ) {}
 
     public function recordServiceEconomics(Request $request): JsonResponse
@@ -55,9 +57,18 @@ class PartnerReportingController extends Controller
             'reconciled_at' => ['nullable', 'date'],
         ]);
 
+        $event = $this->economics->record($validated);
+        $this->auditLogger->record('service_economics.recorded', $request->user(), null, [
+            'service_code' => $validated['service_code'],
+            'provider' => $validated['provider'],
+            'route' => $validated['route'],
+            'request_reference' => $validated['request_reference'],
+            'status' => $validated['status'],
+        ], $request);
+
         return ApiResponse::success(
             'Service economics event recorded.',
-            ['event' => $this->economics->record($validated)],
+            ['event' => $event],
             201,
         );
     }
