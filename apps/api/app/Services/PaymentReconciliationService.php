@@ -168,11 +168,24 @@ class PaymentReconciliationService
                         'statement_reconciled_at' => now(),
                         'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
                     ]);
+                    if ($systemTransaction->provider_reference) {
+                        DB::table('revenue_events')->where('cpay_reference', $systemTransaction->provider_reference)->update([
+                            'statement_reconciliation_status' => 'matched',
+                            'reconciliation_reference' => $providerRecord->provider_reference ?: $providerRecord->internal_reference,
+                            'updated_at' => now(),
+                        ]);
+                    }
                 } else {
                     $systemTransaction->update([
                         'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_EXCEPTION,
                         'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                     ]);
+                    if ($systemTransaction->provider_reference) {
+                        DB::table('revenue_events')->where('cpay_reference', $systemTransaction->provider_reference)->update([
+                            'statement_reconciliation_status' => 'exception',
+                            'updated_at' => now(),
+                        ]);
+                    }
                 }
 
                 $this->auditLogger->record('reconciliation.provider_record.ingested', $actor, $providerRecord, [
