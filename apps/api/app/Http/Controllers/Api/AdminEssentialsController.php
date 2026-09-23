@@ -189,8 +189,10 @@ class AdminEssentialsController extends Controller
             && (empty($validated['regulatory_evidence']['licence_number']) || empty($validated['regulatory_evidence']['licence_authority']))) {
             return ApiResponse::error('Active lenders require licence number and licensing authority evidence.', 422);
         }
-        if ($validated['decision_route'] === 'capital_mandate' && empty($validated['funding_pool_id'])) {
-            return ApiResponse::error('A third-party funding pool is required for capital-mandate lending.', 422);
+        if ($validated['status'] === 'active'
+            && $validated['decision_route'] === 'capital_mandate'
+            && empty($validated['funding_pool_id'])) {
+            return ApiResponse::error('An approved third-party funding pool is required before a capital-mandate lender product can become active.', 422);
         }
 
         try {
