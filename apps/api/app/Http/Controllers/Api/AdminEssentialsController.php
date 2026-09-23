@@ -91,6 +91,12 @@ class AdminEssentialsController extends Controller
             ->orderBy('p.name')
             ->get();
 
+        $pendingFundingPools = DB::table('capital_mandates')
+            ->where('status', 'awaiting_compliance_review')
+            ->select('id', 'reference', 'partner_id', 'owner_user_id', 'name', 'mandate_type', 'committed_capital_minor', 'deployed_capital_minor', 'reserved_capital_minor', 'status', 'investment_policy', 'created_at')
+            ->oldest()
+            ->get();
+
         $fundingPools = DB::table('capital_mandates')
             ->whereIn('status', ['active', 'approved'])
             ->whereNotNull('approved_at')
@@ -104,6 +110,7 @@ class AdminEssentialsController extends Controller
             'pending_repayments' => $repayments,
             'lenders' => $lenders,
             'funding_pools' => $fundingPools,
+            'pending_funding_pools' => $pendingFundingPools,
             'billers' => EssentialsBiller::query()->orderBy('category')->orderBy('name')->get(),
         ]);
     }
