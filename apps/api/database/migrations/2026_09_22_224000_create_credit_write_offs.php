@@ -13,6 +13,9 @@ return new class extends Migration
             $table->foreignId('loan_id')->unique()->constrained('loans')->restrictOnDelete();
             $table->unsignedBigInteger('principal_written_off_minor');
             $table->unsignedBigInteger('financed_fee_written_off_minor')->default(0);
+            $table->unsignedBigInteger('deferred_fee_released_minor')->default(0);
+            $table->unsignedBigInteger('recognised_fee_loss_minor')->default(0);
+            $table->unsignedBigInteger('default_interest_written_off_minor')->default(0);
             $table->string('currency', 3);
             $table->string('policy_version');
             $table->json('evidence');
