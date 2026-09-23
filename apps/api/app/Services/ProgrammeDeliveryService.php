@@ -333,7 +333,11 @@ class ProgrammeDeliveryService
             throw new InvalidArgumentException('This programme instrument is not enabled for the selected channel.');
         }
 
-        $enrolment = $this->assertMeasurementParticipation($user, (int) $instrument->programme_id);
+        $enrolment = $this->assertProgrammeParticipation(
+            $user,
+            (int) $instrument->programme_id,
+            $instrument->consent_classification === 'programme_measurement',
+        );
         $schedule = null;
         if ($scheduleId) {
             $schedule = DB::table('programme_follow_up_schedules')
@@ -926,11 +930,13 @@ class ProgrammeDeliveryService
         }
     }
 
-    private function assertMeasurementParticipation(User $user, int $programmeId): object
+    private function assertProgrammeParticipation(User $user, int $programmeId, bool $requiresMeasurementConsent): object
     {
-        $profile = DB::table('inclusive_finance_profiles')->where('user_id', $user->id)->first();
-        if (! $profile || ! $profile->programme_measurement_consent) {
-            throw new InvalidArgumentException('Programme measurement consent is required before a programme check-in can be recorded.');
+        if ($requiresMeasurementConsent) {
+            $profile = DB::table('inclusive_finance_profiles')->where('user_id', $user->id)->first();
+            if (! $profile || ! $profile->programme_measurement_consent) {
+                throw new InvalidArgumentException('Programme measurement consent is required before this programme check-in can be recorded.');
+            }
         }
 
         $enrolment = DB::table('inclusive_finance_enrolments')
