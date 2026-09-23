@@ -130,6 +130,66 @@ class CreditFeeRecognitionService
         return $delta;
     }
 
+    public function reverseForLoan(Loan $loan, string $reason = 'credit_disbursement_reversal'): int
+    {
+        if (! $loan->credit_offer_id) {
+            return 0;
+        }
+
+        $recognised = (int) DB::table('credit_fee_recognition_events')
+            ->where('loan_id', $loan->id)
+            ->sum('amount_minor');
+        if ($recognised <= 0) {
+            return 0;
+        }
+
+        $offer = CreditOffer::query()->findOrFail($loan->credit_offer_id);
+        $reference = 'loan.fee_recognition.reversal:'.$loan->id;
+        if (DB::table('ledger_transactions')->where('reference', $reference)->exists()) {
+            return $recognised;
+        }
+
+        $this->ledger->post(
+            $reference,
+            'loan.fee_recognition.reversal',
+            $loan,
+            [
+                [
+                    'account_id' => $this->account(
+                        'income.credit_fee.product_'.$loan->loan_product_id,
+                        'Credit fee income product '.$loan->loan_product_id,
+                        'income',
+                        (string) $offer->currency,
+                    )->id,
+                    'direction' => LedgerEntry::DIRECTION_DEBIT,
+                    'amount_minor' => $recognised,
+                    'memo' => 'Reverse previously recognised credit fee income after economic reversal',
+                ],
+                [
+                    'account_id' => $this->account(
+                        'liability.credit_fee_clearing.product_'.$loan->loan_product_id,
+                        'Credit fee clearing product '.$loan->loan_product_id,
+                        'liability',
+                        (string) $offer->currency,
+                    )->id,
+                    'direction' => LedgerEntry::DIRECTION_CREDIT,
+                    'amount_minor' => $recognised,
+                    'memo' => 'Restore deferred credit fee clearing before disbursement reversal',
+                ],
+            ],
+            null,
+            (string) $offer->currency,
+            [
+                'loan_id' => $loan->id,
+                'credit_offer_id' => $offer->id,
+                'recognised_fee_reversed_minor' => $recognised,
+                'reason' => $reason,
+            ],
+        );
+
+        return $recognised;
+    }
+
     public function scan(): array
     {
         $recognised = 0;
