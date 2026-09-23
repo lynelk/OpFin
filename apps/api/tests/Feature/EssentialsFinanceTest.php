@@ -270,6 +270,58 @@ class EssentialsFinanceTest extends TestCase
         });
     }
 
+    public function test_cito_lender_drawdown_is_confirmed_before_cpay_pays_the_provider(): void
+    {
+        [$customer] = $this->customerWithCreditProfile(100000);
+        $this->seedCitoLender('CITOBANK', 100000, 90);
+        $this->configureCito();
+        $this->configureCpay();
+
+        Http::fake([
+            'https://cito.test/v1/essentials/credit-lines' => Http::response([
+                'status' => 'APPROVED',
+                'approvedLimitMinor' => 100000,
+                'providerReference' => 'CITO-LINE-001',
+            ], 200),
+            'https://cito.test/v1/essentials/drawdowns' => Http::response([
+                'status' => 'AUTHORISED',
+                'providerReference' => 'CITO-FUND-001',
+            ], 200),
+            'https://cpay.test/v1/bills/pay' => Http::response([
+                'status' => 'SUCCESS',
+                'providerReference' => 'CPAY-BILL-CITO-001',
+            ], 200),
+        ]);
+
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/essentials/eligibility', ['channel' => 'android'])
+            ->assertOk()
+            ->assertJsonPath('data.lines.0.decision_route', 'cito');
+
+        $account = $this->verifiedElectricityAccount($customer);
+        $quote = $this->postJson('/api/essentials/quotes', [
+            'essentials_account_id' => $account->id,
+            'amount_minor' => 50000,
+            'channel' => 'android',
+        ])->assertCreated()->json('data.quote');
+
+        $advance = $this->postJson('/api/essentials/quotes/'.$quote['id'].'/accept', [
+            'disclosure_hash' => $quote['disclosure_hash'],
+            'accept_disclosures' => true,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.advance.status', 'active')
+            ->assertJsonPath('data.advance.lender_funding_reference', 'CITO-FUND-001')
+            ->json('data.advance');
+
+        $this->assertNotNull($advance['financial_obligation_id']);
+
+        Http::assertSent(function ($request) {
+            return str_ends_with($request->url(), '/v1/bills/pay')
+                && data_get($request->data(), 'lenderFundingReference') === 'CITO-FUND-001';
+        });
+    }
+
     public function test_gnugrid_direct_crb_route_is_blocked_and_requires_cito(): void
     {
         $user = User::factory()->create();
@@ -445,6 +497,74 @@ class EssentialsFinanceTest extends TestCase
         ]);
 
         return ['partner_id' => $partnerId, 'pool_id' => $poolId, 'product_id' => $productId];
+    }
+
+    private function seedCitoLender(string $code, int $maxLimitMinor, int $termDays): int
+    {
+        $partnerId = DB::table('partners')->insertGetId([
+            'code' => $code,
+            'name' => $code.' Financial Institution',
+            'partner_type' => 'financial_institution',
+            'country' => 'UG',
+            'status' => 'active',
+            'adapter_key' => 'cito',
+            'regulatory_evidence' => json_encode([
+                'licence_number' => $code.'-LIC',
+                'licence_authority' => 'Test Authority',
+            ], JSON_THROW_ON_ERROR),
+            'metadata' => json_encode(['essentials_enabled' => true], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return DB::table('partner_products')->insertGetId([
+            'partner_id' => $partnerId,
+            'code' => $code.'-ESS',
+            'name' => $code.' Essentials',
+            'product_type' => 'essentials_credit',
+            'status' => 'active',
+            'country' => 'UG',
+            'currency' => 'UGX',
+            'eligibility_rules' => json_encode([
+                'categories' => ['electricity', 'water', 'internet', 'television', 'energy', 'rent'],
+                'min_score' => 0,
+                'min_coverage_percent' => 0,
+                'min_limit_minor' => 1,
+                'max_limit_minor' => $maxLimitMinor,
+                'line_valid_days' => 30,
+            ], JSON_THROW_ON_ERROR),
+            'pricing' => json_encode([
+                'term_days' => $termDays,
+                'monthly_interest_rate_percent' => 0,
+                'fixed_fee_minor' => 0,
+                'fee_percent' => 0,
+            ], JSON_THROW_ON_ERROR),
+            'disclosures' => json_encode(['lender_of_record' => $code.' Financial Institution'], JSON_THROW_ON_ERROR),
+            'integration_config' => json_encode(['decision_route' => 'cito'], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    private function configureCito(): void
+    {
+        $resource = openssl_pkey_new([
+            'private_key_bits' => 2048,
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+        ]);
+        $this->assertNotFalse($resource);
+        $this->assertTrue(openssl_pkey_export($resource, $privateKey));
+
+        config([
+            'services.cito.base_url' => 'https://cito.test',
+            'services.cito.merchant_number' => 'OPFIN-CITO-TEST',
+            'services.cito.private_key' => $privateKey,
+            'services.cito.environment' => 'SANDBOX',
+            'services.cito.essentials_lending_path' => '/v1/essentials/credit-lines',
+            'services.cito.essentials_drawdown_path' => '/v1/essentials/drawdowns',
+            'services.cito.essentials_drawdown_status_path' => '/v1/essentials/drawdowns/status',
+            'services.cito.essentials_drawdown_release_path' => '/v1/essentials/drawdowns/release',
+        ]);
     }
 
     private function verifiedElectricityAccount(User $customer): EssentialsAccount
