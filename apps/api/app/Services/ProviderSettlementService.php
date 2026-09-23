@@ -72,7 +72,10 @@ class ProviderSettlementService
 
             $transactions = MobileMoneyTransaction::query()
                 ->whereIn('id', $transactionIds)
-                ->where('status', MobileMoneyTransaction::STATUS_SUCCESSFUL)
+                ->whereIn('status', [
+                    MobileMoneyTransaction::STATUS_SUCCESSFUL,
+                    MobileMoneyTransaction::STATUS_REVERSED,
+                ])
                 ->where('statement_reconciliation_status', MobileMoneyTransaction::STATEMENT_MATCHED)
                 ->whereIn('accounting_status', [
                     MobileMoneyTransaction::ACCOUNTING_POSTED,
@@ -87,10 +90,18 @@ class ProviderSettlementService
 
             $collectionsMinor = (int) $transactions
                 ->where('direction', MobileMoneyTransaction::DIRECTION_COLLECTION)
-                ->sum('amount_minor');
+                ->sum(fn (MobileMoneyTransaction $transaction) =>
+                    $transaction->status === MobileMoneyTransaction::STATUS_REVERSED
+                        ? -1 * (int) $transaction->amount_minor
+                        : (int) $transaction->amount_minor
+                );
             $disbursementsMinor = (int) $transactions
                 ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)
-                ->sum('amount_minor');
+                ->sum(fn (MobileMoneyTransaction $transaction) =>
+                    $transaction->status === MobileMoneyTransaction::STATUS_REVERSED
+                        ? -1 * (int) $transaction->amount_minor
+                        : (int) $transaction->amount_minor
+                );
             $expectedNetMinor = $collectionsMinor - $disbursementsMinor - $providerFeeMinor;
 
             if ($bankNetSettlementMinor !== $expectedNetMinor) {
@@ -133,7 +144,7 @@ class ProviderSettlementService
             $entries = [];
             $provider = strtolower((string) $lockedRun->provider);
 
-            if ($collectionsMinor > 0) {
+            if ($collectionsMinor !== 0) {
                 $entries[] = [
                     'account_id' => $this->account(
                         'cash.'.$provider.'.collection',
@@ -141,13 +152,17 @@ class ProviderSettlementService
                         'asset',
                         $currency,
                     )->id,
-                    'direction' => LedgerEntry::DIRECTION_CREDIT,
-                    'amount_minor' => $collectionsMinor,
-                    'memo' => 'Clear provider-confirmed collections into bank settlement',
+                    'direction' => $collectionsMinor > 0
+                        ? LedgerEntry::DIRECTION_CREDIT
+                        : LedgerEntry::DIRECTION_DEBIT,
+                    'amount_minor' => abs($collectionsMinor),
+                    'memo' => $collectionsMinor > 0
+                        ? 'Clear provider-confirmed collections into bank settlement'
+                        : 'Clear provider-confirmed collection reversals from bank settlement',
                 ];
             }
 
-            if ($disbursementsMinor > 0) {
+            if ($disbursementsMinor !== 0) {
                 $entries[] = [
                     'account_id' => $this->account(
                         'cash.'.$provider.'.disbursement',
@@ -155,9 +170,13 @@ class ProviderSettlementService
                         'asset',
                         $currency,
                     )->id,
-                    'direction' => LedgerEntry::DIRECTION_DEBIT,
-                    'amount_minor' => $disbursementsMinor,
-                    'memo' => 'Clear provider-confirmed disbursements against bank settlement',
+                    'direction' => $disbursementsMinor > 0
+                        ? LedgerEntry::DIRECTION_DEBIT
+                        : LedgerEntry::DIRECTION_CREDIT,
+                    'amount_minor' => abs($disbursementsMinor),
+                    'memo' => $disbursementsMinor > 0
+                        ? 'Clear provider-confirmed disbursements against bank settlement'
+                        : 'Clear provider-confirmed disbursement reversals into bank settlement',
                 ];
             }
 
