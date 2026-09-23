@@ -59,7 +59,7 @@ class PostMergeFinancialHotfixTest extends TestCase
         $method->invoke(app(MobileMoneyService::class), $transaction, $response, []);
     }
 
-    public function test_thirty_day_weekly_projection_counts_capped_term_end_instalment(): void
+    public function test_thirty_day_weekly_projection_consolidates_short_term_end_stub(): void
     {
         $term = new LoanProductTerm([
             'interest_rate' => 0,
@@ -78,8 +78,12 @@ class PostMergeFinancialHotfixTest extends TestCase
         ]);
         $projected = $economics->debtServiceWithinDays($quote, 30);
 
+        // The legacy helper still reports five nominal weekly instalments, but the
+        // canonical frequency-stub-v2 schedule deliberately consolidates a two-day
+        // final stub so customers are not charged on both day 28 and day 30.
         $this->assertSame(5, Loan::getInstallments(30, 'Weekly'));
-        $this->assertSame([7, 14, 21, 28, 30], array_column($quote['schedule'], 'due_offset_days'));
+        $this->assertCount(4, $quote['schedule']);
+        $this->assertSame([7, 14, 21, 30], array_column($quote['schedule'], 'due_offset_days'));
         $this->assertSame(100000, $projected);
     }
 
