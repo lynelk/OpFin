@@ -33,6 +33,8 @@ php artisan route:list --json
 | Profile | `GET /api/profile` |
 | KYC status | `GET /api/kyc/status` |
 | Submit KYC | `POST /api/kyc/cases` |
+
+**KYC provider contract:** Cito is primary for provider-neutral NIN and phone-ownership checks when configured. ID-front/back/selfie biometric evidence remains on the separately configured evidence-capable provider until Cito exposes and certifies that binary-evidence contract. Ambiguous Cito failures remain pending; direct fallback requires an explicit route switch after reconciliation.
 | Consents | `GET/POST /api/consents` |
 
 ## Credit profile and borrowing
