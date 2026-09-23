@@ -19,7 +19,8 @@ function list(formData: FormData, key: string): string[] {
 function errorRedirect(path: string, error: unknown): never {
   const kind = error instanceof OpfinApiError ? error.kind : "server";
   const message = error instanceof Error ? error.message : "Request failed";
-  redirect(`${path}?error=${kind}&message=${encodeURIComponent(message)}`);
+  const separator = path.includes("?") ? "&" : "?";
+  redirect(`${path}${separator}error=${kind}&message=${encodeURIComponent(message)}`);
 }
 
 export async function submitProgrammeCheckInAction(formData: FormData) {
@@ -130,13 +131,13 @@ export async function inviteProgrammePartnerAction(formData: FormData) {
       },
       token
     );
-
-    redirect(
-      `/admin/inclusion/delivery?programme_id=${programmeId}&status=partner-invited`
-    );
   } catch (error) {
     errorRedirect(`/admin/inclusion/delivery?programme_id=${programmeId}`, error);
   }
+
+  redirect(
+    `/admin/inclusion/delivery?programme_id=${programmeId}&status=partner-invited`
+  );
 }
 
 export async function createProgrammeInstrumentAction(formData: FormData) {
