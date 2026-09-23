@@ -22,6 +22,7 @@ class ProductionCreditOfferService
         private readonly ProductionLoanLedgerService $loanLedger,
         private readonly CreditEconomicsService $economics,
         private readonly AffordabilityService $affordability,
+        private readonly CreditFeeRecognitionService $feeRecognition,
         private readonly AuditLogger $auditLogger,
         private readonly CreditReferenceReportingService $creditReporting,
         private readonly TransactionReceiptService $receipts,
@@ -408,7 +409,11 @@ class ProductionCreditOfferService
             $schedule = CreditRepaymentScheduleItem::query()->where('loan_id', $loan->id)->lockForUpdate()->get();
             $totalDue = (int) $schedule->sum('total_due_minor');
             $totalOutstanding = (int) $schedule->sum('total_outstanding_minor');
-            if ($totalOutstanding !== $totalDue) {
+            $defaultInterestOutstanding = max(
+                0,
+                (int) $loan->default_interest_accrued_minor - (int) $loan->default_interest_paid_minor,
+            );
+            if ($totalOutstanding !== $totalDue || $defaultInterestOutstanding > 0) {
                 $lockedTransaction->update([
                     'accounting_status' => MobileMoneyTransaction::ACCOUNTING_EXCEPTION,
                     'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
@@ -420,11 +425,13 @@ class ProductionCreditOfferService
                     'mobile_money_transaction_id' => $lockedTransaction->id,
                     'total_due_minor' => $totalDue,
                     'total_outstanding_minor' => $totalOutstanding,
+                    'default_interest_outstanding_minor' => $defaultInterestOutstanding,
                 ]);
 
                 return $loan;
             }
 
+            $this->feeRecognition->reverseForLoan($loan, 'credit_disbursement_reversal');
             $this->loanLedger->reverseCreditOfferDisbursement($lockedTransaction, $loan, $offer);
             CreditRepaymentScheduleItem::query()->where('loan_id', $loan->id)->update([
                 'principal_outstanding_minor' => 0,
