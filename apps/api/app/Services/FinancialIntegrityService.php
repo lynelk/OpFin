@@ -745,7 +745,7 @@ class FinancialIntegrityService
                 ])
                 ->where('m.statement_reconciliation_status', MobileMoneyTransaction::STATEMENT_MATCHED)
                 ->whereIn('m.accounting_status', [MobileMoneyTransaction::ACCOUNTING_POSTED, MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED])
-                ->select('m.id', 'm.direction', 'm.currency', 'm.amount_minor')
+                ->select('m.id', 'm.direction', 'm.currency', 'm.amount_minor', 'm.status')
                 ->get()
                 ->groupBy(fn ($row) => strtoupper((string) $row->currency));
 
