@@ -14,8 +14,8 @@ return new class extends Migration
             $table->string('provider');
             $table->string('currency', 3);
             $table->date('business_date');
-            $table->unsignedBigInteger('collections_minor');
-            $table->unsignedBigInteger('disbursements_minor');
+            $table->bigInteger('collections_minor');
+            $table->bigInteger('disbursements_minor');
             $table->unsignedBigInteger('provider_fee_minor')->default(0);
             $table->bigInteger('bank_net_settlement_minor');
             $table->string('bank_reference');
