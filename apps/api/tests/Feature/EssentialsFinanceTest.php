@@ -159,6 +159,21 @@ class EssentialsFinanceTest extends TestCase
             'user_id' => $customer->id,
             'biller_id' => $biller->id,
         ]);
+
+        Sanctum::actingAs($customer);
+        $authorisationId = (int) DB::table('essentials_partner_authorisations')
+            ->where('user_id', $customer->id)
+            ->where('partner_account_id', $partnerAccountId)
+            ->where('status', 'active')
+            ->value('id');
+        $this->deleteJson('/api/essentials/partner-authorisations/'.$authorisationId)->assertOk();
+
+        Sanctum::actingAs($partnerUser);
+        $this->postJson('/api/partner/essentials/customers/'.$customer->id.'/eligibility', [
+            'partner_account_id' => $partnerAccountId,
+            'financial_space_id' => $space['id'],
+            'channel' => 'partner',
+        ])->assertStatus(422);
     }
 
     public function test_purpose_bound_settlement_and_repayment_restore_lender_capital_and_financial_space_obligation(): void
