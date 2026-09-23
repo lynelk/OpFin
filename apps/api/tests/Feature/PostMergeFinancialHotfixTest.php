@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Api\ProductionCreditController;
 use App\Models\LedgerAccount;
 use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\LoanProductTerm;
 use App\Models\MobileMoneyTransaction;
 use App\Models\User;
+use App\Services\CreditEconomicsService;
 use App\Services\FinancialIntegrityService;
 use App\Services\MobileMoney\MobileMoneyProviderResponse;
 use App\Services\MobileMoney\MobileMoneyService;
@@ -68,16 +68,42 @@ class PostMergeFinancialHotfixTest extends TestCase
             'repayment_frequency' => 'Weekly',
             'duration' => 30,
         ]);
-        $application = new LoanApplication;
-        $application->setRelation('loanProductTerm', $term);
+        $this->installPricingPolicy();
 
-        $method = new ReflectionMethod(ProductionCreditController::class, 'projectedThirtyDayDebtServiceMinor');
-        $method->setAccessible(true);
-
-        $projected = $method->invoke(app(ProductionCreditController::class), $application, 100000);
+        $economics = app(CreditEconomicsService::class);
+        $quote = $economics->quote($term, 100000, [
+            'access_fee_minor' => 0,
+            'disbursement_fee_minor' => 0,
+            'fee_treatment' => 'financed',
+        ]);
+        $projected = $economics->debtServiceWithinDays($quote, 30);
 
         $this->assertSame(5, Loan::getInstallments(30, 'Weekly'));
+        $this->assertSame([7, 14, 21, 28, 30], array_column($quote['schedule'], 'due_offset_days'));
         $this->assertSame(100000, $projected);
+    }
+
+    private function installPricingPolicy(): void
+    {
+        DB::table('financial_policies')->insert([
+            'code' => 'post-merge-projection-test',
+            'policy_type' => 'regulatory_pricing',
+            'jurisdiction_country' => 'UG',
+            'licence_class' => null,
+            'product_scope' => null,
+            'version' => 1,
+            'status' => 'active',
+            'effective_from' => now()->subDay()->toDateString(),
+            'effective_to' => null,
+            'rules' => json_encode([
+                'interest_basis' => 'original_principal',
+                'cycle_days' => ['daily' => 1, 'weekly' => 7, 'monthly' => 30],
+                'repayment_frequency_days' => ['daily' => 1, 'weekly' => 7, 'fortnightly' => 14, 'monthly' => 30],
+            ], JSON_THROW_ON_ERROR),
+            'source_reference' => 'post-merge-hotfix-test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     public function test_retiring_account_does_not_invalidate_balanced_historical_posting(): void
