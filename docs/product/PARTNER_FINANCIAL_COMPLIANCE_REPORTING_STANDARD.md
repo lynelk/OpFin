@@ -115,7 +115,9 @@ Required report/evidence families include:
 - consent evidence;
 - provider/data-quality status.
 
-gnuGrid is consumed through Cito's provider-neutral identity/risk fabric as the preferred route. OpFin retains a direct provider route as controlled backup.
+gnuGrid is consumed through Cito's provider-neutral identity/risk fabric as the preferred route for the capabilities Cito currently exposes, including NIN validation, phone ownership and credit-information/scoring services. OpFin retains a direct provider route as controlled backup.
+
+Identity routing is capability-specific rather than pretending one provider endpoint can do everything. OpFin captures National ID front/back images plus a selfie as private KYC evidence. The current Cito signed capability API does not accept those binary artefacts, so liveness and face-match remain with a separately configured evidence-capable biometric/document provider until Cito exposes and certifies an equivalent contract. A successful Cito NIN/phone result is therefore valid evidence but does not by itself mark the complete KYC case verified. Ambiguous Cito technical failures do not silently trigger a second direct enquiry.
 
 ## 7. Employment and payroll reporting
 
