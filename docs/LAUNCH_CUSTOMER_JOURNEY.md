@@ -275,3 +275,11 @@ The experience now combines:
 The financial-health check-in is deliberately separate from underwriting. It returns a transparent wellbeing status and reasons, and the customer is told that it is not a credit score.
 
 Richer livelihood, dignified-work, empowerment and community-finance observations are programme capabilities rather than compulsory launch onboarding questions. They should only appear in a customer journey when an authorised programme genuinely requires them and programme measurement consent is active.
+
+## Programme check-ins and recorded-data enrichment
+
+An enrolled customer with active programme-measurement consent may receive short due check-ins through App/Web, verified WhatsApp, USSD or authorised assisted capture. The questions are configured centrally and remain outside credit decisioning.
+
+WhatsApp adds **CHECKIN** and USSD adds **Programme check-in**. These channels use the same response model as App/Web rather than maintaining separate programme logic.
+
+Financial resilience may also offer **Use recorded data**, which builds a transparent wellbeing snapshot from financial-life information already recorded by OpFin. Missing external evidence is not guessed. The resulting status is not an underwriting score.
