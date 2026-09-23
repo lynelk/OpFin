@@ -288,6 +288,42 @@ class ProgrammeCommercialCompletionTest extends TestCase
             ->assertJsonPath('data.economics.contribution_after_npl_exposure_minor', 50000);
     }
 
+    public function test_programme_dashboard_keeps_active_cohort_when_acquisition_predates_reporting_window(): void
+    {
+        [$admin, $programmeId] = $this->programme();
+        $customer = $this->enrolledCustomer($programmeId, '256700440006');
+
+        Sanctum::actingAs($admin);
+        $this->postJson('/api/admin/commercial/customers/'.$customer->id.'/attribution', [
+            'acquisition_channel' => 'programme',
+            'programme_id' => $programmeId,
+            'source' => 'historic-programme-acquisition',
+            'acquired_at' => now()->subDays(180)->toIso8601String(),
+        ])->assertOk();
+
+        DB::table('revenue_events')->insert([
+            'public_id' => (string) Str::uuid(),
+            'user_id' => $customer->id,
+            'event_type' => 'servicing_fee',
+            'source_type' => 'test',
+            'source_reference' => 'REV-OLD-ACQ-001',
+            'gross_amount_minor' => 50000,
+            'opfin_amount_minor' => 50000,
+            'partner_amount_minor' => 0,
+            'tax_amount_minor' => 0,
+            'currency' => 'UGX',
+            'status' => 'accrued',
+            'occurred_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->getJson('/api/admin/commercial/dashboard?programme_id='.$programmeId)
+            ->assertOk()
+            ->assertJsonPath('data.acquisition.customers', 0)
+            ->assertJsonPath('data.economics.opfin_revenue_minor', 50000);
+    }
+
     public function test_graduation_is_analytics_only_and_does_not_promote_unready_participant(): void
     {
         [$admin, $programmeId] = $this->programme();
