@@ -37,6 +37,7 @@ export default function MorePage() {
       <section className="panel">
         <h2>Resilience & help</h2>
         <div className="grid grid-2">
+          <JourneyCard title="Programme check-ins" description="Complete short follow-ups for programmes you voluntarily joined, using reviewed language content where available." href="/programme/check-ins" action="View check-ins" status="available" />
           <JourneyCard title="Financial Passport" description="Review your provenance-labelled financial record." href="/financial-passport" action="Open passport" status="available" />
           <JourneyCard title="Credit Builder" description="Use confirmed repayment behaviour to create an improvement plan." href="/credit-builder" action="Build credit plan" status="available" />
           <JourneyCard title="Financial hardship" description="Report a material financial shock and request independent relief review." href="/hardship" action="Request assistance" status="available" />
