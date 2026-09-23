@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\OrganisationJourneyController;
 use App\Http\Controllers\Api\PartnerReportingController;
 use App\Http\Controllers\Api\PlatformCommerceController;
+use App\Http\Controllers\Api\ProgrammeCompletionController;
 use App\Http\Controllers\Api\ProductionConsentController;
 use App\Http\Controllers\Api\ProductionCreditController;
 use App\Http\Controllers\Api\ProductionCreditOfferController;
@@ -61,6 +62,7 @@ Route::post('/ussd', UssdController::class)->middleware('throttle:webhooks')->na
 Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->middleware('throttle:webhooks')->name('webhooks.whatsapp.verify');
 Route::post('/webhooks/whatsapp', WhatsAppWebhookController::class)->middleware('throttle:webhooks')->name('webhooks.whatsapp');
 Route::post('/guarantors/confirm', [GuarantorController::class, 'confirm'])->middleware('throttle:auth');
+Route::post('/programme-partner/invitations/accept', [ProgrammeCompletionController::class, 'acceptPartnerInvitation'])->middleware('throttle:auth');
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -114,6 +116,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/inclusive-finance/impact/empowerment', [InclusiveImpactController::class, 'recordEmpowerment']);
     Route::get('/inclusive-finance/impact/community-finance', [InclusiveImpactController::class, 'communityFinance']);
     Route::post('/inclusive-finance/impact/community-finance', [InclusiveImpactController::class, 'recordCommunityFinance']);
+    Route::get('/inclusive-finance/programme-check-ins', [ProgrammeCompletionController::class, 'dueCheckIns']);
+    Route::post('/inclusive-finance/programme-check-ins/{instrument}/responses', [ProgrammeCompletionController::class, 'submitCheckIn']);
+    Route::post('/inclusive-finance/programme-follow-ups/{schedule}/open', [ProgrammeCompletionController::class, 'openFollowUp']);
+    Route::get('/inclusive-finance/impact/financial-health/enrichment', [ProgrammeCompletionController::class, 'enrichmentPreview']);
+    Route::post('/inclusive-finance/impact/financial-health/enrichment', [ProgrammeCompletionController::class, 'recordEnrichment']);
 
     Route::get('/security-centre', [V5P0PlatformController::class, 'security']);
     Route::patch('/security-centre', [V5P0PlatformController::class, 'updateSecurity']);
@@ -237,6 +244,28 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/inclusive-finance/programmes/{programme}/observations', [InclusiveImpactController::class, 'recordObservation']);
     Route::get('/admin/inclusive-finance/programmes/{programme}/outcomes', [InclusiveImpactController::class, 'programmeOutcomes']);
     Route::post('/admin/inclusive-finance/partner-access', [InclusiveImpactController::class, 'grantPartnerAccess']);
+    Route::get('/admin/inclusive-finance/instruments', [ProgrammeCompletionController::class, 'instruments']);
+    Route::post('/admin/inclusive-finance/instruments', [ProgrammeCompletionController::class, 'createInstrument']);
+    Route::patch('/admin/inclusive-finance/instruments/{instrument}', [ProgrammeCompletionController::class, 'updateInstrument']);
+    Route::post('/admin/inclusive-finance/instruments/{instrument}/questions', [ProgrammeCompletionController::class, 'addQuestion']);
+    Route::put('/admin/inclusive-finance/questions/{question}/translations', [ProgrammeCompletionController::class, 'upsertTranslation']);
+    Route::post('/admin/inclusive-finance/follow-ups/generate', [ProgrammeCompletionController::class, 'generateFollowUps']);
+    Route::get('/admin/inclusive-finance/operations', [ProgrammeCompletionController::class, 'operations']);
+    Route::post('/admin/inclusive-finance/instruments/{instrument}/assisted-responses', [ProgrammeCompletionController::class, 'assistedCapture']);
+    Route::get('/admin/inclusive-finance/templates', [ProgrammeCompletionController::class, 'templates']);
+    Route::post('/admin/inclusive-finance/programmes/{programme}/templates', [ProgrammeCompletionController::class, 'applyTemplate']);
+    Route::get('/admin/inclusive-finance/programmes/{programme}/partner-users', [ProgrammeCompletionController::class, 'partnerUsers']);
+    Route::post('/admin/inclusive-finance/partner-invitations', [ProgrammeCompletionController::class, 'invitePartner']);
+    Route::delete('/admin/inclusive-finance/programmes/{programme}/partner-users/{user}', [ProgrammeCompletionController::class, 'revokePartnerAccess']);
+    Route::post('/admin/commercial/customers/{user}/attribution', [ProgrammeCompletionController::class, 'recordAttribution']);
+    Route::post('/admin/commercial/costs', [ProgrammeCompletionController::class, 'recordCost']);
+    Route::get('/admin/commercial/dashboard', [ProgrammeCompletionController::class, 'commercialDashboard']);
+    Route::post('/admin/commercial/graduations/evaluate', [ProgrammeCompletionController::class, 'evaluateGraduation']);
+    Route::get('/admin/commercial/graduations', [ProgrammeCompletionController::class, 'graduationSummary']);
+    Route::get('/admin/inclusive-finance/provider-adapters', [ProgrammeCompletionController::class, 'adapters']);
+    Route::post('/admin/inclusive-finance/provider-adapters', [ProgrammeCompletionController::class, 'configureAdapter']);
+    Route::post('/admin/inclusive-finance/provider-adapters/{adapter}/ingestions', [ProgrammeCompletionController::class, 'ingestAdapter']);
+    Route::get('/admin/inclusive-finance/programmes/{programme}/exports/{format}', [ProgrammeCompletionController::class, 'exportProgramme']);
     Route::post('/admin/revenue-events', [PlatformCommerceController::class, 'recordRevenue']);
     Route::post('/admin/revenue-events/{event}/reconcile', [PlatformCommerceController::class, 'reconcileRevenue']);
 
@@ -285,6 +314,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:programme_partner'])->group(function () {
     Route::get('/partner/inclusive-finance/programmes', [InclusiveImpactController::class, 'partnerProgrammes']);
     Route::get('/partner/inclusive-finance/programmes/{programme}/impact', [InclusiveImpactController::class, 'partnerImpact']);
+    Route::get('/partner/inclusive-finance/programmes/{programme}/exports/{format}', [ProgrammeCompletionController::class, 'partnerExport']);
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations,support'])->group(function () {
