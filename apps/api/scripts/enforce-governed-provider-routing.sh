@@ -49,13 +49,20 @@ grep -q "mobile_money_provider_certified" "$production" || {
     exit 1
 }
 
+grep -Eq "'default_provider'[[:space:]]*=>[[:space:]]*env\('MOBILE_MONEY_PROVIDER',[[:space:]]*'cpay'\)" "$services" || {
+    echo "CPay must remain the default governed money-movement route." >&2
+    exit 1
+}
+
 awk '
-    /'\''cpay'\'' => \[/ { in_cpay=1; next }
-    in_cpay && /'\''production_certified'\'' => true/ { found=1; exit }
+    /'\''mobile_money'\''[[:space:]]*=>[[:space:]]*\[/ { in_mobile_money=1; next }
+    in_mobile_money && /'\''providers'\''[[:space:]]*=>[[:space:]]*\[/ { in_providers=1; next }
+    in_providers && /'\''cpay'\''[[:space:]]*=>[[:space:]]*\[/ { in_cpay=1; next }
+    in_cpay && /'\''production_certified'\''[[:space:]]*=>[[:space:]]*true/ { found=1; exit }
     in_cpay && /^[[:space:]]*\],/ { exit }
     END { exit(found ? 0 : 1) }
 ' "$services" || {
-    echo "CPay must remain the preferred certified production payment route." >&2
+    echo "CPay must remain a certified production payment route inside mobile_money.providers." >&2
     exit 1
 }
 
