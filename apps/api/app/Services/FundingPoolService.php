@@ -13,6 +13,8 @@ class FundingPoolService
 
     private const BLOCKED_STATUSES = [
         'draft',
+        'awaiting_compliance_review',
+        'rejected',
         'paused',
         'closed',
         'cancelled',
