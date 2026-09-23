@@ -276,9 +276,6 @@ export default async function EssentialsPage({
               </form>
             ) : null}
           </div>
-          <p className="muted">
-            Stolets or another approved platform can use Essentials only after you grant the relevant Financial Space permissions. You can revoke access here.
-          </p>
           {authorisations.length === 0 ? (
             <StateNotice state="empty" message="No external platform currently has Essentials permission." />
           ) : (
