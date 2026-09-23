@@ -73,6 +73,7 @@ return [
         'essentials_lending_path' => env('CITO_ESSENTIALS_LENDING_PATH'),
         'essentials_drawdown_path' => env('CITO_ESSENTIALS_DRAWDOWN_PATH'),
         'essentials_drawdown_status_path' => env('CITO_ESSENTIALS_DRAWDOWN_STATUS_PATH'),
+        'essentials_drawdown_release_path' => env('CITO_ESSENTIALS_DRAWDOWN_RELEASE_PATH'),
     ],
 
     'crb' => [
