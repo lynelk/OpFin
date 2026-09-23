@@ -7,7 +7,7 @@ set -eu
 # dependencies, while keeping PHP verification hermetic and production-safe.
 composer install --no-interaction --prefer-dist --no-progress
 cp .env.example .env
-sh scripts/enforce-cpay-only.sh
+sh scripts/enforce-governed-provider-routing.sh
 sh scripts/run-tests.sh
 composer audit
 npm run build
