@@ -106,6 +106,7 @@ class ProviderIndependenceReportingTest extends TestCase
             'submitted_at' => now(),
             'evidence_complete_at' => now(),
             'evidence' => ['identity_verification_requested' => true],
+            'risk_flags' => ['CITO_IDENTITY_PROVIDER_ERROR', 'UNRELATED_MANUAL_REVIEW_FLAG'],
         ]);
 
         config([
@@ -139,6 +140,8 @@ class ProviderIndependenceReportingTest extends TestCase
         $this->assertSame('pending_review', $verified->face_match_status);
         $this->assertSame(KycCase::STATUS_PENDING_REVIEW, $verified->status);
         $this->assertContains('BIOMETRIC_PROVIDER_NOT_CONFIGURED', $verified->risk_flags);
+        $this->assertNotContains('CITO_IDENTITY_PROVIDER_ERROR', $verified->risk_flags);
+        $this->assertContains('UNRELATED_MANUAL_REVIEW_FLAG', $verified->risk_flags);
         $this->assertSame('CITO_MANAGED', $verified->evidence['identity_route']);
         $this->assertSame('GNUGRID-PHONE-001', $verified->evidence['phone_provider_reference']);
 
