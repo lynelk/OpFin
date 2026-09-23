@@ -11,7 +11,7 @@ class EssentialsAdvance extends Model
         'lender_partner_id', 'partner_product_id', 'funding_pool_id', 'principal_minor',
         'principal_outstanding_minor', 'total_repayment_minor', 'outstanding_minor',
         'repaid_minor', 'currency', 'status', 'lender_contract_reference',
-        'biller_payment_reference', 'fulfilment_payload', 'repayment_schedule',
+        'lender_funding_reference', 'biller_payment_reference', 'fulfilment_payload', 'repayment_schedule',
         'next_due_date', 'final_due_date', 'activated_at', 'settled_at',
     ];
 
