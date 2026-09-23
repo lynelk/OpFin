@@ -1,33 +1,33 @@
 {
   "repository": "lynelk/OpFin",
-  "status": "launch_candidate",
-  "updated_at": "2026-09-18",
+  "status": "production_source_deployed_not_fully_release_certified",
+  "updated_at": "2026-09-23",
   "canonical_branch": "main",
-  "historical_sources": {
-    "backend": {
-      "repository": "lynelk/OpFin-BE",
-      "commit": "fda182cc2d3d741c5f9b462e5d80d5caea6e594a"
-    },
-    "frontend_mobile": {
-      "repository": "lynelk/OpFin-FE",
-      "commit": "1ef9a0e9a4766ba802afc97f9b91f366620d053a"
-    }
-  },
+  "reviewed_main_sha": "1a580e490ccb4cd5cc55f06ea9d09fad6619fd7e",
   "paths": {
     "api": "apps/api",
     "web": "apps/web",
     "client": "apps/client"
   },
-  "launch_contract": {
-    "customer_journey": "docs/LAUNCH_CUSTOMER_JOURNEY.md",
-    "google_play_pack": "distribution/google-play",
-    "security": "SECURITY.md",
-    "engineering_rules": "AGENTS.md",
+  "current_documentation": {
+    "current_state": "docs/CURRENT_STATE.md",
+    "product_blueprint": "docs/product/OPFIN_PRODUCT_BLUEPRINT.md",
+    "implementation_status": "docs/product/CANONICAL_IMPLEMENTATION_STATUS.md",
     "documentation_hub": "docs/README.md",
     "developer_start": "docs/DEVELOPER_START_HERE.md",
-    "training_foundation": "docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md",
-    "umra_controls": "docs/UMRA_DIGITAL_LENDING_CONTROLS.md",
+    "user_manual": "docs/manuals/OPFIN_USER_MANUAL.md",
+    "training_manual": "docs/manuals/OPFIN_TRAINING_MANUAL.md",
+    "operational_manual": "docs/manuals/OPFIN_OPERATIONAL_MANUAL.md",
+    "uat_manual": "docs/manuals/OPFIN_UAT_MANUAL.md",
     "api_quick_reference": "apps/api/docs/api/API_QUICK_REFERENCE.md"
+  },
+  "deployment_evidence": {
+    "api_status": "success",
+    "web_status": "success",
+    "worker_status": "success",
+    "scheduler_status": "success",
+    "exact_head_github_actions_run": false,
+    "release_gate_certified_for_exact_head": false
   },
   "required_release_validation": [
     "OpFin Monorepo CI",
@@ -36,21 +36,18 @@
     "Documentation drift check"
   ],
   "external_activation_gates": [
-    "legal lender/provider and licence evidence",
-    "registered/trading name, UMRA licence/reference and physical business address",
-    "official complaints email/telephone/URL and staffed complaint-resolution process",
-    "identity-verification provider credentials/certification",
-    "CRB/MNO/approved third-party scoring credentials where used",
-    "applicable authorised credit-reference reporting endpoint/schema/credentials/certification",
-    "verified affordability data source for automatic approval",
-    "CPay production certification/credentials",
+    "applicable legal entity/licence evidence",
+    "provider contracts, credentials and production certification",
+    "Cito/gnuGrid/CPay activation where required",
+    "identity/biometric evidence-provider certification",
     "private persistent KYC storage",
-    "USSD short-code/aggregator provisioning when launched",
-    "WhatsApp production credentials when launched",
-    "real-device accessibility and PWD-assisted-KYC UAT",
-    "store declarations and signed release publication",
+    "programme/data-processing agreements",
+    "reviewed translations for live programmes",
+    "USSD and WhatsApp production provisioning where launched",
+    "physical-device accessibility and assisted-KYC UAT",
+    "store declarations, signing and publication",
     "backup/restore, monitoring, reconciliation and incident-response evidence"
   ],
   "production_cutover": false,
-  "notes": "The exact release SHA is established by the passing workflow run and deployed service evidence rather than hard-coded here. Current documentation is maintained under docs/README.md and checked for drift in CI."
+  "notes": "Railway source deployment statuses are successful for the reviewed main head, but no GitHub Actions run is attached to that exact SHA. Do not represent the exact head as fully release-certified until required gates and external activation evidence pass."
 }

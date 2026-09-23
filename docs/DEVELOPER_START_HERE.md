@@ -1,40 +1,44 @@
 # OpFin developer start here
 
-Updated: 19 September 2026
+Updated: 23 September 2026
 
-This guide is the shortest route from “I have the repository” to “I understand where to make a safe change.”
+Read [CURRENT_STATE.md](CURRENT_STATE.md) first. This guide is the shortest path from checkout to a safe change.
 
-## 1. Repository map
+## Repository map
 
 | Path | Owns |
 | --- | --- |
-| `apps/api` | Laravel API, identity, consent, scoring, credit, affordability, offers, payments, ledger, reconciliation, regulatory evidence |
-| `apps/web` | Next.js customer/admin web experience |
-| `apps/client` | Flutter Android/iOS customer app |
-| `packages/contracts` | Shared contract/schema home |
-| `docs` | Cross-product current documentation |
-| `infrastructure/railway` | Deployment boundaries and release gates |
+| `apps/api` | Laravel API, identity, consent, Financial Spaces, credit, programmes, partners, provider routing, money movement, ledger, reconciliation and governance |
+| `apps/web` | marketing site, customer Web, Workspaces and operational/admin UI |
+| `apps/client` | Flutter Android/iOS mobile-complete Individual and Savings Group experience |
+| `packages/contracts` | shared contract/schema conventions |
+| `docs` | product, operational, training, UAT and release documentation |
+| `infrastructure/railway` | deployment topology and gates |
 | `distribution/google-play` | Android store evidence/listing pack |
 
-Do not create independent financial calculations in web/mobile clients. The API is authoritative for money, credit state, payment finality and regulatory controls.
+The API is authoritative for financial and regulated state. Clients do not create parallel pricing, scoring, settlement or programme-governance truth.
 
-## 2. Customer journey in one minute
+## Domain baseline
 
-`Phone → OTP → names → 6-digit PIN → Home → KYC → consent → credit profile → limit → application → formal offer → verified-wallet disbursement → repayment → receipt/reporting`
+New work starts from:
 
-Important rules:
+`Person → Financial Space → Membership/Role → Capability → Entitlement → Eligibility`
 
-- second phone is optional;
-- KYC requires NIN, ID front/back and photo holding ID;
-- score components remain attributable;
-- loan limit is profile-level;
-- automatic approval also requires verified affordability;
-- offer acceptance records exact disclosures and credit-reporting consent;
-- provider acknowledgement is not financial finality;
-- completed financial events create auditable receipts;
-- positive/negative credit information is queued only when identity/data-quality/consent gates pass.
+Do not create a new account/person type when a Space, role or capability models the requirement.
 
-## 3. Local setup
+Inclusive-finance programme measurement, protected attributes and provider evidence remain outside underwriting unless a separate approved risk-data pathway explicitly permits a non-protected signal. Commercial economics remain downstream of customer need, eligibility and suitability.
+
+Stolets is a separate product; use explicit governed integration contracts rather than importing merchant operations into OpFin.
+
+## Customer channel baseline
+
+Canonical new-customer mobile journey:
+
+`Phone → OTP → names → six-digit PIN → Home → progressive verification → financial position / eligible service → disclosed action → confirmed outcome`
+
+The marketing website links existing/authorised users to Web sign-in. Do not treat its password-compatible login as the preferred new-customer journey.
+
+## Local setup
 
 ### API
 
@@ -47,8 +51,6 @@ php artisan migrate
 php artisan test
 ```
 
-Use SQLite/testing configuration for normal automated tests unless the specific change requires PostgreSQL behaviour.
-
 ### Web
 
 ```bash
@@ -56,14 +58,6 @@ cd apps/web
 npm ci --legacy-peer-deps
 cp .env.example .env.local
 npm run dev
-```
-
-Production-like web settings:
-
-```env
-NEXT_PUBLIC_OPFIN_API_URL=http://localhost:8000/api
-NEXT_PUBLIC_USE_MOCK_API=false
-OPFIN_ENABLE_DEMO_SHORTCUTS=false
 ```
 
 ### Flutter
@@ -76,108 +70,75 @@ flutter test
 flutter run
 ```
 
-## 4. Finding the API
+Use testing/local provider configuration. Never use production credentials merely to make a local journey look successful.
 
-For human-readable contracts:
-
-```bash
-python3 scripts/search-docs.py "loan offer" --api
-```
-
-For registered Laravel routes:
+## Find the API and docs
 
 ```bash
-python3 scripts/search-api.py "credit"
+python3 scripts/search-docs.py "programme"
+python3 scripts/search-docs.py "credit offer" --api
+python3 scripts/search-api.py "programme"
 python3 scripts/search-api.py "umra"
 ```
 
-Or directly:
+Or:
 
 ```bash
 cd apps/api
-php artisan route:list --path=api/credit
-php artisan route:list --path=api/admin/umra
 php artisan route:list --json
 ```
 
-Start with `apps/api/docs/api/API_QUICK_REFERENCE.md`, then `current-endpoints.md`.
+Registered routes establish exact addresses; handlers/tests establish behaviour; prose docs explain purpose and safe use.
 
-## 5. Where common changes belong
+## Where changes belong
 
-| Change | Primary code | Documentation to update |
+| Change | Primary code | Documentation review |
 | --- | --- | --- |
-| New API route | `apps/api/routes` + controller/service | current endpoints + frontend/backend contract |
-| Credit/scoring rule | API service/config/tests | launch journey + API/architecture + risk/compliance docs |
-| Loan pricing/disclosure | offer/pricing services | API contract + UMRA controls + UAT |
-| Payment/receipt | payment/ledger/reconciliation services | API + operational runbook + UAT |
-| Customer app journey | `apps/client/lib` | client README + launch journey |
-| Admin workflow | `apps/web/src/app/(portal)/admin` | web README/screen map + operations docs |
-| Regulatory control | API + governance/admin | UMRA controls + reporting docs + UAT |
-| External provider | `config/services.php` + adapter | integration doc + env example + readiness checklist |
+| API route/contract | API routes/controller/service | current endpoints, quick reference, client contract |
+| Financial Space/member/role | API domain + clients | blueprint/domain model, manuals, UAT |
+| Credit/scoring/pricing | API service/config/tests | credit/API/regulatory docs and UAT |
+| Payment/ledger/reconciliation | API financial services | API, operations, security and UAT |
+| Programme/impact | API + client programme surfaces | inclusive-finance framework, manuals, partner docs |
+| Commercial/service economics | API + admin web | partner reporting standard, operations, UAT |
+| Provider adapter/routing | service config + adapter | integration/readiness/current-state docs |
+| Marketing-site claim | `apps/web/src/app/page.tsx` | web README/current state/product docs |
+| Mobile customer journey | `apps/client/lib` | user/training/UAT/current journey |
+| Release/deployment | workflows/infrastructure | release manifest, deployment/current state |
 
-## 6. Safe financial change pattern
-
-A money-changing workflow should normally be:
+## Safe financial/provider change pattern
 
 ```text
 authenticated instruction
 → ownership/authorisation
-→ policy validation
+→ policy and consent validation
 → idempotent provider request
-→ verified provider finality
-→ database lock
-→ product state
-→ immutable ledger
-→ receipt / regulatory side effects after commit
+→ verified finality or explicit pending/error
+→ locked domain state
+→ immutable accounting where applicable
+→ receipts/reporting after commit
 → reconciliation
 ```
 
-If a change skips one of those steps, explain why in code/tests/docs.
+Ambiguous Cito/provider failure must not silently fire a direct fallback. Reconcile first, then switch route explicitly under policy.
 
-## 7. Documentation workflow
+## Release evidence
 
-Before opening a PR:
+A change is not done because it compiled or deployed. The exact candidate should have applicable CI, security, deployment, migration, provider and reconciliation evidence.
+
+At the reviewed 23 September 2026 main head, Railway statuses are successful for API, web, worker and scheduler, but GitHub Actions produced no run for that exact SHA. Preserve that distinction in release notes and documentation.
+
+## Documentation rule
+
+Every material runtime/API/customer-workflow change updates relevant current docs in the same PR. Do not edit historical audit/demo records to make them look current.
+
+Before review:
 
 ```bash
 python3 scripts/search-docs.py "<feature>"
 python3 scripts/verify-documentation-drift.py
+make api-test
+make web-test
+make client-test
 ```
 
-CI compares the PR to `main` and requires corresponding current docs when public API/backend/web/mobile contracts change.
-
-For new developer-facing APIs:
-
-1. update route/controller/service;
-2. add tests;
-3. update `apps/api/docs/api/current-endpoints.md`;
-4. update `apps/api/docs/api/frontend-backend-contract.md` when clients are affected;
-5. update `API_QUICK_REFERENCE.md` for new user-facing task categories;
-6. update the relevant operations/UAT documentation.
-
-## 8. Release definition
-
-A change is not “done” because it compiled.
-
-### CI workflow maintenance
-
-`.github/workflows/ci.yml` must contain one definition for each job. A failed
-workflow with no jobs may indicate invalid workflow YAML, not an application test
-failure. Validate YAML (including duplicate mapping keys) and Bash syntax after
-editing embedded scripts. Do not bypass the release gate to resolve this condition.
-
-The API formatting check uses a NUL-delimited Git diff of added, copied, modified
-and renamed PHP files, then removes the `apps/api/` prefix before running Pint
-from that directory. This preserves filenames containing spaces, excludes deleted
-files and fails if the comparison ref is unavailable. A docs-only change skips
-Pint, but does not skip API tests or audits.
-
-For production financial changes, the exact candidate must pass CI, security monitoring and deployment contract; migrations/provider configuration must be verified; production deployment must become healthy; and any required reconciliation/integrity checks must pass.
-
-
-## 9. Canonical Financial Spaces baseline
-
-New development starts from **Person → Financial Space → Membership/Role → Capability → Entitlement → Eligibility**. Do not introduce a new user/account type when a Space, role or capability models the requirement. Employer is a Business capability; an investor is normally a person/organisation role; regulated providers use organisation/partner onboarding.
-
-Core Space APIs are documented in `apps/api/docs/api/current-endpoints.md`. Financial records should become Space-scoped while retaining actor/provenance. Permission, commercial entitlement and regulatory/product eligibility are independent gates. Clients must not recreate these decisions locally.
-
-For Individuals and Savings Groups, normal journeys must remain complete in the App. Web may add analysis, reporting and productivity but must not become a hidden prerequisite. Low literacy, low digital literacy, unreliable connectivity, minimal typing and assisted use are normal design constraints.
+Run only the affected heavy gates locally if necessary, but the repository release process remains the authority for final acceptance.

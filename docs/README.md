@@ -1,85 +1,84 @@
 # OpFin documentation hub
 
-Updated: 22 September 2026
+Updated: 23 September 2026
 
-This is the starting point for OpFin documentation. The goal is simple: a non-developer should be able to understand what the product does, while a developer should be able to find the exact API, control or implementation rule without excavating Git history like an archaeologist with a deadline.
+This is the navigation point for current OpFin documentation. It separates current product truth, API contracts, manuals, deployment evidence and historical records so yesterday's design note does not become tomorrow's production policy by accident.
 
 ## Start by role
 
 | Audience | Start here | Then read |
 | --- | --- | --- |
-| Product / leadership | `LAUNCH_CUSTOMER_JOURNEY.md` | `UMRA_DIGITAL_LENDING_CONTROLS.md`, production readiness |
-| Customer support / trainers | `TRAINING_AND_USER_GUIDE_FOUNDATION.md` | customer UAT, operational runbook |
-| Developer | `DEVELOPER_START_HERE.md` | API docs, architecture, component README |
-| API integrator | `../apps/api/docs/api/API_QUICK_REFERENCE.md` | current endpoints, frontend/backend contract |
-| Operations / compliance | `../apps/api/docs/operations/operational-runbook.md` | UMRA controls, compliance centre, UAT |
-| Security / release | `../SECURITY.md` | production readiness, release gates |
+| Leadership / product | [Current state](CURRENT_STATE.md) | [Product blueprint](product/OPFIN_PRODUCT_BLUEPRINT.md), [implementation status](product/CANONICAL_IMPLEMENTATION_STATUS.md) |
+| Customer / support | [User manual](manuals/OPFIN_USER_MANUAL.md) | [Training manual](manuals/OPFIN_TRAINING_MANUAL.md), [launch journey](LAUNCH_CUSTOMER_JOURNEY.md) |
+| Operations / compliance | [Operational manual](manuals/OPFIN_OPERATIONAL_MANUAL.md) | [UAT manual](manuals/OPFIN_UAT_MANUAL.md), [UMRA controls](UMRA_DIGITAL_LENDING_CONTROLS.md) |
+| Developer | [Developer start](DEVELOPER_START_HERE.md) | [API docs](../apps/api/docs/README.md), `AGENTS.md`, `SECURITY.md` |
+| API integrator | [API quick reference](../apps/api/docs/api/API_QUICK_REFERENCE.md) | [Current endpoints](../apps/api/docs/api/current-endpoints.md) |
+| Programme / MEL partner | [Inclusive-finance framework](product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md) | [Partner reporting standard](product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md) |
+| Release owner | [Current state](CURRENT_STATE.md) | [Railway topology](../infrastructure/railway/README.md), store/release documentation |
 
-## Current product documents
+## Current product baseline
 
-- `LAUNCH_CUSTOMER_JOURNEY.md` — canonical borrower journey across App, WhatsApp and USSD.
-- `UMRA_DIGITAL_LENDING_CONTROLS.md` — implemented digital-lending regulatory controls.
-- `DEVELOPER_START_HERE.md` — practical repository/API/development guide.
-- `product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md` — canonical inclusion, programme, alternative-data, collateral and OpFin/Stolets boundary contract.
-- `product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md` — canonical provider-independence, Stolets Financial Passport, partner reporting and universal service-economics contract.
-- `TRAINING_AND_USER_GUIDE_FOUNDATION.md` — source foundation for staff training and customer/user guides.
-- `BRAND_IMPLEMENTATION.md` — implementation of OpFin brand tokens and assets.
-- `GOOGLE_PLAY_LAUNCH_V1.md` — Android release evidence and store requirements.
-- `GOOGLE_PLAY_ACCOUNT_DELETION.md` — deletion path and regulatory retention behaviour.
+OpFin is a financial operating platform, not a lending-only application. Current implemented domains include Financial Spaces, everyday financial management, responsible credit, financial health, provider-gated savings/investment/protection, employer capabilities, inclusive-finance programmes, partner/MEL reporting, programme follow-ups/localisation, governed provider evidence, and commercial/service-economics reporting.
+
+Cito is the preferred external-integration gateway where configured. CPay is the preferred production money-movement route. Neither statement means every underlying provider is automatically active.
+
+Stolets remains a separate SME operating product. Any OpFin use of Stolets evidence requires a specific consented and governed interface.
+
+## Website documentation boundary
+
+The public Web homepage describes the broad platform proposition. It is not the source of truth for:
+
+- provider activation;
+- credit policy;
+- regulatory status;
+- exact API behaviour;
+- app-store publication;
+- release certification.
+
+The homepage's Web sign-in is a Workspace/customer compatibility route. The canonical new-customer onboarding journey remains phone → OTP → names → six-digit PIN in the mobile experience.
 
 ## API documentation
 
-Canonical API documentation lives in `../apps/api/docs/`.
+Canonical API documentation lives under `../apps/api/docs/`.
 
-Key files:
-
-- `api/API_QUICK_REFERENCE.md`
-- `api/current-endpoints.md`
-- `api/frontend-backend-contract.md`
-- `architecture/api-design.md`
-- `architecture/security-and-compliance.md`
-- `architecture/testing-strategy.md`
-
-The live Laravel route table remains authoritative for exact registered routes:
+Use the registered Laravel route table for exact registered routes:
 
 ```bash
 cd apps/api
 php artisan route:list
-php artisan route:list --path=api/credit
 php artisan route:list --json
 ```
 
-## Search documentation
+Use prose contracts for purpose, validation, permissions, failure semantics and safe operation. A registered route alone is not a complete API contract.
+
+## Search
 
 From repository root:
 
 ```bash
-python3 scripts/search-docs.py "credit reporting"
-python3 scripts/search-docs.py "complaint" --api
-python3 scripts/search-api.py "umra"
+python3 scripts/search-docs.py "programme"
+python3 scripts/search-docs.py "commercial performance"
+python3 scripts/search-docs.py "credit reporting" --api
+python3 scripts/search-api.py "programme"
 python3 scripts/search-api.py "receipts"
 ```
 
-The search tools deliberately use the repository itself as the index, so they cannot become stale merely because someone forgot to regenerate a separate search database.
+## Current versus historical
 
-## Current versus historical documents
+Apply this hierarchy:
 
-Documents under dated `audit/`, `demo/`, migration or checkpoint paths are historical evidence unless a current index explicitly says otherwise. They may describe superseded architecture or demo behaviour and must not override:
+1. source code, migrations, registered routes and automated tests;
+2. Product Blueprint/domain models;
+3. [Current state](CURRENT_STATE.md) and canonical implementation status;
+4. current API documentation;
+5. current manuals;
+6. specialist regulatory/release/deployment guides;
+7. dated audit/demo/migration/checkpoint evidence.
 
-1. current source code;
-2. root `AGENTS.md` / `SECURITY.md`;
-3. current docs listed above;
-4. current API docs.
-
-Historical documents should retain their original date/context rather than being rewritten to pretend the past never happened.
+Historical evidence should retain its original date and context. Do not rewrite it to pretend the past was current all along.
 
 ## Documentation quality rule
 
-Every system/API change must update the relevant current documentation in the same pull request. CI checks documentation drift for route, backend, web and mobile changes. Documentation that materially disagrees with production behaviour is treated as a defect.
+Every material system/API/customer-workflow change must update the relevant current documentation in the same change. Unknown provider, commercial or release facts remain unknown. Missing values are not zero; unavailable evidence is not success; deployed source is not automatically release-certified.
 
-
-## Canonical product baseline — 20 September 2026
-
-The fully enabled product is a financial operating platform, not a lending-only application. Cito is the preferred third-party integration gateway and CPay is the preferred payment route, but OpFin remains independently operable through governed provider adapters. Inclusive-finance programme delivery is governed by `product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md`. For current work, read `product/OPFIN_PRODUCT_BLUEPRINT.md` and `architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md` before the older lending-specific journey documents. Current manuals live under `manuals/` and are authoritative for user, training, operations and UAT guidance.
-
-The current hierarchy is: source code and registered routes → Product Blueprint/domain model → current API references → current manuals → lending/regulatory specialist guides → dated audit/demo/history. A specialist lending guide must not be interpreted as the whole-product architecture.
+The manual set and website copy were reconciled against `main` on 23 September 2026. See [current state](CURRENT_STATE.md) for the exact reviewed commit and evidence limits.

@@ -1,89 +1,100 @@
 # OpFin
 
-OpFin is the canonical monorepo for the OpFin personal-finance platform. The launch customer experience is intentionally simple even though identity, credit, ledger, reconciliation and provider controls remain sophisticated behind it.
+OpFin is the canonical monorepo for the OpFin financial operating platform. One identity can participate in multiple Financial Spaces while the backend keeps identity, permissions, product eligibility, provider orchestration, financial truth, ledger and reconciliation authoritative.
 
-## Launch borrower journey
+**Current state:** see [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md).
 
-The supported launch journey is:
+## Product position
 
-`Phone → OTP → names → 6-digit PIN → Home → identity verification → credit profile → available limit → loan request → formal offer → verified-wallet disbursement → repayment`.
+OpFin helps people and organisations understand, manage, plan and improve their financial position. Lending is one capability, not the platform boundary.
 
-Key product rules:
+Current product layers include:
 
-- A second phone is optional.
-- KYC captures NIN, National ID front and back, and a photo of the customer holding the ID.
-- CRB, MNO, approved third-party and internal behaviour inputs remain separate score components and feed a decomposable OpFin Composite Score. Verified positive employer behaviour may add a small capped benefit; missing or negative employer-behaviour data is neutral.
-- The customer sees the composite score, understandable explanations, available loan limit, amount due and next payment date. Internal probability-of-default values remain internal.
-- Limits are profile-level, not multiplied by wallets or phone numbers.
-- App, WhatsApp and USSD use the same server-authoritative profile and financial state.
-- High-impact financial actions require authenticated confirmation; a PIN is never requested in WhatsApp or USSD.
-- Launch mobile navigation is `Home | Borrow | Activity | More`; non-launch products remain capability-gated rather than crowding the primary experience.
-- Accessibility is part of the core journey: large text, screen readers, reduced motion, simple language, high contrast and assisted identity verification are supported without lowering assurance.
-- Financial resilience adds contextual capability guidance, a non-score financial-reputation pathway, optional inclusion measurement, inclusive-finance programmes and alternative credit-support evidence without converting demographic attributes into underwriting inputs.
+- Personal, Household, Savings Group and authorised organisation Financial Spaces;
+- everyday money, budgets, goals, assets, liabilities and financial-health guidance;
+- responsible credit with disclosed offers, affordability, verified-wallet disbursement, repayment and receipts;
+- provider-gated savings, investment and protection;
+- employer financial-wellbeing capabilities;
+- inclusive-finance programme delivery, follow-ups, localisation and privacy-suppressed reporting;
+- partner/provider integrations through Cito where configured, with governed direct-provider fallback;
+- CPay-preferred money movement;
+- commercial/service-economics reporting that remains downstream of customer need, suitability and financial truth.
 
-See `docs/LAUNCH_CUSTOMER_JOURNEY.md` for the complete cross-channel contract and `docs/UMRA_DIGITAL_LENDING_CONTROLS.md` for the implemented digital-lending compliance controls.
+Stolets remains a separate SME automation and commerce product. Cross-product evidence must use explicit, consented, governed interfaces.
 
-## Layout
+## New-customer journey
 
-- `apps/api`: Laravel API, queue worker, scheduler and financial-domain source.
-- `apps/web`: Next.js web/customer and operational experience.
-- `apps/client`: Flutter Android/iOS client.
-- `packages/contracts`: shared API-contract home.
-- `infrastructure/railway`: Railway service-boundary documentation.
-- `docs`: current cross-platform launch, architecture, security and migration documentation.
+The canonical mobile journey is:
 
-The historical source imports remain in Git history. This repository is the current working source of truth.
+`Phone → OTP → names → 6-digit PIN → Home → progressive verification → financial position / eligible service → disclosed action → confirmed outcome`
 
-## Financial and security boundaries
+The Web marketing site and Workspace sign-in are not the preferred new-customer registration path. Legacy password-compatible Web sign-in remains a compatibility/operational surface.
 
-- `apps/api` owns identity, consent, eligibility, decisioning, obligations, provider finality, ledger posting and reconciliation.
-- Cito is the preferred third-party integration gateway and CPay is the preferred production money-movement route. OpFin remains independently operable; a direct production adapter is allowed only when explicitly configured, genuinely contracted/certified and reconcilable.
-- Provider acknowledgement is not financial finality.
-- External scoring/KYC sources may be unavailable; OpFin records that state instead of inventing data.
-- KYC evidence belongs on private persistent/object storage in production.
-- Store-distributed personal-loan terms retain the repository's 61-day minimum full-repayment rule and preference for eligible 90-day-plus routes.
-- Credit-information reporting, complaint SLA, NPL/default-interest caps, transaction receipts, guarantor confirmation and governed term changes are controlled/auditable backend responsibilities.
+Key rules:
 
-Read `SECURITY.md`, `AGENTS.md` and `apps/api/docs/README.md` before changing authentication, KYC, credit, money movement or customer-facing financial state.
+- a second phone is optional;
+- KYC and provider results remain attributable;
+- unavailable source data stays unavailable;
+- profile limits do not multiply across phones or wallets;
+- provider acknowledgement is not financial finality;
+- programme measurement and protected attributes do not become underwriting inputs;
+- app, web, WhatsApp, USSD and assisted channels use server-authoritative state;
+- high-impact actions require authenticated confirmation;
+- PINs and OTPs are never requested through support conversations.
+
+## Repository layout
+
+| Path | Responsibility |
+| --- | --- |
+| `apps/api` | Laravel API, worker, scheduler, financial and compliance domain |
+| `apps/web` | Next.js marketing, customer, workspace and operational surfaces |
+| `apps/client` | Flutter Android/iOS app |
+| `packages/contracts` | shared contract/schema conventions |
+| `docs` | current product, operational, training and release documentation |
+| `infrastructure/railway` | deployment boundaries and release controls |
+| `distribution/google-play` | Android store listing/release evidence |
+
+## Current documentation
+
+Start with:
+
+- [Current state](docs/CURRENT_STATE.md)
+- [Documentation hub](docs/README.md)
+- [Product blueprint](docs/product/OPFIN_PRODUCT_BLUEPRINT.md)
+- [Canonical implementation status](docs/product/CANONICAL_IMPLEMENTATION_STATUS.md)
+- [Inclusive-finance programme framework](docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md)
+- [Partner financial/compliance reporting standard](docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md)
+- [Developer start](docs/DEVELOPER_START_HERE.md)
+- [User manual](docs/manuals/OPFIN_USER_MANUAL.md)
+- [Training manual](docs/manuals/OPFIN_TRAINING_MANUAL.md)
+- [Operational manual](docs/manuals/OPFIN_OPERATIONAL_MANUAL.md)
+- [UAT manual](docs/manuals/OPFIN_UAT_MANUAL.md)
+- [API quick reference](apps/api/docs/api/API_QUICK_REFERENCE.md)
+- [Current API endpoints](apps/api/docs/api/current-endpoints.md)
+
+## Website and deployment
+
+The Web service setup endpoint is `https://opfin-web-production.up.railway.app`; the API setup endpoint is `https://opfin-production.up.railway.app`.
+
+At the reviewed 23 September 2026 `main` head, Railway commit statuses report successful API, Web, worker and scheduler deployments. No GitHub Actions workflow run is attached to that exact head, so do not describe that commit as fully release-certified merely because deployment succeeded.
+
+See [deployment documentation](infrastructure/railway/README.md) for the service topology and [current state](docs/CURRENT_STATE.md) for evidence boundaries.
 
 ## Local verification
 
-Run the affected project gates or the aggregate suite:
+Run the affected project gates or aggregate suite:
 
 `make api-test`, `make web-test`, `make client-test` or `make test`.
 
-The exact release commit must also pass the repository release gate, security gate and deployment contract. A passing build is not proof that provider credentials, store publication, real-device accessibility or production operations are activated.
-
-
-## Documentation and developer discovery
-
-Start at `docs/README.md`.
-
-Useful commands:
+Useful discovery commands:
 
 ```bash
-python3 scripts/search-docs.py "credit reporting"
-python3 scripts/search-docs.py "complaint" --api
+python3 scripts/search-docs.py "programme"
+python3 scripts/search-docs.py "credit reporting" --api
+python3 scripts/search-api.py "programme"
 python3 scripts/search-api.py "umra"
-python3 scripts/search-api.py "receipts"
 ```
 
-Training manuals and user guides should be derived from `docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md` plus the current application labels and API contracts.
+A build or deployment is not proof that provider credentials, legal approvals, store publication, physical-device accessibility or full release-gate evidence exist.
 
-CI checks documentation drift when backend routes/contracts or customer/admin workflows change.
-
-
-## Current product documentation (21 September 2026)
-
-- [Canonical Product Blueprint](docs/product/OPFIN_PRODUCT_BLUEPRINT.md)
-- [Financial Spaces domain model](docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md)
-- [Inclusive Finance and Programme Delivery Framework](docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md)
-- [Partner Financial, Compliance and Service Reporting Standard](docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md)
-- [User Manual](docs/manuals/OPFIN_USER_MANUAL.md)
-- [Training Manual](docs/manuals/OPFIN_TRAINING_MANUAL.md)
-- [Operational Manual](docs/manuals/OPFIN_OPERATIONAL_MANUAL.md)
-- [UAT Manual](docs/manuals/OPFIN_UAT_MANUAL.md)
-- [Current API endpoints](apps/api/docs/api/current-endpoints.md)
-- [API quick reference](apps/api/docs/api/API_QUICK_REFERENCE.md)
-
-These documents describe the current Financial Spaces and inclusive-finance architecture and supersede April-era prompt packs/architecture drafts for operational and training use. Stolets remains a separate SME automation/digitisation product; any cross-product use is an explicit, consented integration rather than a merged product boundary.
+Read `SECURITY.md`, `AGENTS.md` and the relevant current documentation before changing authentication, KYC, credit, provider routing, money movement or customer-facing financial state.

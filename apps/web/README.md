@@ -1,40 +1,42 @@
 # OpFin web application
 
-Updated: 21 September 2026
+Updated: 23 September 2026
 
-The Next.js web application provides customer and operational/admin experiences for the OpFin monorepo. It is a client of `apps/api`; it does not own authoritative credit calculations, balances, ledger state, provider finality or regulatory reporting logic.
+The Next.js application provides the public marketing site, customer Web access, institutional Workspaces and authorised operational/admin surfaces. It consumes `apps/api`; it does not own authoritative credit calculations, balances, financial finality, ledger state, provider routing or regulatory truth.
 
-## Customer experience
+## Website role
 
-The launch customer information architecture mirrors mobile intent:
+The homepage communicates the broad OpFin proposition:
 
-**Home | Borrow | Activity | More**
+- individuals;
+- savings groups;
+- businesses/employers;
+- SACCOs and partners;
+- responsible credit;
+- inclusive-finance programmes and partner reporting.
 
-The web experience supports account/profile, KYC/consent, borrower state, loan application/offer/account flows, support, receipts and selected financial-wellbeing capabilities.
+Public copy must distinguish implemented capability from activated provider service. Illustrative product cards are not production screenshots. Programme outcomes are not causal claims. Web sign-in is not the preferred new-customer onboarding route.
 
-Savings, investments, insurance, participatory finance, SACCO/community capital and other long-range capabilities remain capability/provider gated and must not be presented as live merely because code exists.
+Canonical new-customer onboarding remains phone → OTP → names → six-digit PIN in the mobile experience. The current Web login retains password-compatible access for existing/authorised users and account-deletion verification.
 
-## Admin and operations
+## Customer and Workspace experience
 
-Current operational surfaces include:
+Server-authoritative Financial Space context is shared across clients. Web enhances analysis and institutional operations; it must not become a hidden prerequisite for essential Individual or Savings Group journeys.
 
-- credit review;
-- reconciliation and immutable ledger review;
-- customer support/complaints;
-- governance and regulatory reports;
-- UMRA compliance controls and evidence packs;
-- security/audit and platform operations.
+Current web surfaces include financial management, credit/customer state, programme delivery, inclusive-finance/impact operations, partner access, commercial performance, governance/compliance and operational administration.
 
-The Compliance Centre surfaces credit-reporting queues, complaint SLA state, NPL/default-interest controls, receipts, guarantor confirmations and governed term changes.
+Provider-gated savings, investment, protection and other regulated products must not be presented as live solely because source code exists.
 
-## Frontend authority rules
+## Authority rules
 
-- Monetary API values are integer minor units.
-- Do not reproduce backend pricing, interest, fee, repayment-allocation or credit-limit formulas in TypeScript.
-- Display immutable offer disclosures exactly as returned.
-- Pending provider requests are not completed financial events.
-- High-impact actions keep verification material on the server side.
-- Production must not use mock API behaviour or demo shortcuts.
+- monetary values remain integer minor units;
+- do not reproduce backend pricing, interest, fee, repayment-allocation or credit-limit formulas in TypeScript;
+- display offer disclosures as returned by the API;
+- pending provider requests are not completed financial events;
+- programme measurement/protected attributes remain outside underwriting;
+- commercial economics remain downstream of customer need/eligibility/suitability;
+- production must not use mock API behaviour or demo shortcuts;
+- provider secrets never belong in browser-visible configuration.
 
 ## Setup
 
@@ -52,73 +54,32 @@ NEXT_PUBLIC_USE_MOCK_API=false
 OPFIN_ENABLE_DEMO_SHORTCUTS=false
 ```
 
-Only browser-safe values may use `NEXT_PUBLIC_`. Provider credentials belong to the API/backend.
+## Production topology
+
+The current Railway Web setup address is `https://opfin-web-production.up.railway.app`, consuming `https://opfin-production.up.railway.app/api`.
+
+Generated Railway domains are operational setup endpoints, not proof of custom-domain cutover. At the reviewed 23 September `main` head, Railway commit statuses report successful web/API/worker/scheduler deployments, while no GitHub Actions workflow run exists for that exact head. Do not collapse those two evidence states.
 
 ## Quality gates
 
 ```bash
+npm run audit
 npm run typecheck
 npm run lint
 npm run test
 npm run build
 ```
 
-## API discovery
+A release also needs the repository release/security/deployment gates and any required provider/physical-device acceptance.
 
-Use the canonical API documentation, not an old hand-written frontend route list:
+## Documentation
 
-```bash
-python3 scripts/search-api.py "credit"
-python3 scripts/search-docs.py "credit offer" --api
-```
+Start with:
 
-Start with `../api/docs/api/API_QUICK_REFERENCE.md` through `apps/api/docs/api/API_QUICK_REFERENCE.md`, then `apps/api/docs/api/current-endpoints.md`.
+- `../../docs/CURRENT_STATE.md`
+- `../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`
+- `../../docs/manuals/OPFIN_USER_MANUAL.md`
+- `../../docs/manuals/OPFIN_OPERATIONAL_MANUAL.md`
+- `../api/docs/api/API_QUICK_REFERENCE.md`
 
-## Documentation rule
-
-When a web screen changes a customer/admin workflow, update the relevant web/current documentation in the same PR. Historical demo/audit documents remain evidence of an earlier state and do not override current contracts.
-
-
-## 20 September 2026 product-surface update
-
-Financial Spaces are now part of the canonical OpFin experience. One person may access Personal, Household, Savings Group and authorised organisation contexts without creating separate identities. Individuals and Savings Groups remain mobile-complete; Web provides enhanced analysis and institutional workspace capabilities. The customer proposition is to understand, manage, plan and improve money, with borrowing as one capability rather than the product boundary.
-
-## Inclusive-finance operations — 21 September 2026
-
-The **Inclusion & programmes** operations surface reports configured inclusive-finance programmes, enrolments, credit outcomes, NPL state, capability/programme events and consented cohorts. Cohorts smaller than five are suppressed. Voluntary programme-measurement attributes remain outside credit-risk decisioning.
-
-Stolets remains a separate product. This dashboard does not make Stolets data part of OpFin; any future cross-product signal must arrive through an explicit, consented and governed provider contract.
-
-The Inclusion & programmes surface also provides programme creation with explicit participation rules for age cohort, gender, disability inclusion, refugee/displacement status, geography category, employment category, first-time formal borrower status and KYC state. These rules govern programme participation only and are not written into the credit-scoring model.
-
-## Impact framework and programme-partner portal
-
-Platform operators now have an **Impact framework** workspace under Inclusion & programmes. It supports:
-
-- versioned programme theories of change;
-- reusable impact indicator definitions;
-- outcome domains, units, methodologies, sources and verification requirements;
-- programme targets/reporting frequencies;
-- privacy-safe outcome summaries;
-- explicit programme-partner access grants.
-
-A dedicated `programme_partner` role has a separate **Programme impact** navigation group. Partner accounts:
-
-- see only programmes explicitly granted to them;
-- receive aggregate delivery and outcome evidence;
-- never receive individual participant records from the partner surface;
-- cannot alter credit policy through the impact workspace.
-
-The operator must configure a programme's partner before granting access, and the target account must already be a dedicated programme-partner identity. Do not repurpose an ordinary customer's account as a partner login.
-
-## Programme delivery and commercial performance
-
-New web surfaces:
-
-- **More → Programme check-ins** for customer Web follow-ups;
-- **Admin → Programme delivery** for instruments, templates, translations, schedules, assisted capture, partner users, exports and provider-adapter governance;
-- **Admin → Commercial performance** for acquisition, funnel, portfolio outcomes, recorded unit economics and programme-to-commercial graduation;
-- **Programme partner activation** for invitation + phone OTP + dedicated PIN onboarding;
-- programme-partner/admin export proxy that downloads aggregate CSV/XLSX/ZIP evidence without exposing API bearer tokens.
-
-Programme-partner activation tokens are never passed through admin redirect query strings. Pending tokens are stored encrypted at rest for authorised delivery and cleared when accepted.
+When a Web workflow or public claim changes, update the relevant current documentation in the same PR.

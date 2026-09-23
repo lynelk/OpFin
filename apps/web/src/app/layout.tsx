@@ -8,12 +8,12 @@ import "./experience.css";
 import "./opfin-brand.css";
 
 export const metadata: Metadata = {
-  title: "OpFin | Your next step, clearer.",
-  description: "Explore available credit, understand your obligations and take your next financial step with OpFin. Services are subject to eligibility and availability.",
+  title: "OpFin | Understand, manage, plan and improve your money",
+  description:
+    "OpFin connects everyday money, financial health, responsible credit, savings, protection and partner services across personal, group and organisation Financial Spaces. Services remain subject to eligibility, provider activation and availability.",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  // Each HTML response receives a fresh CSP nonce. Do not statically cache it.
   await connection();
   return (
     <html lang="en-GB">
