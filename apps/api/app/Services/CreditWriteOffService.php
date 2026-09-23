@@ -41,6 +41,10 @@ class CreditWriteOffService
             }
 
             [$principalMinor, $financedFeeMinor] = $this->outstandingComponents($lockedLoan);
+            $defaultInterestMinor = max(
+                0,
+                (int) $lockedLoan->default_interest_accrued_minor - (int) $lockedLoan->default_interest_paid_minor,
+            );
             if ($principalMinor <= 0) {
                 throw new InvalidArgumentException('Credit write-off requires outstanding principal.');
             }
@@ -62,10 +66,25 @@ class CreditWriteOffService
             }
 
             $currency = $this->currency($lockedLoan);
+            $offer = $lockedLoan->credit_offer_id
+                ? CreditOffer::query()->findOrFail($lockedLoan->credit_offer_id)
+                : null;
+            $recognisedFeesMinor = $offer
+                ? (int) DB::table('credit_fee_recognition_events')->where('loan_id', $lockedLoan->id)->sum('amount_minor')
+                : 0;
+            $remainingDeferredFeesMinor = $offer
+                ? max(0, (int) $offer->fees_minor - $recognisedFeesMinor)
+                : 0;
+            $deferredFeeReleasedMinor = min($financedFeeMinor, $remainingDeferredFeesMinor);
+            $recognisedFeeLossMinor = max(0, $financedFeeMinor - $deferredFeeReleasedMinor);
+
             $writeOff = CreditWriteOff::create([
                 'loan_id' => $lockedLoan->id,
                 'principal_written_off_minor' => $principalMinor,
                 'financed_fee_written_off_minor' => $financedFeeMinor,
+                'deferred_fee_released_minor' => $deferredFeeReleasedMinor,
+                'recognised_fee_loss_minor' => $recognisedFeeLossMinor,
+                'default_interest_written_off_minor' => $defaultInterestMinor,
                 'currency' => $currency,
                 'policy_version' => $policyVersion,
                 'evidence' => $evidence,
@@ -101,17 +120,32 @@ class CreditWriteOffService
             ];
 
             if ($financedFeeMinor > 0) {
-                $entries[] = [
-                    'account_id' => $this->account(
-                        'liability.credit_fee_clearing.product_'.$lockedLoan->loan_product_id,
-                        'Credit fee clearing product '.$lockedLoan->loan_product_id,
-                        'liability',
-                        $currency,
-                    )->id,
-                    'direction' => LedgerEntry::DIRECTION_DEBIT,
-                    'amount_minor' => $financedFeeMinor,
-                    'memo' => 'Release unearned financed-fee clearing on accounting write-off',
-                ];
+                if ($deferredFeeReleasedMinor > 0) {
+                    $entries[] = [
+                        'account_id' => $this->account(
+                            'liability.credit_fee_clearing.product_'.$lockedLoan->loan_product_id,
+                            'Credit fee clearing product '.$lockedLoan->loan_product_id,
+                            'liability',
+                            $currency,
+                        )->id,
+                        'direction' => LedgerEntry::DIRECTION_DEBIT,
+                        'amount_minor' => $deferredFeeReleasedMinor,
+                        'memo' => 'Release deferred unearned financed fee on accounting write-off',
+                    ];
+                }
+                if ($recognisedFeeLossMinor > 0) {
+                    $entries[] = [
+                        'account_id' => $this->account(
+                            'expense.credit_fee_write_off.product_'.$lockedLoan->loan_product_id,
+                            'Recognised credit fee write-off expense product '.$lockedLoan->loan_product_id,
+                            'expense',
+                            $currency,
+                        )->id,
+                        'direction' => LedgerEntry::DIRECTION_DEBIT,
+                        'amount_minor' => $recognisedFeeLossMinor,
+                        'memo' => 'Write off recognised but unpaid financed fee receivable',
+                    ];
+                }
                 $entries[] = [
                     'account_id' => $this->account(
                         'asset.credit_fee_receivable.product_'.$lockedLoan->loan_product_id,
@@ -122,6 +156,31 @@ class CreditWriteOffService
                     'direction' => LedgerEntry::DIRECTION_CREDIT,
                     'amount_minor' => $financedFeeMinor,
                     'memo' => 'Derecognise unpaid financed-fee receivable on accounting write-off',
+                ];
+            }
+
+            if ($defaultInterestMinor > 0) {
+                $entries[] = [
+                    'account_id' => $this->account(
+                        'expense.default_interest_write_off.product_'.$lockedLoan->loan_product_id,
+                        'Default interest write-off expense product '.$lockedLoan->loan_product_id,
+                        'expense',
+                        $currency,
+                    )->id,
+                    'direction' => LedgerEntry::DIRECTION_DEBIT,
+                    'amount_minor' => $defaultInterestMinor,
+                    'memo' => 'Write off accrued but unpaid default-interest receivable',
+                ];
+                $entries[] = [
+                    'account_id' => $this->account(
+                        'asset.default_interest_receivable.product_'.$lockedLoan->loan_product_id,
+                        'Default interest receivable product '.$lockedLoan->loan_product_id,
+                        'asset',
+                        $currency,
+                    )->id,
+                    'direction' => LedgerEntry::DIRECTION_CREDIT,
+                    'amount_minor' => $defaultInterestMinor,
+                    'memo' => 'Derecognise unpaid accrued default interest',
                 ];
             }
 
@@ -138,6 +197,9 @@ class CreditWriteOffService
                     'impairment_assessment_id' => $assessment->id,
                     'principal_written_off_minor' => $principalMinor,
                     'financed_fee_written_off_minor' => $financedFeeMinor,
+                    'deferred_fee_released_minor' => $deferredFeeReleasedMinor,
+                    'recognised_fee_loss_minor' => $recognisedFeeLossMinor,
+                    'default_interest_written_off_minor' => $defaultInterestMinor,
                     'legal_obligation_preserved' => true,
                     'policy_version' => $policyVersion,
                 ],
@@ -150,6 +212,9 @@ class CreditWriteOffService
                 'credit_write_off_id' => $writeOff->id,
                 'principal_written_off_minor' => $principalMinor,
                 'financed_fee_written_off_minor' => $financedFeeMinor,
+                'deferred_fee_released_minor' => $deferredFeeReleasedMinor,
+                'recognised_fee_loss_minor' => $recognisedFeeLossMinor,
+                'default_interest_written_off_minor' => $defaultInterestMinor,
                 'policy_version' => $policyVersion,
                 'legal_obligation_preserved' => true,
             ]);
