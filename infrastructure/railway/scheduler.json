@@ -3,7 +3,17 @@
   "build": {
     "builder": "RAILPACK",
     "watchPatterns": [
-      "/apps/api/**",
+      "/apps/api/app/**",
+      "/apps/api/bootstrap/**",
+      "/apps/api/config/**",
+      "/apps/api/database/**",
+      "/apps/api/lang/**",
+      "/apps/api/resources/views/**",
+      "/apps/api/routes/**",
+      "/apps/api/railway/**",
+      "/apps/api/artisan",
+      "/apps/api/composer.json",
+      "/apps/api/composer.lock",
       "/packages/contracts/**",
       "/infrastructure/railway/scheduler.json"
     ]
