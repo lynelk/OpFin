@@ -73,3 +73,18 @@ Programme-linked outcome information is recorded only when:
 2. you are actively enrolled in that programme.
 
 You may leave a programme through the existing programme controls. Historical evidence from your participation period may be retained for legitimate audit and aggregate programme reporting, but post-exit observations are not silently added to the programme.
+
+## Programme check-ins across channels
+
+If you are enrolled in a programme and have active programme-measurement consent, OpFin may show short follow-up check-ins when they are due. The same governed questions can be delivered through the App, Web, verified WhatsApp, USSD or authorised assisted capture.
+
+- App/Web render the configured question types dynamically.
+- WhatsApp requires a verified session; send **CHECKIN** to see what is due.
+- USSD includes **Programme check-in** as a menu option for short instruments.
+- Assisted capture records the staff member separately and does not impersonate you.
+
+Where a reviewed translation exists, OpFin shows it. Otherwise it falls back to English rather than inventing a translation.
+
+Under **Financial health**, **Use recorded data** can create a wellbeing snapshot from financial information already recorded in OpFin. Missing external data stays missing. The result is not a credit score and does not change approval, price or limit.
+
+Programme partners see aggregate, programme-scoped reports only. Individual participant records are not exposed through the partner portal.
