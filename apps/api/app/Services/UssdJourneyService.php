@@ -8,7 +8,10 @@ use App\Models\User;
 
 class UssdJourneyService
 {
-    public function __construct(private readonly CustomerCreditProfileService $profiles) {}
+    public function __construct(
+        private readonly CustomerCreditProfileService $profiles,
+        private readonly ProgrammeDeliveryService $programmes,
+    ) {}
 
     public function handle(string $sessionId, string $phone, string $text): array
     {
@@ -19,7 +22,7 @@ class UssdJourneyService
 
         $parts = $text === '' ? [] : explode('*', trim($text));
         if ($parts === []) {
-            return $this->continue("OpFin\n1. My limit\n2. Borrow\n3. Repay\n4. My loan\n5. Complete profile\n6. Help");
+            return $this->continue("OpFin\n1. My limit\n2. Borrow\n3. Repay\n4. My loan\n5. Complete profile\n6. Help\n7. Programme check-in");
         }
 
         return match ($parts[0]) {
@@ -29,7 +32,8 @@ class UssdJourneyService
             '4' => $this->loan($user),
             '5' => $this->profile($user),
             '6' => $this->end('Help: use the OpFin app or WhatsApp support. Never share your PIN or OTP with anyone.'),
-            default => $this->end('Invalid choice. Dial again and choose 1 to 6.'),
+            '7' => $this->programme($user, $parts),
+            default => $this->end('Invalid choice. Dial again and choose 1 to 7.'),
         };
     }
 
@@ -99,6 +103,141 @@ class UssdJourneyService
         return $this->end(
             'Loan status: '.$loan->status.'. Outstanding: UGX '.number_format((int) $loan->outstanding_balance).'.',
         );
+    }
+
+    private function programme(User $user, array $parts): array
+    {
+        try {
+            $state = $this->programmes->dueInstruments($user, 'ussd', $user->preferred_language ?? 'en');
+        } catch (\InvalidArgumentException $exception) {
+            return $this->end($exception->getMessage());
+        }
+
+        $instruments = $state['instruments'] ?? [];
+        if ($instruments === []) {
+            return $this->end('You have no programme check-in due right now.');
+        }
+
+        if (count($parts) === 1) {
+            $lines = ['Choose check-in:'];
+            foreach (array_slice($instruments, 0, 5) as $index => $instrument) {
+                $lines[] = ($index + 1).'. '.substr($instrument['name'], 0, 28);
+            }
+
+            return $this->continue(implode("\n", $lines));
+        }
+
+        $instrumentIndex = ((int) $parts[1]) - 1;
+        if (! isset($instruments[$instrumentIndex])) {
+            return $this->end('Invalid programme check-in choice.');
+        }
+
+        $instrument = $instruments[$instrumentIndex];
+        $questions = array_values($instrument['questions'] ?? []);
+        if ($questions === []) {
+            return $this->end('This programme check-in has no active questions.');
+        }
+
+        $answerParts = array_slice($parts, 2);
+        if (count($answerParts) < count($questions)) {
+            $question = $questions[count($answerParts)];
+
+            return $this->continue(
+                $this->ussdQuestionPrompt($question, count($answerParts) + 1, count($questions))
+            );
+        }
+
+        $answers = [];
+        foreach ($questions as $index => $question) {
+            try {
+                $answers[] = [
+                    'question_id' => $question['id'],
+                    'value' => $this->parseUssdAnswer($question, $answerParts[$index] ?? ''),
+                ];
+            } catch (\InvalidArgumentException $exception) {
+                return $this->end('Check-in answer '.($index + 1).' is invalid. Please dial again and retry.');
+            }
+        }
+
+        try {
+            $this->programmes->submitResponse(
+                $user,
+                (int) $instrument['id'],
+                $answers,
+                'ussd',
+                $state['locale'] ?? 'en',
+                isset($instrument['schedule']['id']) ? (int) $instrument['schedule']['id'] : null,
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return $this->end($exception->getMessage());
+        }
+
+        return $this->end('Programme check-in saved. Thank you.');
+    }
+
+    private function ussdQuestionPrompt(array $question, int $position, int $total): string
+    {
+        $prompt = $position.'/'.$total.' '.substr((string) ($question['prompt'] ?? 'Question'), 0, 120);
+        $type = $question['answer_type'] ?? 'text';
+        $options = $question['options'] ?? [];
+
+        if ($type === 'boolean') {
+            return $prompt."\n1. Yes\n2. No";
+        }
+
+        if ($type === 'single_choice') {
+            $lines = [$prompt];
+            foreach (array_slice($options, 0, 7) as $index => $option) {
+                $lines[] = ($index + 1).'. '.substr((string) $option, 0, 25);
+            }
+
+            return implode("\n", $lines);
+        }
+
+        if ($type === 'multi_choice') {
+            return $prompt."\nEnter choice numbers separated by commas.";
+        }
+
+        return $prompt;
+    }
+
+    private function parseUssdAnswer(array $question, string $raw): mixed
+    {
+        $type = $question['answer_type'] ?? 'text';
+        $options = $question['options'] ?? [];
+        $raw = trim($raw);
+
+        if ($type === 'boolean') {
+            return match ($raw) {
+                '1' => true,
+                '2' => false,
+                default => throw new \InvalidArgumentException('Invalid yes/no answer.'),
+            };
+        }
+
+        if ($type === 'single_choice') {
+            $index = ((int) $raw) - 1;
+            if (! isset($options[$index])) {
+                throw new \InvalidArgumentException('Invalid programme choice.');
+            }
+
+            return $options[$index];
+        }
+
+        if ($type === 'multi_choice') {
+            $selected = [];
+            foreach (explode(',', $raw) as $choice) {
+                $index = ((int) trim($choice)) - 1;
+                if (! isset($options[$index])) {
+                    throw new \InvalidArgumentException('Invalid programme choices.');
+                }
+                $selected[] = $options[$index];
+            }
+
+            return array_values(array_unique($selected));
+        }
+
+        return $raw;
     }
 
     private function profile(User $user): array
