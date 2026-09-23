@@ -51,6 +51,7 @@ return [
         'fee_recognition_policy_type' => env('OPFIN_FEE_RECOGNITION_POLICY_TYPE', 'credit_fee_recognition'),
         'tax_policy_type' => env('OPFIN_TAX_POLICY_TYPE', 'tax'),
         'efris_enabled' => (bool) env('OPFIN_EFRIS_ENABLED', false),
+        'impairment_max_age_days' => (int) env('OPFIN_IMPAIRMENT_MAX_AGE_DAYS', 31),
     ],
 
     'customer_experience' => [
