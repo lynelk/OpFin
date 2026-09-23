@@ -378,3 +378,56 @@ The code foundation does not fabricate external readiness. Production use still 
 Sensitive inclusion, provider-signal, support-instrument and programme configuration mutations are audit logged without copying raw sensitive values into the audit metadata.
 
 These are operational gates, not missing licence strings to be invented in source code.
+
+## 13. Programme delivery, commercial evidence and graduation
+
+### 13.1 Metadata-driven measurement instruments
+
+Programme questionnaires are versioned configuration rather than partner-specific code forks. Each question defines:
+
+**prompt → reviewed locale → answer type → validation → optional indicator → measurement stage → verification source → allowed channels**
+
+The same instrument can be rendered through App, Web, WhatsApp, USSD and assisted capture, subject to channel suitability.
+
+### 13.2 Channel and language inclusion
+
+Feature-phone and chat journeys remain deliberately short. Complex or high-friction instruments can be limited to App/Web/assisted capture by configuration.
+
+Programme locale keys currently support English, Swahili, Luganda, Runyankole-Rukiga, French, Arabic and Acholi. A locale key is not evidence that a translation has been reviewed. Missing reviewed translations fall back to English and are labelled as fallback content.
+
+### 13.3 Programme operations
+
+Follow-ups are derived deterministically from enrolment time plus configured measurement-stage offsets. The operations surface exposes due, overdue and completed measurements, baseline gaps and consent exceptions. Consent withdrawal stops new programme-measurement prompts while preserving legitimate historical evidence and the operational exception.
+
+### 13.4 Commercial evidence
+
+Commercial reporting uses governed records for:
+
+- customer acquisition attribution;
+- acquisition/KYC/CRB/payment/support/funding/collection/programme-delivery costs;
+- applications and decisions;
+- disbursed principal;
+- repeat borrowing;
+- NPL/overdue outcomes;
+- OpFin revenue events;
+- contribution before/after recorded NPL exposure.
+
+Missing cost/source data remains missing. It is not filled with benchmark assumptions.
+
+### 13.5 Programme-to-commercial graduation
+
+Graduation evaluates whether a participant has enough independent formal-finance evidence to be considered commercially established without an active development guarantee. It is an outcome metric, not a credit decision.
+
+The implementation uses verified identity, formal financial-reputation progress, cleared-loan history, absence of recorded NPL and development-guarantee dependence as transparent evidence.
+
+### 13.6 Partner identities and exports
+
+Programme partners use dedicated identities rather than customer accounts. Invitation activation requires an invitation, fresh phone OTP verification, a non-predictable PIN and programme-access acceptance. Partner reporting remains aggregate-only.
+
+Exports preserve suppression; they never become a back door to individual participant records.
+
+### 13.7 Provider adapters
+
+Adapter types include gnuGrid/CRB, MNO, employer, VSLA, Stolets and other approved providers. The registry stores configuration evidence and mappings, not provider secrets.
+
+Activation requires explicit confirmation that credentials/configuration and legal basis exist. Programme-measurement ingestion additionally requires active measurement consent and active programme enrolment. Ingested signals are verified for provenance but remain non-risk-eligible until a separate lawful scoring policy explicitly permits a non-protected signal through the existing credit-data governance path.
