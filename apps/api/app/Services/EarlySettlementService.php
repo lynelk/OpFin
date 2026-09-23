@@ -36,6 +36,9 @@ class EarlySettlementService
         if (! $loan->credit_offer_id) {
             throw new InvalidArgumentException('Early settlement is available only on governed production credit.');
         }
+        if (strcasecmp((string) $loan->status, 'Written Off') === 0) {
+            throw new InvalidArgumentException('Written-off credit is recovered through the governed recovery path, not early settlement.');
+        }
 
         $asOf ??= now();
         $loan = $this->defaultInterest->accrue($loan, $asOf);
