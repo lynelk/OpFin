@@ -118,3 +118,38 @@ The core Impact & Inclusive Finance implementation is now coded. Remaining work 
 - donor-specific application forks;
 - automatic causal-impact claims;
 - automatic use of programme demographics or impact observations in underwriting.
+
+## P0-P2 programme/commercial completion — implemented 23 September 2026
+
+### P0 — implemented
+
+- **P0-01 Dynamic programme check-in engine — Implemented.** Versioned instruments, typed questions, validation, indicator mapping, consent classification, scheduling and shared response storage.
+- **P0-02 Multi-channel programme journeys — Implemented.** App, Web, WhatsApp, USSD and assisted capture use one server-authoritative instrument contract.
+- **P0-03 Localisation framework — Implemented.** English plus configurable reviewed translations for Swahili, Luganda, Runyankole-Rukiga, French, Arabic and Acholi; untranslated content explicitly falls back to English.
+- **P0-04 Commercial unit-economics dashboard — Implemented.** Acquisition attribution, recorded cost truth, funnel, repeat usage, NPL/overdue outcomes, recorded revenue and contribution.
+
+### P1 — implemented
+
+- **P1-01 Programme-to-commercial graduation analytics — Implemented.** Transparent evidence-based graduation state, analytically separate from underwriting.
+- **P1-02 Partner/MEL exports — Implemented.** Aggregate CSV, XLSX and ZIP report packs with existing privacy suppression and causal-attribution notices.
+- **P1-03 Programme templates — Implemented.** Youth/women resilience, VSLA formal bridge, refugee/PWD inclusion, employer financial wellness and MSME/livelihood templates create editable draft configurations.
+- **P1-04 Partner-user administration — Implemented.** Dedicated programme-partner invitations, OTP-backed phone activation, programme grants, listing and revocation.
+- **P1-05 Programme operations dashboard — Implemented.** Active enrolments, due/overdue/completed follow-ups, baseline gaps, consent exceptions, assisted capture and scheduled reconciliation.
+
+### P2 — implemented
+
+- **P2-01 Automated financial-health enrichment — Implemented.** Uses existing OpFin financial-life records with provenance; missing external data stays missing; resulting snapshots remain non-credit-eligible.
+- **P2-02 Provider-specific adapter framework — Implemented.** Governed gnuGrid/CRB, MNO, employer, VSLA, Stolets and other adapter types with explicit signal allow-lists, consent/legal/configuration gates, idempotent provider references and `risk_eligible=false` ingestion.
+
+### External activation remains separate
+
+Code completion does not fabricate:
+
+- provider credentials;
+- partner programme agreements;
+- legal/data-processing approvals;
+- regulatory approvals;
+- reviewed translations that have not actually been supplied;
+- physical-device accessibility evidence.
+
+Those are activation/evidence gates rather than missing P0-P2 application code.
