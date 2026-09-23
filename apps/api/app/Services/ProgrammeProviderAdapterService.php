@@ -52,6 +52,17 @@ class ProgrammeProviderAdapterService
 
         $allowed = array_values(array_unique(array_map('strval', $data['allowed_signal_keys'] ?? [])));
         $mapping = $data['signal_mapping'] ?? [];
+        $purpose = $data['purpose'] ?? 'programme_measurement';
+        $creditPurpose = in_array($purpose, ['credit_assessment', 'affordability'], true);
+
+        if ($creditPurpose) {
+            foreach ($allowed as $sourceKey) {
+                $targetKey = $mapping[$sourceKey] ?? $sourceKey;
+                if ($this->isProtectedCreditSignal((string) $targetKey)) {
+                    throw new InvalidArgumentException('Protected or programme-measurement attributes cannot be configured for credit-purpose provider adapters.');
+                }
+            }
+        }
 
         if ($allowed === []) {
             throw new InvalidArgumentException('Provider adapter requires an explicit allowed-signal allow-list.');
@@ -70,10 +81,10 @@ class ProgrammeProviderAdapterService
             'name' => trim($data['name']),
             'adapter_type' => $data['adapter_type'],
             'status' => $data['status'] ?? 'draft',
-            'purpose' => $data['purpose'] ?? 'programme_measurement',
+            'purpose' => $purpose,
             'allowed_signal_keys' => json_encode($allowed),
             'signal_mapping' => json_encode($mapping),
-            'requires_credit_processing_consent' => (bool) ($data['requires_credit_processing_consent'] ?? false),
+            'requires_credit_processing_consent' => $creditPurpose || (bool) ($data['requires_credit_processing_consent'] ?? false),
             'credentials_configured' => (bool) ($data['credentials_configured'] ?? false),
             'legal_basis_confirmed' => (bool) ($data['legal_basis_confirmed'] ?? false),
             'activation_notes' => $data['activation_notes'] ?? null,
@@ -240,6 +251,14 @@ class ProgrammeProviderAdapterService
                 'boundary' => 'Provider ingestion verifies provenance only. It does not add the signal to underwriting or change a score, price or limit.',
             ];
         });
+    }
+
+    private function isProtectedCreditSignal(string $key): bool
+    {
+        $normalised = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '_', $key), '_'));
+
+        return in_array($normalised, InclusiveFinanceService::PROTECTED_SIGNAL_KEYS, true)
+            || in_array($normalised, InclusiveFinanceService::MEASUREMENT_ONLY_KEYS, true);
     }
 
     private function payload(object $row): array
