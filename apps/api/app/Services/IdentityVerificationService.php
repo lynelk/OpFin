@@ -359,10 +359,7 @@ class IdentityVerificationService
                 'biometric_route' => $biometricProviderReference ? 'DIRECT_PROVIDER' : 'PENDING_OR_NOT_CONFIGURED',
                 'biometric_provider_reference' => $biometricProviderReference,
             ]),
-            'risk_flags' => array_values(array_unique(array_filter([
-                ...($case->risk_flags ?? []),
-                ...$extraRiskFlags,
-            ]))),
+            'risk_flags' => $this->mergeIdentityRiskFlags($case->risk_flags ?? [], $extraRiskFlags),
             'reviewed_at' => $verified ? now() : null,
             'expires_at' => $verified ? now()->addYear() : null,
         ]);
@@ -382,10 +379,7 @@ class IdentityVerificationService
             'face_match_status' => $providerError ? 'provider_error' : 'pending_review',
             'nin_phone_link_status' => $providerError ? 'provider_error' : 'pending_review',
             'status' => KycCase::STATUS_PENDING_REVIEW,
-            'risk_flags' => array_values(array_unique([
-                ...($case->risk_flags ?? []),
-                ...$riskFlags,
-            ])),
+            'risk_flags' => $this->mergeIdentityRiskFlags($case->risk_flags ?? [], $riskFlags),
         ]);
 
         return $case->fresh();
@@ -441,6 +435,37 @@ class IdentityVerificationService
     private function directBiometricProviderConfigured(): bool
     {
         return trim((string) config('services.identity_verification.url')) !== '';
+    }
+
+    private function mergeIdentityRiskFlags(array $existing, array $current): array
+    {
+        $managed = [
+            'CITO_IDENTITY_NOT_CONFIGURED',
+            'IDENTITY_PROVIDER_NOT_CONFIGURED',
+            'DIRECT_PROVIDER_FALLBACK_DISABLED',
+            'NIN_VALIDATION_PENDING',
+            'NIN_VALIDATION_FAILED',
+            'CITO_IDENTITY_PROVIDER_ERROR',
+            'DIRECT_RETRY_REQUIRES_EXPLICIT_ROUTE_SWITCH',
+            'NIN_PHONE_LINK_PENDING',
+            'NIN_PHONE_LINK_FAILED',
+            'CITO_PHONE_OWNERSHIP_PROVIDER_ERROR',
+            'BIOMETRIC_PROVIDER_NOT_CONFIGURED',
+            'LIVENESS_CHECK_FAILED',
+            'FACE_MATCH_FAILED',
+            'BIOMETRIC_PROVIDER_ERROR',
+            'IDENTITY_PROVIDER_ERROR',
+        ];
+
+        $unrelated = array_values(array_filter(
+            $existing,
+            fn ($flag) => is_string($flag) && ! in_array($flag, $managed, true),
+        ));
+
+        return array_values(array_unique(array_filter([
+            ...$unrelated,
+            ...$current,
+        ], 'is_string')));
     }
 
     private function nullableString(mixed $value): ?string
