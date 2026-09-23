@@ -20,12 +20,16 @@ class DefaultInterestService
         if (! $loan->credit_offer_id) {
             throw new InvalidArgumentException('Default-interest accrual is only supported on governed production loans.');
         }
+        if (strcasecmp((string) $loan->status, 'Written Off') === 0) {
+            return $loan->fresh();
+        }
 
         $asOf ??= now();
         if (! $loan->non_performing_at) {
             throw new InvalidArgumentException('Default interest cannot accrue before the loan becomes non-performing.');
         }
 
+        $currency = strtoupper((string) ($loan->creditOffer?->currency ?? config('services.mobile_money.currency', 'UGX')));
         $policy = $this->policies->active('regulatory_pricing', (string) $loan->loan_product_id, null, null, $asOf);
         $rules = $this->policies->rules($policy);
         $defaultRules = (array) ($rules['default_interest'] ?? []);
@@ -128,7 +132,7 @@ class DefaultInterestService
                                 'asset.default_interest_receivable.product_'.$loan->loan_product_id,
                                 'Default interest receivable product '.$loan->loan_product_id,
                                 'asset',
-                                'UGX',
+                                $currency,
                             )->id,
                             'direction' => LedgerEntry::DIRECTION_DEBIT,
                             'amount_minor' => $delta,
@@ -139,7 +143,7 @@ class DefaultInterestService
                                 'income.default_interest.product_'.$loan->loan_product_id,
                                 'Default interest income product '.$loan->loan_product_id,
                                 'income',
-                                'UGX',
+                                $currency,
                             )->id,
                             'direction' => LedgerEntry::DIRECTION_CREDIT,
                             'amount_minor' => $delta,
@@ -147,7 +151,7 @@ class DefaultInterestService
                         ],
                     ],
                     null,
-                    'UGX',
+                    $currency,
                     [
                         'loan_id' => $loan->id,
                         'days' => $days,
