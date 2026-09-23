@@ -57,7 +57,7 @@ Financial health, safe-to-spend, forecasts, scenarios, alerts, explanations and 
 - Access: USSD, WhatsApp/SMS and assisted journeys.
 
 ### Partnerships
-SACCOs, insurers/brokers, fund managers, banks/MFIs, CRBs, employers, payment providers, cooperatives and other approved providers connect through a standard Partner Catalogue and provider-neutral adapters. Cito is the primary integration point; each service retains a controlled direct-provider adapter where the underlying provider contract permits it.
+SACCOs, insurers/brokers, fund managers, banks/MFIs, CRBs, employers, payment providers, cooperatives and other approved providers connect through a standard Partner Catalogue and provider-neutral adapters. Cito is the primary integration point; each service retains a controlled direct-provider adapter where the underlying provider contract permits it. Provider routing is capability-specific: for identity, Cito/gnuGrid is primary for NIN and phone ownership, while biometric ID-image/selfie checks remain on an evidence-capable provider until Cito exposes an equivalent certified evidence contract.
 
 ### Monetisation
 Subscriptions, commissions, revenue share, transaction economics, SaaS/platform fees, API/integration fees and servicing/administration income. Commercial terms are downstream of customer need and eligibility.

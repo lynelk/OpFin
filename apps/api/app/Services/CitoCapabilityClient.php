@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ConsentRecord;
+use App\Models\KycCase;
 use App\Models\User;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -21,42 +22,83 @@ class CitoCapabilityClient
 
     public function creditScore(User $user, ConsentRecord $consent, string $capability = 'CREDIT_SCORE_CRB'): array
     {
+        return $this->executeCapability(
+            path: '/api/v2/credit/scores',
+            user: $user,
+            nationalId: (string) $user->national_id,
+            capability: $capability,
+            purpose: $consent->purpose,
+            consentReference: 'consent:'.$consent->id,
+        );
+    }
+
+    public function identityCheck(User $user, KycCase $case, string $capability): array
+    {
+        $capability = strtoupper(trim($capability));
+        $path = match ($capability) {
+            'NIN' => '/api/v2/identity/nin/verifications',
+            'PHONE_OWNERSHIP' => '/api/v2/identity/verifications',
+            default => throw new InvalidArgumentException("Unsupported Cito identity capability: {$capability}"),
+        };
+
+        return $this->executeCapability(
+            path: $path,
+            user: $user,
+            nationalId: (string) $case->national_id,
+            capability: $capability,
+            purpose: 'identity_verification',
+            consentReference: 'kyc-case:'.$case->id,
+        );
+    }
+
+    private function executeCapability(
+        string $path,
+        User $user,
+        string $nationalId,
+        string $capability,
+        string $purpose,
+        string $consentReference,
+    ): array {
         if (! $this->configured()) {
             throw new InvalidArgumentException('Cito capability integration is not configured.');
         }
+
+        $fullName = trim(implode(' ', array_filter([
+            $user->first_name,
+            $user->other_name,
+            $user->last_name,
+        ]))) ?: ($user->name ?: null);
 
         $payload = [
             'merchantNumber' => $this->merchantNumber(),
             'capability' => strtoupper(trim($capability)),
             'country' => strtoupper((string) config('opfin.default_country', 'UG')),
             'subject' => [
-                'nationalId' => $user->national_id,
-                'fullName' => trim(implode(' ', array_filter([
-                    $user->first_name,
-                    $user->other_name,
-                    $user->last_name,
-                ]))) ?: ($user->name ?: null),
+                'nationalId' => $nationalId,
+                'fullName' => $fullName,
                 'phone' => $user->phone,
                 'attributes' => [
                     'identifierType' => 'NATIONAL_ID',
-                    'identifierValue' => (string) $user->national_id,
+                    'identifierValue' => $nationalId,
                     'customerReference' => 'user:'.$user->id,
                 ],
             ],
             'consent' => [
                 'obtained' => true,
-                'purpose' => $consent->purpose,
-                'reference' => 'consent:'.$consent->id,
+                'purpose' => trim($purpose),
+                'reference' => trim($consentReference),
             ],
             'attributes' => [
                 'identifierType' => 'NATIONAL_ID',
-                'identifierValue' => (string) $user->national_id,
+                'identifierValue' => $nationalId,
+                'nin' => $nationalId,
                 'msisdn' => (string) $user->phone,
+                'fullName' => $fullName,
                 'customerReference' => 'user:'.$user->id,
             ],
         ];
 
-        $response = $this->sendSigned('/api/v2/credit/scores', $payload);
+        $response = $this->sendSigned($path, $payload);
         if (! $response->successful()) {
             $code = (string) ($response->json('code') ?? 'CITO_CAPABILITY_ERROR');
             throw new RuntimeException("Cito capability request failed with {$code} (HTTP {$response->status()}).");
@@ -89,7 +131,7 @@ class CitoCapabilityClient
         ])
             ->timeout((int) config('services.cito.timeout_seconds', 15))
             ->withBody($body, 'application/json')
-            ->post(rtrim((string) config('services.cito.base_url'), '/').$path);
+            ->send('POST', rtrim((string) config('services.cito.base_url'), '/').$path);
     }
 
     private function sign(string $canonical): string

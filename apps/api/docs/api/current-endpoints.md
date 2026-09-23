@@ -1,6 +1,6 @@
 # Current API endpoints
 
-Updated against the registered canonical platform routes on **22 September 2026**. Routes remain subject to the middleware and role gates in source.
+Updated against the registered canonical platform routes on **23 September 2026**. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:
 
@@ -90,6 +90,10 @@ KYC multipart fields:
 - optional `capture_channel=app|whatsapp|mobile_web`
 
 Private evidence paths are not customer response fields.
+
+**Identity routing:** when Cito is configured, OpFin uses Cito's provider-neutral capability API as the primary route for NIN validation and phone-ownership/NIN-phone evidence. gnuGrid may satisfy those capabilities behind Cito without OpFin depending on gnuGrid-specific request formats. The captured National ID images and selfie are separate biometric/document evidence: the current Cito signed capability contract does not accept those binary artefacts, so liveness and face-match remain with the configured direct biometric provider until an equivalent Cito evidence contract is certified.
+
+If Cito returns an ambiguous technical failure, OpFin leaves the KYC case pending and does **not** silently issue a direct duplicate identity enquiry. Operations must reconcile the original request before explicitly selecting the direct route. If Cito NIN/phone checks pass but no biometric provider is configured, those checks remain recorded as valid while liveness/face-match remain `pending_review`; the customer is not falsely marked fully verified.
 
 ## 5. Credit profile
 
