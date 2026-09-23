@@ -28,6 +28,8 @@ export const navigationItems: NavItem[] = [
   { href: "/admin/support", label: "Support cases", group: "admin", roles: ["platform_admin", "operations", "support"] },
   { href: "/admin/compliance", label: "Compliance reports", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/inclusion", label: "Inclusion & programmes", group: "admin", roles: ["platform_admin", "operations"] },
+  { href: "/admin/inclusion/delivery", label: "Programme delivery", group: "admin", roles: ["platform_admin", "operations"] },
+  { href: "/admin/commercial", label: "Commercial performance", group: "admin", roles: ["platform_admin", "operations"] },
   { href: "/admin/audit-trail", label: "Audit trail", group: "admin", roles: ["platform_admin", "operations", "support"] },
 
   { href: "/employer", label: "OpFin Work", group: "employer", roles: ["platform_admin", "employer_admin"] },
