@@ -70,7 +70,8 @@ class CitoEssentialsLendingClient
             && trim((string) config('services.cito.merchant_number')) !== ''
             && trim((string) config('services.cito.private_key')) !== ''
             && trim((string) config('services.cito.essentials_drawdown_path')) !== ''
-            && trim((string) config('services.cito.essentials_drawdown_status_path')) !== '';
+            && trim((string) config('services.cito.essentials_drawdown_status_path')) !== ''
+            && trim((string) config('services.cito.essentials_drawdown_release_path')) !== '';
     }
 
     public function authoriseDrawdown(
@@ -125,6 +126,27 @@ class CitoEssentialsLendingClient
             'capability' => 'ESSENTIALS_CREDIT_DRAWDOWN_STATUS',
             'reference' => $reference,
             'referenceType' => $referenceType === 'internal' ? 'REQUEST_REFERENCE' : 'PROVIDER_REFERENCE',
+        ]);
+    }
+
+    public function releaseDrawdown(EssentialsAdvance $advance, string $reason): array
+    {
+        if (! $this->drawdownConfigured()) {
+            throw new RuntimeException('Cito Essentials lender drawdown release is not configured.');
+        }
+        if (! $advance->lender_funding_reference) {
+            throw new RuntimeException('A lender funding reference is required before drawdown release.');
+        }
+
+        $path = trim((string) config('services.cito.essentials_drawdown_release_path'));
+        $path = str_starts_with($path, '/') ? $path : '/'.$path;
+
+        return $this->sendSigned($path, [
+            'merchantNumber' => (string) config('services.cito.merchant_number'),
+            'capability' => 'ESSENTIALS_CREDIT_DRAWDOWN_RELEASE',
+            'reference' => $advance->lender_funding_reference,
+            'requestReference' => $advance->reference.':release',
+            'reason' => $reason,
         ]);
     }
 
