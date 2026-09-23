@@ -177,9 +177,21 @@ class PartnerEssentialsController extends Controller
             return ApiResponse::error('The quote does not belong to this platform/customer context.', 403);
         }
 
+        $customer = User::withoutGlobalScopes()->findOrFail((int) $validated['customer_user_id']);
+        try {
+            $this->essentials->assertPartnerCustomerAuthorised(
+                $customer,
+                (int) $validated['partner_account_id'],
+                'quote_create',
+                $record->financial_space_id,
+            );
+        } catch (InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 403);
+        }
+
         try {
             $advance = $this->essentials->acceptQuote(
-                User::withoutGlobalScopes()->findOrFail((int) $validated['customer_user_id']),
+                $customer,
                 $record->id,
                 (string) $validated['disclosure_hash'],
                 (string) $validated['customer_authorisation_token'],
