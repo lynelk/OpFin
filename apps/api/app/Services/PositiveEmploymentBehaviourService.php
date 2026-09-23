@@ -16,19 +16,24 @@ class PositiveEmploymentBehaviourService
             return $this->neutral();
         }
 
-        $signals = DB::table('alternative_data_signals')
-            ->where('user_id', $user->id)
-            ->where('source_type', 'employer')
-            ->whereIn('purpose', ['credit_assessment', 'affordability'])
-            ->where('verified', true)
-            ->where('risk_eligible', true)
-            ->whereNotNull('consent_record_id')
+        $signals = DB::table('alternative_data_signals as signals')
+            ->join('consent_records as consents', 'consents.id', '=', 'signals.consent_record_id')
+            ->where('signals.user_id', $user->id)
+            ->where('signals.source_type', 'employer')
+            ->whereIn('signals.purpose', ['credit_assessment', 'affordability'])
+            ->where('signals.verified', true)
+            ->where('signals.risk_eligible', true)
+            ->where('consents.user_id', $user->id)
+            ->where('consents.purpose', 'credit_processing')
+            ->where('consents.status', 'granted')
+            ->whereNull('consents.revoked_at')
             ->where(function ($query) {
-                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                $query->whereNull('signals.expires_at')->orWhere('signals.expires_at', '>', now());
             })
-            ->whereIn('signal_key', array_keys($rules))
-            ->orderByDesc('observed_at')
-            ->orderByDesc('id')
+            ->whereIn('signals.signal_key', array_keys($rules))
+            ->orderByDesc('signals.observed_at')
+            ->orderByDesc('signals.id')
+            ->select('signals.*')
             ->get();
 
         $seen = [];
