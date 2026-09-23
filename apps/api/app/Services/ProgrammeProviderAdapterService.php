@@ -145,34 +145,50 @@ class ProgrammeProviderAdapterService
         }
 
         $payloadHash = hash('sha256', json_encode($signals, JSON_THROW_ON_ERROR));
-        $duplicate = DB::table('programme_provider_ingestions')
-            ->where('adapter_id', $adapterId)
-            ->where('provider_reference', $data['provider_reference'])
-            ->first();
 
-        if ($duplicate) {
-            if (! hash_equals($duplicate->payload_hash, $payloadHash)) {
-                throw new InvalidArgumentException('Provider reference has already been used with different signal data.');
+        return DB::transaction(function () use (
+            $adapterId,
+            $adapter,
+            $subject,
+            $data,
+            $signals,
+            $allowed,
+            $mapping,
+            $payloadHash,
+        ) {
+            $duplicate = DB::table('programme_provider_ingestions')
+                ->where('adapter_id', $adapterId)
+                ->where('provider_reference', $data['provider_reference'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($duplicate) {
+                if (! hash_equals($duplicate->payload_hash, $payloadHash)) {
+                    throw new InvalidArgumentException('Provider reference has already been used with different signal data.');
+                }
+
+                return [
+                    'ingestion_id' => (int) $duplicate->id,
+                    'duplicate' => true,
+                    'status' => $duplicate->status,
+                    'risk_eligible' => false,
+                ];
             }
 
-            return [
-                'ingestion_id' => (int) $duplicate->id,
-                'duplicate' => true,
-                'status' => $duplicate->status,
-            ];
-        }
+            $sourceType = match ($adapter->adapter_type) {
+                'gnugrid_crb' => 'crb',
+                'mno' => 'mno',
+                'employer' => 'employer',
+                'stolets' => 'transactional',
+                default => 'partner',
+            };
 
-        $sourceType = match ($adapter->adapter_type) {
-            'gnugrid_crb' => 'crb',
-            'mno' => 'mno',
-            'employer' => 'employer',
-            'stolets' => 'transactional',
-            default => 'partner',
-        };
-
-        $mapped = [];
-        DB::transaction(function () use ($signals, $mapping, $adapter, $subject, $sourceType, $data, &$mapped) {
+            $mapped = [];
             foreach ($signals as $sourceKey => $value) {
+                if (! in_array($sourceKey, $allowed, true)) {
+                    throw new InvalidArgumentException('Provider payload contains a signal outside the configured allow-list.');
+                }
+
                 $target = $mapping[$sourceKey] ?? $sourceKey;
 
                 DB::table('alternative_data_signals')->insert([
@@ -200,30 +216,30 @@ class ProgrammeProviderAdapterService
 
                 $mapped[$sourceKey] = $target;
             }
+
+            $id = DB::table('programme_provider_ingestions')->insertGetId([
+                'adapter_id' => $adapterId,
+                'user_id' => $subject->id,
+                'provider_reference' => $data['provider_reference'],
+                'payload_hash' => $payloadHash,
+                'mapped_signals' => json_encode($mapped),
+                'status' => 'processed',
+                'received_at' => now(),
+                'processed_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return [
+                'ingestion_id' => $id,
+                'adapter_id' => $adapterId,
+                'user_id' => $subject->id,
+                'mapped_signals' => $mapped,
+                'risk_eligible' => false,
+                'verified' => true,
+                'boundary' => 'Provider ingestion verifies provenance only. It does not add the signal to underwriting or change a score, price or limit.',
+            ];
         });
-
-        $id = DB::table('programme_provider_ingestions')->insertGetId([
-            'adapter_id' => $adapterId,
-            'user_id' => $subject->id,
-            'provider_reference' => $data['provider_reference'],
-            'payload_hash' => $payloadHash,
-            'mapped_signals' => json_encode($mapped),
-            'status' => 'processed',
-            'received_at' => now(),
-            'processed_at' => now(),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return [
-            'ingestion_id' => $id,
-            'adapter_id' => $adapterId,
-            'user_id' => $subject->id,
-            'mapped_signals' => $mapped,
-            'risk_eligible' => false,
-            'verified' => true,
-            'boundary' => 'Provider ingestion verifies provenance only. It does not add the signal to underwriting or change a score, price or limit.',
-        ];
     }
 
     private function payload(object $row): array
