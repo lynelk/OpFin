@@ -47,6 +47,11 @@ return [
         'callback_secret' => env('CPAY_CALLBACK_SECRET'),
         // Messaging is a separate CPay contract. No endpoint is guessed in production.
         'sms_path' => env('CPAY_SMS_PATH'),
+        'bill_lookup_path' => env('CPAY_BILL_LOOKUP_PATH'),
+        'bill_payment_path' => env('CPAY_BILL_PAYMENT_PATH'),
+        'beneficiary_payment_path' => env('CPAY_BENEFICIARY_PAYMENT_PATH'),
+        'lender_repayment_path' => env('CPAY_LENDER_REPAYMENT_PATH'),
+        'transaction_status_path' => env('CPAY_TRANSACTION_STATUS_PATH'),
         'callback_replay_window_seconds' => (int) env('CPAY_CALLBACK_REPLAY_WINDOW_SECONDS', 300),
         'environment' => env('CPAY_ENVIRONMENT', 'sandbox'),
         'country' => env('CPAY_COUNTRY', 'UG'),
@@ -65,9 +70,11 @@ return [
         'private_key' => env('CITO_PRIVATE_KEY', env('CPAY_PRIVATE_KEY')),
         'environment' => env('CITO_ENVIRONMENT', env('CPAY_ENVIRONMENT', 'sandbox')),
         'timeout_seconds' => (int) env('CITO_TIMEOUT_SECONDS', 15),
+        'essentials_lending_path' => env('CITO_ESSENTIALS_LENDING_PATH'),
     ],
 
     'crb' => [
+        'provider' => env('CRB_PROVIDER'),
         'base_url' => env('CRB_URL'),
         'account' => env('CRB_CLIENT_ID'),
         'password' => env('CRB_CLIENT_SECRET'),
@@ -87,6 +94,7 @@ return [
     ],
 
     'identity_verification' => [
+        'provider' => env('IDENTITY_VERIFICATION_PROVIDER'),
         'url' => env('IDENTITY_VERIFICATION_URL'),
         'token' => env('IDENTITY_VERIFICATION_TOKEN'),
         'disk' => env('KYC_FILESYSTEM_DISK', env('FILESYSTEM_DISK', 'local')),

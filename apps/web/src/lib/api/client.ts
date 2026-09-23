@@ -491,3 +491,195 @@ export const opfinApi = {
 function envelopeAsync<T>(data: T, message: string): Promise<ApiEnvelope<T>> {
   return Promise.resolve(envelope(data, message));
 }
+
+
+export type EssentialsBiller = {
+  id: number;
+  code: string;
+  name: string;
+  category: string;
+  account_label: string;
+  route: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type EssentialsAccountView = {
+  id: number;
+  public_id: string;
+  financial_space_id: number | null;
+  biller: EssentialsBiller;
+  nickname?: string | null;
+  reference_last4: string;
+  verification_status: string;
+  verified_at?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type EssentialsAdvanceView = {
+  id: number;
+  reference: string;
+  status: string;
+  principal_minor: number;
+  principal_outstanding_minor: number;
+  total_repayment_minor: number;
+  outstanding_minor: number;
+  repaid_minor: number;
+  currency: string;
+  next_due_date?: string | null;
+  final_due_date?: string | null;
+  lender_partner_id: number;
+  partner_product_id: number;
+};
+
+export type EssentialsSummary = {
+  product: {
+    name: string;
+    positioning: string;
+    opfin_role: string;
+    opfin_is_primary_lender: boolean;
+  };
+  overall_available_limit_minor: number;
+  outstanding_minor: number;
+  currency: string;
+  accounts: EssentialsAccountView[];
+  advances: EssentialsAdvanceView[];
+  profile_status: string;
+};
+
+export type EssentialsQuoteView = {
+  id: number;
+  reference: string;
+  status: string;
+  purpose_category: string;
+  amount_minor: number;
+  interest_minor: number;
+  fees_minor: number;
+  total_repayment_minor: number;
+  term_days: number;
+  currency: string;
+  disclosure_snapshot: {
+    lender?: { name?: string; partner_code?: string };
+    opfin_role?: string;
+    purpose_bound?: boolean;
+    cash_disbursement_to_customer?: boolean;
+    [key: string]: unknown;
+  };
+  disclosure_hash?: string;
+  expires_at: string;
+};
+
+export type EssentialsPartnerAuthorisationView = {
+  id: number;
+  reference: string;
+  partner_account_id: number;
+  partner_name?: string | null;
+  financial_space_id?: number | null;
+  scopes: string[];
+  status: string;
+  granted_at?: string | null;
+  expires_at?: string | null;
+  revoked_at?: string | null;
+};
+
+export type EssentialsPortfolio = {
+  active_advances: number;
+  principal_outstanding_minor: number;
+  total_outstanding_minor: number;
+  pending_account_verification: number;
+  by_category: Array<{ category: string; advances: number; outstanding_minor: number }>;
+};
+
+export type EssentialsAdminAccount = EssentialsAccountView & {
+  user_id: number;
+  created_at?: string | null;
+};
+
+export type EssentialsFundingPool = {
+  id: number;
+  reference: string;
+  partner_id?: number | null;
+  name: string;
+  committed_capital_minor: number;
+  deployed_capital_minor: number;
+  reserved_capital_minor: number;
+  status: string;
+};
+
+export type EssentialsLenderRow = {
+  partner_id: number;
+  partner_code: string;
+  partner_name: string;
+  partner_type: string;
+  partner_status: string;
+  product_id: number;
+  product_code: string;
+  product_name: string;
+  product_type: string;
+  product_status: string;
+  integration_config?: string | Record<string, unknown> | null;
+  pricing?: string | Record<string, unknown> | null;
+  eligibility_rules?: string | Record<string, unknown> | null;
+};
+
+export type EssentialsWorkQueue = {
+  pending_accounts: EssentialsAdminAccount[];
+  exception_advances: EssentialsAdvanceView[];
+  lenders: EssentialsLenderRow[];
+  funding_pools: EssentialsFundingPool[];
+  billers: EssentialsBiller[];
+};
+
+export const essentialsApi = {
+  summary: (token?: string) => request<EssentialsSummary>("/essentials", { token }),
+  catalogue: (token?: string) => request<{ billers: EssentialsBiller[]; categories: string[]; platforms: Array<{id:number;name:string;type:string}> }>("/essentials/catalogue", { token }),
+  refreshEligibility: (payload: { financial_space_id?: number; channel?: string }, token?: string) =>
+    request<Record<string, unknown>>("/essentials/eligibility", { method: "POST", bodyJson: payload, token }),
+  addAccount: (
+    payload: { biller_id: number; account_reference: string; nickname?: string; financial_space_id?: number; metadata?: Record<string, unknown> },
+    token?: string
+  ) => request<{ account: EssentialsAccountView }>("/essentials/accounts", { method: "POST", bodyJson: payload, token }),
+  verifyAccount: (accountId: number, token?: string) =>
+    request<{ account: EssentialsAccountView }>(`/essentials/accounts/${accountId}/verify`, { method: "POST", token }),
+  quotes: (token?: string) => request<{ quotes: EssentialsQuoteView[] }>("/essentials/quotes", { token }),
+  createQuote: (payload: { essentials_account_id: number; amount_minor: number; channel?: string }, token?: string) =>
+    request<{ quote: EssentialsQuoteView; disclosure_hash: string }>("/essentials/quotes", { method: "POST", bodyJson: payload, token }),
+  acceptQuote: (quoteId: number, disclosureHash: string, token?: string) =>
+    request<{ advance: EssentialsAdvanceView }>(`/essentials/quotes/${quoteId}/accept`, {
+      method: "POST",
+      bodyJson: { disclosure_hash: disclosureHash, accept_disclosures: true },
+      token
+    }),
+  repay: (advanceId: number, amountMinor: number, idempotencyKey: string, token?: string) =>
+    request<Record<string, unknown>>(`/essentials/advances/${advanceId}/repay`, {
+      method: "POST",
+      bodyJson: { amount_minor: amountMinor, idempotency_key: idempotencyKey },
+      token
+    }),
+  partnerAuthorisations: (token?: string) =>
+    request<{ authorisations: EssentialsPartnerAuthorisationView[] }>("/essentials/partner-authorisations", { token }),
+  authorisePartner: (
+    payload: { partner_account_id:number; financial_space_id?:number; scopes:string[]; valid_days?:number },
+    token?: string
+  ) => request<{authorisation:EssentialsPartnerAuthorisationView}>("/essentials/partner-authorisations", {method:"POST",bodyJson:payload,token}),
+  revokePartnerAuthorisation: (authorisationId: number, token?: string) =>
+    request<Record<string, unknown>>(`/essentials/partner-authorisations/${authorisationId}`, { method: "DELETE", token }),
+  adminPortfolio: (token?: string) => request<EssentialsPortfolio>("/admin/essentials/portfolio", { token }),
+  adminWorkQueue: (token?: string) => request<EssentialsWorkQueue>("/admin/essentials/work-queue", { token }),
+  adminSaveBiller: (
+    payload: { code:string; name:string; category:string; account_label:string; route:string; status?:string; metadata?:Record<string,unknown> },
+    token?: string
+  ) => request<{ biller: EssentialsBiller }>("/admin/essentials/billers", { method:"POST", bodyJson:payload, token }),
+  adminSaveLender: (
+    payload: {
+      partner_code:string; partner_name:string; partner_type:string; institution_id?:number;
+      regulatory_evidence:Record<string,unknown>; status:string; product_code:string; product_name:string;
+      product_type:string; eligibility_rules:Record<string,unknown>; pricing:Record<string,unknown>;
+      decision_route:string; funding_pool_id?:number;
+    },
+    token?: string
+  ) => request<{ partner_id:number; partner_product_id:number }>("/admin/essentials/lenders", { method:"POST", bodyJson:payload, token }),
+  adminVerifyAccount: (accountId: number, payload: { status: "verified" | "failed"; provider_reference?: string }, token?: string) =>
+    request<{ account: EssentialsAccountView }>(`/admin/essentials/accounts/${accountId}/verify`, { method: "POST", bodyJson: payload, token }),
+  adminReconcileAdvance: (advanceId: number, token?: string) =>
+    request<{ advance: EssentialsAdvanceView }>(`/admin/essentials/advances/${advanceId}/reconcile`, { method: "POST", token })
+};

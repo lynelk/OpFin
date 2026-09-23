@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/credit_offers_screen.dart';
+import 'package:opfin/essentials_screen.dart';
 import 'package:opfin/financial_spaces_screen.dart';
 import 'package:opfin/connected_financial_life_screen.dart';
 import 'package:opfin/kyc_setup_screen.dart';
@@ -173,6 +174,12 @@ class _HomePageState extends State<_HomePage>{
           trailing:const Icon(Icons.chevron_right),
           onTap:()=>_open(const FinancialSpacesScreen()))),
         Card(child:ListTile(
+          leading:const Icon(Icons.home_work_outlined),
+          title:const Text('Keep essentials running',style:TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:const Text('Electricity, water, internet, rent and other verified essentials with third-party financing when eligible.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>_open(const EssentialsScreen()))),
+        Card(child:ListTile(
           leading:const Icon(Icons.insights_outlined),
           title:const Text('Plan my financial life',style:TextStyle(fontWeight:FontWeight.w700)),
           subtitle:const Text('Accounts, goals, household, business and community context.'),
@@ -234,6 +241,12 @@ class _BorrowPageState extends State<_BorrowPage>{
               child:const Text('Apply for a loan'))),
           ]))),
         Card(child:ListTile(
+          leading:const Icon(Icons.home_work_outlined),
+          title:const Text('Finance an essential'),
+          subtitle:const Text('Pay a verified provider directly through an approved third-party lender.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EssentialsScreen())))),
+        Card(child:ListTile(
           leading:const Icon(Icons.list_alt_outlined),
           title:const Text('My loan requests'),
           trailing:const Icon(Icons.chevron_right),
@@ -260,6 +273,11 @@ class _ActivityPage extends StatelessWidget{
         title:const Text('Credit offers'),subtitle:const Text('Review costs before accepting.'),
         trailing:const Icon(Icons.chevron_right),
         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const CreditOffersScreen())))),
+      Card(child:ListTile(
+        leading:const Icon(Icons.home_work_outlined),
+        title:const Text('Essentials'),subtitle:const Text('Purpose-bound service financing and repayments.'),
+        trailing:const Icon(Icons.chevron_right),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EssentialsScreen())))),
       Card(child:ListTile(
         leading:const Icon(Icons.receipt_long_outlined),
         title:const Text('Receipts'),subtitle:const Text('Completed disbursement and repayment acknowledgements.'),

@@ -124,3 +124,9 @@ Explain that acquisition cost, recorded revenue, CAC, contribution and provider 
 ## Acceptance exercise
 
 A learner passes when they can complete the assigned task unaided, explain what information is confirmed versus pending, identify where to get support, and avoid sharing credentials or treating unavailable services as live.
+
+## Training module: OpFin Essentials
+
+Trainees must explain that OpFin arranges and services Essentials financing while the named third party supplies the credit. Practise: add and verify a utility account; refresh eligibility; review lender/cost/term disclosures; accept a purpose-bound provider payment; repay; repeat with a rental beneficiary; and review/revoke connected-platform permissions.
+
+Do not describe lender limits as additive, promise approval, describe OpFin as the primary lender, or imply that Stolets/another platform can create debt without customer confirmation.

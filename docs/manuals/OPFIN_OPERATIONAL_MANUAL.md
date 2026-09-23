@@ -131,3 +131,9 @@ Railway deployment success and GitHub CI success are separate evidence. Both sho
 ## External activation
 
 Provider credentials/contracts, programme agreements, legal approvals, reviewed translations, app-store publication and physical-device certification are external activation gates. Record them as pending until genuine evidence exists.
+
+## Operating OpFin Essentials
+
+Use **Essentials operations** for biller configuration, licensed third-party lender products, rental/service verification, funding capacity and provider/repayment reconciliation. Rental finance requires verified landlord/property-manager and beneficiary details before activation.
+
+OpFin cannot be configured as the primary Essentials lender. Capital-mandate routes require an approved, active, funded pool linked to the lender. Cito-managed routes require a certified lender capability. All gnuGrid services remain behind Cito. Provider acknowledgement is not financial finality; ambiguous settlement/collection stays in the operations queue until reconciled.

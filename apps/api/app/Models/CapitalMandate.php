@@ -9,6 +9,7 @@ class CapitalMandate extends Model
     protected $fillable = [
         'reference',
         'owner_user_id',
+        'partner_id',
         'mandate_type',
         'name',
         'committed_capital_minor',
@@ -34,6 +35,11 @@ class CapitalMandate extends Model
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    public function partner()
+    {
+        return $this->belongsTo(\App\Models\Partner::class, 'partner_id');
     }
 
     public function approver()

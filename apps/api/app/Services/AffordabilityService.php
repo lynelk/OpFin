@@ -148,7 +148,18 @@ class AffordabilityService
                 ->sum('schedule.total_outstanding'));
         }
 
-        return $production + $legacy;
+        $essentials = 0;
+        if (Schema::hasTable('essentials_repayment_schedule_items')) {
+            $essentials = (int) DB::table('essentials_repayment_schedule_items as schedule')
+                ->join('essentials_advances as advance', 'advance.id', '=', 'schedule.advance_id')
+                ->where('advance.user_id', $userId)
+                ->whereIn('advance.status', ['active', 'overdue'])
+                ->where('schedule.total_outstanding_minor', '>', 0)
+                ->whereBetween('schedule.due_date', [$from, $to])
+                ->sum('schedule.total_outstanding_minor');
+        }
+
+        return $production + $legacy + $essentials;
     }
 
     private function projectedThirtyDayDebtServiceMinor(

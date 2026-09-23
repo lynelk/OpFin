@@ -94,3 +94,8 @@ Historical evidence should retain its original date and context.
 Every material system/API/customer-workflow change must update the relevant current documentation in the same change. Unknown provider, commercial or release facts remain unknown. Missing values are not zero; unavailable evidence is not success; deployed source is not automatically release-certified.
 
 The manual set and website copy were reconciled against `main` on 23 September 2026. See [current state](CURRENT_STATE.md) for the reviewed evidence boundary.
+
+## OpFin Essentials
+
+- `product/OPFIN_ESSENTIALS.md` — controlled product, utility/rent, third-party-lender orchestration, embedded-platform and operating contract.
+- Essentials extends OpFin; it does not redefine OpFin as a lending-only application or make OpFin the primary lender.

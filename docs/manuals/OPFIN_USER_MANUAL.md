@@ -100,3 +100,9 @@ Organisation or programme membership never grants automatic access to private Pe
 ## What remains externally dependent
 
 The app may contain code for a service that is not yet activated. Provider credentials, partner contracts, regulatory approvals, app-store publication, programme agreements, reviewed translations and physical-device certification are real external gates. OpFin should show an unavailable/pending state rather than pretending these gates have been completed.
+
+## OpFin Essentials
+
+Open **Essentials** from the normal OpFin journeys to add electricity, water, internet, TV, household-energy or rent payments. Verify the provider account or rental beneficiary, check participating third-party lenders, enter the amount, then review the named lender, provider payment, interest, fees, total repayment and term.
+
+If you accept, the financed amount goes directly to the verified provider or beneficiary rather than to your wallet. Track the obligation in OpFin and repay from a verified repayment wallet/phone. Connected platforms such as Stolets require your permission, and you can revoke that permission from Essentials.

@@ -139,3 +139,11 @@ Therefore the current source may be described as deployed, but the exact head mu
 Implementation proceeds by vertical journey slices and reuses working components. Existing identity, consent, credit, savings/protection, financial-wellbeing, ledger/reconciliation, governed provider adapters, community-finance and channel foundations are adapted rather than rewritten without evidence.
 
 Every slice is done only when implementation, permissions, failure states, tests, documentation and applicable production acceptance evidence agree.
+
+## OpFin Essentials
+
+Essentials is an embedded financial-service capability inside the wider OpFin financial operating platform. It provides purpose-bound financing for verified electricity, water, connectivity, household energy and rent while preserving the existing Financial Spaces, Financial Compass, savings, investment, insurance, employer and ordinary responsible-credit journeys.
+
+OpFin is not the initial primary lender. Approved third-party lenders provide credit through governed capital mandates or Cito-managed lender routes, every offer identifies the lender, and lender approvals do not stack above the customer's overall responsible-credit headroom. CPay is the preferred settlement/repayment route, all gnuGrid services consumed by OpFin route through Cito, and Stolets/other approved platforms integrate only through customer-controlled Financial Space permissions.
+
+The detailed contract is `product/OPFIN_ESSENTIALS.md`.
