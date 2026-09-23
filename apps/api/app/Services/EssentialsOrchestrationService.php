@@ -26,6 +26,7 @@ class EssentialsOrchestrationService
     public function __construct(
         private readonly CpayEssentialsClient $cpay,
         private readonly CitoEssentialsLendingClient $citoLending,
+        private readonly FinancialPolicyService $policies,
         private readonly ServiceEconomicsService $economics,
         private readonly AuditLogger $audit,
     ) {}
@@ -505,6 +506,7 @@ class EssentialsOrchestrationService
             'currency' => (string) $best['product']->currency,
             'channel' => $channel,
             'pricing_method' => $best['pricing']['method'],
+            'regulatory_policy' => $best['pricing']['regulatory_policy'],
             'customer_confirmation_required' => true,
         ];
         $hash = hash('sha256', json_encode($disclosures, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -1312,13 +1314,44 @@ class EssentialsOrchestrationService
     private function price(int $amount, array $pricing, string $channel): ?array
     {
         $termDays = (int) ($pricing['term_days'] ?? AppStoreCreditPolicy::PREFERRED_FULL_REPAYMENT_DAYS);
+        if ($termDays <= 0) {
+            throw new InvalidArgumentException('Essentials lender term must be positive.');
+        }
         if (in_array($channel, AppStoreCreditPolicy::STORE_CHANNELS, true) && $termDays < AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS) {
             return null;
         }
+
         $monthlyRate = max(0, (float) ($pricing['monthly_interest_rate_percent'] ?? $pricing['interest_rate_percent'] ?? 0));
+        $feePercent = max(0, (float) ($pricing['fee_percent'] ?? 0));
+        $fixedFee = max(0, (int) ($pricing['fixed_fee_minor'] ?? 0));
+
+        $policy = $this->policies->active('regulatory_pricing', 'essentials');
+        $rules = $this->policies->rules($policy);
+        if (isset($rules['max_rate_percent'])) {
+            $cycle = strtolower((string) ($rules['rate_cycle'] ?? 'monthly'));
+            $cycleDays = match ($cycle) {
+                'daily', 'day' => 1,
+                'weekly', 'week' => 7,
+                'monthly', 'month' => 30,
+                'annual', 'annually', 'yearly', 'year' => 365,
+                default => throw new InvalidArgumentException('The active regulatory pricing policy has an unsupported rate cycle.'),
+            };
+            $maximumMonthlyEquivalent = ((float) $rules['max_rate_percent'] / $cycleDays) * 30;
+            if ($monthlyRate > $maximumMonthlyEquivalent + 0.0000001) {
+                throw new InvalidArgumentException('The lender interest rate exceeds the active effective-dated regulatory pricing policy.');
+            }
+        }
+
+        $feeCaps = (array) ($rules['fee_caps'] ?? []);
+        if (isset($feeCaps['access_fee_percent']) && $feePercent > (float) $feeCaps['access_fee_percent'] + 0.0000001) {
+            throw new InvalidArgumentException('The lender percentage fee exceeds the active regulatory pricing policy.');
+        }
+        if (isset($feeCaps['disbursement_fee_minor']) && $fixedFee > (int) $feeCaps['disbursement_fee_minor']) {
+            throw new InvalidArgumentException('The lender fixed fee exceeds the active regulatory pricing policy.');
+        }
+
         $interest = (int) round($amount * ($monthlyRate / 100) * ($termDays / 30));
-        $fees = max(0, (int) ($pricing['fixed_fee_minor'] ?? 0))
-            + (int) round($amount * (max(0, (float) ($pricing['fee_percent'] ?? 0)) / 100));
+        $fees = $fixedFee + (int) round($amount * ($feePercent / 100));
         $total = $amount + $interest + $fees;
         $annualised = $amount > 0 ? (($total - $amount) / $amount) * (365 / max(1, $termDays)) * 100 : 0;
         if ($channel === 'app_store' && $annualised > AppStoreCreditPolicy::MAX_APR_PERCENT) {
@@ -1330,8 +1363,15 @@ class EssentialsOrchestrationService
             'fees_minor' => $fees,
             'total_repayment_minor' => $total,
             'term_days' => $termDays,
-            'method' => 'partner_pricing_snapshot_simple_term_cost_v1',
+            'method' => 'partner_pricing_snapshot_simple_term_cost_v2',
             'simple_annualised_cost_percent' => round($annualised, 6),
+            'regulatory_policy' => [
+                'id' => $policy->id,
+                'code' => $policy->code,
+                'version' => $policy->version,
+                'licence_class' => $policy->licence_class,
+                'effective_from' => $policy->effective_from,
+            ],
         ];
     }
 
