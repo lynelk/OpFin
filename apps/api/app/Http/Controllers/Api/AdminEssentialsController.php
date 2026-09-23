@@ -205,13 +205,15 @@ class AdminEssentialsController extends Controller
         try {
             $result = DB::transaction(function () use ($validated) {
             $partner = DB::table('partners')->where('code', strtoupper($validated['partner_code']))->first();
+            $partnerLicenceComplete = ! empty($validated['regulatory_evidence']['licence_number'])
+                && ! empty($validated['regulatory_evidence']['licence_authority']);
             $partnerValues = [
                 'institution_id' => $validated['institution_id'] ?? null,
                 'code' => strtoupper($validated['partner_code']),
                 'name' => $validated['partner_name'],
                 'partner_type' => $validated['partner_type'],
                 'country' => 'UG',
-                'status' => $validated['status'],
+                'status' => $partnerLicenceComplete ? 'active' : 'onboarding',
                 'adapter_key' => $validated['decision_route'],
                 'regulatory_evidence' => json_encode($validated['regulatory_evidence'], JSON_THROW_ON_ERROR),
                 'metadata' => json_encode(['essentials_enabled' => true], JSON_THROW_ON_ERROR),
