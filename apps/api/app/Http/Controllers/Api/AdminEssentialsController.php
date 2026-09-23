@@ -193,7 +193,8 @@ class AdminEssentialsController extends Controller
             return ApiResponse::error('A third-party funding pool is required for capital-mandate lending.', 422);
         }
 
-        $result = DB::transaction(function () use ($validated) {
+        try {
+            $result = DB::transaction(function () use ($validated) {
             $partner = DB::table('partners')->where('code', strtoupper($validated['partner_code']))->first();
             $partnerValues = [
                 'institution_id' => $validated['institution_id'] ?? null,
@@ -261,8 +262,11 @@ class AdminEssentialsController extends Controller
                 ]);
             }
 
-            return ['partner_id' => $partnerId, 'partner_product_id' => $productId];
-        });
+                return ['partner_id' => $partnerId, 'partner_product_id' => $productId];
+            });
+        } catch (InvalidArgumentException $e) {
+            return ApiResponse::error($e->getMessage(), 422);
+        }
 
         return ApiResponse::success('Third-party Essentials lender configured.', $result, 201);
     }
