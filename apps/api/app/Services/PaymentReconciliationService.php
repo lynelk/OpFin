@@ -178,6 +178,7 @@ class PaymentReconciliationService
                 } else {
                     $systemTransaction->update([
                         'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_EXCEPTION,
+                        'statement_reconciled_at' => null,
                         'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                     ]);
                     if ($systemTransaction->provider_reference) {
@@ -228,6 +229,7 @@ class PaymentReconciliationService
             if ($unmatchedIds->isNotEmpty()) {
                 MobileMoneyTransaction::query()->whereIn('id', $unmatchedIds)->update([
                     'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_EXCEPTION,
+                    'statement_reconciled_at' => null,
                     'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                 ]);
             }
@@ -373,6 +375,7 @@ class PaymentReconciliationService
                 );
                 $systemTransaction->update([
                     'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_EXCEPTION,
+                    'statement_reconciled_at' => null,
                     'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                 ]);
             }
