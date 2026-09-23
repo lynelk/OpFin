@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use RuntimeException;
-use ZipArchive;
 
 class ProgrammeReportExportService
 {
@@ -81,10 +80,6 @@ class ProgrammeReportExportService
 
     public function xlsx(int $programmeId): string
     {
-        if (! class_exists(ZipArchive::class)) {
-            throw new RuntimeException('XLSX export requires the PHP zip extension.');
-        }
-
         $data = $this->reportData($programmeId);
         $rows = $this->indicatorRows($data);
         $headers = [
@@ -105,74 +100,36 @@ class ProgrammeReportExportService
             $sheetRows[] = array_values($row);
         }
 
-        $path = tempnam(sys_get_temp_dir(), 'opfin-xlsx-');
-        if ($path === false) {
-            throw new RuntimeException('Unable to prepare XLSX export.');
-        }
-
-        $zip = new ZipArchive();
-        if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            @unlink($path);
-            throw new RuntimeException('Unable to create XLSX export.');
-        }
-
-        $zip->addFromString('[Content_Types].xml', $this->contentTypesXml());
-        $zip->addFromString('_rels/.rels', $this->rootRelsXml());
-        $zip->addFromString('xl/workbook.xml', $this->workbookXml());
-        $zip->addFromString('xl/_rels/workbook.xml.rels', $this->workbookRelsXml());
-        $zip->addFromString('xl/worksheets/sheet1.xml', $this->sheetXml($sheetRows));
-        $zip->close();
-
-        $bytes = file_get_contents($path);
-        @unlink($path);
-
-        if ($bytes === false) {
-            throw new RuntimeException('Unable to read generated XLSX export.');
-        }
-
-        return $bytes;
+        return $this->zip([
+            '[Content_Types].xml' => $this->contentTypesXml(),
+            '_rels/.rels' => $this->rootRelsXml(),
+            'xl/workbook.xml' => $this->workbookXml(),
+            'xl/_rels/workbook.xml.rels' => $this->workbookRelsXml(),
+            'xl/worksheets/sheet1.xml' => $this->sheetXml($sheetRows),
+        ]);
     }
 
     public function reportPack(int $programmeId, bool $includeCommercial = false): string
     {
-        if (! class_exists(ZipArchive::class)) {
-            throw new RuntimeException('Report-pack export requires the PHP zip extension.');
-        }
-
         $data = $this->reportData($programmeId, $includeCommercial);
-        $path = tempnam(sys_get_temp_dir(), 'opfin-report-pack-');
-        if ($path === false) {
-            throw new RuntimeException('Unable to prepare report pack.');
-        }
 
-        $zip = new ZipArchive();
-        if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            @unlink($path);
-            throw new RuntimeException('Unable to create report pack.');
-        }
-
-        $zip->addFromString('programme-outcomes.csv', $this->csv($programmeId));
-        $zip->addFromString('programme-report.json', json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-        $zip->addFromString('README.txt', implode("\n", [
-            'OpFin Programme Report Pack',
-            '',
-            'This package contains aggregate programme evidence only.',
-            'Small participant cohorts remain suppressed.',
-            'The package does not contain individual participant records.',
-            'Measured outcomes must not be described as causal programme impact unless the evaluation design supports that claim.',
-            '',
-            'Generated: '.$data['generated_at'],
-        ]));
-        $zip->close();
-
-        $bytes = file_get_contents($path);
-        @unlink($path);
-
-        if ($bytes === false) {
-            throw new RuntimeException('Unable to read generated report pack.');
-        }
-
-        return $bytes;
+        return $this->zip([
+            'programme-outcomes.csv' => $this->csv($programmeId),
+            'programme-report.json' => json_encode(
+                $data,
+                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+            ),
+            'README.txt' => implode("\n", [
+                'OpFin Programme Report Pack',
+                '',
+                'This package contains aggregate programme evidence only.',
+                'Small participant cohorts remain suppressed.',
+                'The package does not contain individual participant records.',
+                'Measured outcomes must not be described as causal programme impact unless the evaluation design supports that claim.',
+                '',
+                'Generated: '.$data['generated_at'],
+            ]),
+        ]);
     }
 
     private function indicatorRows(array $data): array
@@ -231,6 +188,102 @@ class ProgrammeReportExportService
         }
 
         return $name;
+    }
+
+    /**
+     * Create a standards-compliant ZIP archive using the uncompressed STORE
+     * method so XLSX/report-pack generation does not depend on ext-zip.
+     *
+     * @param  array<string, string>  $files
+     */
+    private function zip(array $files): string
+    {
+        $body = '';
+        $central = '';
+        $offset = 0;
+        [$dosTime, $dosDate] = $this->dosDateTime();
+
+        foreach ($files as $name => $contents) {
+            $nameBytes = (string) $name;
+            $data = (string) $contents;
+            $crc = crc32($data);
+            if ($crc < 0) {
+                $crc += 4294967296;
+            }
+            $size = strlen($data);
+            $nameLength = strlen($nameBytes);
+
+            $local = pack(
+                'VvvvvvVVVvv',
+                0x04034b50,
+                20,
+                0,
+                0,
+                $dosTime,
+                $dosDate,
+                $crc,
+                $size,
+                $size,
+                $nameLength,
+                0,
+            ).$nameBytes.$data;
+
+            $central .= pack(
+                'VvvvvvvVVVvvvvvVV',
+                0x02014b50,
+                20,
+                20,
+                0,
+                0,
+                $dosTime,
+                $dosDate,
+                $crc,
+                $size,
+                $size,
+                $nameLength,
+                0,
+                0,
+                0,
+                0,
+                0,
+                $offset,
+            ).$nameBytes;
+
+            $body .= $local;
+            $offset += strlen($local);
+        }
+
+        $centralOffset = strlen($body);
+        $centralSize = strlen($central);
+        $count = count($files);
+
+        $end = pack(
+            'VvvvvVVv',
+            0x06054b50,
+            0,
+            0,
+            $count,
+            $count,
+            $centralSize,
+            $centralOffset,
+            0,
+        );
+
+        return $body.$central.$end;
+    }
+
+    private function dosDateTime(): array
+    {
+        $now = now();
+        $year = max(1980, min(2107, (int) $now->format('Y')));
+        $dosTime = ((int) $now->format('H') << 11)
+            | ((int) $now->format('i') << 5)
+            | intdiv((int) $now->format('s'), 2);
+        $dosDate = (($year - 1980) << 9)
+            | ((int) $now->format('n') << 5)
+            | (int) $now->format('j');
+
+        return [$dosTime, $dosDate];
     }
 
     private function contentTypesXml(): string
