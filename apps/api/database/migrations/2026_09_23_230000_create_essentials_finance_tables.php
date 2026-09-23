@@ -129,6 +129,7 @@ return new class extends Migration
             $table->char('currency', 3)->default('UGX');
             $table->string('status', 40)->default('funding_reserved')->index();
             $table->string('lender_contract_reference', 160)->nullable()->index();
+            $table->string('lender_funding_reference', 160)->nullable()->index();
             $table->string('biller_payment_reference', 160)->nullable()->index();
             $table->json('fulfilment_payload')->nullable();
             $table->json('repayment_schedule')->nullable();
