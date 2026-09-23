@@ -5,12 +5,15 @@ namespace Tests\Feature;
 use App\Models\CapitalMandate;
 use App\Models\ConsentRecord;
 use App\Models\CreditOffer;
+use App\Models\KycCase;
 use App\Models\User;
 use App\Services\FundingPoolService;
+use App\Services\IdentityVerificationService;
 use App\Services\PositiveEmploymentBehaviourService;
 use App\Services\ServiceEconomicsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -83,6 +86,136 @@ class ProviderIndependenceReportingTest extends TestCase
         $afterRevocation = app(PositiveEmploymentBehaviourService::class)->assess($user);
         $this->assertSame(0.0, $afterRevocation['uplift_points']);
         $this->assertSame([], $afterRevocation['applied_signals']);
+    }
+
+    public function test_cito_is_primary_for_nin_and_phone_ownership_while_biometrics_remain_pending_when_not_configured(): void
+    {
+        $this->configureCito();
+
+        $user = User::factory()->create([
+            'phone' => '256700123456',
+            'phone_verified_at' => now(),
+            'first_name' => 'Amina',
+            'last_name' => 'Kato',
+        ]);
+        $case = KycCase::create([
+            'user_id' => $user->id,
+            'provider' => 'pending',
+            'national_id' => 'CM123456789012',
+            'status' => KycCase::STATUS_PENDING_REVIEW,
+            'submitted_at' => now(),
+            'evidence_complete_at' => now(),
+            'evidence' => ['identity_verification_requested' => true],
+        ]);
+
+        config([
+            'opfin.integrations.external_service_route' => 'auto',
+            'services.identity_verification.url' => '',
+        ]);
+
+        Http::fake([
+            'https://cito.test/api/v2/identity/nin/verifications' => Http::response([
+                'reference' => 'CAP-NIN-001',
+                'capability' => 'NIN',
+                'status' => 'PASS',
+                'reasonCodes' => ['NIN_MATCH'],
+                'providerReference' => 'GNUGRID-NIN-001',
+            ], 200),
+            'https://cito.test/api/v2/identity/verifications' => Http::response([
+                'reference' => 'CAP-PHONE-001',
+                'capability' => 'PHONE_OWNERSHIP',
+                'status' => 'PASS',
+                'reasonCodes' => ['PHONE_OWNERSHIP_MATCHED'],
+                'providerReference' => 'GNUGRID-PHONE-001',
+            ], 200),
+        ]);
+
+        $verified = app(IdentityVerificationService::class)->verify($case);
+
+        $this->assertSame('cito', $verified->provider);
+        $this->assertSame('GNUGRID-NIN-001', $verified->provider_reference);
+        $this->assertSame('valid', $verified->nin_phone_link_status);
+        $this->assertSame('pending_review', $verified->liveness_status);
+        $this->assertSame('pending_review', $verified->face_match_status);
+        $this->assertSame(KycCase::STATUS_PENDING_REVIEW, $verified->status);
+        $this->assertContains('BIOMETRIC_PROVIDER_NOT_CONFIGURED', $verified->risk_flags);
+        $this->assertSame('CITO_MANAGED', $verified->evidence['identity_route']);
+        $this->assertSame('GNUGRID-PHONE-001', $verified->evidence['phone_provider_reference']);
+
+        $this->assertDatabaseHas('service_economics_events', [
+            'service_code' => 'identity',
+            'capability_code' => 'NIN',
+            'route' => 'CITO_MANAGED',
+            'status' => 'PASS',
+        ]);
+        $this->assertDatabaseHas('service_economics_events', [
+            'service_code' => 'identity',
+            'capability_code' => 'PHONE_OWNERSHIP',
+            'route' => 'CITO_MANAGED',
+            'status' => 'PASS',
+        ]);
+
+        Http::assertSent(function ($request) use ($case) {
+            $json = $request->data();
+
+            return str_contains($request->url(), '/api/v2/identity/')
+                && data_get($json, 'consent.purpose') === 'identity_verification'
+                && data_get($json, 'consent.reference') === 'kyc-case:'.$case->id;
+        });
+    }
+
+    public function test_ambiguous_cito_identity_failure_does_not_silently_call_direct_provider(): void
+    {
+        $this->configureCito();
+
+        $user = User::factory()->create([
+            'phone' => '256700654321',
+            'phone_verified_at' => now(),
+        ]);
+        $case = KycCase::create([
+            'user_id' => $user->id,
+            'provider' => 'pending',
+            'national_id' => 'CM123456789013',
+            'status' => KycCase::STATUS_PENDING_REVIEW,
+            'submitted_at' => now(),
+            'evidence_complete_at' => now(),
+            'evidence' => ['identity_verification_requested' => true],
+        ]);
+
+        config([
+            'opfin.integrations.external_service_route' => 'auto',
+            'services.identity_verification.url' => 'https://direct-id.test/verify',
+        ]);
+
+        Http::fake(function ($request) {
+            if (str_starts_with($request->url(), 'https://cito.test/')) {
+                return Http::response(['code' => 'PROVIDER_UNAVAILABLE'], 503);
+            }
+
+            return Http::response([
+                'nin_valid' => true,
+                'liveness_valid' => true,
+                'face_match_valid' => true,
+                'nin_phone_link_valid' => true,
+                'reference' => 'DIRECT-SHOULD-NOT-RUN',
+            ], 200);
+        });
+
+        $result = app(IdentityVerificationService::class)->verify($case);
+
+        $this->assertSame('cito', $result->provider);
+        $this->assertSame(KycCase::STATUS_PENDING_REVIEW, $result->status);
+        $this->assertContains('CITO_IDENTITY_PROVIDER_ERROR', $result->risk_flags);
+        $this->assertContains('DIRECT_RETRY_REQUIRES_EXPLICIT_ROUTE_SWITCH', $result->risk_flags);
+
+        Http::assertNotSent(fn ($request) => str_starts_with($request->url(), 'https://direct-id.test/'));
+
+        $this->assertDatabaseHas('service_economics_events', [
+            'service_code' => 'identity',
+            'capability_code' => 'NIN',
+            'route' => 'CITO_MANAGED',
+            'status' => 'ERROR',
+        ]);
     }
 
     public function test_service_economics_reconciliation_is_idempotent_and_preserves_known_values(): void
@@ -166,6 +299,24 @@ class ProviderIndependenceReportingTest extends TestCase
         $releasePool->refresh();
         $this->assertSame(0, (int) $releasePool->reserved_capital_minor);
         $this->assertSame(0, (int) $releasePool->deployed_capital_minor);
+    }
+
+    private function configureCito(): void
+    {
+        $resource = openssl_pkey_new([
+            'private_key_bits' => 2048,
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+        ]);
+        $this->assertNotFalse($resource);
+        $exported = openssl_pkey_export($resource, $privateKey);
+        $this->assertTrue($exported);
+
+        config([
+            'services.cito.base_url' => 'https://cito.test',
+            'services.cito.merchant_number' => 'OPFIN-TEST',
+            'services.cito.private_key' => $privateKey,
+            'services.cito.environment' => 'SANDBOX',
+        ]);
     }
 
     private function creditOfferWithFundingPool(User $user, int $principalMinor, int $committedMinor): CreditOffer
