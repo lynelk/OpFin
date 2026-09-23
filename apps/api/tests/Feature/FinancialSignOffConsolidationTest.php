@@ -24,6 +24,7 @@ use App\Services\ProductionLedgerService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use LogicException;
 use Tests\TestCase;
@@ -268,6 +269,7 @@ class FinancialSignOffConsolidationTest extends TestCase
             'disbursement_fee_minor' => 2000,
             'fee_treatment' => 'financed',
             'expires_in_minutes' => 60,
+            'funding_pool_id' => $this->fundingPoolId($operations),
         ]);
         $accepted = $offers->acceptOffer($offer, $customer, ['channel' => 'test']);
         $payout = $accepted['mobile_money'];
@@ -280,6 +282,40 @@ class FinancialSignOffConsolidationTest extends TestCase
         $this->assertInstanceOf(Loan::class, $loan);
 
         return [$customer, $operations, $loan];
+    }
+
+    private function fundingPoolId(User $owner): int
+    {
+        $partnerId = DB::table('partners')->insertGetId([
+            'code' => 'TEST-LENDER-'.Str::upper(Str::random(8)),
+            'name' => 'Test Licensed Lender '.Str::random(6),
+            'partner_type' => 'financial_institution',
+            'country' => 'UG',
+            'status' => 'active',
+            'regulatory_evidence' => json_encode([
+                'licence_number' => 'TEST-LIC-'.Str::upper(Str::random(8)),
+                'licence_authority' => 'Test Authority',
+            ], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return DB::table('capital_mandates')->insertGetId([
+            'reference' => (string) Str::uuid(),
+            'owner_user_id' => $owner->id,
+            'partner_id' => $partnerId,
+            'mandate_type' => 'institutional_credit',
+            'name' => 'Financial Sign-off Funding',
+            'committed_capital_minor' => 2000000,
+            'deployed_capital_minor' => 0,
+            'reserved_capital_minor' => 0,
+            'status' => 'active',
+            'investment_policy' => json_encode(['test' => true], JSON_THROW_ON_ERROR),
+            'approved_by' => $owner->id,
+            'approved_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function installAffordabilityEvidence(User $user, int $incomeMinor): void
