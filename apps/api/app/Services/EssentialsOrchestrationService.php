@@ -36,7 +36,7 @@ class EssentialsOrchestrationService
         $profile = CreditProfile::query()->where('user_id', $user->id)->first();
         $outstanding = (int) EssentialsAdvance::query()
             ->where('user_id', $user->id)
-            ->whereIn('status', ['funding_reserved', 'lender_funding_pending', 'fulfilment_pending', 'active', 'overdue'])
+            ->whereIn('status', ['funding_reserved', 'lender_funding_pending', 'lender_reversal_pending', 'fulfilment_pending', 'active', 'overdue'])
             ->sum('outstanding_minor');
 
         $maxLine = (int) EssentialsCreditLine::query()
@@ -412,7 +412,7 @@ class EssentialsOrchestrationService
                     'available_limit_minor' => max(0, $approvedLimit - (int) EssentialsAdvance::query()
                         ->where('user_id', $user->id)
                         ->where('lender_partner_id', $product->partner_id)
-                        ->whereIn('status', ['funding_reserved', 'lender_funding_pending', 'fulfilment_pending', 'active', 'overdue'])
+                        ->whereIn('status', ['funding_reserved', 'lender_funding_pending', 'lender_reversal_pending', 'fulfilment_pending', 'active', 'overdue'])
                         ->sum('principal_outstanding_minor')),
                     'currency' => (string) $product->currency,
                     'status' => 'active',
@@ -814,6 +814,24 @@ class EssentialsOrchestrationService
 
     public function reconcileAdvance(EssentialsAdvance $advance): EssentialsAdvance
     {
+        if ($advance->status === 'lender_reversal_pending') {
+            $reference = $advance->lender_funding_reference ?: $advance->reference;
+            $referenceType = $advance->lender_funding_reference ? 'provider' : 'internal';
+            $funding = $this->citoLending->drawdownStatus($reference, $referenceType);
+            $status = strtoupper((string) ($funding['status'] ?? ''));
+            $advance->update([
+                'fulfilment_payload' => array_merge((array) $advance->fulfilment_payload, [
+                    'lender_release_status' => $this->redact($funding),
+                ]),
+            ]);
+
+            if (in_array($status, ['RELEASED', 'CANCELLED', 'REVERSED', 'FAILED', 'DECLINED', 'REJECTED'], true)) {
+                return $this->releaseReservation($advance->fresh(), 'fulfilment_failed');
+            }
+
+            return $advance->fresh();
+        }
+
         if ($advance->status === 'lender_funding_pending') {
             $quote = EssentialsQuote::query()->findOrFail($advance->quote_id);
             $line = EssentialsCreditLine::query()->findOrFail($quote->credit_line_id);
@@ -861,7 +879,7 @@ class EssentialsOrchestrationService
             return $this->activateAdvance($advance, $result);
         }
         if (in_array($status, ['FAILED', 'REVERSED', 'CANCELLED'], true)) {
-            return $this->releaseReservation($advance, 'fulfilment_failed');
+            return $this->handleProviderSettlementFailure($advance, 'provider_'.$status);
         }
 
         return $advance;
@@ -956,7 +974,7 @@ class EssentialsOrchestrationService
         ]);
 
         if (in_array($status, ['FAILED', 'REVERSED', 'CANCELLED'], true)) {
-            $advance = $this->releaseReservation($advance->fresh(), 'fulfilment_failed');
+            $advance = $this->handleProviderSettlementFailure($advance->fresh(), 'provider_'.$status);
         } elseif (in_array($status, ['SUCCESS', 'SUCCESSFUL', 'PAID', 'COMPLETED'], true)) {
             try {
                 $advance = $this->activateAdvance($advance->fresh(), $result);
@@ -1247,6 +1265,52 @@ class EssentialsOrchestrationService
         return $applied->fresh();
     }
 
+    private function handleProviderSettlementFailure(EssentialsAdvance $advance, string $reason): EssentialsAdvance
+    {
+        $quote = EssentialsQuote::query()->findOrFail($advance->quote_id);
+        $line = EssentialsCreditLine::query()->findOrFail($quote->credit_line_id);
+
+        if ($line->decision_route !== 'cito' || ! $advance->lender_funding_reference) {
+            return $this->releaseReservation($advance, 'fulfilment_failed');
+        }
+
+        try {
+            $release = $this->citoLending->releaseDrawdown($advance, $reason);
+        } catch (\Throwable $exception) {
+            report($exception);
+            $advance->update([
+                'status' => 'lender_reversal_pending',
+                'fulfilment_payload' => array_merge((array) $advance->fulfilment_payload, [
+                    'lender_release' => [
+                        'state' => 'unknown',
+                        'funding_reference' => $advance->lender_funding_reference,
+                        'error_type' => $exception::class,
+                    ],
+                ]),
+            ]);
+            $this->safeAudit('essentials.advance.lender_release_ambiguous', null, $advance, [
+                'reason' => $reason,
+            ]);
+
+            return $advance->fresh();
+        }
+
+        $releaseStatus = strtoupper((string) ($release['status'] ?? ''));
+        $advance->update([
+            'fulfilment_payload' => array_merge((array) $advance->fulfilment_payload, [
+                'lender_release' => $this->redact($release),
+            ]),
+        ]);
+
+        if (in_array($releaseStatus, ['RELEASED', 'CANCELLED', 'REVERSED', 'SUCCESS', 'SUCCESSFUL', 'COMPLETED'], true)) {
+            return $this->releaseReservation($advance->fresh(), 'fulfilment_failed');
+        }
+
+        $advance->update(['status' => 'lender_reversal_pending']);
+
+        return $advance->fresh();
+    }
+
     private function releaseReservation(EssentialsAdvance $advance, string $status): EssentialsAdvance
     {
         $released = DB::transaction(function () use ($advance, $status) {
@@ -1324,7 +1388,7 @@ class EssentialsOrchestrationService
         $pendingReserved = Schema::hasTable('essentials_advances')
             ? (int) DB::table('essentials_advances')
                 ->where('user_id', $userId)
-                ->whereIn('status', ['funding_reserved', 'lender_funding_pending', 'fulfilment_pending'])
+                ->whereIn('status', ['funding_reserved', 'lender_funding_pending', 'lender_reversal_pending', 'fulfilment_pending'])
                 ->sum('principal_outstanding_minor')
             : 0;
 
