@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CreditDecision;
+use App\Models\CreditScoreComponent;
 use App\Models\Institution;
 use App\Models\Loan;
 use App\Models\LoanApplication;
@@ -299,6 +300,7 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             'phone' => '256700000902',
         ]);
         $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS, 'institution_id' => $institution->id]);
+        $this->installAffordabilityEvidence($customer, 600000);
         $product = LoanProduct::create(['name' => 'Repayment Credit', 'type' => 'Cash', 'institution_id' => $institution->id]);
         $term = LoanProductTerm::create([
             'loan_product_id' => $product->id,
@@ -353,6 +355,25 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
         $this->assertSame(1, $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.disbursement')->count());
 
         return [$customer, $operations, $loan];
+    }
+
+    private function installAffordabilityEvidence(User $user, int $incomeMinor): void
+    {
+        CreditScoreComponent::create([
+            'user_id' => $user->id,
+            'source' => 'crb',
+            'status' => CreditScoreComponent::STATUS_READY,
+            'score' => 800,
+            'weight_percent' => 40,
+            'source_reference' => 'repayment-affordability-'.$user->id,
+            'reason_codes' => ['VERIFIED_INCOME'],
+            'raw_payload' => [
+                'verified_monthly_income_minor' => $incomeMinor,
+                'verified_external_obligation_excluding_opfin_minor' => 0,
+            ],
+            'received_at' => now(),
+            'expires_at' => now()->addDay(),
+        ]);
     }
 
     private function systemPayment(
