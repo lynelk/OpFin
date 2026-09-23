@@ -18,6 +18,7 @@ class SavingsService
         private readonly MobileMoneyService $mobileMoney,
         private readonly SaveProtectionLedgerService $ledger,
         private readonly AuditLogger $auditLogger,
+        private readonly ServiceEconomicsService $economics,
     ) {}
 
     public function activeProducts(string $countryCode): mixed
@@ -188,6 +189,8 @@ class SavingsService
             ],
         ]);
 
+        $this->recordMovementEconomics($movement->fresh('goal.product'), 'REQUESTED');
+
         try {
             $mobileMoney = $this->mobileMoney->collect([
                 'user_id' => $user->id,
@@ -208,6 +211,7 @@ class SavingsService
                 'status' => SavingsMovement::STATUS_FAILED,
                 'metadata' => array_merge($movement->metadata ?? [], ['failure' => $exception->getMessage()]),
             ]);
+            $this->recordMovementEconomics($movement->fresh('goal.product'), 'ERROR');
             throw $exception;
         }
 
@@ -271,6 +275,7 @@ class SavingsService
             'amount_minor' => $amountMinor,
             'available_balance_minor_before_reservation' => $goal->availableBalanceMinor() + $amountMinor,
         ]);
+        $this->recordMovementEconomics($movement->fresh('goal.product'), 'REQUESTED');
 
         return $movement->fresh('goal.product');
     }
@@ -318,6 +323,14 @@ class SavingsService
             'partner_reference' => $partnerReference,
             'partner_evidence_hash' => strtolower($evidenceHash),
         ]);
+        $configuredSettlement = $movement->goal->product->economics_config['net_settlement_to_provider_minor'] ?? null;
+        $this->recordMovementEconomics(
+            $movement,
+            'RECONCILED',
+            $movement->mobileMoneyTransaction,
+            $partnerReference,
+            $configuredSettlement !== null ? (int) $configuredSettlement : (int) $movement->amount_minor,
+        );
 
         return $movement;
     }
@@ -345,6 +358,7 @@ class SavingsService
             'partner_confirmed_at' => now(),
         ]);
         $this->ledger->postSavingsWithdrawalRelease($movement->fresh('goal.product'), $actor);
+        $this->recordMovementEconomics($movement->fresh('goal.product'), 'PARTNER_RELEASED', null, $partnerReference);
 
         return $this->startWithdrawalPayout($movement->fresh('goal.product'), $actor);
     }
@@ -383,6 +397,7 @@ class SavingsService
                 $movement->update(['status' => SavingsMovement::STATUS_FAILED]);
             }
             $mobileMoney->update(['accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED]);
+            $this->recordMovementEconomics($movement->fresh('goal.product'), 'FAILED', $mobileMoney);
 
             return $movement->fresh(['goal.product', 'mobileMoneyTransaction']);
         }
@@ -454,6 +469,15 @@ class SavingsService
                 'mobile_money_transaction_id' => $mobileMoney->id,
                 'provider_reference' => $mobileMoney->provider_reference,
             ]);
+            $reversalStatus = $movement->status === SavingsMovement::STATUS_REVERSAL_EXCEPTION
+                ? 'REVERSAL_EXCEPTION'
+                : ($movement->movement_type === SavingsMovement::TYPE_WITHDRAWAL ? 'PAYOUT_REVERSED' : 'REVERSED');
+            $this->recordMovementEconomics(
+                $movement->fresh('goal.product'),
+                $reversalStatus,
+                $mobileMoney,
+                $mobileMoney->provider_reference,
+            );
 
             return $movement->fresh(['goal.product', 'mobileMoneyTransaction']);
         }
@@ -489,8 +513,61 @@ class SavingsService
             'mobile_money_transaction_id' => $mobileMoney->id,
             'mobile_money_status' => $mobileMoney->status,
         ]);
+        $this->recordMovementEconomics(
+            $movement->fresh('goal.product'),
+            $movement->movement_type === SavingsMovement::TYPE_WITHDRAWAL ? 'COMPLETED' : 'COLLECTED',
+            $mobileMoney,
+            $mobileMoney->provider_reference,
+        );
 
         return $movement->fresh(['goal.product', 'mobileMoneyTransaction']);
+    }
+
+    private function recordMovementEconomics(
+        SavingsMovement $movement,
+        string $status,
+        ?MobileMoneyTransaction $moneyMovement = null,
+        ?string $providerReference = null,
+        ?int $netSettlementMinor = null,
+    ): void {
+        $movement->loadMissing('goal.product');
+        $product = $movement->goal->product;
+        $config = (array) ($product->economics_config ?? []);
+
+        $this->economics->record([
+            'user_id' => $movement->user_id,
+            'service_code' => 'savings',
+            'capability_code' => $movement->movement_type,
+            'provider' => $product->partner_name,
+            'route' => 'DIRECT_PARTNER',
+            'environment' => app()->environment('production') ? 'PRODUCTION' : 'SANDBOX',
+            'request_reference' => $movement->movement_reference,
+            'provider_reference' => $providerReference ?: $movement->partner_reference,
+            'status' => $status,
+            'currency' => $movement->currency,
+            'provider_gross_cost_minor' => $config['provider_gross_cost_minor'] ?? null,
+            'provider_discount_minor' => $config['provider_discount_minor'] ?? null,
+            'customer_service_charge_minor' => $config['customer_service_charge_minor'] ?? null,
+            'customer_platform_fee_minor' => $config['customer_platform_fee_minor'] ?? null,
+            'partner_commission_minor' => $config['partner_commission_minor'] ?? null,
+            'cito_platform_fee_minor' => $config['cito_platform_fee_minor'] ?? null,
+            'opfin_platform_fee_minor' => $config['opfin_platform_fee_minor'] ?? null,
+            'tax_amount_minor' => $config['tax_amount_minor'] ?? null,
+            'net_settlement_to_provider_minor' => $netSettlementMinor,
+            'price_book_version' => $config['price_book_version'] ?? null,
+            'contract_version' => $config['contract_version'] ?? null,
+            'reconciliation_reference' => $status === 'RECONCILED' ? $movement->partner_reference : null,
+            'reconciled_at' => $status === 'RECONCILED' ? now() : null,
+            'metadata' => [
+                'customer_principal_minor' => (int) $movement->amount_minor,
+                'movement_type' => $movement->movement_type,
+                'goal_reference' => $movement->goal->goal_reference,
+                'product_code' => $product->code,
+                'money_movement_provider' => $moneyMovement?->provider,
+                'money_movement_reference' => $moneyMovement?->provider_reference,
+                'customer_principal_is_not_platform_revenue' => true,
+            ],
+        ]);
     }
 
     private function startWithdrawalPayout(SavingsMovement $movement, User $actor, bool $retry = false): SavingsMovement
