@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:opfin/programme_checkin_screen.dart';
 import 'package:opfin/services/inclusive_finance_api.dart';
 
 class InclusiveFinanceScreen extends StatefulWidget {
@@ -369,6 +370,70 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
     await _reload();
   }
 
+  Future<void> _useRecordedFinancialData() async {
+    try {
+      final preview = await InclusiveFinanceApi.financialHealthEnrichmentPreview();
+      if (!mounted) return;
+
+      final reasons = (preview['status_reasons'] as List?) ?? const [];
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Use recorded financial data?'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'OpFin can calculate a financial-health snapshot from financial information already recorded in your account. Missing external information stays missing.',
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _titleCase(preview['status']?.toString() ?? 'stabilising'),
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                ...reasons.map((reason) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('• ' + reason.toString()),
+                    )),
+                const SizedBox(height: 8),
+                const Text(
+                  'This remains a wellbeing indicator and is not used as a credit score.',
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Save snapshot'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+
+      await InclusiveFinanceApi.recordFinancialHealthEnrichment();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Recorded-data financial health snapshot saved.')),
+      );
+      await _reload();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
   Future<void> _enrol(int programmeId, String programmeName) async {
     await InclusiveFinanceApi.enrol(programmeId);
     await InclusiveFinanceApi.recordCapabilityEvent(
@@ -646,10 +711,19 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
                                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                                 ),
                               ),
-                              TextButton.icon(
-                                onPressed: _updateFinancialHealth,
-                                icon: const Icon(Icons.monitor_heart_outlined),
-                                label: const Text('Check in'),
+                              Wrap(
+                                spacing: 4,
+                                children: [
+                                  TextButton.icon(
+                                    onPressed: _updateFinancialHealth,
+                                    icon: const Icon(Icons.monitor_heart_outlined),
+                                    label: const Text('Check in'),
+                                  ),
+                                  TextButton(
+                                    onPressed: _useRecordedFinancialData,
+                                    child: const Text('Use recorded data'),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -735,6 +809,37 @@ class _InclusiveFinanceScreenState extends State<InclusiveFinanceScreen> {
                             ),
                           ),
                       ],
+                    ),
+                  ),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Programme check-ins',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Complete only the programme follow-ups that are due. Reviewed translations are used where available, with English as the fallback.',
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.tonalIcon(
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ProgrammeCheckInScreen(),
+                                ),
+                              ),
+                              icon: const Icon(Icons.assignment_outlined),
+                              label: const Text('View due check-ins'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   Card(
