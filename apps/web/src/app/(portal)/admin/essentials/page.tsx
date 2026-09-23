@@ -1,5 +1,6 @@
 import {
   reconcileEssentialsAdvanceAction,
+  reconcileEssentialsRepaymentAction,
   saveEssentialsBillerAction,
   saveEssentialsLenderAction,
   verifyEssentialsAccountAdminAction
@@ -14,7 +15,8 @@ const notices: Record<string, string> = {
   "biller-saved": "Biller configuration saved.",
   "lender-saved": "Third-party lender configuration saved.",
   "verification-updated": "Account verification updated.",
-  reconciled: "Provider fulfilment reconciliation completed."
+  reconciled: "Provider fulfilment reconciliation completed.",
+  "repayment-reconciled": "Repayment reconciliation completed."
 };
 
 export default async function AdminEssentialsPage({
@@ -111,6 +113,32 @@ export default async function AdminEssentialsPage({
                       <button className="button secondary" type="submit">Reconcile provider status</button>
                     </form>
                   ) : null}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="panel">
+          <h2>Repayment confirmation queue</h2>
+          {queue.pending_repayments.length === 0 ? (
+            <StateNotice state="empty" message="No Essentials repayments are awaiting provider confirmation." />
+          ) : (
+            <div className="case-list">
+              {queue.pending_repayments.map((repayment) => (
+                <article className="case-card" key={repayment.id}>
+                  <div className="case-card-head">
+                    <div>
+                      <strong>{repayment.reference}</strong>
+                      <p className="muted">Advance {repayment.advance_id} · Customer {repayment.user_id}</p>
+                    </div>
+                    <span className="badge warn">{repayment.status.replaceAll("_", " ")}</span>
+                  </div>
+                  <p>{formatUgx(repayment.amount_minor)} awaiting confirmed collection finality.</p>
+                  <form action={reconcileEssentialsRepaymentAction}>
+                    <input type="hidden" name="repayment_id" value={repayment.id} />
+                    <button className="button secondary" type="submit">Reconcile repayment</button>
+                  </form>
                 </article>
               ))}
             </div>
