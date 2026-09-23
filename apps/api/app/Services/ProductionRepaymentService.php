@@ -176,27 +176,17 @@ class ProductionRepaymentService
         ]);
 
         if ($mobileMoney->status === MobileMoneyTransaction::STATUS_REVERSED) {
-            $ledgerReference = 'loan.repayment:'.$transaction->reference;
-            if (LedgerTransaction::query()->where('reference', $ledgerReference)->exists()) {
-                $mobileMoney->update([
-                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_EXCEPTION,
-                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_EXCEPTION,
-                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
-                    'failure_reason' => 'Provider reversed a previously posted repayment. Automatic schedule rewriting is blocked until exact allocation reversal evidence is available.',
-                ]);
-                $transaction->update(['status' => 'Exception']);
-                $loan->update(['status' => 'Exception']);
-                $this->auditLogger->record('credit.repayment.reversal_exception', null, $mobileMoney, [
-                    'loan_id' => $loan->id,
-                    'ledger_reference' => $ledgerReference,
-                    'provider_reference' => $mobileMoney->provider_reference,
-                ]);
-            }
-
-            return $loan->fresh();
+            return $this->reverseSuccessfulCollection($mobileMoney, $transaction, $loan);
         }
 
         if ($mobileMoney->status !== MobileMoneyTransaction::STATUS_SUCCESSFUL) {
+            if ($mobileMoney->status === MobileMoneyTransaction::STATUS_FAILED) {
+                $mobileMoney->update([
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
+                    'reconciliation_status' => $this->combinedReconciliationStatus($mobileMoney),
+                ]);
+            }
+
             return $loan;
         }
 
@@ -205,7 +195,7 @@ class ProductionRepaymentService
             $mobileMoney->update([
                 'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
                 'accounting_posted_at' => now(),
-                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                'reconciliation_status' => $this->combinedReconciliationStatus($mobileMoney),
             ]);
 
             return $loan->fresh();
@@ -217,7 +207,7 @@ class ProductionRepaymentService
                 $mobileMoney->update([
                 'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
                 'accounting_posted_at' => now(),
-                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                'reconciliation_status' => $this->combinedReconciliationStatus($mobileMoney),
             ]);
                 $this->receipts->issue($mobileMoney->fresh(), 'loan_repayment');
             }
@@ -232,7 +222,7 @@ class ProductionRepaymentService
                 $mobileMoney->update([
                 'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
                 'accounting_posted_at' => now(),
-                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                'reconciliation_status' => $this->combinedReconciliationStatus($mobileMoney),
             ]);
 
                 return $lockedLoan;
@@ -240,21 +230,29 @@ class ProductionRepaymentService
 
             $outstanding = $this->outstandingMinor($lockedLoan);
             if ($mobileMoney->amount_minor > $outstanding) {
+                $this->productionLoanLedgerService->postRepayment($transaction, 0, 0, 0, 0);
                 $mobileMoney->update([
-                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
-                    'failure_reason' => 'Successful collection exceeds the current product obligation; operations review required.',
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                    'accounting_posted_at' => now(),
+                    'reconciliation_status' => $this->combinedReconciliationStatus($mobileMoney),
+                    'failure_reason' => 'Successful collection exceeds the current product obligation. The full collection is held in customer repayment suspense pending refund or approved resolution.',
                 ]);
                 $transaction->update(['status' => 'Exception']);
                 $this->auditLogger->record('credit.repayment.overpayment_exception', null, $mobileMoney, [
                     'loan_id' => $lockedLoan->id,
                     'collected_amount_minor' => $mobileMoney->amount_minor,
                     'outstanding_minor' => $outstanding,
+                    'suspense_minor' => $mobileMoney->amount_minor,
+                    'ledger_reference' => $ledgerReference,
                 ]);
+                DB::afterCommit(function () use ($mobileMoney) {
+                    $this->receipts->issue(MobileMoneyTransaction::findOrFail($mobileMoney->id), 'loan_repayment');
+                });
 
                 return $lockedLoan;
             }
 
-            $allocation = $this->applyProductionAllocation($lockedLoan, $mobileMoney->amount_minor);
+            $allocation = $this->applyProductionAllocation($lockedLoan, $transaction, $mobileMoney, $mobileMoney->amount_minor);
             $this->productionLoanLedgerService->postRepayment(
                 $transaction,
                 $allocation['interest_minor'],
@@ -270,7 +268,7 @@ class ProductionRepaymentService
             $mobileMoney->update([
                 'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
                 'accounting_posted_at' => now(),
-                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                'reconciliation_status' => $this->combinedReconciliationStatus($mobileMoney),
             ]);
             $this->auditLogger->record('credit.repayment.fulfilled', null, $lockedLoan, [
                 'mobile_money_transaction_id' => $mobileMoney->id,
@@ -306,7 +304,12 @@ class ProductionRepaymentService
         return (int) round((float) $loan->schedules()->sum('total_outstanding'));
     }
 
-    private function applyProductionAllocation(Loan $loan, int $amountMinor): array
+    private function applyProductionAllocation(
+        Loan $loan,
+        Transaction $transaction,
+        MobileMoneyTransaction $mobileMoney,
+        int $amountMinor,
+    ): array
     {
         $remaining = $amountMinor;
         $defaultInterestPaid = min($remaining, $this->defaultInterest->outstandingMinor($loan));
@@ -359,6 +362,24 @@ class ProductionRepaymentService
                     : CreditRepaymentScheduleItem::STATUS_PARTIALLY_PAID,
                 'paid_at' => $totalOutstanding === 0 ? now() : null,
             ]);
+
+            if (($principal + $interest + $fees) > 0) {
+                DB::table('credit_repayment_allocations')->updateOrInsert(
+                    [
+                        'transaction_id' => $transaction->id,
+                        'credit_repayment_schedule_item_id' => $item->id,
+                    ],
+                    [
+                        'mobile_money_transaction_id' => $mobileMoney->id,
+                        'loan_id' => $loan->id,
+                        'principal_minor' => $principal,
+                        'interest_minor' => $interest,
+                        'fees_minor' => $fees,
+                        'updated_at' => now(),
+                        'created_at' => now(),
+                    ],
+                );
+            }
         }
 
         if ($remaining !== 0) {
@@ -371,6 +392,176 @@ class ProductionRepaymentService
             'fees_minor' => $feesPaid,
             'default_interest_minor' => $defaultInterestPaid,
         ];
+    }
+
+    private function reverseSuccessfulCollection(
+        MobileMoneyTransaction $mobileMoney,
+        Transaction $transaction,
+        Loan $loan,
+    ): Loan {
+        $ledgerReference = 'loan.repayment:'.$transaction->reference;
+        $reversalReference = 'loan.repayment.reversal:'.$transaction->reference;
+        $originalLedger = LedgerTransaction::query()->where('reference', $ledgerReference)->first();
+
+        if (! $originalLedger) {
+            $mobileMoney->update([
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
+                'reconciliation_status' => $this->combinedReconciliationStatus($mobileMoney),
+                'failure_reason' => null,
+            ]);
+            $transaction->update(['status' => 'REVERSED']);
+
+            return $loan->fresh();
+        }
+
+        if (LedgerTransaction::query()->where('reference', $reversalReference)->exists()) {
+            $mobileMoney->update([
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                'accounting_posted_at' => $mobileMoney->accounting_posted_at ?? now(),
+                'reconciliation_status' => $this->combinedReconciliationStatus($mobileMoney),
+                'failure_reason' => null,
+            ]);
+            $transaction->update(['status' => 'REVERSED']);
+
+            return $loan->fresh();
+        }
+
+        if (! $loan->credit_offer_id) {
+            return $this->markRepaymentReversalException(
+                $mobileMoney,
+                $transaction,
+                $loan,
+                $ledgerReference,
+                'Legacy repayment reversal requires operations review because exact production allocation evidence is unavailable.',
+            );
+        }
+
+        return DB::transaction(function () use ($mobileMoney, $transaction, $loan, $ledgerReference, $originalLedger) {
+            $lockedLoan = Loan::query()->lockForUpdate()->findOrFail($loan->id);
+            $allocations = DB::table('credit_repayment_allocations')
+                ->where('transaction_id', $transaction->id)
+                ->orderBy('credit_repayment_schedule_item_id')
+                ->get();
+
+            $metadata = (array) ($originalLedger->metadata ?? []);
+            $suspenseMinor = (int) ($metadata['suspense_minor'] ?? 0);
+            $defaultInterestMinor = (int) ($metadata['default_interest_minor'] ?? 0);
+
+            if ($allocations->isEmpty() && $suspenseMinor <= 0 && $defaultInterestMinor <= 0) {
+                return $this->markRepaymentReversalException(
+                    $mobileMoney,
+                    $transaction,
+                    $lockedLoan,
+                    $ledgerReference,
+                    'Repayment reversal cannot be automated because exact allocation evidence is missing.',
+                );
+            }
+
+            foreach ($allocations as $allocation) {
+                $item = CreditRepaymentScheduleItem::query()
+                    ->whereKey($allocation->credit_repayment_schedule_item_id)
+                    ->where('loan_id', $lockedLoan->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $principalOutstanding = (int) $item->principal_outstanding_minor + (int) $allocation->principal_minor;
+                $interestOutstanding = (int) $item->interest_outstanding_minor + (int) $allocation->interest_minor;
+                $feesOutstanding = (int) $item->fees_outstanding_minor + (int) $allocation->fees_minor;
+
+                if (
+                    $principalOutstanding > (int) $item->principal_minor
+                    || $interestOutstanding > (int) $item->interest_minor
+                    || $feesOutstanding > (int) $item->fees_minor
+                ) {
+                    throw new InvalidArgumentException('Repayment reversal would restore more than the contractual schedule amount.');
+                }
+
+                $totalOutstanding = $principalOutstanding + $interestOutstanding + $feesOutstanding;
+                $fullyOutstanding = $totalOutstanding === (int) $item->total_due_minor;
+                $item->update([
+                    'principal_outstanding_minor' => $principalOutstanding,
+                    'interest_outstanding_minor' => $interestOutstanding,
+                    'fees_outstanding_minor' => $feesOutstanding,
+                    'total_outstanding_minor' => $totalOutstanding,
+                    'status' => $fullyOutstanding
+                        ? ($item->due_date->isPast() ? CreditRepaymentScheduleItem::STATUS_OVERDUE : CreditRepaymentScheduleItem::STATUS_DUE)
+                        : CreditRepaymentScheduleItem::STATUS_PARTIALLY_PAID,
+                    'paid_at' => null,
+                ]);
+            }
+
+            if ($defaultInterestMinor > 0) {
+                $paid = (int) $lockedLoan->default_interest_paid_minor;
+                if ($defaultInterestMinor > $paid) {
+                    throw new InvalidArgumentException('Repayment reversal would restore more default interest than was recorded as paid.');
+                }
+                $lockedLoan->decrement('default_interest_paid_minor', $defaultInterestMinor);
+            }
+
+            $this->productionLoanLedgerService->reverseRepayment($transaction);
+
+            if (
+                $this->outstandingMinor($lockedLoan) > 0
+                && in_array($lockedLoan->status, ['Cleared', 'Exception'], true)
+            ) {
+                $lockedLoan->update(['status' => 'Active']);
+            }
+
+            $mobileMoney->update([
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                'accounting_posted_at' => now(),
+                'reconciliation_status' => $this->combinedReconciliationStatus($mobileMoney),
+                'failure_reason' => null,
+            ]);
+            $transaction->update(['status' => 'REVERSED']);
+            $this->auditLogger->record('credit.repayment.reversed', null, $lockedLoan, [
+                'mobile_money_transaction_id' => $mobileMoney->id,
+                'provider_reference' => $mobileMoney->provider_reference,
+                'ledger_reference' => $ledgerReference,
+                'reversal_ledger_reference' => 'loan.repayment.reversal:'.$transaction->reference,
+                'allocation_rows_restored' => $allocations->count(),
+                'default_interest_minor_restored' => $defaultInterestMinor,
+                'suspense_minor_reversed' => $suspenseMinor,
+            ]);
+
+            $freshLoan = $lockedLoan->fresh();
+            DB::afterCommit(function () use ($freshLoan) {
+                $this->creditReporting->queueLoanEvent(Loan::findOrFail($freshLoan->id), 'correction');
+            });
+
+            return $freshLoan;
+        });
+    }
+
+    private function markRepaymentReversalException(
+        MobileMoneyTransaction $mobileMoney,
+        Transaction $transaction,
+        Loan $loan,
+        string $ledgerReference,
+        string $reason,
+    ): Loan {
+        $mobileMoney->update([
+            'accounting_status' => MobileMoneyTransaction::ACCOUNTING_EXCEPTION,
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+            'failure_reason' => $reason,
+        ]);
+        $transaction->update(['status' => 'Exception']);
+        $loan->update(['status' => 'Exception']);
+        $this->auditLogger->record('credit.repayment.reversal_exception', null, $mobileMoney, [
+            'loan_id' => $loan->id,
+            'ledger_reference' => $ledgerReference,
+            'provider_reference' => $mobileMoney->provider_reference,
+            'reason' => $reason,
+        ]);
+
+        return $loan->fresh();
+    }
+
+    private function combinedReconciliationStatus(MobileMoneyTransaction $mobileMoney): string
+    {
+        return $mobileMoney->statement_reconciliation_status === MobileMoneyTransaction::STATEMENT_MATCHED
+            ? MobileMoneyTransaction::RECONCILIATION_MATCHED
+            : MobileMoneyTransaction::RECONCILIATION_PENDING;
     }
 
     private function assertIdempotentReplay(
