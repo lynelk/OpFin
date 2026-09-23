@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\CreditProfile;
+use App\Models\EssentialsAdvance;
+use App\Models\EssentialsQuote;
 use App\Models\User;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -60,6 +62,70 @@ class CitoEssentialsLendingClient
         ];
 
         return $this->sendSigned($path, $payload);
+    }
+
+    public function drawdownConfigured(): bool
+    {
+        return trim((string) config('services.cito.base_url')) !== ''
+            && trim((string) config('services.cito.merchant_number')) !== ''
+            && trim((string) config('services.cito.private_key')) !== ''
+            && trim((string) config('services.cito.essentials_drawdown_path')) !== ''
+            && trim((string) config('services.cito.essentials_drawdown_status_path')) !== '';
+    }
+
+    public function authoriseDrawdown(
+        User $user,
+        EssentialsAdvance $advance,
+        EssentialsQuote $quote,
+        object $partner,
+        object $product,
+        string $consentReference,
+    ): array {
+        if (! $this->drawdownConfigured()) {
+            throw new RuntimeException('Cito Essentials lender drawdown is not configured.');
+        }
+
+        $path = trim((string) config('services.cito.essentials_drawdown_path'));
+        $path = str_starts_with($path, '/') ? $path : '/'.$path;
+
+        return $this->sendSigned($path, [
+            'merchantNumber' => (string) config('services.cito.merchant_number'),
+            'capability' => 'ESSENTIALS_CREDIT_DRAWDOWN',
+            'country' => strtoupper((string) config('opfin.default_country', 'UG')),
+            'currency' => $advance->currency,
+            'customerReference' => 'user:'.$user->id,
+            'financialSpaceId' => $advance->financial_space_id,
+            'requestReference' => $advance->reference,
+            'amountMinor' => $advance->principal_minor,
+            'purposeCategory' => $quote->purpose_category,
+            'lender' => [
+                'partnerCode' => $partner->code,
+                'partnerProductCode' => $product->code,
+                'creditLineReference' => $advance->lender_contract_reference,
+            ],
+            'consent' => [
+                'obtained' => true,
+                'purpose' => 'credit_processing',
+                'reference' => $consentReference,
+            ],
+        ]);
+    }
+
+    public function drawdownStatus(string $reference, string $referenceType = 'provider'): array
+    {
+        if (! $this->drawdownConfigured()) {
+            throw new RuntimeException('Cito Essentials lender drawdown status is not configured.');
+        }
+
+        $path = trim((string) config('services.cito.essentials_drawdown_status_path'));
+        $path = str_starts_with($path, '/') ? $path : '/'.$path;
+
+        return $this->sendSigned($path, [
+            'merchantNumber' => (string) config('services.cito.merchant_number'),
+            'capability' => 'ESSENTIALS_CREDIT_DRAWDOWN_STATUS',
+            'reference' => $reference,
+            'referenceType' => $referenceType === 'internal' ? 'REQUEST_REFERENCE' : 'PROVIDER_REFERENCE',
+        ]);
     }
 
     private function sendSigned(string $path, array $payload): array
