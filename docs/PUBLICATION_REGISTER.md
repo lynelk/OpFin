@@ -23,6 +23,7 @@ These documents are intended to be clean enough for unrestricted external sharin
 Suitable for the named professional audience rather than unrestricted consumer publication:
 
 - `docs/product/OPFIN_PRODUCT_BLUEPRINT.md`
+- `docs/product/OPFIN_ESSENTIALS.md`
 - `docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md`
 - `docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md`
 - `docs/UMRA_DIGITAL_LENDING_CONTROLS.md`
