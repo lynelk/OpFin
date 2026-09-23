@@ -133,7 +133,7 @@ Among eligible lender lines capable of serving the category and channel, the cur
 
 Possible commercial revenue sources include disclosed lender-funded origination or servicing revenue, biller/provider transaction commissions where contracted, embedded-platform commercial arrangements, lender/platform API servicing fees, and other contracted service revenue captured through service-economics events.
 
-Customer interest and customer fees belong to the configured lender product and must comply with applicable lending and distribution rules. OpFin's platform revenue is recorded separately so economics can be audited without disguising it as customer pricing.
+Customer interest and customer fees belong to the configured lender product and must comply with applicable lending and distribution rules. Every Essentials quote is validated against OpFin's active effective-dated regulatory pricing policy before it can be offered. OpFin's platform revenue is recorded separately so economics can be audited without disguising it as customer pricing.
 
 ## 11. Android / store-distributed credit controls
 
@@ -151,7 +151,7 @@ Quote: offered, accepted, expired.
 
 Advance: funding_reserved, fulfilment_pending, active, overdue, settled, fulfilment_failed.
 
-Repayment: pending, pending_provider_confirmation, successful.
+Repayment: pending, pending_provider_confirmation, successful, failed.
 
 ## 13. Security and control requirements
 
@@ -169,7 +169,7 @@ Essentials preserves the following controls:
 - account references masked in normal API responses;
 - customer-controlled embedded-platform permissions;
 - provider acknowledgement is not treated as financial finality unless the configured response is a confirmed final state;
-- reconciliation route for pending fulfilment;
+- reconciliation routes for ambiguous/pending fulfilment and repayment collections;
 - audit events for account, offer, advance, repayment and partner-permission actions;
 - financial obligation kept in sync with repayment;
 - sensitive provider tokens redacted from stored fulfilment evidence.
@@ -198,6 +198,7 @@ Embedded platforms:
 - POST /api/partner/essentials/customers/{customer}/eligibility
 - POST /api/partner/essentials/customers/{customer}/accounts
 - POST /api/partner/essentials/customers/{customer}/quotes
+- GET /api/partner/essentials/customers/{customer}/status
 - POST /api/partner/essentials/quotes/{quote}/complete
 
 Operations:
@@ -209,6 +210,7 @@ Operations:
 - POST /api/admin/essentials/accounts/{account}/verify
 - POST /api/admin/essentials/lenders
 - POST /api/admin/essentials/advances/{advance}/reconcile
+- POST /api/admin/essentials/repayments/{repayment}/reconcile
 
 ## 15. Production acceptance
 
