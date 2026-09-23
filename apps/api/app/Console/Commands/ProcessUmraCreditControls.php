@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\CreditFeeRecognitionService;
 use App\Services\CreditReferenceReportingService;
 use App\Services\UmraNplCapService;
 use Illuminate\Console\Command;
@@ -15,9 +16,11 @@ class ProcessUmraCreditControls extends Command
 
     public function handle(
         UmraNplCapService $npl,
+        CreditFeeRecognitionService $fees,
         CreditReferenceReportingService $reporting,
     ): int {
         $nplSummary = $npl->scan();
+        $feeSummary = $fees->scan();
 
         $breached = DB::table('support_cases')
             ->whereNotIn('status', ['resolved', 'closed'])
@@ -32,6 +35,7 @@ class ProcessUmraCreditControls extends Command
 
         $this->info(json_encode([
             'npl' => $nplSummary,
+            'credit_fee_recognition' => $feeSummary,
             'complaint_sla_breaches_marked' => $breached,
             'credit_reporting' => $reportingSummary,
         ], JSON_UNESCAPED_SLASHES));

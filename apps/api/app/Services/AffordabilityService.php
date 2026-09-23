@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Schema;
 
 class AffordabilityService
 {
-    public function assess(User $user, LoanApplication $application, int $amountMinor): array
+    public function __construct(private readonly CreditEconomicsService $economics) {}
+
+    public function assess(User $user, LoanApplication $application, int $amountMinor, ?array $quote = null): array
     {
         $incomeMinor = $this->verifiedMonthlyIncomeMinor($user);
         if ($incomeMinor === null || $incomeMinor <= 0) {
@@ -25,9 +27,23 @@ class AffordabilityService
         }
 
         $existing = $this->existingThirtyDayDebtServiceMinor($user->id);
-        $proposed = $this->projectedThirtyDayDebtServiceMinor($application, $amountMinor);
-        $externalObligation = $this->verifiedMonthlyObligationMinor($user) ?? 0;
-        $effective = max($externalObligation, $existing + $proposed);
+        try {
+            $proposed = $quote
+                ? $this->economics->debtServiceWithinDays($quote, 30)
+                : $this->projectedThirtyDayDebtServiceMinor($application, $amountMinor);
+        } catch (\InvalidArgumentException $exception) {
+            return [
+                'status' => 'unavailable',
+                'reason_code' => 'REGULATORY_PRICING_POLICY_REQUIRED',
+                'monthly_income_minor' => $incomeMinor,
+                'estimated_obligation_minor' => null,
+                'debt_service_ratio_percent' => null,
+                'detail' => $exception->getMessage(),
+            ];
+        }
+        $externalNetOfOpfin = $this->verifiedExternalObligationNetOfOpfinMinor($user);
+        $externalObligation = $externalNetOfOpfin ?? ($this->verifiedMonthlyObligationMinor($user) ?? 0);
+        $effective = $externalObligation + $existing + $proposed;
         $dsr = round(($effective / $incomeMinor) * 100, 2);
         $maximum = (float) config('opfin.credit.max_debt_service_ratio_percent', 35);
 
@@ -43,6 +59,7 @@ class AffordabilityService
             'existing_thirty_day_debt_service_minor' => $existing,
             'proposed_thirty_day_debt_service_minor' => $proposed,
             'verified_external_obligation_minor' => $externalObligation,
+            'external_obligation_is_net_of_opfin' => $externalNetOfOpfin !== null,
         ];
     }
 
@@ -54,6 +71,11 @@ class AffordabilityService
     private function verifiedMonthlyObligationMinor(User $user): ?int
     {
         return $this->valueFromExternalComponents($user, 'verified_monthly_obligation_minor');
+    }
+
+    private function verifiedExternalObligationNetOfOpfinMinor(User $user): ?int
+    {
+        return $this->valueFromExternalComponents($user, 'verified_external_obligation_excluding_opfin_minor');
     }
 
     private function valueFromExternalComponents(User $user, string $key): ?int
@@ -133,33 +155,16 @@ class AffordabilityService
         LoanApplication $application,
         int $approvedAmountMinor,
     ): int {
-        $application->loadMissing('loanProductTerm');
-        $term = $application->loanProductTerm;
-        if (! $term) {
-            return $approvedAmountMinor;
-        }
+        $pricing = [
+            'access_fee_minor' => (int) round(
+                $approvedAmountMinor * ((float) config('opfin.credit.default_pricing.access_fee_percent', 0) / 100)
+            ),
+            'disbursement_fee_minor' => (int) config('opfin.credit.default_pricing.disbursement_fee_minor', 0),
+            'fee_treatment' => (string) config('opfin.credit.default_pricing.fee_treatment', 'financed'),
+        ];
 
-        $duration = (int) $term->duration;
-        $installments = Loan::getInstallments(
-            $duration,
-            (string) $term->repayment_frequency,
-        );
-        $repaymentMinor = Loan::getRepaymentAmount(
-            (float) $term->interest_rate / 100,
-            $approvedAmountMinor,
-            (string) $term->interest_type,
-            $installments,
-            (string) $term->interest_cycle,
-            $duration,
-        );
-        $frequencyDays = Loan::getDaysInFrequency((string) $term->repayment_frequency);
-        $occurrences = $duration <= 30
-            ? $installments
-            : max(1, min($installments, intdiv(30, $frequencyDays)));
-        $base = intdiv($repaymentMinor, $installments);
-        $remainder = $repaymentMinor % $installments;
+        $quote = $this->economics->quoteForApplication($application, $approvedAmountMinor, $pricing);
 
-        return ($base * $occurrences)
-            + ($occurrences === $installments ? $remainder : 0);
+        return $this->economics->debtServiceWithinDays($quote, 30);
     }
 }

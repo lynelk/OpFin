@@ -396,7 +396,88 @@ class SavingsService
             } else {
                 $movement->update(['status' => SavingsMovement::STATUS_FAILED]);
             }
+            $mobileMoney->update(['accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED]);
             $this->recordMovementEconomics($movement->fresh('goal.product'), 'FAILED', $mobileMoney);
+
+            return $movement->fresh(['goal.product', 'mobileMoneyTransaction']);
+        }
+
+        if ($mobileMoney->status === MobileMoneyTransaction::STATUS_REVERSED) {
+            if ($movement->movement_type === SavingsMovement::TYPE_CONTRIBUTION) {
+                $collectionPosted = \App\Models\LedgerTransaction::query()
+                    ->where('reference', 'savings.collection:'.$movement->movement_reference)->exists();
+                $partnerSettled = \App\Models\LedgerTransaction::query()
+                    ->where('reference', 'savings.partner_settlement:'.$movement->movement_reference)->exists();
+
+                if ($collectionPosted) {
+                    $this->ledger->reverseSavingsCollection(
+                        $movement->fresh(['goal.product', 'mobileMoneyTransaction']),
+                        $mobileMoney,
+                        $partnerSettled,
+                    );
+                    $movement->update([
+                        'status' => $partnerSettled
+                            ? SavingsMovement::STATUS_REVERSAL_EXCEPTION
+                            : SavingsMovement::STATUS_REVERSED,
+                        'completed_at' => null,
+                        'metadata' => array_merge($movement->metadata ?? [], [
+                            'provider_reversed_at' => now()->toIso8601String(),
+                            'partner_recovery_required' => $partnerSettled,
+                        ]),
+                    ]);
+                    $mobileMoney->update([
+                        'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                        'accounting_posted_at' => now(),
+                        'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                    ]);
+                    $goal = $movement->goal;
+                    if ($goal->status === SavingsGoal::STATUS_COMPLETED
+                        && (! $goal->target_amount_minor || $goal->fresh()->confirmedBalanceMinor() < $goal->target_amount_minor)) {
+                        $goal->update(['status' => SavingsGoal::STATUS_ACTIVE, 'completed_at' => null]);
+                    }
+                } else {
+                    $movement->update(['status' => SavingsMovement::STATUS_REVERSED]);
+                    $mobileMoney->update(['accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED]);
+                }
+            } else {
+                $payoutPosted = \App\Models\LedgerTransaction::query()
+                    ->where('reference', 'savings.withdrawal_payout:'.$movement->movement_reference)->exists();
+                if ($payoutPosted) {
+                    $this->ledger->reverseSavingsPayout(
+                        $movement->fresh(['goal.product', 'mobileMoneyTransaction']),
+                        $mobileMoney,
+                    );
+                    $movement->update([
+                        'status' => SavingsMovement::STATUS_PARTNER_RELEASED,
+                        'completed_at' => null,
+                        'metadata' => array_merge($movement->metadata ?? [], [
+                            'provider_payout_reversed_at' => now()->toIso8601String(),
+                        ]),
+                    ]);
+                    $mobileMoney->update([
+                        'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                        'accounting_posted_at' => now(),
+                        'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                    ]);
+                } else {
+                    $movement->update(['status' => SavingsMovement::STATUS_PARTNER_RELEASED]);
+                    $mobileMoney->update(['accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED]);
+                }
+            }
+
+            $this->auditLogger->record('savings.money_movement.reversed', null, $movement, [
+                'mobile_money_transaction_id' => $mobileMoney->id,
+                'provider_reference' => $mobileMoney->provider_reference,
+            ]);
+            $reversalStatus = $movement->status === SavingsMovement::STATUS_REVERSAL_EXCEPTION
+                ? 'REVERSAL_EXCEPTION'
+                : ($movement->movement_type === SavingsMovement::TYPE_WITHDRAWAL ? 'PAYOUT_REVERSED' : 'REVERSED');
+            $this->recordMovementEconomics(
+                $movement->fresh('goal.product'),
+                $reversalStatus,
+                $mobileMoney,
+                $mobileMoney->provider_reference,
+            );
 
             return $movement->fresh(['goal.product', 'mobileMoneyTransaction']);
         }
@@ -421,6 +502,12 @@ class SavingsService
             ]);
             $this->ledger->postSavingsPayout($movement->fresh(['goal.product', 'mobileMoneyTransaction']), $mobileMoney);
         }
+
+        $mobileMoney->update([
+            'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+            'accounting_posted_at' => now(),
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+        ]);
 
         $this->auditLogger->record('savings.money_movement.synchronized', null, $movement, [
             'mobile_money_transaction_id' => $mobileMoney->id,

@@ -12,6 +12,8 @@ use InvalidArgumentException;
 
 class ProductionLedgerService
 {
+    public function __construct(private readonly FinancialAccountingPeriodService $accountingPeriods) {}
+
     /**
      * @param  array<int, array{account_id:int,direction:string,amount_minor:int,memo?:string}>  $entries
      */
@@ -37,6 +39,7 @@ class ProductionLedgerService
 
         $this->assertBalanced($entries);
         $this->assertAccounts($entries, $currency);
+        $this->accountingPeriods->assertPostingAllowed(now());
 
         return DB::transaction(function () use ($reference, $eventType, $source, $entries, $actor, $currency, $metadata) {
             $transaction = LedgerTransaction::create([

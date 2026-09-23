@@ -4,11 +4,18 @@ namespace App\Services;
 
 use App\Models\CreditRepaymentScheduleItem;
 use App\Models\Loan;
+use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class UmraNplCapService
 {
+    public function __construct(
+        private readonly FinancialPolicyService $policies,
+        private readonly DefaultInterestService $defaultInterest,
+    ) {}
+
     public function evaluate(Loan $loan): Loan
     {
         if (! $loan->credit_offer_id) {
@@ -29,17 +36,10 @@ class UmraNplCapService
         $principalOutstanding = (int) CreditRepaymentScheduleItem::query()
             ->where('loan_id', $loan->id)
             ->sum('principal_outstanding_minor');
-        $interestOutstanding = (int) CreditRepaymentScheduleItem::query()
-            ->where('loan_id', $loan->id)
-            ->sum('interest_outstanding_minor');
 
-        $initialInterest = (int) $offer->interest_amount_minor;
-        $defaultInterestCap = intdiv($initialInterest, 2);
-        $principalAtNpl = (int) ($loan->principal_at_npl_minor ?? $principalOutstanding);
-        $contractualPlusDefault = min(
-            $principalAtNpl,
-            $interestOutstanding + min((int) $loan->default_interest_accrued_minor, $defaultInterestCap),
-        );
+        $policy = $this->policies->active('regulatory_pricing', (string) $loan->loan_product_id);
+        $rules = $this->policies->rules($policy);
+        $defaultRules = (array) ($rules['default_interest'] ?? []);
 
         CreditRepaymentScheduleItem::query()
             ->where('loan_id', $loan->id)
@@ -48,41 +48,73 @@ class UmraNplCapService
             ->whereNotIn('status', [CreditRepaymentScheduleItem::STATUS_PAID, CreditRepaymentScheduleItem::STATUS_VOIDED])
             ->update(['status' => CreditRepaymentScheduleItem::STATUS_OVERDUE, 'updated_at' => now()]);
 
+        $principalAtNpl = (int) ($loan->principal_at_npl_minor ?? $principalOutstanding);
+        $initialInterest = (int) $offer->interest_amount_minor;
+        $defaultCap = null;
+        if (isset($defaultRules['cap_percent_of_initial_interest'])) {
+            $defaultCap = (int) floor(
+                $initialInterest * ((float) $defaultRules['cap_percent_of_initial_interest'] / 100)
+            );
+        }
+
+        $recoveryCap = null;
+        if (isset($defaultRules['recovery_cap_percent_of_principal_at_npl'])) {
+            $recoveryCap = (int) floor(
+                $principalAtNpl * ((float) $defaultRules['recovery_cap_percent_of_principal_at_npl'] / 100)
+            );
+        }
+
         $loan->forceFill([
             'status' => strcasecmp((string) $loan->status, 'Active') === 0 ? 'Non-Performing' : $loan->status,
             'non_performing_at' => $loan->non_performing_at ?? now(),
             'principal_at_npl_minor' => $principalAtNpl,
             'initial_interest_minor' => $loan->initial_interest_minor ?? $initialInterest,
-            'default_interest_cap_minor' => $defaultInterestCap,
-            'npl_recovery_cap_minor' => $principalAtNpl + $contractualPlusDefault,
+            'default_interest_cap_minor' => $defaultCap,
+            'npl_recovery_cap_minor' => $recoveryCap,
+            'default_interest_policy_snapshot' => [
+                'policy_id' => $policy->id,
+                'code' => $policy->code,
+                'version' => $policy->version,
+                'licence_class' => $policy->licence_class,
+                'rules' => $defaultRules,
+            ],
             'npl_policy_checked_at' => now(),
         ])->save();
 
         return $loan->fresh();
     }
 
-    public function accrueDefaultInterest(Loan $loan, int $requestedMinor): Loan
+    public function accrueDefaultInterest(Loan $loan, ?Carbon $asOf = null): Loan
     {
-        if ($requestedMinor < 0) {
-            throw new InvalidArgumentException('Default interest cannot be negative.');
-        }
+        return $this->defaultInterest->accrue($this->evaluate($loan), $asOf);
+    }
 
-        $loan = $this->evaluate($loan);
-        if (! $loan->non_performing_at) {
-            throw new InvalidArgumentException('Default interest can only be accrued after the loan becomes non-performing.');
-        }
+    public function setEnforcement(Loan $loan, bool $enabled, User $actor, ?int $overrideId = null): Loan
+    {
+        if (! $enabled) {
+            if (! $overrideId) {
+                throw new InvalidArgumentException('Disabling a regulatory financial control requires an approved maker-checker override.');
+            }
 
-        $cap = (int) $loan->default_interest_cap_minor;
-        $current = (int) $loan->default_interest_accrued_minor;
-        $next = $current + $requestedMinor;
-
-        if ($loan->umra_npl_cap_enforcement_enabled && $next > $cap) {
-            throw new InvalidArgumentException('UMRA default-interest ceiling would be exceeded.');
+            $override = DB::table('financial_control_overrides')->where('id', $overrideId)->first();
+            if (! $override
+                || $override->status !== 'approved'
+                || $override->control_code !== 'credit.default_interest_cap'
+                || $override->subject_type !== Loan::class
+                || (int) $override->subject_id !== (int) $loan->id
+                || ($override->expires_at && Carbon::parse($override->expires_at)->isPast())) {
+                throw new InvalidArgumentException('The supplied financial-control override is not valid for this loan.');
+            }
         }
 
         $loan->update([
-            'default_interest_accrued_minor' => $loan->umra_npl_cap_enforcement_enabled ? min($next, $cap) : $next,
+            'umra_npl_cap_enforcement_enabled' => $enabled,
             'npl_policy_checked_at' => now(),
+        ]);
+
+        app(AuditLogger::class)->record('credit.default_interest.enforcement_changed', $actor, $loan, [
+            'enabled' => $enabled,
+            'override_id' => $overrideId,
         ]);
 
         return $this->evaluate($loan->fresh());
@@ -109,7 +141,7 @@ class UmraNplCapService
         return [
             'checked' => $count,
             'non_performing' => DB::table('loans')->whereNotNull('non_performing_at')->count(),
-            'enforcement_enabled' => (bool) config('opfin.regulatory.enforce_umra_npl_cap', true),
+            'enforcement_enabled_by_default' => (bool) config('opfin.regulatory.enforce_umra_npl_cap', true),
         ];
     }
 }

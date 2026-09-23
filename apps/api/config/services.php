@@ -45,6 +45,7 @@ return [
         'private_key' => env('CPAY_PRIVATE_KEY'),
         'callback_url' => env('CPAY_CALLBACK_URL'),
         'callback_secret' => env('CPAY_CALLBACK_SECRET'),
+        // Messaging is a separate CPay contract. No endpoint is guessed in production.
         'sms_path' => env('CPAY_SMS_PATH'),
         'callback_replay_window_seconds' => (int) env('CPAY_CALLBACK_REPLAY_WINDOW_SECONDS', 300),
         'environment' => env('CPAY_ENVIRONMENT', 'sandbox'),
@@ -67,11 +68,16 @@ return [
     ],
 
     'crb' => [
-        // Direct CRB credentials are the controlled backup for Cito-routed credit data.
         'base_url' => env('CRB_URL'),
         'account' => env('CRB_CLIENT_ID'),
         'password' => env('CRB_CLIENT_SECRET'),
         'environment' => env('CRB_ENVIRONMENT', 'production'),
+    ],
+
+    'efris' => [
+        'url' => env('EFRIS_URL'),
+        'token' => env('EFRIS_TOKEN'),
+        'tin' => env('EFRIS_TIN'),
     ],
 
     'credit_reference_reporting' => [
@@ -118,8 +124,6 @@ return [
                 'webhook_secret' => env('CPAY_CALLBACK_SECRET'),
                 'production_certified' => true,
             ],
-            // Direct provider adapters are intentionally not supplied by default. Production
-            // enablement requires a real adapter class, credentials, certification and approval.
             'mtn' => [
                 'adapter' => env('MTN_MOBILE_MONEY_ADAPTER_CLASS'),
                 'production_certified' => (bool) env('MTN_MOBILE_MONEY_PRODUCTION_CERTIFIED', false),

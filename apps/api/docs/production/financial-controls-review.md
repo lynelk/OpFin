@@ -1,7 +1,7 @@
 # Financial Controls Review
 
 Date: 2026-09-01
-Status: Current production-control specification
+Status: Superseded in part by 22 September 2026 financial-control remediation; retained as control-history evidence
 
 ## Summary
 
@@ -241,3 +241,21 @@ A money-changing release is acceptable only when:
 7. `opfin:integrity-audit` executes successfully after deployment;
 8. `opfin:umra-credit-controls` is healthy/observable where the UMRA digital-lending controls are active;
 8. any live provider activation still lacking genuine credentials or certification remains fail-closed.
+
+
+## 22 September 2026 superseding controls
+
+For current implementation behaviour, the following supersede earlier descriptions in this document:
+
+- payment `matched` no longer means internal accounting complete; provider finality, accounting and statement reconciliation are separate;
+- affordability, offer pricing and repayment schedules use one canonical credit-economics service;
+- regulatory pricing is effective-dated and licence-class aware, without hard-coded statutory rates;
+- default-interest accrual is calculated from rate/principal/time and ledgered, not operator-entered;
+- credit fee clearing is released to income under a governed accounting policy;
+- early settlement uses a frozen quote and append-only settlement accounting;
+- paid subscription revenue is invoice/CPay/ledger driven, with entitlements activated only after successful collection;
+- revenue events post OpFin income, partner share and tax separately;
+- savings/protection provider reversals post economic reversals or recovery receivables;
+- financial regulatory reports require a true reconciliation assessment before they can be labelled `financially_reconciled`.
+
+See `financial-integrity-hardening-2026-09-01.md` (22 September addendum), `docs/FINANCIAL_CHANGE_GOVERNANCE.md` and `docs/UMRA_DIGITAL_LENDING_CONTROLS.md`.

@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\CustomerCreditProfileController;
 use App\Http\Controllers\Api\CustomerPhoneController;
 use App\Http\Controllers\Api\CustomerSupportController;
 use App\Http\Controllers\Api\CustomerWalletController;
+use App\Http\Controllers\Api\EarlySettlementController;
+use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\FinancialSpaceController;
 use App\Http\Controllers\Api\FinancialWellbeingController;
@@ -180,6 +182,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/loan-applications/{id}/status', [LoanApplicationController::class, 'updateStatus'])->middleware('audit.sensitive:loan_application.status_updated');
     Route::patch('/transactions/{id}/approve', [TransactionController::class, 'approve'])->middleware('audit.sensitive:transaction.approved');
     Route::post('/loans/{loan_id}/repay', [LoanRepaymentController::class, 'repay']);
+    Route::post('/loans/{loan}/early-settlement-quote', [EarlySettlementController::class, 'quote']);
+    Route::post('/early-settlement-quotes/{quote}/settle', [EarlySettlementController::class, 'settle']);
     Route::get('/products', [LoanApplicationController::class, 'getProducts']);
     Route::get('/institutions', [LoanApplicationController::class, 'getInstitutions']);
     Route::get('/product-terms/{product}', [LoanApplicationController::class, 'getProductTerms']);
@@ -248,6 +252,8 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/umra/loans/{loan}/evaluate-npl', [UmraComplianceController::class, 'evaluateNpl']);
     Route::post('/admin/umra/loans/{loan}/default-interest', [UmraComplianceController::class, 'accrueDefaultInterest']);
     Route::patch('/admin/umra/loans/{loan}/npl-enforcement', [UmraComplianceController::class, 'setNplEnforcement']);
+    Route::post('/admin/financial-controls/loans/{loan}/overrides', [FinancialControlController::class, 'requestLoanOverride']);
+    Route::post('/admin/financial-controls/overrides/{override}/approve', [FinancialControlController::class, 'approve']);
     Route::get('/admin/umra/term-changes', [UmraComplianceController::class, 'termChanges']);
     Route::post('/admin/umra/product-terms/{term}/changes', [UmraComplianceController::class, 'termChange']);
     Route::post('/admin/umra/term-changes/{change}/approve', [UmraComplianceController::class, 'approveTermChange']);

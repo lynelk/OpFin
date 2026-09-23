@@ -22,4 +22,10 @@ class LedgerEntry extends Model
     {
         return ['amount_minor' => 'integer'];
     }
+
+    protected static function booted(): void
+    {
+        static::updating(fn () => throw new \LogicException('Ledger entries are immutable; post an append-only correction instead.'));
+        static::deleting(fn () => throw new \LogicException('Ledger entries are immutable and cannot be deleted.'));
+    }
 }

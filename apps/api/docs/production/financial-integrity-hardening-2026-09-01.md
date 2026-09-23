@@ -134,3 +134,38 @@ The scanner now detects, among other findings:
 - invalid asset-finance economics.
 
 Corrections remain append-only where economic history has already been posted. The scanner must surface an exception rather than manufacture a balancing entry solely to make a control report green.
+
+
+## 22 September 2026 financial-control remediation
+
+The production control model now separates three independent states for external money movement:
+
+1. **provider finality** — what CPay/provider says happened;
+2. **accounting finality** — whether the expected immutable economic posting exists;
+3. **statement reconciliation** — whether independent provider-statement evidence matches.
+
+Only the statement reconciliation service can set external reconciliation to matched. Provider callbacks and product services may set accounting state but not manufacture statement evidence.
+
+### Canonical credit economics
+
+`CreditEconomicsService` is the single pricing/schedule calculation used for exact offer economics and affordability. The accepted offer stores its canonical schedule snapshot; servicing creates schedule rows from that snapshot instead of recalculating with a second formula.
+
+The engine reads an approved effective-dated `regulatory_pricing` policy. Rate ceilings, fee caps, interest basis, day-count conventions, default-interest rules and early-settlement treatment are policy data, not statutory constants embedded in PHP.
+
+### Default interest
+
+Default interest is deterministic: outstanding principal × governed contractual rate × elapsed time, subject to effective-dated policy caps. Accrual creates a receivable and income posting. Disabling enforcement requires a current maker-checker override.
+
+### Fee recognition and early settlement
+
+Credit fees remain deferred until an effective-dated accounting policy releases them to income. Early settlement freezes principal, earned interest, eligible fees, default interest, policy-authorised settlement charges and rebates, then collects exactly that amount. Future unearned schedule amounts are voided only after successful provider finality.
+
+### Platform revenue and tax
+
+Commercial revenue events use unique occurrence identities and canonical ledger postings. Paid subscriptions activate entitlements only after a frozen invoice is successfully collected. OpFin income, partner share and tax are posted separately.
+
+Tax calculation and EFRIS requirements are also effective-dated policy rules. EFRIS submission fails closed when enabled without configured production credentials.
+
+### Savings and protection reversals
+
+Post-success provider reversals now receive append-only economic reversals. Where funds have already been settled to a savings partner or insurer, the reversal creates a partner recovery receivable instead of pretending the cash is still held by OpFin.

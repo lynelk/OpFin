@@ -91,9 +91,9 @@ KYC multipart fields:
 
 Private evidence paths are not customer response fields.
 
-**Identity routing:** when Cito is configured, OpFin uses Cito's provider-neutral capability API as the primary route for NIN validation and phone-ownership/NIN-phone evidence. gnuGrid may satisfy those capabilities behind Cito without OpFin depending on gnuGrid-specific request formats. The captured National ID images and selfie are separate biometric/document evidence: the current Cito signed capability contract does not accept those binary artefacts, so liveness and face-match remain with the configured direct biometric provider until an equivalent Cito evidence contract is certified.
+**Identity routing:** when Cito is configured, OpFin uses Cito's provider-neutral capability API as the primary route for NIN validation and phone-ownership/NIN-phone evidence. gnuGrid may satisfy those capabilities behind Cito without OpFin depending on gnuGrid-specific request formats. National ID images and selfie remain separate biometric/document evidence; the current Cito signed capability contract does not accept those binary artefacts, so liveness and face-match stay with the configured evidence-capable provider until an equivalent Cito contract is certified.
 
-If Cito returns an ambiguous technical failure, OpFin leaves the KYC case pending and does **not** silently issue a direct duplicate identity enquiry. Operations must reconcile the original request before explicitly selecting the direct route. If Cito NIN/phone checks pass but no biometric provider is configured, those checks remain recorded as valid while liveness/face-match remain `pending_review`; the customer is not falsely marked fully verified.
+If Cito returns an ambiguous technical failure, OpFin leaves the KYC case pending and does **not** silently issue a direct duplicate identity enquiry. Operations must reconcile the original request before explicitly selecting the direct route. If Cito NIN/phone checks pass but no biometric provider is configured, those checks remain valid while liveness/face-match remain `pending_review`; the customer is not falsely marked fully verified.
 
 ## 5. Credit profile
 
@@ -121,7 +121,7 @@ Typical profile data includes:
 
 Do not replace unavailable external data with made-up score values.
 
-External credit-data routing is provider-independent: OpFin prefers Cito when configured and otherwise can use the direct provider adapter. A failed or ambiguous Cito request does not silently trigger a second direct paid enquiry. Operations must reconcile the original request before explicitly selecting the direct route.
+External credit-data routing is provider-independent: OpFin prefers Cito when configured and otherwise can use the direct provider adapter. A failed or ambiguous Cito request does not silently trigger a second paid enquiry. Operations must reconcile the original request before explicitly selecting the direct route.
 
 Verified positive employer behaviour may provide a small capped score uplift. Missing, unavailable, customer-declined or negative employer-behaviour data is neutral and does not reduce the base Composite Score or its data-coverage calculation.
 
@@ -169,6 +169,8 @@ A successful acceptance records a separate versioned `credit_information_reporti
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | POST | `/api/loans/{loan_id}/repay` | Initiate full/partial collection from verified repayment wallet |
+| POST | `/api/loans/{loan}/early-settlement-quote` | Freeze a governed early-settlement quote using earned interest, eligible fees/rebates and current default-interest state |
+| POST | `/api/early-settlement-quotes/{quote}/settle` | Collect exactly the frozen settlement amount and close the loan only after provider finality |
 
 Required idempotency key is accepted in the `Idempotency-Key` header or body.
 
@@ -232,8 +234,10 @@ Admin/operations:
 | GET | `/api/admin/umra/credit-reporting` | Credit-information exchange register/status |
 | POST | `/api/admin/umra/credit-reporting/submit` | Submit eligible pending outbound reports |
 | POST | `/api/admin/umra/loans/{loan}/evaluate-npl` | Evaluate/update UMRA NPL controls |
-| POST | `/api/admin/umra/loans/{loan}/default-interest` | Accrue default interest within configured cap |
-| PATCH | `/api/admin/umra/loans/{loan}/npl-enforcement` | Explicitly enable/disable per-loan cap enforcement while retaining tracking |
+| POST | `/api/admin/umra/loans/{loan}/default-interest` | Recalculate default interest from governed rate, outstanding principal and elapsed time; optional `as_of_date` only |
+| PATCH | `/api/admin/umra/loans/{loan}/npl-enforcement` | Change enforcement state; disabling requires an approved maker-checker financial-control override |
+| POST | `/api/admin/financial-controls/loans/{loan}/overrides` | Request a time-bounded financial-control override with evidence |
+| POST | `/api/admin/financial-controls/overrides/{override}/approve` | Independent checker approval; self-approval is prohibited |
 | GET | `/api/admin/umra/term-changes` | Credit-term governance register |
 | POST | `/api/admin/umra/product-terms/{term}/changes` | Submit governed term change |
 | POST | `/api/admin/umra/term-changes/{change}/approve` | Maker-checker approval; interest change requires prior UMRA evidence |
@@ -278,18 +282,18 @@ These endpoints are Space-scoped. Cross-Space access is denied unless an active 
 | --- | --- | --- |
 | GET | `/api/marketplace/products` | Active eligible-market partner catalogue surface |
 | GET | `/api/plans` | Active OpFin plans |
-| POST | `/api/financial-spaces/{space}/subscription` | Activate plan entitlements for an authorised Space |
+| POST | `/api/financial-spaces/{space}/subscription` | Create/continue a subscription contract and, for paid plans, collect a governed invoice before activating entitlements |
 
 Permission, entitlement and product/regulatory eligibility are separate gates. Commercial economics must not determine financial-health advice.
 
-## 20. Revenue, service economics and partner reporting
+## 20. Revenue, service economics and financial reconciliation
 
 Operations/admin routes:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| POST | `/api/admin/revenue-events` | Record idempotent subscription, commission, revenue-share, transaction, platform/API or servicing revenue |
-| POST | `/api/admin/revenue-events/{event}/reconcile` | Attach provider/reconciliation references and settle/reconcile the revenue event |
+| POST | `/api/admin/revenue-events` | Accrue a uniquely identified commercial revenue occurrence; OpFin/partner/tax economics are calculated by governed policy and posted to the canonical ledger |
+| POST | `/api/admin/revenue-events/{event}/reconcile` | Settle an accrued revenue receivable against an actual successful money-movement record; free-form settlement assertions are not accepted |
 | POST | `/api/admin/service-economics-events` | Record or enrich one idempotent external-service economics event |
 | GET | `/api/admin/reports/service-economics` | Provider/customer/partner/Cito/OpFin fee, cost, tax, settlement and margin report |
 | GET | `/api/admin/reports/capital-loan-book` | Capital/funding-pool and loan-book performance report |
@@ -298,11 +302,11 @@ Operations/admin routes:
 | GET | `/api/admin/reports/employment-positive-behaviour` | Aggregate positive-only employer enrichment report |
 | GET | `/api/admin/reports/financial-account-behaviour` | Aggregate linked-account and verified financial-behaviour coverage report |
 
-Report routes accept optional `from` and `to` dates. The service-economics report also accepts `service_code`, `provider`, `route` and `environment` filters.
+Paid subscriptions follow contract → invoice → tax → governed payment finality → revenue ledger → entitlement activation. Provider-statement reconciliation remains a separate finality state. Revenue, partner payable and tax payable are canonical ledger postings, not editable reporting labels.
 
-Cito/CPay is the preferred third-party/payment route, not an availability dependency. A production direct money-movement adapter is permitted only when explicitly configured and marked certified. Provider execution never replaces OpFin product-state, ledger, finality and reconciliation controls.
+Cito/CPay is the preferred third-party/payment route, not an availability dependency. A production direct money-movement adapter is permitted only when explicitly configured and certified. Provider execution never replaces OpFin product-state, accounting, statement reconciliation or ledger controls.
 
-Service economics distinguishes pass-through principal/premium/capital from revenue. A known zero is stored as `0`; an unknown commercial amount remains `null` and appears as an incompleteness count rather than being guessed.
+Service economics distinguishes pass-through principal, premium and capital from revenue. A known zero is stored as `0`; an unknown commercial amount remains `null` and is reported as incomplete rather than guessed.
 
 ## 21. Inclusive finance, programme delivery and alternative credit support
 

@@ -12,13 +12,21 @@ use App\Models\MobileMoneyTransaction;
 use App\Models\ReconciliationItem;
 use App\Models\User;
 use App\Services\ProductionCreditOfferService;
+use App\Services\ProductionRepaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ProductionRepaymentAndReconciliationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->installPricingPolicy();
+    }
 
     public function test_repayment_requires_idempotency_and_replays_same_collection_once(): void
     {
@@ -88,6 +96,68 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
         $this->assertSame(1, $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.disbursement')->count());
         $this->assertSame(1, $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.repayment')->count());
         $this->assertDatabaseHas('audit_logs', ['event' => 'credit.repayment.fulfilled', 'subject_id' => $loan->id]);
+        $repayment = $repayment->fresh();
+        $this->assertSame(MobileMoneyTransaction::ACCOUNTING_POSTED, $repayment->accounting_status);
+        $this->assertNotNull($repayment->accounting_posted_at);
+        $this->assertSame(MobileMoneyTransaction::STATEMENT_UNRECONCILED, $repayment->statement_reconciliation_status);
+        $this->assertSame(MobileMoneyTransaction::RECONCILIATION_PENDING, $repayment->reconciliation_status);
+    }
+
+    public function test_provider_reversal_restores_exact_repayment_allocation_once(): void
+    {
+        [$customer, , $loan] = $this->productionLoan();
+        Sanctum::actingAs($customer);
+
+        $this->withHeader('Idempotency-Key', 'repayment-reversal-001')
+            ->postJson("/api/loans/{$loan->id}/repay", ['amount_minor' => 50000])
+            ->assertStatus(202);
+
+        $repayment = MobileMoneyTransaction::query()
+            ->where('direction', MobileMoneyTransaction::DIRECTION_COLLECTION)
+            ->firstOrFail();
+        $repayment->update([
+            'status' => MobileMoneyTransaction::STATUS_SUCCESSFUL,
+            'provider_reference' => 'mock-collection-reversal-001',
+        ]);
+
+        app(ProductionRepaymentService::class)->syncCollectionState($repayment->fresh());
+        $this->assertSame(
+            120000,
+            (int) DB::table('credit_repayment_schedule_items')
+                ->where('loan_id', $loan->id)
+                ->sum('total_outstanding_minor'),
+        );
+        $this->assertGreaterThan(
+            0,
+            DB::table('credit_repayment_allocations')->where('transaction_id', $repayment->transaction_id)->count(),
+        );
+
+        $repayment->update([
+            'status' => MobileMoneyTransaction::STATUS_REVERSED,
+            'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_UNRECONCILED,
+            'statement_reconciled_at' => null,
+        ]);
+
+        app(ProductionRepaymentService::class)->syncCollectionState($repayment->fresh());
+
+        $this->assertSame(
+            170000,
+            (int) DB::table('credit_repayment_schedule_items')
+                ->where('loan_id', $loan->id)
+                ->sum('total_outstanding_minor'),
+        );
+        $this->assertSame(
+            1,
+            DB::table('ledger_transactions')->where('event_type', 'loan.repayment.reversal')->count(),
+        );
+        $this->assertSame('Active', $loan->fresh()->status);
+        $this->assertSame(MobileMoneyTransaction::ACCOUNTING_POSTED, $repayment->fresh()->accounting_status);
+
+        app(ProductionRepaymentService::class)->syncCollectionState($repayment->fresh());
+        $this->assertSame(
+            1,
+            DB::table('ledger_transactions')->where('event_type', 'loan.repayment.reversal')->count(),
+        );
     }
 
     public function test_repayment_rejects_amount_above_exact_production_obligation(): void
@@ -104,7 +174,7 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
         $this->assertSame(1, $this->app['db']->table('ledger_transactions')->where('event_type', 'loan.disbursement')->count());
     }
 
-    public function test_reconciliation_is_business_date_scoped_and_classifies_provider_evidence(): void
+    public function test_reconciliation_includes_unresolved_backlog_and_classifies_provider_evidence(): void
     {
         $institution = Institution::create([
             'name' => 'Reconciliation Institution',
@@ -125,7 +195,7 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             'provider' => 'cpay',
             'business_date' => now()->toDateString(),
         ]);
-        $runResponse->assertCreated()->assertJsonPath('data.item_count', 3);
+        $runResponse->assertCreated()->assertJsonPath('data.item_count', 4);
         $runId = (int) $runResponse->json('data.run.id');
 
         $this->postJson("/api/admin/reconciliation-runs/{$runId}/provider-records", [
@@ -159,12 +229,15 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             'status' => ReconciliationItem::STATUS_EXCEPTION,
             'exception_type' => ReconciliationItem::EXCEPTION_AMOUNT_MISMATCH,
         ]);
-        $this->assertDatabaseMissing('reconciliation_items', ['mobile_money_transaction_id' => $yesterday->id]);
+        $this->assertDatabaseHas('reconciliation_items', [
+            'mobile_money_transaction_id' => $yesterday->id,
+            'status' => ReconciliationItem::STATUS_REQUIRES_PROVIDER_MATCH,
+        ]);
 
         $complete = $this->postJson("/api/admin/reconciliation-runs/{$runId}/complete")->assertOk();
         $complete->assertJsonPath('data.run.status', 'completed')
             ->assertJsonPath('data.run.summary.matched_count', 1)
-            ->assertJsonPath('data.run.summary.exception_count', 2)
+            ->assertJsonPath('data.run.summary.exception_count', 3)
             ->assertJsonPath('data.run.summary.pending_provider_match_count', 0);
 
         $this->assertDatabaseHas('reconciliation_items', [
@@ -172,13 +245,43 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             'status' => ReconciliationItem::STATUS_EXCEPTION,
             'exception_type' => ReconciliationItem::EXCEPTION_MISSING_PROVIDER_RECORD,
         ]);
+        $this->assertDatabaseHas('reconciliation_items', [
+            'mobile_money_transaction_id' => $yesterday->id,
+            'status' => ReconciliationItem::STATUS_EXCEPTION,
+            'exception_type' => ReconciliationItem::EXCEPTION_MISSING_PROVIDER_RECORD,
+        ]);
         $this->assertDatabaseHas('mobile_money_transactions', [
             'id' => $matched->id,
             'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
         ]);
+        $this->assertSame(MobileMoneyTransaction::STATEMENT_MATCHED, $matched->fresh()->statement_reconciliation_status);
+        $this->assertNotNull($matched->fresh()->statement_reconciled_at);
         $this->assertDatabaseHas('mobile_money_transactions', [
             'id' => $mismatch->id,
             'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+        ]);
+    }
+
+    private function installPricingPolicy(): void
+    {
+        DB::table('financial_policies')->insert([
+            'code' => 'test-regulatory-pricing',
+            'policy_type' => 'regulatory_pricing',
+            'jurisdiction_country' => 'UG',
+            'licence_class' => null,
+            'product_scope' => null,
+            'version' => 1,
+            'status' => 'active',
+            'effective_from' => now()->subDay()->toDateString(),
+            'effective_to' => null,
+            'rules' => json_encode([
+                'interest_basis' => 'original_principal',
+                'cycle_days' => ['daily' => 1, 'weekly' => 7, 'monthly' => 30],
+                'repayment_frequency_days' => ['daily' => 1, 'weekly' => 7, 'fortnightly' => 14, 'monthly' => 30],
+            ], JSON_THROW_ON_ERROR),
+            'source_reference' => 'financial-signoff-test',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 
