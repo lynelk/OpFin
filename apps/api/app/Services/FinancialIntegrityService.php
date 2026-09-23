@@ -739,7 +739,10 @@ class FinancialIntegrityService
                 ->join('mobile_money_transactions as m', 'm.id', '=', 'i.mobile_money_transaction_id')
                 ->where('i.reconciliation_run_id', $run->id)
                 ->where('i.status', 'matched')
-                ->where('m.status', MobileMoneyTransaction::STATUS_SUCCESSFUL)
+                ->whereIn('m.status', [
+                    MobileMoneyTransaction::STATUS_SUCCESSFUL,
+                    MobileMoneyTransaction::STATUS_REVERSED,
+                ])
                 ->where('m.statement_reconciliation_status', MobileMoneyTransaction::STATEMENT_MATCHED)
                 ->whereIn('m.accounting_status', [MobileMoneyTransaction::ACCOUNTING_POSTED, MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED])
                 ->select('m.id', 'm.direction', 'm.currency', 'm.amount_minor')
@@ -747,8 +750,16 @@ class FinancialIntegrityService
                 ->groupBy(fn ($row) => strtoupper((string) $row->currency));
 
             foreach ($movements as $currency => $currencyMovements) {
-                $collections = (int) $currencyMovements->where('direction', MobileMoneyTransaction::DIRECTION_COLLECTION)->sum('amount_minor');
-                $disbursements = (int) $currencyMovements->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)->sum('amount_minor');
+                $collections = (int) $currencyMovements
+                    ->where('direction', MobileMoneyTransaction::DIRECTION_COLLECTION)
+                    ->sum(fn ($movement) => $movement->status === MobileMoneyTransaction::STATUS_REVERSED
+                        ? -1 * (int) $movement->amount_minor
+                        : (int) $movement->amount_minor);
+                $disbursements = (int) $currencyMovements
+                    ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)
+                    ->sum(fn ($movement) => $movement->status === MobileMoneyTransaction::STATUS_REVERSED
+                        ? -1 * (int) $movement->amount_minor
+                        : (int) $movement->amount_minor);
                 if ($collections === 0 && $disbursements === 0) {
                     continue;
                 }
