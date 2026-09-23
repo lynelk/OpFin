@@ -111,16 +111,40 @@ class CommercialInsightsService
             throw new InvalidArgumentException('Commercial reporting end date must be on or after the start date.');
         }
 
+        $scopeUserIds = null;
+
+        if ($programmeId) {
+            $scopeUserIds = DB::table('inclusive_finance_enrolments')
+                ->where('programme_id', $programmeId)
+                ->pluck('user_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        if ($channel) {
+            $channelUserIds = DB::table('customer_acquisition_attributions')
+                ->where('acquisition_channel', $channel)
+                ->pluck('user_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+
+            $scopeUserIds = $scopeUserIds === null
+                ? $channelUserIds
+                : array_values(array_intersect($scopeUserIds, $channelUserIds));
+        }
+
         $attributionQuery = DB::table('customer_acquisition_attributions')
             ->whereBetween('acquired_at', [$fromDate, $toDate]);
-        if ($channel) {
-            $attributionQuery->where('acquisition_channel', $channel);
-        }
-        if ($programmeId) {
-            $attributionQuery->where('programme_id', $programmeId);
+        if ($scopeUserIds !== null) {
+            $scopeUserIds === []
+                ? $attributionQuery->whereRaw('1 = 0')
+                : $attributionQuery->whereIn('user_id', $scopeUserIds);
         }
         $attributions = $attributionQuery->get();
-        $userIds = $attributions->pluck('user_id')->map(fn ($id) => (int) $id)->all();
 
         $costQuery = DB::table('commercial_cost_events')
             ->where('currency', 'UGX')
@@ -140,16 +164,18 @@ class CommercialInsightsService
         $loansQuery = DB::table('loans')->whereBetween('created_at', [$fromDate, $toDate]);
         $revenueQuery = DB::table('revenue_events')->whereBetween('occurred_at', [$fromDate, $toDate])->where('currency', 'UGX');
 
-        if ($userIds !== []) {
-            $applicationsQuery->whereIn('user_id', $userIds);
-            $decisionsQuery->whereIn('user_id', $userIds);
-            $loansQuery->whereIn('user_id', $userIds);
-            $revenueQuery->whereIn('user_id', $userIds);
-        } elseif ($channel || $programmeId) {
-            $applicationsQuery->whereRaw('1 = 0');
-            $decisionsQuery->whereRaw('1 = 0');
-            $loansQuery->whereRaw('1 = 0');
-            $revenueQuery->whereRaw('1 = 0');
+        if ($scopeUserIds !== null) {
+            if ($scopeUserIds === []) {
+                $applicationsQuery->whereRaw('1 = 0');
+                $decisionsQuery->whereRaw('1 = 0');
+                $loansQuery->whereRaw('1 = 0');
+                $revenueQuery->whereRaw('1 = 0');
+            } else {
+                $applicationsQuery->whereIn('user_id', $scopeUserIds);
+                $decisionsQuery->whereIn('user_id', $scopeUserIds);
+                $loansQuery->whereIn('user_id', $scopeUserIds);
+                $revenueQuery->whereIn('user_id', $scopeUserIds);
+            }
         }
 
         $applications = $applicationsQuery->count();
@@ -182,8 +208,11 @@ class CommercialInsightsService
             ->join('loans', 'loans.id', '=', 'item.loan_id')
             ->where('item.total_outstanding_minor', '>', 0)
             ->whereDate('item.due_date', '<', now()->toDateString())
-            ->when($userIds !== [], fn ($query) => $query->whereIn('loans.user_id', $userIds))
-            ->when(($channel || $programmeId) && $userIds === [], fn ($query) => $query->whereRaw('1 = 0'))
+            ->when(
+                $scopeUserIds !== null && $scopeUserIds !== [],
+                fn ($query) => $query->whereIn('loans.user_id', $scopeUserIds)
+            )
+            ->when($scopeUserIds === [], fn ($query) => $query->whereRaw('1 = 0'))
             ->distinct()
             ->count('item.loan_id');
 
