@@ -243,9 +243,9 @@ class ProviderIndependenceReportingTest extends TestCase
             'tax_amount_minor' => 0,
         ]);
 
-        $this->assertSame(50, (int) $first->gross_revenue_minor);
-        $this->assertSame(50, (int) $first->net_revenue_minor);
-        $this->assertSame(-50, (int) $first->gross_margin_minor);
+        $this->assertNull($first->gross_revenue_minor);
+        $this->assertNull($first->net_revenue_minor);
+        $this->assertNull($first->gross_margin_minor);
 
         $second = $service->record([
             'service_code' => 'insurance',
@@ -255,12 +255,18 @@ class ProviderIndependenceReportingTest extends TestCase
             'status' => 'RECONCILED',
             'provider_reference' => 'INS-SETTLEMENT-001',
             'net_settlement_to_provider_minor' => 100,
+            'gross_revenue_minor' => 50,
+            'net_revenue_minor' => 50,
+            'gross_margin_minor' => -50,
             'reconciled_at' => now(),
         ]);
 
         $this->assertSame($first->id, $second->id);
         $this->assertSame(50, (int) $second->customer_platform_fee_minor);
         $this->assertSame(100, (int) $second->net_settlement_to_provider_minor);
+        $this->assertSame(50, (int) $second->gross_revenue_minor);
+        $this->assertSame(50, (int) $second->net_revenue_minor);
+        $this->assertSame(-50, (int) $second->gross_margin_minor);
         $this->assertSame('RECONCILED', $second->status);
         $this->assertDatabaseCount('service_economics_events', 1);
     }    
