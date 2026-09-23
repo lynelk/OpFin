@@ -51,6 +51,7 @@ export async function saveEssentialsLenderAction(formData: FormData) {
       .map((item) => item.trim().toLowerCase())
       .filter(Boolean);
     const decisionRoute = value(formData, "decision_route");
+    const lenderStatus = value(formData, "lender_status") || "onboarding";
     const fundingPoolId = num(formData, "funding_pool_id");
     const maxLimit = num(formData, "max_limit_minor");
     const minLimit = num(formData, "min_limit_minor");
@@ -62,9 +63,13 @@ export async function saveEssentialsLenderAction(formData: FormData) {
     const feePercent = num(formData, "fee_percent");
 
     if (!value(formData, "partner_code") || !value(formData, "partner_name")) throw new Error("Lender code and name are required.");
-    if (!value(formData, "licence_number") || !value(formData, "licence_authority")) throw new Error("Active lenders require licensing evidence.");
+    if (lenderStatus === "active" && (!value(formData, "licence_number") || !value(formData, "licence_authority"))) {
+      throw new Error("Active lenders require licensing evidence.");
+    }
     if (!termDays || termDays < 1) throw new Error("Enter the lender product term in days.");
-    if (decisionRoute === "capital_mandate" && !fundingPoolId) throw new Error("Choose an approved funding pool for a capital-mandate route.");
+    if (lenderStatus === "active" && decisionRoute === "capital_mandate" && !fundingPoolId) {
+      throw new Error("Choose an approved funding pool before activating a capital-mandate lender.");
+    }
 
     await essentialsApi.adminSaveLender(
       {
@@ -75,7 +80,7 @@ export async function saveEssentialsLenderAction(formData: FormData) {
           licence_number: value(formData, "licence_number"),
           licence_authority: value(formData, "licence_authority")
         },
-        status: "active",
+        status: lenderStatus,
         product_code: value(formData, "product_code"),
         product_name: value(formData, "product_name"),
         product_type: value(formData, "product_type") || "essentials_credit",
@@ -150,4 +155,52 @@ export async function reconcileEssentialsRepaymentAction(formData: FormData) {
     fail(error);
   }
   redirect("/admin/essentials?status=repayment-reconciled");
+}
+
+
+export async function createFundingMandateAction(formData: FormData) {
+  const token = await getAccessToken();
+  try {
+    const partnerId = num(formData, "partner_id");
+    const committedCapital = num(formData, "committed_capital_minor");
+    if (!partnerId) throw new Error("Choose the third-party lender for this mandate.");
+    if (!committedCapital || committedCapital <= 0) throw new Error("Enter committed lender capital.");
+
+    const categories = value(formData, "mandate_categories")
+      .split(",")
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+
+    await essentialsApi.adminCreateCapitalMandate(
+      {
+        partner_id: partnerId,
+        mandate_type: value(formData, "mandate_type") || "warehouse_line",
+        name: value(formData, "mandate_name") || "Third-party credit funding",
+        committed_capital_minor: committedCapital,
+        investment_policy: {
+          categories,
+          purpose: "OpFin third-party funded credit",
+          notes: value(formData, "mandate_notes") || undefined
+        }
+      },
+      token
+    );
+  } catch (error) {
+    fail(error);
+  }
+  redirect("/admin/essentials?status=mandate-created");
+}
+
+export async function reviewFundingMandateAction(formData: FormData) {
+  const token = await getAccessToken();
+  try {
+    const mandateId = num(formData, "mandate_id");
+    const status = value(formData, "status");
+    if (!mandateId) throw new Error("The capital mandate could not be identified.");
+    if (status !== "approved" && status !== "rejected") throw new Error("Choose a valid mandate review decision.");
+    await essentialsApi.adminReviewCapitalMandate(mandateId, status, token);
+  } catch (error) {
+    fail(error);
+  }
+  redirect("/admin/essentials?status=mandate-reviewed");
 }
