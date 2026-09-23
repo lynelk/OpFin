@@ -92,6 +92,11 @@ return [
         'support' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'security_centre' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'borrow' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'licensed_product_and_funding_configuration'],
+        'essentials' => [
+            'status' => 'AVAILABLE',
+            'owner' => 'opfin',
+            'external_gate' => 'third_party_lender_biller_cpay_cito_and_beneficiary_activation',
+        ],
         'budgeting' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'financial_calendar' => ['status' => 'AVAILABLE', 'owner' => 'opfin'],
         'money_autopilot' => ['status' => 'AVAILABLE', 'owner' => 'opfin', 'external_gate' => 'provider_mandates_for_automatic_money_movement'],
