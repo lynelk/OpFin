@@ -23,7 +23,7 @@ class AdminEssentialsController extends Controller
     public function portfolio(): JsonResponse
     {
         return ApiResponse::success('Essentials portfolio loaded.', [
-            'active_advances' => EssentialsAdvance::query()->whereIn('status', ['active', 'overdue', 'fulfilment_pending'])->count(),
+            'active_advances' => EssentialsAdvance::query()->whereIn('status', ['lender_funding_pending', 'lender_reversal_pending', 'funding_reserved', 'fulfilment_pending', 'active', 'overdue'])->count(),
             'principal_outstanding_minor' => (int) EssentialsAdvance::query()->whereIn('status', ['active', 'overdue'])->sum('principal_outstanding_minor'),
             'total_outstanding_minor' => (int) EssentialsAdvance::query()->whereIn('status', ['active', 'overdue'])->sum('outstanding_minor'),
             'pending_account_verification' => EssentialsAccount::query()->whereIn('verification_status', ['pending', 'pending_manual_review'])->count(),
@@ -59,7 +59,7 @@ class AdminEssentialsController extends Controller
             ]);
 
         $advances = EssentialsAdvance::query()
-            ->whereIn('status', ['funding_reserved', 'fulfilment_pending', 'overdue'])
+            ->whereIn('status', ['funding_reserved', 'lender_funding_pending', 'lender_reversal_pending', 'fulfilment_pending', 'overdue'])
             ->oldest()
             ->limit(100)
             ->get();
