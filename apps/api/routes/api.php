@@ -23,6 +23,8 @@ use App\Http\Controllers\Api\InclusiveImpactController;
 use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
+use App\Http\Controllers\Api\LongRangeGovernanceController;
+use App\Http\Controllers\Api\LongRangePlatformController;
 use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\OrganisationJourneyController;
 use App\Http\Controllers\Api\PartnerEssentialsController;
@@ -244,6 +246,8 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/workflow-runs/{run}/transition', [V5P0PlatformController::class, 'transitionWorkflow']);
 
     Route::post('/admin/credit-decisions/{decision}/approve', [ProductionCreditController::class, 'approve']);
+    Route::post('/admin/capital-mandates', [LongRangePlatformController::class, 'capital']);
+    Route::post('/admin/capital-mandates/{id}/review', [LongRangeGovernanceController::class, 'capital']);
 
     Route::get('/admin/inclusive-finance/programmes', [InclusiveFinanceController::class, 'adminProgrammes']);
     Route::get('/admin/inclusive-finance/impact', [InclusiveFinanceController::class, 'adminImpact']);
