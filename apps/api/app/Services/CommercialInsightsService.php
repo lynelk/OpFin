@@ -52,7 +52,9 @@ class CommercialInsightsService
                 'source' => $data['source'] ?? null,
                 'campaign' => $data['campaign'] ?? null,
                 'programme_id' => $data['programme_id'] ?? null,
-                'acquired_at' => $data['acquired_at'] ?? $subject->created_at ?? now(),
+                'acquired_at' => isset($data['acquired_at'])
+                    ? Carbon::parse($data['acquired_at'])->setTimezone((string) config('app.timezone', 'UTC'))
+                    : ($subject->created_at ?? now()),
                 'metadata' => isset($data['metadata']) ? json_encode($data['metadata']) : null,
                 'recorded_by' => $actor?->id,
                 'created_at' => $existing?->created_at ?? now(),
@@ -88,7 +90,9 @@ class CommercialInsightsService
             'quantity' => $data['quantity'] ?? 1,
             'source_reference' => $data['source_reference'] ?? null,
             'metadata' => isset($data['metadata']) ? json_encode($data['metadata']) : null,
-            'occurred_at' => $data['occurred_at'] ?? now(),
+            'occurred_at' => isset($data['occurred_at'])
+                ? Carbon::parse($data['occurred_at'])->setTimezone((string) config('app.timezone', 'UTC'))
+                : now(),
             'recorded_by' => $actor->id,
             'created_at' => now(),
             'updated_at' => now(),
