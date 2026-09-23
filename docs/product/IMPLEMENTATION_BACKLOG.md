@@ -1,6 +1,6 @@
 # OpFin Canonical Implementation Backlog
 
-Updated: 22 September 2026
+Updated: 23 September 2026
 
 ## P0 — Foundation
 - FS-001 Create Financial Space schema, Personal Space bootstrap and backfill.
@@ -51,14 +51,16 @@ Updated: 22 September 2026
 - REV-001 Plans/subscriptions/entitlements.
 - REV-002 Commercial agreements and effective-dated terms.
 - REV-003 Immutable revenue events and allocations.
-- REV-004 Cito/CPay preferred-route integration with controlled certified direct-provider fallback. **Provider-independence foundation implemented; individual provider activation remains certification-dependent.**
+- REV-004 Cito/CPay preferred-route integration with controlled certified direct-provider fallback. **Implemented and deployed; individual provider activation remains credential/certification-dependent.**
 - REV-005 Revenue disclosure, reconciliation and finance reporting.
 - REV-006 Universal service-economics event model and report. **Implemented.**
 - REV-007 Capital & Loan Book Performance Report with funding-source exception reporting. **Implemented foundation.**
 - REV-008 Insurance Product/Premium/Claims Report with service-economics breakdown. **Implemented foundation.**
 - REV-009 Savings & Investment Partner Report with principal/revenue separation. **Implemented foundation.**
 - REV-010 Financial Account Behaviour Report. **Implemented foundation.**
-- EMP-002 Positive-Only Employment Behaviour Enrichment. **Implemented.**
+- EMP-002 Positive-Only Employment Behaviour Enrichment. **Implemented and deployed.**
+- KYC-001 Cito-primary NIN and phone-ownership routing with explicit direct fallback. **Implemented and deployed.**
+- KYC-002 Biometric/document evidence through an evidence-capable provider until Cito exposes a certified binary-evidence contract. **Implemented as a capability-specific boundary; live provider activation remains external.**
 
 ## Inclusive-finance programme delivery — implemented foundation
 - IF-001 Inclusive customer/profile measurement consent boundary. **Implemented.**
@@ -102,7 +104,7 @@ The core Impact & Inclusive Finance implementation is now coded. Remaining work 
 
 ### Validation and field evidence
 
-- run the full API/web/client release gates;
+- restore/trigger GitHub Actions and run the full API/web/client release gates; production build/migration/health has passed, but zero GitHub workflow runs were emitted for the 23 September release;
 - apply production database migration only through the normal controlled release process;
 - complete physical-device accessibility/UAT before certification-level claims;
 - validate actual programme questionnaires with intended participants, including low-literacy and assisted-channel use;
