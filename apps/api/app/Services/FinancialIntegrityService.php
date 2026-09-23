@@ -443,6 +443,8 @@ class FinancialIntegrityService
         if (Schema::hasTable('credit_fee_recognition_events')) {
             $recognised = DB::table('credit_fee_recognition_events as r')
                 ->join('loans as l', 'l.id', '=', 'r.loan_id')
+                ->whereNull('l.deleted_at')
+                ->whereNotIn('l.status', ['Reversed'])
                 ->select('l.loan_product_id', 'r.currency')
                 ->selectRaw('SUM(r.amount_minor) AS amount_minor')
                 ->groupBy('l.loan_product_id', 'r.currency')
