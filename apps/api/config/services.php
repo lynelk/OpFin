@@ -38,7 +38,7 @@ return [
     ],
 
     'cpay' => [
-        // CPay v2 is the canonical and only production OpFin money-movement boundary.
+        // CPay is OpFin's preferred governed money-movement route, not an availability dependency.
         'base_url' => env('CPAY_BASE_URL'),
         'merchant_number' => env('CPAY_MERCHANT_NUMBER'),
         'merchant_id' => env('CPAY_MERCHANT_ID'),
@@ -58,10 +58,20 @@ return [
         'retry_delay_ms' => (int) env('CPAY_RETRY_DELAY_MS', 250),
     ],
 
+    'cito' => [
+        // Cito is the preferred third-party service gateway. These may deliberately be unset.
+        'base_url' => env('CITO_BASE_URL', env('CPAY_BASE_URL')),
+        'merchant_number' => env('CITO_MERCHANT_NUMBER', env('CPAY_MERCHANT_NUMBER')),
+        'private_key' => env('CITO_PRIVATE_KEY', env('CPAY_PRIVATE_KEY')),
+        'environment' => env('CITO_ENVIRONMENT', env('CPAY_ENVIRONMENT', 'sandbox')),
+        'timeout_seconds' => (int) env('CITO_TIMEOUT_SECONDS', 15),
+    ],
+
     'crb' => [
         'base_url' => env('CRB_URL'),
         'account' => env('CRB_CLIENT_ID'),
         'password' => env('CRB_CLIENT_SECRET'),
+        'environment' => env('CRB_ENVIRONMENT', 'production'),
     ],
 
     'efris' => [
@@ -93,7 +103,7 @@ return [
         ],
     ],
 
-    // Airtel integration is retained only for KYC lookup. It must not initiate or inspect money movement.
+    // Airtel integration retained here is KYC-related unless a separately certified money adapter is configured.
     'airtel' => [
         'client_id' => env('AIRTEL_CLIENT_ID'),
         'client_secret' => env('AIRTEL_CLIENT_SECRET'),
@@ -108,9 +118,19 @@ return [
         'providers' => [
             'mock' => [
                 'webhook_secret' => env('MOCK_MOBILE_MONEY_WEBHOOK_SECRET'),
+                'production_certified' => false,
             ],
             'cpay' => [
                 'webhook_secret' => env('CPAY_CALLBACK_SECRET'),
+                'production_certified' => true,
+            ],
+            'mtn' => [
+                'adapter' => env('MTN_MOBILE_MONEY_ADAPTER_CLASS'),
+                'production_certified' => (bool) env('MTN_MOBILE_MONEY_PRODUCTION_CERTIFIED', false),
+            ],
+            'airtel' => [
+                'adapter' => env('AIRTEL_MOBILE_MONEY_ADAPTER_CLASS'),
+                'production_certified' => (bool) env('AIRTEL_MOBILE_MONEY_PRODUCTION_CERTIFIED', false),
             ],
         ],
     ],
