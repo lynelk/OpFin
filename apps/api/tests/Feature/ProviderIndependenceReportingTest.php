@@ -74,6 +74,15 @@ class ProviderIndependenceReportingTest extends TestCase
         $this->assertSame(['POSITIVE_EMPLOYMENT_BEHAVIOUR_UPLIFT'], $benefit['reason_codes']);
         $this->assertCount(1, $benefit['applied_signals']);
         $this->assertSame('positive_performance', $benefit['applied_signals'][0]['signal_key']);
+
+        $consent->update([
+            'status' => ConsentRecord::STATUS_REVOKED,
+            'revoked_at' => now(),
+        ]);
+
+        $afterRevocation = app(PositiveEmploymentBehaviourService::class)->assess($user);
+        $this->assertSame(0.0, $afterRevocation['uplift_points']);
+        $this->assertSame([], $afterRevocation['applied_signals']);
     }
 
     public function test_service_economics_reconciliation_is_idempotent_and_preserves_known_values(): void
