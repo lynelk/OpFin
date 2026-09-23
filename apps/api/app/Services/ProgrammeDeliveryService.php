@@ -359,6 +359,18 @@ class ProgrammeDeliveryService
             ->orderBy('id')
             ->get();
 
+        $answerIds = collect($answers)
+            ->map(fn ($answer) => (int) ($answer['question_id'] ?? 0))
+            ->values();
+        if ($answerIds->duplicates()->isNotEmpty()) {
+            throw new InvalidArgumentException('A programme question may only be answered once per response.');
+        }
+
+        $questionIds = $questions->pluck('id')->map(fn ($id) => (int) $id);
+        if ($answerIds->diff($questionIds)->isNotEmpty()) {
+            throw new InvalidArgumentException('Programme response contains a question that does not belong to this instrument.');
+        }
+
         $answerMap = collect($answers)->keyBy(fn ($answer) => (int) ($answer['question_id'] ?? 0));
         foreach ($questions as $question) {
             $provided = $answerMap->has((int) $question->id);
