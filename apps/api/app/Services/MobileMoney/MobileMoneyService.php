@@ -4,6 +4,7 @@ namespace App\Services\MobileMoney;
 
 use App\Models\MobileMoneyTransaction;
 use App\Services\AuditLogger;
+use App\Services\ServiceEconomicsService;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -15,6 +16,7 @@ class MobileMoneyService
         private readonly MobileMoneyProviderManager $providers,
         private readonly WebhookSignatureValidator $signatureValidator,
         private readonly AuditLogger $auditLogger,
+        private readonly ServiceEconomicsService $economics,
     ) {}
 
     public function disburse(array $attributes, ?string $providerName = null): MobileMoneyTransaction
@@ -32,6 +34,7 @@ class MobileMoneyService
         $response = $this->providers->provider($transaction->provider)->lookupStatus($transaction);
         $this->applyProviderResponse($transaction, $response, ['last_status_checked_at' => now()]);
         $this->audit('mobile_money.status_checked', $transaction, ['response' => $response->raw]);
+        $this->syncEconomics($transaction->fresh());
 
         return $transaction->fresh();
     }
@@ -41,6 +44,7 @@ class MobileMoneyService
         $response = $this->providers->provider($transaction->provider)->reverse($transaction, $reason);
         $this->applyProviderResponse($transaction, $response);
         $this->audit('mobile_money.reversal.requested', $transaction, ['reason' => $reason, 'response' => $response->raw]);
+        $this->syncEconomics($transaction->fresh());
 
         return $transaction->fresh();
     }
@@ -54,6 +58,7 @@ class MobileMoneyService
             'next_retry_at' => $transaction->retry_count + 1 < $transaction->max_retries ? now()->addMinutes(5) : null,
         ]);
         $this->audit('mobile_money.transaction.failed', $transaction, ['reason' => $reason, 'retryable' => $response->retryable]);
+        $this->syncEconomics($transaction->fresh());
 
         return $transaction->fresh();
     }
@@ -90,6 +95,7 @@ class MobileMoneyService
         $transaction = $this->findWebhookTransaction($providerName, $payload, $response->providerReference);
         $this->applyProviderResponse($transaction, $response, ['webhook_event_id' => $response->webhookEventId, 'webhook_received_at' => now()]);
         $this->audit('mobile_money.webhook.processed', $transaction, ['provider' => $providerName, 'webhook_event_id' => $response->webhookEventId, 'response' => $response->raw]);
+        $this->syncEconomics($transaction->fresh());
 
         return $transaction->fresh();
     }
@@ -121,6 +127,7 @@ class MobileMoneyService
             if ($existing) {
                 $this->assertIdempotentReplay($existing, $direction, $providerName, $attributes, $amountMinor, $phone, $currency);
                 $this->audit("mobile_money.{$direction}.duplicate", $existing, ['idempotency_key' => $idempotencyKey]);
+                $this->syncEconomics($existing);
 
                 return $existing;
             }
@@ -156,6 +163,7 @@ class MobileMoneyService
                 : $provider->collect($transaction);
             $this->applyProviderResponse($transaction, $response);
             $this->audit("mobile_money.{$direction}.provider_response", $transaction, ['response' => $response->raw]);
+            $this->syncEconomics($transaction->fresh());
 
             return $transaction->fresh();
         });
@@ -316,6 +324,44 @@ class MobileMoneyService
 
             $transaction->setRawAttributes($locked->fresh()->getAttributes(), true);
         });
+    }
+
+    private function syncEconomics(MobileMoneyTransaction $transaction): void
+    {
+        $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+        $provider = strtolower((string) $transaction->provider);
+
+        $this->economics->record([
+            'user_id' => $transaction->user_id,
+            'service_code' => 'payments',
+            'capability_code' => (string) $transaction->direction,
+            'provider' => $provider,
+            'route' => $provider === 'cpay' ? 'CITO_MANAGED' : 'DIRECT_PROVIDER',
+            'environment' => $provider === 'cpay'
+                ? strtoupper((string) config('services.cpay.environment', 'SANDBOX'))
+                : (app()->environment('production') ? 'PRODUCTION' : 'SANDBOX'),
+            'request_reference' => 'money:'.(string) $transaction->idempotency_key,
+            'provider_reference' => $transaction->provider_reference,
+            'status' => strtoupper((string) $transaction->status),
+            'currency' => (string) $transaction->currency,
+            'metadata' => [
+                'mobile_money_transaction_id' => $transaction->id,
+                'money_movement_amount_minor' => (int) $transaction->amount_minor,
+                'money_movement_amount_is_not_platform_revenue' => true,
+                'internal_reference' => $transaction->internal_reference,
+                'purpose' => $metadata['purpose'] ?? null,
+                'source_type' => $metadata['source_type'] ?? null,
+                'source_id' => $metadata['source_id'] ?? null,
+                'reconciliation_status' => $transaction->reconciliation_status,
+            ],
+            'occurred_at' => $transaction->created_at ?? now(),
+            'reconciliation_reference' => $transaction->reconciliation_status === MobileMoneyTransaction::RECONCILIATION_MATCHED
+                ? $transaction->provider_reference
+                : null,
+            'reconciled_at' => $transaction->reconciliation_status === MobileMoneyTransaction::RECONCILIATION_MATCHED
+                ? now()
+                : null,
+        ]);
     }
 
     private function audit(string $event, MobileMoneyTransaction $transaction, array $metadata = []): void

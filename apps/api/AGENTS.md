@@ -4,7 +4,7 @@ Guidance for agents and engineers working on the OpFin Laravel backend.
 
 ## Project context
 
-OpFin is Uganda-first financial infrastructure. It owns product and customer state for credit, savings, protection, financial wellbeing, linked accounts, community and participatory finance, asset finance, partner distribution, consent, KYC/CRB workflows and compliance evidence. CPay is the only production boundary for external collections and payouts.
+OpFin is Uganda-first financial infrastructure. It owns product and customer state for credit, savings, protection, financial wellbeing, linked accounts, community and participatory finance, asset finance, partner distribution, consent, KYC/CRB workflows and compliance evidence. Cito is the preferred third-party service gateway and CPay is the preferred production payment route, but neither is a mandatory runtime dependency. A separately configured direct-provider adapter may be used only when its real provider contract, credentials, certification, finality semantics and reconciliation path are approved.
 
 Correctness, authorization, auditability, reconciliation and recoverability outrank implementation speed.
 
@@ -41,7 +41,7 @@ Correctness, authorization, auditability, reconciliation and recoverability outr
 
 ## Money movement
 
-Production code must route collections and payouts through the governed CPay adapter. `mock` is local/test only. Airtel configuration remaining in OpFin is KYC-related, not a direct production money rail.
+Production collections and payouts default to the governed CPay adapter. `mock` is local/test only. Direct production adapters are allowed only when explicitly configured and marked production-certified; otherwise they fail closed. Airtel configuration remaining in OpFin is KYC-related unless a separately certified money-movement adapter is installed.
 
 For every money-changing path, preserve this sequence:
 
@@ -49,7 +49,7 @@ For every money-changing path, preserve this sequence:
 authenticated product instruction
 → canonical idempotent intent
 → step-up where required
-→ CPay execution
+→ governed provider execution (CPay preferred; certified direct adapter when explicitly selected)
 → verified provider finality
 → locked product-state transition
 → immutable accounting

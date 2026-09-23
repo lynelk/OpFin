@@ -1,6 +1,6 @@
 # OpFin Canonical Implementation Backlog
 
-Updated: 21 September 2026
+Updated: 22 September 2026
 
 ## P0 — Foundation
 - FS-001 Create Financial Space schema, Personal Space bootstrap and backfill.
@@ -51,8 +51,14 @@ Updated: 21 September 2026
 - REV-001 Plans/subscriptions/entitlements.
 - REV-002 Commercial agreements and effective-dated terms.
 - REV-003 Immutable revenue events and allocations.
-- REV-004 CPay billing/collection/settlement/reconciliation integration.
+- REV-004 Cito/CPay preferred-route integration with controlled certified direct-provider fallback. **Provider-independence foundation implemented; individual provider activation remains certification-dependent.**
 - REV-005 Revenue disclosure, reconciliation and finance reporting.
+- REV-006 Universal service-economics event model and report. **Implemented.**
+- REV-007 Capital & Loan Book Performance Report with funding-source exception reporting. **Implemented foundation.**
+- REV-008 Insurance Product/Premium/Claims Report with service-economics breakdown. **Implemented foundation.**
+- REV-009 Savings & Investment Partner Report with principal/revenue separation. **Implemented foundation.**
+- REV-010 Financial Account Behaviour Report. **Implemented foundation.**
+- EMP-002 Positive-Only Employment Behaviour Enrichment. **Implemented.**
 
 ## Inclusive-finance programme delivery — implemented foundation
 - IF-001 Inclusive customer/profile measurement consent boundary. **Implemented.**

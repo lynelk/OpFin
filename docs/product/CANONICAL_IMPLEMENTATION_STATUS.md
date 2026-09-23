@@ -1,6 +1,6 @@
 # Canonical Programme Implementation Status
 
-Updated: 21 September 2026
+Updated: 22 September 2026
 
 This file is an implementation evidence index. A capability is only marked complete when code and automated acceptance evidence exist.
 
@@ -13,9 +13,13 @@ This file is an implementation evidence index. A capability is only marked compl
 - Plan/entitlement schema separated from roles/permissions.
 - Partner and Partner Product catalogue schema/API.
 - Commercial agreements and immutable/idempotent Revenue Events.
-- Revenue reconciliation fields for CPay reference and reconciliation reference.
+- Universal Service Economics Events with provider/customer/partner/Cito/OpFin fee, tax, settlement and margin fields; known-zero vs unknown values remain distinct.
+- Admin reporting surfaces for service economics, capital/loan books, insurance, savings/investments, positive employment behaviour and financial-account behaviour.
+- Funding provenance foundation through `loans.funding_pool_id`; unassigned funding is surfaced as a control exception rather than inferred.
+- Revenue reconciliation fields for provider and reconciliation references.
 - Organisation onboarding cases for Business, SACCO, Investment/Fund and regulated Partner Spaces.
 - Employer activation as a Business capability, preserving the Personal Space privacy boundary.
+- Positive-only employment-behaviour enrichment: verified positive signals may add a capped benefit; missing or negative signals remain neutral.
 - Automated cross-Space isolation, invitation, employer and financial-life tests.
 
 ## Inclusive-finance foundations implemented 21 September 2026
@@ -37,7 +41,7 @@ This file is an implementation evidence index. A capability is only marked compl
 
 ## Existing capabilities retained and integrated by contract
 
-The current product already contains production KYC/consent, credit, offers, repayments, savings, protection, investment suitability/orders, employer programmes, community-finance/SACCO foundations, ledger/reconciliation, CPay adapter/webhook replay protection, USSD, WhatsApp, financial-wellbeing and Web surfaces. These are reused; this programme does not replace working financial truth with duplicate implementations.
+The current product already contains production KYC/consent, credit, offers, repayments, savings, protection, investment suitability/orders, employer programmes, community-finance/SACCO foundations, ledger/reconciliation, CPay plus provider-adapter boundaries/webhook replay protection, USSD, WhatsApp, financial-wellbeing and Web surfaces. These are reused; this programme does not replace working financial truth with duplicate implementations.
 
 ## Mobile-completeness contract
 
@@ -58,7 +62,7 @@ A release is not certified until:
 2. API and client tests pass;
 3. cross-Space access is denied by default;
 4. financial operations are idempotent and reconciled;
-5. CPay callback/retry/failure behaviour passes;
+5. preferred-gateway and certified-direct-provider retry/failure/finality behaviour passes;
 6. Individual and Savings Group App journeys pass mobile-completeness UAT;
 7. accessibility/low-literacy and interrupted-connectivity journeys pass;
 8. Business/Employer/SACCO/Partner Workspaces pass role/permission UAT;

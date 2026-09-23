@@ -25,9 +25,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $moneyProvider = (string) config('services.mobile_money.default_provider', 'cpay');
         ProductionConfiguration::assertSafe($this->app->environment('production'), [
             'app_debug' => config('app.debug'),
-            'mobile_money_provider' => config('services.mobile_money.default_provider'),
+            'mobile_money_provider' => $moneyProvider,
+            'mobile_money_provider_certified' => (bool) config("services.mobile_money.providers.{$moneyProvider}.production_certified", false),
             'enable_demo_routes' => config('services.opfin.enable_demo_routes'),
         ]);
 

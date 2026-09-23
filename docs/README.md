@@ -1,6 +1,6 @@
 # OpFin documentation hub
 
-Updated: 21 September 2026
+Updated: 22 September 2026
 
 This is the starting point for OpFin documentation. The goal is simple: a non-developer should be able to understand what the product does, while a developer should be able to find the exact API, control or implementation rule without excavating Git history like an archaeologist with a deadline.
 
@@ -21,6 +21,7 @@ This is the starting point for OpFin documentation. The goal is simple: a non-de
 - `UMRA_DIGITAL_LENDING_CONTROLS.md` — implemented digital-lending regulatory controls.
 - `DEVELOPER_START_HERE.md` — practical repository/API/development guide.
 - `product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md` — canonical inclusion, programme, alternative-data, collateral and OpFin/Stolets boundary contract.
+- `product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md` — canonical provider-independence, Stolets Financial Passport, partner reporting and universal service-economics contract.
 - `TRAINING_AND_USER_GUIDE_FOUNDATION.md` — source foundation for staff training and customer/user guides.
 - `BRAND_IMPLEMENTATION.md` — implementation of OpFin brand tokens and assets.
 - `GOOGLE_PLAY_LAUNCH_V1.md` — Android release evidence and store requirements.
@@ -79,6 +80,6 @@ Every system/API change must update the relevant current documentation in the sa
 
 ## Canonical product baseline — 20 September 2026
 
-The fully enabled product is a financial operating platform, not a lending-only application. Inclusive-finance programme delivery is governed by `product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md`. For current work, read `product/OPFIN_PRODUCT_BLUEPRINT.md` and `architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md` before the older lending-specific journey documents. Current manuals live under `manuals/` and are authoritative for user, training, operations and UAT guidance.
+The fully enabled product is a financial operating platform, not a lending-only application. Cito is the preferred third-party integration gateway and CPay is the preferred payment route, but OpFin remains independently operable through governed provider adapters. Inclusive-finance programme delivery is governed by `product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md`. For current work, read `product/OPFIN_PRODUCT_BLUEPRINT.md` and `architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md` before the older lending-specific journey documents. Current manuals live under `manuals/` and are authoritative for user, training, operations and UAT guidance.
 
 The current hierarchy is: source code and registered routes → Product Blueprint/domain model → current API references → current manuals → lending/regulatory specialist guides → dated audit/demo/history. A specialist lending guide must not be interpreted as the whole-product architecture.

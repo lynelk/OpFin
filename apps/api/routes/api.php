@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
 use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\OrganisationJourneyController;
+use App\Http\Controllers\Api\PartnerReportingController;
 use App\Http\Controllers\Api\PlatformCommerceController;
 use App\Http\Controllers\Api\ProductionConsentController;
 use App\Http\Controllers\Api\ProductionCreditController;
@@ -234,6 +235,14 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/inclusive-finance/partner-access', [InclusiveImpactController::class, 'grantPartnerAccess']);
     Route::post('/admin/revenue-events', [PlatformCommerceController::class, 'recordRevenue']);
     Route::post('/admin/revenue-events/{event}/reconcile', [PlatformCommerceController::class, 'reconcileRevenue']);
+
+    Route::post('/admin/service-economics-events', [PartnerReportingController::class, 'recordServiceEconomics']);
+    Route::get('/admin/reports/service-economics', [PartnerReportingController::class, 'serviceEconomics']);
+    Route::get('/admin/reports/capital-loan-book', [PartnerReportingController::class, 'capitalLoanBook']);
+    Route::get('/admin/reports/insurance', [PartnerReportingController::class, 'insurance']);
+    Route::get('/admin/reports/savings-investments', [PartnerReportingController::class, 'savingsInvestments']);
+    Route::get('/admin/reports/employment-positive-behaviour', [PartnerReportingController::class, 'employmentBehaviour']);
+    Route::get('/admin/reports/financial-account-behaviour', [PartnerReportingController::class, 'financialAccountBehaviour']);
     Route::get('/admin/umra/credit-reporting', [UmraComplianceController::class, 'creditReporting']);
     Route::post('/admin/umra/credit-reporting/submit', [UmraComplianceController::class, 'submitCreditReporting']);
     Route::post('/admin/umra/loans/{loan}/evaluate-npl', [UmraComplianceController::class, 'evaluateNpl']);

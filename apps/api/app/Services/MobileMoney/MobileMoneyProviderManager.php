@@ -16,10 +16,7 @@ class MobileMoneyProviderManager
         return match ($name) {
             'cpay' => app(CpayV2Adapter::class),
             'mock' => $this->mockProvider(),
-            'mtn', 'airtel' => throw new InvalidArgumentException(
-                'Direct mobile-money provider adapters are retired from OpFin. Route all money movement through CPay.'
-            ),
-            default => throw new InvalidArgumentException("Unsupported mobile money provider: {$name}"),
+            default => $this->configuredDirectProvider($name),
         };
     }
 
@@ -30,5 +27,33 @@ class MobileMoneyProviderManager
         }
 
         return app(MockMobileMoneyAdapter::class);
+    }
+
+    private function configuredDirectProvider(string $name): MobileMoneyProviderInterface
+    {
+        $class = trim((string) config("services.mobile_money.providers.{$name}.adapter"));
+        if ($class === '') {
+            throw new InvalidArgumentException(
+                "Direct mobile-money provider adapter '{$name}' is not configured. CPay remains the preferred route until a real adapter is installed and certified."
+            );
+        }
+
+        if (! class_exists($class)) {
+            throw new InvalidArgumentException("Configured mobile-money adapter class does not exist: {$class}");
+        }
+
+        $adapter = app($class);
+        if (! $adapter instanceof MobileMoneyProviderInterface) {
+            throw new InvalidArgumentException("Configured mobile-money adapter must implement ".MobileMoneyProviderInterface::class.'.');
+        }
+
+        if (app()->environment('production')
+            && ! (bool) config("services.mobile_money.providers.{$name}.production_certified", false)) {
+            throw new InvalidArgumentException(
+                "Direct mobile-money provider '{$name}' is not certified for production."
+            );
+        }
+
+        return $adapter;
     }
 }

@@ -35,16 +35,29 @@ class ProductionConfigurationTest extends TestCase
         ]);
     }
 
-    public function test_blocks_non_cpay_money_movement_provider_in_production(): void
+    public function test_blocks_uncertified_money_movement_provider_in_production(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Production money movement must use CPay. Set MOBILE_MONEY_PROVIDER=cpay; direct MTN/Airtel/mock routing is not allowed in OpFin.');
+        $this->expectExceptionMessage("Production money-movement provider 'mtn' is not marked as certified.");
 
         ProductionConfiguration::assertSafe(true, [
             'app_debug' => false,
-            'mobile_money_provider' => 'mock',
+            'mobile_money_provider' => 'mtn',
+            'mobile_money_provider_certified' => false,
             'enable_demo_routes' => false,
         ]);
+    }
+
+    public function test_allows_explicitly_certified_direct_money_movement_provider_in_production(): void
+    {
+        ProductionConfiguration::assertSafe(true, [
+            'app_debug' => false,
+            'mobile_money_provider' => 'mtn',
+            'mobile_money_provider_certified' => true,
+            'enable_demo_routes' => false,
+        ]);
+
+        $this->assertTrue(true);
     }
 
     public function test_blocks_demo_routes_in_production(): void
@@ -55,6 +68,7 @@ class ProductionConfigurationTest extends TestCase
         ProductionConfiguration::assertSafe(true, [
             'app_debug' => false,
             'mobile_money_provider' => 'cpay',
+            'mobile_money_provider_certified' => true,
             'enable_demo_routes' => true,
         ]);
     }
@@ -67,6 +81,7 @@ class ProductionConfigurationTest extends TestCase
         ProductionConfiguration::assertSafe(true, [
             'app_debug' => false,
             'mobile_money_provider' => 'cpay',
+            'mobile_money_provider_certified' => true,
             'enable_demo_routes' => false,
             'community_finance_mode' => 'live',
         ]);
@@ -80,6 +95,7 @@ class ProductionConfigurationTest extends TestCase
         ProductionConfiguration::assertSafe(true, [
             'app_debug' => false,
             'mobile_money_provider' => 'cpay',
+            'mobile_money_provider_certified' => true,
             'enable_demo_routes' => false,
             'community_finance_live_enabled' => true,
         ]);
@@ -93,6 +109,7 @@ class ProductionConfigurationTest extends TestCase
         ProductionConfiguration::assertSafe(true, [
             'app_debug' => false,
             'mobile_money_provider' => 'cpay',
+            'mobile_money_provider_certified' => true,
             'enable_demo_routes' => false,
             'sacco_core_enabled' => true,
         ]);
@@ -106,6 +123,7 @@ class ProductionConfigurationTest extends TestCase
         ProductionConfiguration::assertSafe(true, [
             'app_debug' => false,
             'mobile_money_provider' => 'cpay',
+            'mobile_money_provider_certified' => true,
             'enable_demo_routes' => false,
             'community_finance_public_routes_enabled' => true,
         ]);

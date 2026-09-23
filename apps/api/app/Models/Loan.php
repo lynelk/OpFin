@@ -14,7 +14,7 @@ class Loan extends Model
     use HasFactory, SoftDeletes;
 
     public $fillable = [
-        'user_id', 'loan_product_id', 'loan_product_term_id', 'institution_id', 'loan_application_id',
+        'user_id', 'loan_product_id', 'loan_product_term_id', 'institution_id', 'funding_pool_id', 'loan_application_id',
         'amount', 'status', 'reason', 'disbursed_at', 'duration', 'repayment_amount', 'repayment_start_date',
         'non_performing_at', 'principal_at_npl_minor', 'initial_interest_minor', 'default_interest_accrued_minor',
         'default_interest_cap_minor', 'npl_recovery_cap_minor', 'umra_npl_cap_enforcement_enabled', 'npl_policy_checked_at',
@@ -303,5 +303,10 @@ class Loan extends Model
     public function institution()
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    public function fundingPool()
+    {
+        return $this->belongsTo(CapitalMandate::class, 'funding_pool_id');
     }
 }
