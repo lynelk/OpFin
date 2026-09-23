@@ -57,7 +57,8 @@ class CreditEconomicsService
         $this->validateRateAndFees($rules, $term, $principalMinor, $accessFeeMinor, $disbursementFeeMinor);
 
         $frequencyDays = $this->frequencyDays((string) $term->repayment_frequency, $rules);
-        $installments = max(1, (int) ceil($durationDays / $frequencyDays));
+        $dueOffsets = $this->dueOffsets($durationDays, $frequencyDays);
+        $installments = count($dueOffsets);
         $method = strtolower((string) $term->interest_type);
         $interestBasis = strtolower((string) ($rules['interest_basis'] ?? 'either'));
 
@@ -69,8 +70,8 @@ class CreditEconomicsService
         }
 
         $schedule = in_array($method, ['amortization', 'amortisation', 'reducing_balance'], true)
-            ? $this->reducingBalanceSchedule($principalMinor, $ratePercent, $cycleDays, $durationDays, $frequencyDays, $installments)
-            : $this->flatSchedule($principalMinor, $ratePercent, $cycleDays, $durationDays, $frequencyDays, $installments);
+            ? $this->reducingBalanceSchedule($principalMinor, $ratePercent, $cycleDays, $durationDays, $dueOffsets)
+            : $this->flatSchedule($principalMinor, $ratePercent, $cycleDays, $durationDays, $dueOffsets);
 
         $interestMinor = array_sum(array_column($schedule, 'interest_minor'));
         $repayableFees = $feeTreatment === 'financed' ? $feesMinor : 0;
@@ -88,9 +89,12 @@ class CreditEconomicsService
         $simpleAnnualCostPercent = $netDisbursement > 0
             ? ($financeCharge / $netDisbursement) * (365 / $durationDays) * 100
             : 0.0;
+        $equivalentAprPercent = $this->equivalentAprPercent($netDisbursement, $schedule);
 
         return [
-            'algorithm_version' => 'canonical-credit-economics-v1',
+            'algorithm_version' => 'canonical-credit-economics-v2',
+            'schedule_algorithm_version' => 'frequency-stub-v2',
+            'apr_algorithm_version' => 'dated-cash-flow-bisection-v1',
             'principal_amount_minor' => $principalMinor,
             'interest_amount_minor' => $interestMinor,
             'fees_minor' => $feesMinor,
@@ -106,6 +110,7 @@ class CreditEconomicsService
             'interest_type' => (string) $term->interest_type,
             'repayment_frequency' => (string) $term->repayment_frequency,
             'simple_annualised_cost_percent' => round($simpleAnnualCostPercent, 6),
+            'equivalent_apr_percent' => round($equivalentAprPercent, 6),
             'schedule' => $schedule,
             'policy' => [
                 'id' => $policy->id,
@@ -157,18 +162,19 @@ class CreditEconomicsService
         }
     }
 
-    private function flatSchedule(int $principal, float $ratePercent, int $cycleDays, int $durationDays, int $frequencyDays, int $installments): array
+    private function flatSchedule(int $principal, float $ratePercent, int $cycleDays, int $durationDays, array $dueOffsets): array
     {
         $termRate = ($ratePercent / $cycleDays) * $durationDays / 100;
         $totalInterest = (int) round($principal * $termRate);
+        $installments = count($dueOffsets);
         $principalParts = $this->allocate($principal, $installments);
         $interestParts = $this->allocate($totalInterest, $installments);
         $rows = [];
 
-        for ($i = 0; $i < $installments; $i++) {
+        foreach ($dueOffsets as $i => $dueOffsetDays) {
             $rows[] = [
                 'installment_number' => $i + 1,
-                'due_offset_days' => min($durationDays, ($i + 1) * $frequencyDays),
+                'due_offset_days' => $dueOffsetDays,
                 'principal_minor' => $principalParts[$i],
                 'interest_minor' => $interestParts[$i],
             ];
@@ -177,8 +183,9 @@ class CreditEconomicsService
         return $rows;
     }
 
-    private function reducingBalanceSchedule(int $principal, float $ratePercent, int $cycleDays, int $durationDays, int $frequencyDays, int $installments): array
+    private function reducingBalanceSchedule(int $principal, float $ratePercent, int $cycleDays, int $durationDays, array $dueOffsets): array
     {
+        $installments = count($dueOffsets);
         $periodDays = $durationDays / $installments;
         $periodRate = ($ratePercent / 100) * ($periodDays / $cycleDays);
         $payment = $periodRate == 0.0
@@ -195,7 +202,7 @@ class CreditEconomicsService
             $remaining -= $principalPart;
             $rows[] = [
                 'installment_number' => $i + 1,
-                'due_offset_days' => min($durationDays, (int) round(($i + 1) * $durationDays / $installments)),
+                'due_offset_days' => $dueOffsets[$i],
                 'principal_minor' => $principalPart,
                 'interest_minor' => $interest,
             ];
@@ -206,6 +213,81 @@ class CreditEconomicsService
         }
 
         return $rows;
+    }
+
+    private function dueOffsets(int $durationDays, int $frequencyDays): array
+    {
+        if ($durationDays <= 0 || $frequencyDays <= 0) {
+            throw new InvalidArgumentException('Credit duration and repayment frequency must be positive.');
+        }
+        if ($durationDays <= $frequencyDays) {
+            return [$durationDays];
+        }
+
+        $wholeCycles = intdiv($durationDays, $frequencyDays);
+        $remainderDays = $durationDays % $frequencyDays;
+        $offsets = [];
+        for ($cycle = 1; $cycle <= $wholeCycles; $cycle++) {
+            $offsets[] = $cycle * $frequencyDays;
+        }
+        if ($remainderDays === 0) {
+            return $offsets;
+        }
+
+        $minimumStandaloneStubDays = max(1, (int) ceil($frequencyDays / 2));
+        if ($remainderDays < $minimumStandaloneStubDays && $offsets !== []) {
+            $offsets[count($offsets) - 1] = $durationDays;
+        } else {
+            $offsets[] = $durationDays;
+        }
+
+        return array_values(array_unique($offsets));
+    }
+
+    private function equivalentAprPercent(int $netDisbursementMinor, array $schedule): float
+    {
+        if ($netDisbursementMinor <= 0 || $schedule === []) {
+            throw new InvalidArgumentException('APR calculation requires positive net disbursement and repayment cash flows.');
+        }
+
+        $totalRepayment = array_sum(array_map(fn (array $row) => (int) $row['total_due_minor'], $schedule));
+        if ($totalRepayment === $netDisbursementMinor) {
+            return 0.0;
+        }
+
+        $npv = function (float $annualRate) use ($netDisbursementMinor, $schedule): float {
+            $presentValue = 0.0;
+            foreach ($schedule as $row) {
+                $days = (int) $row['due_offset_days'];
+                $amount = (int) $row['total_due_minor'];
+                if ($days <= 0 || $amount <= 0) {
+                    throw new InvalidArgumentException('APR cash flows require positive due offsets and repayment amounts.');
+                }
+                $presentValue += $amount / pow(1.0 + $annualRate, $days / 365.0);
+            }
+
+            return $presentValue - $netDisbursementMinor;
+        };
+
+        $low = -0.999999;
+        $high = 1.0;
+        while ($npv($high) > 0.0 && $high < 1000000.0) {
+            $high *= 2.0;
+        }
+        if ($npv($high) > 0.0) {
+            throw new InvalidArgumentException('Unable to bracket the effective APR for the disclosed cash flows.');
+        }
+
+        for ($iteration = 0; $iteration < 200; $iteration++) {
+            $mid = ($low + $high) / 2.0;
+            if ($npv($mid) > 0.0) {
+                $low = $mid;
+            } else {
+                $high = $mid;
+            }
+        }
+
+        return (($low + $high) / 2.0) * 100.0;
     }
 
     private function allocate(int $total, int $count): array
