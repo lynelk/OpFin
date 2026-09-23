@@ -45,6 +45,7 @@ class CpayEssentialsClient
             'landlordName' => $metadata['landlord_name'] ?? null,
             'amountMinor' => $advance->principal_minor,
             'requestReference' => $advance->reference,
+            'lenderFundingReference' => $advance->lender_funding_reference,
             'purpose' => 'opfin_essentials_finance',
             'metadata' => [
                 'opfinAdvanceReference' => $advance->reference,
