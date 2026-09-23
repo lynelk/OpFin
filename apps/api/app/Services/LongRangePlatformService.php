@@ -274,6 +274,7 @@ class LongRangePlatformService
         $id = DB::table('capital_mandates')->insertGetId([
             'reference' => $reference,
             'owner_user_id' => $user->id,
+            'partner_id' => $data['partner_id'],
             'mandate_type' => $data['mandate_type'],
             'name' => $data['name'],
             'committed_capital_minor' => $data['committed_capital_minor'] ?? 0,
