@@ -30,6 +30,12 @@ class UmraDigitalLendingControlsTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->installPricingPolicy();
+    }
+
     public function test_customer_complaint_gets_thirty_day_regulatory_clock_and_procedure_snapshot(): void
     {
         $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
@@ -101,9 +107,12 @@ class UmraDigitalLendingControlsTest extends TestCase
         $this->assertSame(10000, $evaluated->default_interest_cap_minor);
         $this->assertSame(100000, $evaluated->principal_at_npl_minor);
 
-        $service->accrueDefaultInterest($evaluated, 10000);
-        $this->expectException(InvalidArgumentException::class);
-        $service->accrueDefaultInterest($evaluated->fresh(), 1);
+        $accrued = $service->accrueDefaultInterest($evaluated, now()->addDays(150));
+        $this->assertSame(10000, $accrued->default_interest_accrued_minor);
+
+        $capped = $service->accrueDefaultInterest($accrued, now()->addDays(180));
+        $this->assertSame(10000, $capped->default_interest_accrued_minor);
+        $this->assertSame(10000, $capped->default_interest_cap_minor);
     }
 
     public function test_interest_rate_change_requires_prior_umra_approval_and_maker_checker(): void
@@ -221,11 +230,41 @@ class UmraDigitalLendingControlsTest extends TestCase
         );
 
         $this->assertSame('UMRA', $report->regulator);
-        $this->assertSame('validated', $report->status);
+        $this->assertSame('financially_reconciled', $report->status);
         $payload = json_decode($report->payload, true, 512, JSON_THROW_ON_ERROR);
         $this->assertArrayHasKey('loan_register', $payload);
         $this->assertArrayHasKey('payment_register', $payload);
         $this->assertArrayHasKey('ledger_register', $payload);
+    }
+
+    private function installPricingPolicy(): void
+    {
+        DB::table('financial_policies')->insert([
+            'code' => 'umra-controls-regulatory-pricing',
+            'policy_type' => 'regulatory_pricing',
+            'jurisdiction_country' => 'UG',
+            'licence_class' => null,
+            'product_scope' => null,
+            'version' => 1,
+            'status' => 'active',
+            'effective_from' => now()->subDay()->toDateString(),
+            'effective_to' => null,
+            'rules' => json_encode([
+                'interest_basis' => 'original_principal',
+                'cycle_days' => ['daily' => 1, 'weekly' => 7, 'monthly' => 30],
+                'repayment_frequency_days' => ['daily' => 1, 'weekly' => 7, 'fortnightly' => 14, 'monthly' => 30],
+                'default_interest' => [
+                    'basis' => 'outstanding_principal',
+                    'rate_cycle' => 'monthly',
+                    'max_rate_percent' => 2,
+                    'cap_percent_of_initial_interest' => 50,
+                    'recovery_cap_percent_of_principal_at_npl' => 100,
+                ],
+            ], JSON_THROW_ON_ERROR),
+            'source_reference' => 'umra-controls-test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function facility(bool $withLoan = false): array

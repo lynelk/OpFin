@@ -204,16 +204,18 @@ class MobileMoneyAdapterTest extends TestCase
         ]);
     }
 
-    public function test_cpay_is_the_only_live_money_movement_adapter(): void
+    public function test_cpay_is_preferred_and_unconfigured_direct_adapters_fail_closed(): void
     {
         $this->assertInstanceOf(MobileMoneyProviderInterface::class, app(CpayV2Adapter::class));
         $manager = app(MobileMoneyProviderManager::class);
+
         foreach (['mtn', 'airtel'] as $provider) {
             try {
                 $manager->provider($provider);
-                $this->fail("Direct {$provider} provider must not be available.");
+                $this->fail("Unconfigured direct {$provider} provider must not be available.");
             } catch (InvalidArgumentException $exception) {
-                $this->assertStringContainsString('Route all money movement through CPay', $exception->getMessage());
+                $this->assertStringContainsString('is not configured', $exception->getMessage());
+                $this->assertStringContainsString('CPay remains the preferred route', $exception->getMessage());
             }
         }
     }
