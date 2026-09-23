@@ -5,7 +5,7 @@ Status: Superseded in part by 22 September 2026 financial-control remediation; r
 
 ## Summary
 
-OpFin's current production financial architecture separates product authority from external money execution. OpFin owns product decisions, customer obligations, schedules, product state and immutable accounting; CPay owns external collection/payout execution and provider finality evidence.
+OpFin's current production financial architecture separates product authority from external money execution. OpFin owns product decisions, customer obligations, schedules, product state and immutable accounting. CPay is the preferred governed payment route through the Cito/provider fabric; an explicitly configured and production-certified direct adapter may provide controlled backup while preserving the same provider-finality, accounting and reconciliation controls.
 
 This review supersedes the May 2026 control snapshot for current implementation behavior. Historical audit files remain useful as evidence of the remediation journey but must not override this document, the root `README.md`, or `AGENTS.md`.
 
@@ -174,7 +174,7 @@ maximum finance = asset price - deposit
 0 < approved finance <= maximum finance
 ```
 
-Deposit collection requires the approved exact deposit amount and fresh customer step-up before CPay execution.
+Deposit collection requires the approved exact deposit amount and fresh customer step-up before governed provider execution.
 
 ## Savings and partner-held funds
 
@@ -235,7 +235,7 @@ A money-changing release is acceptable only when:
 1. hermetic tests pass;
 2. changed PHP files pass Pint;
 3. dependency audit passes;
-4. production money movement remains CPay-only;
+4. production money movement uses CPay as the preferred route or an explicitly configured, production-certified direct adapter;
 5. deployment health checks pass;
 6. provider finality/reconciliation jobs execute;
 7. `opfin:integrity-audit` executes successfully after deployment;
