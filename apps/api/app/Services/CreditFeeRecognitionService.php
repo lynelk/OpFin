@@ -23,7 +23,7 @@ class CreditFeeRecognitionService
         bool $settlement = false,
         int $rebatedFeeMinor = 0,
     ): int {
-        if (! $loan->credit_offer_id) {
+        if (! $loan->credit_offer_id || strcasecmp((string) $loan->status, 'Written Off') === 0) {
             return 0;
         }
 
@@ -197,7 +197,7 @@ class CreditFeeRecognitionService
 
         Loan::withoutGlobalScopes()
             ->whereNotNull('credit_offer_id')
-            ->whereNotIn('status', ['Reversed', 'Cancelled', 'Rejected'])
+            ->whereNotIn('status', ['Reversed', 'Cancelled', 'Rejected', 'Written Off'])
             ->orderBy('id')
             ->chunkById(100, function ($loans) use (&$recognised, &$checked) {
                 foreach ($loans as $loan) {
