@@ -1,6 +1,6 @@
 # Canonical Programme Implementation Status
 
-Updated: 22 September 2026
+Updated: 23 September 2026
 
 This file is an implementation evidence index. A capability is only marked complete when code and automated acceptance evidence exist.
 
@@ -38,6 +38,34 @@ This file is an implementation evidence index. A capability is only marked compl
 - Operations programme configuration UI and privacy-suppressed impact dashboard.
 - Audit logging for sensitive inclusive-finance mutations without duplicating raw sensitive values into audit metadata.
 - Automated feature tests for measurement consent, protected-field exclusion, provider-signal consent, programme eligibility, Financial Space isolation, programme reporting privacy, enrolment idempotency and alternative-collateral verification.
+
+## Provider-independence and production reporting release — 23 September 2026
+
+Merged to `main` and deployed to the existing Railway production topology:
+
+- Cito-preferred, direct-provider-backup architecture for external services;
+- gnuGrid/CRB and MNO credit-data routing through Cito where configured;
+- Cito-primary NIN and phone-ownership KYC checks, with separate direct biometric/document evidence only where Cito does not currently expose a certified binary-evidence contract;
+- no silent direct retry after an ambiguous Cito/provider request;
+- Positive-Only Employment Behaviour Enrichment with missing/negative information neutral and active credit-processing consent required;
+- Universal Service Economics Events and partner reports;
+- capital-mandate funding provenance with locked reserve/deploy/release/reverse lifecycle;
+- payment, insurance and savings economics attribution without treating principal, premium or investment capital as revenue;
+- canonical partner financial/compliance reporting standard including the Stolets Financial Passport.
+
+Production evidence on commit `e8e11b1d348f252cae7c5ee3870145c8cb733e10`:
+
+- API deployment: `SUCCESS`;
+- worker deployment: `SUCCESS`;
+- scheduler deployment: `SUCCESS`;
+- production schema: current / nothing pending;
+- readiness health check: passed on first attempt;
+- fatal runtime errors observed during release verification: none;
+- no new Railway services, databases or volumes were introduced.
+
+External activation remains pending where genuine provider credentials/contracts/certification are not configured, including Cito/gnuGrid production credentials and real-provider KYC/credit-data exercises.
+
+GitHub Actions did not produce PR or push workflow runs for this release. Therefore the repository-level monorepo CI gate must not be represented as passed until Actions are enabled/triggered and the configured API/web/mobile jobs complete. Production build/boot/migration/health evidence above is real but does not replace that CI evidence.
 
 ## Existing capabilities retained and integrated by contract
 
