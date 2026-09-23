@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CreditDecision;
+use App\Models\CreditScoreComponent;
 use App\Models\Institution;
 use App\Models\LedgerAccount;
 use App\Models\Loan;
@@ -221,6 +222,7 @@ class FinancialSignOffConsolidationTest extends TestCase
             'role' => User::ROLE_OPERATIONS,
             'institution_id' => $institution->id,
         ]);
+        $this->installAffordabilityEvidence($customer, 600000);
         $product = LoanProduct::create([
             'name' => 'Financial Sign-Off Credit',
             'type' => 'Cash',
@@ -278,6 +280,25 @@ class FinancialSignOffConsolidationTest extends TestCase
         $this->assertInstanceOf(Loan::class, $loan);
 
         return [$customer, $operations, $loan];
+    }
+
+    private function installAffordabilityEvidence(User $user, int $incomeMinor): void
+    {
+        CreditScoreComponent::create([
+            'user_id' => $user->id,
+            'source' => 'crb',
+            'status' => CreditScoreComponent::STATUS_READY,
+            'score' => 800,
+            'weight_percent' => 40,
+            'source_reference' => 'financial-signoff-affordability-'.$user->id,
+            'reason_codes' => ['VERIFIED_INCOME'],
+            'raw_payload' => [
+                'verified_monthly_income_minor' => $incomeMinor,
+                'verified_external_obligation_excluding_opfin_minor' => 0,
+            ],
+            'received_at' => now(),
+            'expires_at' => now()->addDay(),
+        ]);
     }
 
     private function installPricingPolicy(): void
