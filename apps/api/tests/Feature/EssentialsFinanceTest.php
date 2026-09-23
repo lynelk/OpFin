@@ -279,6 +279,32 @@ class EssentialsFinanceTest extends TestCase
 
     private function customerWithCreditProfile(int $availableMinor): array
     {
+        DB::table('financial_policies')->insert([
+            'code' => 'TEST-UG-REGULATORY-PRICING',
+            'policy_type' => 'regulatory_pricing',
+            'jurisdiction_country' => 'UG',
+            'licence_class' => null,
+            'product_scope' => null,
+            'version' => 1,
+            'status' => 'active',
+            'effective_from' => now()->subDay()->toDateString(),
+            'effective_to' => null,
+            'rules' => json_encode([
+                'max_rate_percent' => 2.8,
+                'rate_cycle' => 'monthly',
+                'fee_caps' => [
+                    'access_fee_percent' => 3,
+                    'disbursement_fee_minor' => 2000,
+                ],
+            ], JSON_THROW_ON_ERROR),
+            'source_reference' => 'test-policy',
+            'source_url' => null,
+            'approved_by' => null,
+            'approved_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         $customer = User::factory()->create([
             'role' => User::ROLE_CUSTOMER,
             'phone_verified_at' => now(),
