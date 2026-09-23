@@ -581,6 +581,20 @@ export type EssentialsPartnerAuthorisationView = {
   revoked_at?: string | null;
 };
 
+export type EssentialsRepaymentView = {
+  id: number;
+  reference: string;
+  advance_id: number;
+  user_id: number;
+  amount_minor: number;
+  principal_applied_minor: number;
+  currency: string;
+  status: string;
+  cpay_reference?: string | null;
+  provider_reference?: string | null;
+  paid_at?: string | null;
+};
+
 export type EssentialsPortfolio = {
   active_advances: number;
   principal_outstanding_minor: number;
@@ -624,6 +638,7 @@ export type EssentialsLenderRow = {
 export type EssentialsWorkQueue = {
   pending_accounts: EssentialsAdminAccount[];
   exception_advances: EssentialsAdvanceView[];
+  pending_repayments: EssentialsRepaymentView[];
   lenders: EssentialsLenderRow[];
   funding_pools: EssentialsFundingPool[];
   billers: EssentialsBiller[];
@@ -681,5 +696,7 @@ export const essentialsApi = {
   adminVerifyAccount: (accountId: number, payload: { status: "verified" | "failed"; provider_reference?: string }, token?: string) =>
     request<{ account: EssentialsAccountView }>(`/admin/essentials/accounts/${accountId}/verify`, { method: "POST", bodyJson: payload, token }),
   adminReconcileAdvance: (advanceId: number, token?: string) =>
-    request<{ advance: EssentialsAdvanceView }>(`/admin/essentials/advances/${advanceId}/reconcile`, { method: "POST", token })
+    request<{ advance: EssentialsAdvanceView }>(`/admin/essentials/advances/${advanceId}/reconcile`, { method: "POST", token }),
+  adminReconcileRepayment: (repaymentId: number, token?: string) =>
+    request<{ repayment: EssentialsRepaymentView }>(`/admin/essentials/repayments/${repaymentId}/reconcile`, { method: "POST", token })
 };
