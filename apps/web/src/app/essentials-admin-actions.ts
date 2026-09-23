@@ -138,3 +138,16 @@ export async function reconcileEssentialsAdvanceAction(formData: FormData) {
   }
   redirect("/admin/essentials?status=reconciled");
 }
+
+
+export async function reconcileEssentialsRepaymentAction(formData: FormData) {
+  const token = await getAccessToken();
+  try {
+    const repaymentId = num(formData, "repayment_id");
+    if (!repaymentId) throw new Error("The repayment could not be identified.");
+    await essentialsApi.adminReconcileRepayment(repaymentId, token);
+  } catch (error) {
+    fail(error);
+  }
+  redirect("/admin/essentials?status=repayment-reconciled");
+}
