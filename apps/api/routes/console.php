@@ -2,6 +2,7 @@
 
 use App\Console\Commands\EvaluateMoneyAutopilot;
 use App\Console\Commands\GenerateRegulatoryReports;
+use App\Console\Commands\MaintainProgrammeMeasurement;
 use App\Console\Commands\ProcessTaxAndEfris;
 use App\Console\Commands\ProcessUmraCreditControls;
 use App\Console\Commands\ReconcileLongRangeFinancialIntents;
@@ -18,3 +19,5 @@ Schedule::command(EvaluateMoneyAutopilot::class)->hourly()->withoutOverlapping(6
 Schedule::command(GenerateRegulatoryReports::class)->dailyAt('01:15')->withoutOverlapping(120)->onOneServer();
 Schedule::command(ProcessUmraCreditControls::class)->hourly()->withoutOverlapping(55)->onOneServer();
 Schedule::command(ProcessTaxAndEfris::class)->hourly()->withoutOverlapping(55)->onOneServer();
+
+Schedule::command(MaintainProgrammeMeasurement::class)->hourly()->withoutOverlapping(55)->onOneServer();
