@@ -593,6 +593,61 @@ class ProgrammeCommercialCompletionTest extends TestCase
         $this->assertStringNotContainsString('user_id', $content);
     }
 
+    public function test_xlsx_and_zip_exports_are_native_and_partner_pack_stays_partner_safe(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $partnerId = DB::table('partners')->insertGetId([
+            'code' => 'EXPORT-PARTNER',
+            'name' => 'Export Partner',
+            'partner_type' => 'development_programme',
+            'country' => 'UG',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Sanctum::actingAs($admin);
+        $programmeId = $this->postJson('/api/admin/inclusive-finance/programmes', [
+            'code' => 'EXPORT-PROGRAMME',
+            'name' => 'Export Programme',
+            'partner_id' => $partnerId,
+            'status' => 'active',
+        ])->assertCreated()->json('data.id');
+
+        $partner = User::factory()->create(['role' => User::ROLE_PROGRAMME_PARTNER]);
+        DB::table('programme_partner_access')->insert([
+            'programme_id' => $programmeId,
+            'partner_id' => $partnerId,
+            'user_id' => $partner->id,
+            'access_level' => 'read_only',
+            'can_view_individual_records' => false,
+            'status' => 'active',
+            'granted_by' => $admin->id,
+            'granted_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $xlsx = $this->get('/api/admin/inclusive-finance/programmes/'.$programmeId.'/exports/xlsx')
+            ->assertOk()
+            ->getContent();
+        $this->assertSame('PK', substr($xlsx, 0, 2));
+
+        $adminPack = $this->get('/api/admin/inclusive-finance/programmes/'.$programmeId.'/exports/zip')
+            ->assertOk()
+            ->getContent();
+        $this->assertSame('PK', substr($adminPack, 0, 2));
+        $this->assertStringContainsString('"commercial"', $adminPack);
+
+        Sanctum::actingAs($partner);
+        $partnerPack = $this->get('/api/partner/inclusive-finance/programmes/'.$programmeId.'/exports/zip')
+            ->assertOk()
+            ->getContent();
+        $this->assertSame('PK', substr($partnerPack, 0, 2));
+        $this->assertStringNotContainsString('"commercial"', $partnerPack);
+        $this->assertStringNotContainsString('"user_id"', $partnerPack);
+    }
+
     private function programme(): array
     {
         $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
