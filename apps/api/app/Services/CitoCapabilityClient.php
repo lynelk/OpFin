@@ -131,7 +131,7 @@ class CitoCapabilityClient
         ])
             ->timeout((int) config('services.cito.timeout_seconds', 15))
             ->withBody($body, 'application/json')
-            ->post(rtrim((string) config('services.cito.base_url'), '/').$path);
+            ->send('POST', rtrim((string) config('services.cito.base_url'), '/').$path);
     }
 
     private function sign(string $canonical): string
