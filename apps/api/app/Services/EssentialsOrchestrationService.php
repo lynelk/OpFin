@@ -36,7 +36,7 @@ class EssentialsOrchestrationService
         $profile = CreditProfile::query()->where('user_id', $user->id)->first();
         $outstanding = (int) EssentialsAdvance::query()
             ->where('user_id', $user->id)
-            ->whereIn('status', ['funding_reserved', 'fulfilment_pending', 'active', 'overdue'])
+            ->whereIn('status', ['funding_reserved', 'lender_funding_pending', 'fulfilment_pending', 'active', 'overdue'])
             ->sum('outstanding_minor');
 
         $maxLine = (int) EssentialsCreditLine::query()
@@ -341,6 +341,7 @@ class EssentialsOrchestrationService
             $decisionReference = null;
             $decisionSnapshot = [
                 'opfin_profile_model_version' => $profile->model_version,
+                'credit_processing_consent_reference' => 'consent:'.$consent->id,
                 'opfin_profile_score' => $profile->composite_score,
                 'opfin_profile_coverage_percent' => $profile->coverage_percent,
                 'lender' => $product->partner_name,
@@ -365,6 +366,9 @@ class EssentialsOrchestrationService
                 $decisionReference = 'mandate:'.$pool->reference;
                 $decisionSnapshot['funding_pool_reference'] = $pool->reference;
             } elseif ($route === 'cito') {
+                if (! $this->citoLending->drawdownConfigured()) {
+                    continue;
+                }
                 $partner = (object) ['code' => $product->partner_code, 'name' => $product->partner_name];
                 $result = $this->citoLending->requestCreditLine(
                     $user,
@@ -408,7 +412,7 @@ class EssentialsOrchestrationService
                     'available_limit_minor' => max(0, $approvedLimit - (int) EssentialsAdvance::query()
                         ->where('user_id', $user->id)
                         ->where('lender_partner_id', $product->partner_id)
-                        ->whereIn('status', ['funding_reserved', 'fulfilment_pending', 'active', 'overdue'])
+                        ->whereIn('status', ['funding_reserved', 'lender_funding_pending', 'fulfilment_pending', 'active', 'overdue'])
                         ->sum('principal_outstanding_minor')),
                     'currency' => (string) $product->currency,
                     'status' => 'active',
@@ -470,6 +474,9 @@ class EssentialsOrchestrationService
             $product = DB::table('partner_products')->where('id', $line->partner_product_id)->where('status', 'active')->first();
             $partner = DB::table('partners')->where('id', $line->lender_partner_id)->where('status', 'active')->first();
             if (! $product || ! $partner) {
+                continue;
+            }
+            if ($line->decision_route === 'cito' && ! $this->citoLending->drawdownConfigured()) {
                 continue;
             }
             $eligibility = $this->json($product->eligibility_rules);
@@ -648,57 +655,58 @@ class EssentialsOrchestrationService
             ]);
         });
 
-        $account = $settlementAccount;
-        $biller = $settlementBiller;
+        $line = EssentialsCreditLine::query()->findOrFail($quote->credit_line_id);
+        if ($line->decision_route === 'cito') {
+            $partner = DB::table('partners')->where('id', $advance->lender_partner_id)->firstOrFail();
+            $product = DB::table('partner_products')->where('id', $advance->partner_product_id)->firstOrFail();
+            $consentReference = (string) (($line->decision_snapshot ?? [])['credit_processing_consent_reference'] ?? '');
+            if ($consentReference === '') {
+                return $this->releaseReservation($advance, 'lender_funding_failed');
+            }
 
-        try {
-            $result = $this->cpay->payBill($advance, $account, $biller);
-        } catch (\Throwable $exception) {
-            report($exception);
-            $advance->update([
-                'status' => 'fulfilment_pending',
-                'fulfilment_payload' => [
-                    'provider_state' => 'unknown',
-                    'reconcile_by' => 'request_reference',
-                    'request_reference' => $advance->reference,
-                    'error_type' => $exception::class,
-                ],
-            ]);
-            $this->safeAudit('essentials.advance.fulfilment_ambiguous', $user, $advance, [
-                'biller_code' => $biller->code,
-                'request_reference' => $advance->reference,
-            ]);
-
-            return $advance->fresh();
-        }
-
-        $status = strtoupper((string) ($result['status'] ?? ''));
-        $providerReference = (string) ($result['providerReference'] ?? $result['reference'] ?? '');
-        $advance->update([
-            'status' => 'fulfilment_pending',
-            'biller_payment_reference' => $providerReference ?: null,
-            'fulfilment_payload' => $this->redact($result),
-        ]);
-
-        if (in_array($status, ['FAILED', 'REVERSED', 'CANCELLED'], true)) {
-            $advance = $this->releaseReservation($advance, 'fulfilment_failed');
-        } elseif (in_array($status, ['SUCCESS', 'SUCCESSFUL', 'PAID', 'COMPLETED'], true)) {
             try {
-                $advance = $this->activateAdvance($advance, $result);
+                $funding = $this->citoLending->authoriseDrawdown(
+                    $user,
+                    $advance,
+                    $quote,
+                    $partner,
+                    $product,
+                    $consentReference,
+                );
             } catch (\Throwable $exception) {
                 report($exception);
-                $advance = $advance->fresh();
+                $advance->update([
+                    'status' => 'lender_funding_pending',
+                    'fulfilment_payload' => [
+                        'lender_state' => 'unknown',
+                        'reconcile_by' => 'request_reference',
+                        'request_reference' => $advance->reference,
+                        'error_type' => $exception::class,
+                    ],
+                ]);
+                $this->safeAudit('essentials.advance.lender_funding_ambiguous', $user, $advance);
+
+                return $advance->fresh();
+            }
+
+            $fundingStatus = strtoupper((string) ($funding['status'] ?? ''));
+            $fundingReference = (string) ($funding['providerReference'] ?? $funding['drawdownReference'] ?? $funding['reference'] ?? '');
+            $advance->update([
+                'lender_funding_reference' => $fundingReference ?: null,
+                'fulfilment_payload' => ['lender_funding' => $this->redact($funding)],
+            ]);
+
+            if (in_array($fundingStatus, ['FAILED', 'DECLINED', 'REJECTED', 'CANCELLED', 'REVERSED'], true)) {
+                return $this->releaseReservation($advance, 'lender_funding_failed');
+            }
+            if (! in_array($fundingStatus, ['FUNDED', 'COMMITTED', 'AUTHORISED', 'AUTHORIZED'], true)) {
+                $advance->update(['status' => 'lender_funding_pending']);
+
+                return $advance->fresh();
             }
         }
 
-        $this->safeAudit('essentials.advance.accepted', $user, $advance, [
-            'lender_partner_id' => $advance->lender_partner_id,
-            'biller_code' => $biller->code,
-            'provider_reference' => $providerReference ?: null,
-            'provider_status' => $status ?: 'UNKNOWN',
-        ]);
-
-        return $advance->fresh();
+        return $this->settlePurposeBoundProvider($advance->fresh(), $user);
     }
 
     public function repay(
