@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-# Historical direct-provider services bypassed the governed adapter/finality model and remain forbidden.
+# Enforce the governed money-movement provider boundary. Historical direct-provider services
+# that bypassed adapter certification/finality controls remain forbidden.
 forbidden_files="
 app/Services/MtnMomoService.php
 app/Services/AirtelCollectionService.php

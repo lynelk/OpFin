@@ -152,7 +152,7 @@ jobs:
           cp .env.example .env
           composer install --no-interaction --prefer-dist --no-progress
           php artisan key:generate
-          sh scripts/enforce-cpay-only.sh
+          sh scripts/enforce-governed-provider-routing.sh
           sh scripts/run-tests.sh
           composer audit
       - name: Check formatting for changed PHP files
