@@ -27,6 +27,8 @@ Production KYC evidence must use the configured private persistent/object-storag
 
 Check NIN, liveness, face-match and NIN/phone-link outcomes individually. Provider unavailable/error is not the same as customer failure and must not be converted to verified.
 
+When Cito is configured, NIN and phone-ownership/NIN-phone checks are Cito-primary. Liveness and face-match currently require the separately configured biometric/document provider because Cito's signed capability contract does not yet carry the ID-front/back/selfie binary evidence. A customer may therefore have valid Cito NIN/phone evidence while the overall KYC case remains pending for biometrics. Do not override that pending state merely because two of the checks passed.
+
 ### Assisted/PWD verification
 
 Support cases with category `accessibility` and subject `Assisted identity verification` require an accessible interaction plan. A helper may position a device or help enter non-secret information. Staff/helpers must never request the customer's PIN or OTP. Identity assurance remains the same as the standard path.
