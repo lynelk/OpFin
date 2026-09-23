@@ -814,9 +814,45 @@ class EssentialsOrchestrationService
 
     public function reconcileAdvance(EssentialsAdvance $advance): EssentialsAdvance
     {
+        if ($advance->status === 'lender_funding_pending') {
+            $quote = EssentialsQuote::query()->findOrFail($advance->quote_id);
+            $line = EssentialsCreditLine::query()->findOrFail($quote->credit_line_id);
+            if ($line->decision_route !== 'cito') {
+                return $this->releaseReservation($advance, 'lender_funding_failed');
+            }
+
+            $reference = $advance->lender_funding_reference ?: $advance->reference;
+            $referenceType = $advance->lender_funding_reference ? 'provider' : 'internal';
+            $funding = $this->citoLending->drawdownStatus($reference, $referenceType);
+            $status = strtoupper((string) ($funding['status'] ?? ''));
+            $fundingReference = (string) ($funding['providerReference'] ?? $funding['drawdownReference'] ?? $funding['reference'] ?? $advance->lender_funding_reference ?? '');
+
+            $advance->update([
+                'lender_funding_reference' => $fundingReference ?: $advance->lender_funding_reference,
+                'fulfilment_payload' => array_merge((array) $advance->fulfilment_payload, [
+                    'lender_funding' => $this->redact($funding),
+                ]),
+            ]);
+
+            if (in_array($status, ['FAILED', 'DECLINED', 'REJECTED', 'CANCELLED', 'REVERSED'], true)) {
+                return $this->releaseReservation($advance->fresh(), 'lender_funding_failed');
+            }
+            if (! in_array($status, ['FUNDED', 'COMMITTED', 'AUTHORISED', 'AUTHORIZED'], true)) {
+                return $advance->fresh();
+            }
+
+            $advance->update(['status' => 'funding_reserved']);
+
+            return $this->settlePurposeBoundProvider($advance->fresh(), User::withoutGlobalScopes()->findOrFail($advance->user_id));
+        }
+
         if (! in_array($advance->status, ['fulfilment_pending', 'funding_reserved'], true)) {
             return $advance;
         }
+        if ($advance->status === 'funding_reserved' && ! $advance->biller_payment_reference) {
+            return $this->settlePurposeBoundProvider($advance, User::withoutGlobalScopes()->findOrFail($advance->user_id));
+        }
+
         $result = $advance->biller_payment_reference
             ? $this->cpay->status($advance->biller_payment_reference, 'provider')
             : $this->cpay->status($advance->reference, 'internal');
@@ -874,6 +910,72 @@ class EssentialsOrchestrationService
         return $account->fresh();
     }
 
+    private function settlePurposeBoundProvider(EssentialsAdvance $advance, User $user): EssentialsAdvance
+    {
+        $account = EssentialsAccount::query()->where('user_id', $user->id)->findOrFail($advance->essentials_account_id);
+        $biller = EssentialsBiller::query()->findOrFail($account->biller_id);
+        if (! $this->cpay->configuredForBiller($biller)) {
+            throw new RuntimeException(
+                $biller->route === 'manual_verification'
+                    ? 'Purpose-bound beneficiary settlement is not activated.'
+                    : 'Purpose-bound bill settlement is not activated.'
+            );
+        }
+
+        try {
+            $result = $this->cpay->payBill($advance, $account, $biller);
+        } catch (\Throwable $exception) {
+            report($exception);
+            $advance->update([
+                'status' => 'fulfilment_pending',
+                'fulfilment_payload' => array_merge((array) $advance->fulfilment_payload, [
+                    'provider_settlement' => [
+                        'provider_state' => 'unknown',
+                        'reconcile_by' => 'request_reference',
+                        'request_reference' => $advance->reference,
+                        'error_type' => $exception::class,
+                    ],
+                ]),
+            ]);
+            $this->safeAudit('essentials.advance.fulfilment_ambiguous', $user, $advance, [
+                'biller_code' => $biller->code,
+                'request_reference' => $advance->reference,
+            ]);
+
+            return $advance->fresh();
+        }
+
+        $status = strtoupper((string) ($result['status'] ?? ''));
+        $providerReference = (string) ($result['providerReference'] ?? $result['reference'] ?? '');
+        $advance->update([
+            'status' => 'fulfilment_pending',
+            'biller_payment_reference' => $providerReference ?: $advance->biller_payment_reference,
+            'fulfilment_payload' => array_merge((array) $advance->fulfilment_payload, [
+                'provider_settlement' => $this->redact($result),
+            ]),
+        ]);
+
+        if (in_array($status, ['FAILED', 'REVERSED', 'CANCELLED'], true)) {
+            $advance = $this->releaseReservation($advance->fresh(), 'fulfilment_failed');
+        } elseif (in_array($status, ['SUCCESS', 'SUCCESSFUL', 'PAID', 'COMPLETED'], true)) {
+            try {
+                $advance = $this->activateAdvance($advance->fresh(), $result);
+            } catch (\Throwable $exception) {
+                report($exception);
+                $advance = $advance->fresh();
+            }
+        }
+
+        $this->safeAudit('essentials.advance.provider_settlement_requested', $user, $advance, [
+            'lender_partner_id' => $advance->lender_partner_id,
+            'biller_code' => $biller->code,
+            'provider_reference' => $providerReference ?: null,
+            'provider_status' => $status ?: 'UNKNOWN',
+        ]);
+
+        return $advance->fresh();
+    }
+
     private function activateAdvance(EssentialsAdvance $advance, array $result): EssentialsAdvance
     {
         $activated = DB::transaction(function () use ($advance, $result) {
@@ -881,8 +983,11 @@ class EssentialsOrchestrationService
             if (in_array($locked->status, ['active', 'settled'], true)) {
                 return $locked;
             }
-            if ($locked->status === 'fulfilment_failed') {
+            if (in_array($locked->status, ['fulfilment_failed', 'lender_funding_failed'], true)) {
                 throw new RuntimeException('A failed Essentials fulfilment cannot be activated without a new governed request.');
+            }
+            if (! $locked->funding_pool_id && ! $locked->lender_funding_reference) {
+                throw new RuntimeException('Third-party lender funding finality is required before provider settlement can become an active obligation.');
             }
 
             $providerReference = (string) ($result['providerReference'] ?? $result['reference'] ?? $locked->biller_payment_reference ?? '');
@@ -961,7 +1066,9 @@ class EssentialsOrchestrationService
                 'financial_obligation_id' => $obligationId,
                 'status' => 'active',
                 'biller_payment_reference' => $providerReference ?: $locked->biller_payment_reference,
-                'fulfilment_payload' => $this->redact($result),
+                'fulfilment_payload' => array_merge((array) $locked->fulfilment_payload, [
+                    'provider_settlement' => $this->redact($result),
+                ]),
                 'next_due_date' => $nextDueDate,
                 'activated_at' => $locked->activated_at ?: $activatedAt,
             ]);
@@ -1217,7 +1324,7 @@ class EssentialsOrchestrationService
         $pendingReserved = Schema::hasTable('essentials_advances')
             ? (int) DB::table('essentials_advances')
                 ->where('user_id', $userId)
-                ->whereIn('status', ['funding_reserved', 'fulfilment_pending'])
+                ->whereIn('status', ['funding_reserved', 'lender_funding_pending', 'fulfilment_pending'])
                 ->sum('principal_outstanding_minor')
             : 0;
 
