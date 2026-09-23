@@ -1,7 +1,9 @@
 # OpFin Essentials
 
+Status: Controlled external product and implementation contract  
 Updated: 23 September 2026  
-Status: implemented product capability; live provider activation remains configuration- and contract-gated.
+Language: English (United Kingdom)  
+Implementation status: software capability implemented; live provider activation remains configuration-, contract- and approval-gated.
 
 ## 1. Product position
 
