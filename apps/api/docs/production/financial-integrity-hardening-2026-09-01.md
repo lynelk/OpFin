@@ -50,9 +50,9 @@ Every new money instruction requires an idempotency key. The key is bound to a c
 
 Database uniqueness on the idempotency key and internal reference remains the final concurrency invariant.
 
-## CPay finality and reversals
+## Provider finality and reversals
 
-Allowed CPay transitions are explicit:
+Allowed governed-provider transitions are explicit:
 
 - processing/pending → processing, pending, successful, failed or reversed;
 - successful → successful or reversed;
@@ -61,7 +61,7 @@ Allowed CPay transitions are explicit:
 
 A provider-confirmed reversal after success is therefore valid. A failed status cannot overwrite a successful or reversed finality state.
 
-Outbound CPay reversal remains fail-closed until a certified reversal/refund request contract is configured. Attempting an unsupported outbound reversal raises an error and does not mutate the original successful payment.
+Outbound reversal remains fail-closed until the selected provider adapter has a certified reversal/refund request contract. Attempting an unsupported outbound reversal raises an error and does not mutate the original successful payment.
 
 Webhook provider and merchant references are resolved independently. If they identify different OpFin transactions, the callback is rejected rather than accepted ambiguously.
 
