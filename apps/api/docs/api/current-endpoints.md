@@ -1,6 +1,6 @@
 # Current API endpoints
 
-Updated against the registered canonical platform routes on **22 September 2026**. Routes remain subject to the middleware and role gates in source.
+Updated against the registered canonical platform routes on **23 September 2026**. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:
 
@@ -91,6 +91,10 @@ KYC multipart fields:
 
 Private evidence paths are not customer response fields.
 
+**Identity routing:** when Cito is configured, OpFin uses Cito's provider-neutral capability API as the primary route for NIN validation and phone-ownership/NIN-phone evidence. gnuGrid may satisfy those capabilities behind Cito without OpFin depending on gnuGrid-specific request formats. National ID images and selfie remain separate biometric/document evidence; the current Cito signed capability contract does not accept those binary artefacts, so liveness and face-match stay with the configured evidence-capable provider until an equivalent Cito contract is certified.
+
+If Cito returns an ambiguous technical failure, OpFin leaves the KYC case pending and does **not** silently issue a direct duplicate identity enquiry. Operations must reconcile the original request before explicitly selecting the direct route. If Cito NIN/phone checks pass but no biometric provider is configured, those checks remain valid while liveness/face-match remain `pending_review`; the customer is not falsely marked fully verified.
+
 ## 5. Credit profile
 
 | Method | Endpoint | Purpose |
@@ -116,6 +120,10 @@ Typical profile data includes:
 - setup state and `next_action`
 
 Do not replace unavailable external data with made-up score values.
+
+External credit-data routing is provider-independent: OpFin prefers Cito when configured and otherwise can use the direct provider adapter. A failed or ambiguous Cito request does not silently trigger a second paid enquiry. Operations must reconcile the original request before explicitly selecting the direct route.
+
+Verified positive employer behaviour may provide a small capped score uplift. Missing, unavailable, customer-declined or negative employer-behaviour data is neutral and does not reduce the base Composite Score or its data-coverage calculation.
 
 ## 6. Credit applications and offers
 
@@ -278,7 +286,7 @@ These endpoints are Space-scoped. Cross-Space access is denied unless an active 
 
 Permission, entitlement and product/regulatory eligibility are separate gates. Commercial economics must not determine financial-health advice.
 
-## 20. Revenue events and CPay reconciliation
+## 20. Revenue, service economics and financial reconciliation
 
 Operations/admin routes:
 
@@ -286,8 +294,19 @@ Operations/admin routes:
 | --- | --- | --- |
 | POST | `/api/admin/revenue-events` | Accrue a uniquely identified commercial revenue occurrence; OpFin/partner/tax economics are calculated by governed policy and posted to the canonical ledger |
 | POST | `/api/admin/revenue-events/{event}/reconcile` | Settle an accrued revenue receivable against an actual successful money-movement record; free-form settlement assertions are not accepted |
+| POST | `/api/admin/service-economics-events` | Record or enrich one idempotent external-service economics event |
+| GET | `/api/admin/reports/service-economics` | Provider/customer/partner/Cito/OpFin fee, cost, tax, settlement and margin report |
+| GET | `/api/admin/reports/capital-loan-book` | Capital/funding-pool and loan-book performance report |
+| GET | `/api/admin/reports/insurance` | Insurance policy, premium, settlement, claims and economics report |
+| GET | `/api/admin/reports/savings-investments` | Savings/investment movement, custody/commitment and economics report |
+| GET | `/api/admin/reports/employment-positive-behaviour` | Aggregate positive-only employer enrichment report |
+| GET | `/api/admin/reports/financial-account-behaviour` | Aggregate linked-account and verified financial-behaviour coverage report |
 
-Paid subscriptions follow contract → invoice → tax → CPay finality → revenue ledger → entitlement activation. Provider-statement reconciliation remains a separate finality state. Revenue, partner payable and tax payable are canonical ledger postings, not editable reporting labels.
+Paid subscriptions follow contract → invoice → tax → governed payment finality → revenue ledger → entitlement activation. Provider-statement reconciliation remains a separate finality state. Revenue, partner payable and tax payable are canonical ledger postings, not editable reporting labels.
+
+Cito/CPay is the preferred third-party/payment route, not an availability dependency. A production direct money-movement adapter is permitted only when explicitly configured and certified. Provider execution never replaces OpFin product-state, accounting, statement reconciliation or ledger controls.
+
+Service economics distinguishes pass-through principal, premium and capital from revenue. A known zero is stored as `0`; an unknown commercial amount remains `null` and is reported as incomplete rather than guessed.
 
 ## 21. Inclusive finance, programme delivery and alternative credit support
 
