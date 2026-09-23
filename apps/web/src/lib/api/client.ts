@@ -635,12 +635,28 @@ export type EssentialsLenderRow = {
   eligibility_rules?: string | Record<string, unknown> | null;
 };
 
+export type FundingMandateView = {
+  id: number;
+  reference: string;
+  partner_id: number;
+  owner_user_id?: number;
+  name: string;
+  mandate_type: string;
+  committed_capital_minor: number;
+  deployed_capital_minor: number;
+  reserved_capital_minor: number;
+  status: string;
+  investment_policy?: string | Record<string, unknown> | null;
+  created_at?: string | null;
+};
+
 export type EssentialsWorkQueue = {
   pending_accounts: EssentialsAdminAccount[];
   exception_advances: EssentialsAdvanceView[];
   pending_repayments: EssentialsRepaymentView[];
   lenders: EssentialsLenderRow[];
   funding_pools: EssentialsFundingPool[];
+  pending_funding_pools: FundingMandateView[];
   billers: EssentialsBiller[];
 };
 
@@ -680,6 +696,12 @@ export const essentialsApi = {
     request<Record<string, unknown>>(`/essentials/partner-authorisations/${authorisationId}`, { method: "DELETE", token }),
   adminPortfolio: (token?: string) => request<EssentialsPortfolio>("/admin/essentials/portfolio", { token }),
   adminWorkQueue: (token?: string) => request<EssentialsWorkQueue>("/admin/essentials/work-queue", { token }),
+  adminCreateCapitalMandate: (
+    payload: { partner_id:number; mandate_type:string; name:string; committed_capital_minor:number; investment_policy:Record<string,unknown> },
+    token?: string
+  ) => request<{capital_mandate:FundingMandateView}>("/admin/capital-mandates", {method:"POST",bodyJson:payload,token}),
+  adminReviewCapitalMandate: (mandateId:number, status:"approved"|"rejected", token?:string) =>
+    request<{capital_mandate:FundingMandateView}>(`/admin/capital-mandates/${mandateId}/review`, {method:"POST",bodyJson:{status},token}),
   adminSaveBiller: (
     payload: { code:string; name:string; category:string; account_label:string; route:string; status?:string; metadata?:Record<string,unknown> },
     token?: string
