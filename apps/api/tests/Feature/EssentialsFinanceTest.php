@@ -45,6 +45,96 @@ class EssentialsFinanceTest extends TestCase
             ->assertJsonPath('message', 'OpFin cannot be configured as the primary lender for Essentials.');
     }
 
+    public function test_lender_onboarding_capital_mandate_maker_checker_and_product_activation_are_end_to_end(): void
+    {
+        $maker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $reviewer = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
+
+        $lenderPayload = [
+            'partner_code' => 'FLOWBANK',
+            'partner_name' => 'Flow Bank Test',
+            'partner_type' => 'financial_institution',
+            'regulatory_evidence' => [
+                'licence_number' => 'FLOW-LIC-001',
+                'licence_authority' => 'Test Authority',
+            ],
+            'status' => 'onboarding',
+            'product_code' => 'FLOW-ESS',
+            'product_name' => 'Flow Essentials',
+            'product_type' => 'essentials_credit',
+            'eligibility_rules' => [
+                'categories' => ['electricity', 'water', 'rent'],
+                'min_score' => 0,
+                'min_coverage_percent' => 0,
+                'min_limit_minor' => 1,
+                'max_limit_minor' => 500000,
+            ],
+            'pricing' => [
+                'term_days' => 90,
+                'monthly_interest_rate_percent' => 0,
+                'fixed_fee_minor' => 0,
+                'fee_percent' => 0,
+            ],
+            'decision_route' => 'capital_mandate',
+        ];
+
+        Sanctum::actingAs($maker);
+        $onboarding = $this->postJson('/api/admin/essentials/lenders', $lenderPayload)
+            ->assertCreated()
+            ->json('data');
+
+        $partnerId = (int) $onboarding['partner_id'];
+        $this->assertDatabaseHas('partners', [
+            'id' => $partnerId,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('partner_products', [
+            'id' => (int) $onboarding['partner_product_id'],
+            'status' => 'draft',
+        ]);
+
+        $mandate = $this->postJson('/api/admin/capital-mandates', [
+            'partner_id' => $partnerId,
+            'mandate_type' => 'warehouse_line',
+            'name' => 'Flow Bank OpFin credit pool',
+            'committed_capital_minor' => 1000000,
+            'investment_policy' => [
+                'categories' => ['essentials', 'salary'],
+                'purpose' => 'Third-party funded OpFin credit',
+            ],
+        ])->assertCreated()->json('data.capital_mandate');
+
+        $mandateId = (int) $mandate['id'];
+        $this->postJson('/api/admin/capital-mandates/'.$mandateId.'/review', [
+            'status' => 'approved',
+        ])->assertStatus(422);
+
+        Sanctum::actingAs($reviewer);
+        $this->postJson('/api/admin/capital-mandates/'.$mandateId.'/review', [
+            'status' => 'approved',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.capital_mandate.status', 'approved');
+
+        Sanctum::actingAs($maker);
+        $activation = $lenderPayload;
+        $activation['status'] = 'active';
+        $activation['funding_pool_id'] = $mandateId;
+
+        $this->postJson('/api/admin/essentials/lenders', $activation)
+            ->assertCreated();
+
+        $this->assertDatabaseHas('partner_products', [
+            'id' => (int) $onboarding['partner_product_id'],
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('capital_mandates', [
+            'id' => $mandateId,
+            'partner_id' => $partnerId,
+            'status' => 'approved',
+        ]);
+    }
+
     public function test_third_party_lender_lines_do_not_stack_into_a_larger_customer_limit(): void
     {
         [$customer, $space] = $this->customerWithCreditProfile(500000);
