@@ -83,9 +83,18 @@ class ProductionKycController extends Controller
             'evidence_complete_at' => now(),
         ]);
 
+        $case->update([
+            'evidence' => array_merge($case->evidence ?? [], [
+                'identity_verification_requested' => true,
+                'identity_verification_purpose' => 'identity_verification',
+                'identity_verification_reference' => 'kyc-case:'.$case->id,
+            ]),
+        ]);
+
         $this->auditLogger->record('kyc.submitted', $user, $case, [
             'evidence_complete' => true,
             'capture_channel' => $request->input('capture_channel', 'app'),
+            'identity_verification_reference' => 'kyc-case:'.$case->id,
         ], $request);
 
         $case = $this->identityVerification->verify($case);
