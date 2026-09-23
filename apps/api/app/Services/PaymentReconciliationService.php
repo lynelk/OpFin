@@ -45,8 +45,9 @@ class PaymentReconciliationService
 
             $transactions = MobileMoneyTransaction::query()
                 ->where('provider', $provider)
-                ->whereBetween('created_at', [$date->startOfDay(), $date->endOfDay()])
+                ->where('created_at', '<=', $date->endOfDay())
                 ->where('statement_reconciliation_status', '!=', MobileMoneyTransaction::STATEMENT_MATCHED)
+                ->orderBy('created_at')
                 ->orderBy('id')
                 ->get();
 
@@ -263,11 +264,8 @@ class PaymentReconciliationService
 
     private function matchingSystemTransactions(ReconciliationRun $run, ProviderStatementRecord $record)
     {
-        $date = CarbonImmutable::parse($run->business_date);
-
         return MobileMoneyTransaction::query()
             ->where('provider', $run->provider)
-            ->whereBetween('created_at', [$date->startOfDay(), $date->endOfDay()])
             ->where(function ($query) use ($record) {
                 if ($record->provider_reference) {
                     $query->where('provider_reference', $record->provider_reference);
