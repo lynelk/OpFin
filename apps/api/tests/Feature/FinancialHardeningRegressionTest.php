@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CreditDecision;
+use App\Models\CreditScoreComponent;
 use App\Models\Institution;
 use App\Models\LedgerAccount;
 use App\Models\LoanApplication;
@@ -76,7 +77,8 @@ class FinancialHardeningRegressionTest extends TestCase
 
     public function test_affordability_uses_server_projected_debt_service_even_when_declared_obligation_is_zero(): void
     {
-        [, $operations, , $decision] = $this->referredApplication();
+        [$customer, $operations, , $decision] = $this->referredApplication();
+        $this->installAffordabilityEvidence($customer, 400000);
         Sanctum::actingAs($operations);
 
         $response = $this->postJson("/api/admin/credit-decisions/{$decision->id}/approve", [
@@ -132,6 +134,7 @@ class FinancialHardeningRegressionTest extends TestCase
     private function approvedApplication(): array
     {
         [$customer, $operations, $application, $decision] = $this->referredApplication();
+        $this->installAffordabilityEvidence($customer, 600000);
         $decision->update([
             'status' => CreditDecision::STATUS_APPROVED,
             'approved_amount_minor' => 150000,
@@ -146,6 +149,25 @@ class FinancialHardeningRegressionTest extends TestCase
         $application->update(['status' => 'Approved', 'approved_at' => now()]);
 
         return [$customer, $operations, $application, $decision];
+    }
+
+    private function installAffordabilityEvidence(User $user, int $incomeMinor): void
+    {
+        CreditScoreComponent::create([
+            'user_id' => $user->id,
+            'source' => 'crb',
+            'status' => CreditScoreComponent::STATUS_READY,
+            'score' => 800,
+            'weight_percent' => 40,
+            'source_reference' => 'financial-hardening-affordability-'.$user->id,
+            'reason_codes' => ['VERIFIED_INCOME'],
+            'raw_payload' => [
+                'verified_monthly_income_minor' => $incomeMinor,
+                'verified_external_obligation_excluding_opfin_minor' => 0,
+            ],
+            'received_at' => now(),
+            'expires_at' => now()->addDay(),
+        ]);
     }
 
     private function installPricingPolicy(): void
