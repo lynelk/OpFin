@@ -483,33 +483,7 @@ class ProgrammeCompletionController extends Controller
 
     public function exportProgramme(Request $request, int $programme, string $format): Response
     {
-        if (! in_array($format, ['csv', 'xlsx', 'zip'], true)) {
-            return ApiResponse::error('Unsupported programme export format.', 404);
-        }
-
-        try {
-            [$bytes, $contentType, $extension] = match ($format) {
-                'csv' => [$this->exports->csv($programme), 'text/csv; charset=UTF-8', 'csv'],
-                'xlsx' => [$this->exports->xlsx($programme), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx'],
-                default => [$this->exports->reportPack($programme), 'application/zip', 'zip'],
-            };
-        } catch (RuntimeException|InvalidArgumentException $exception) {
-            return ApiResponse::error($exception->getMessage(), 422);
-        }
-
-        $this->audit->record(
-            'programme.export.generated',
-            $request->user(),
-            null,
-            ['programme_id' => $programme, 'format' => $format],
-            $request,
-        );
-
-        return response($bytes, 200, [
-            'Content-Type' => $contentType,
-            'Content-Disposition' => 'attachment; filename="opfin-programme-'.$programme.'-'.now()->format('Ymd').'.'.$extension.'"',
-            'Cache-Control' => 'private, no-store',
-        ]);
+        return $this->downloadProgrammeExport($request, $programme, $format, true);
     }
 
     public function partnerExport(Request $request, int $programme, string $format): Response
@@ -524,7 +498,46 @@ class ProgrammeCompletionController extends Controller
             return ApiResponse::error('Programme access is not available for this partner account.', 403);
         }
 
-        return $this->exportProgramme($request, $programme, $format);
+        return $this->downloadProgrammeExport($request, $programme, $format, false);
+    }
+
+    private function downloadProgrammeExport(
+        Request $request,
+        int $programme,
+        string $format,
+        bool $includeCommercial,
+    ): Response {
+        if (! in_array($format, ['csv', 'xlsx', 'zip'], true)) {
+            return ApiResponse::error('Unsupported programme export format.', 404);
+        }
+
+        try {
+            [$bytes, $contentType, $extension] = match ($format) {
+                'csv' => [$this->exports->csv($programme), 'text/csv; charset=UTF-8', 'csv'],
+                'xlsx' => [$this->exports->xlsx($programme), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx'],
+                default => [$this->exports->reportPack($programme, $includeCommercial), 'application/zip', 'zip'],
+            };
+        } catch (RuntimeException|InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), 422);
+        }
+
+        $this->audit->record(
+            'programme.export.generated',
+            $request->user(),
+            null,
+            [
+                'programme_id' => $programme,
+                'format' => $format,
+                'commercial_metrics_included' => $includeCommercial,
+            ],
+            $request,
+        );
+
+        return response($bytes, 200, [
+            'Content-Type' => $contentType,
+            'Content-Disposition' => 'attachment; filename="opfin-programme-'.$programme.'-'.now()->format('Ymd').'.'.$extension.'"',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     private function instrumentValidation(Request $request, bool $partial = false): array
