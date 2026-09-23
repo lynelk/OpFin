@@ -219,6 +219,78 @@ class ProgrammeCommercialCompletionTest extends TestCase
         ]);
     }
 
+    public function test_programme_response_rejects_question_from_another_instrument(): void
+    {
+        [$admin, $programmeId] = $this->programme();
+        $instrumentA = $this->createInstrument($programmeId, $admin, [
+            'code' => 'INSTRUMENT-A',
+            'name' => 'Instrument A',
+        ]);
+        $instrumentB = $this->createInstrument($programmeId, $admin, [
+            'code' => 'INSTRUMENT-B',
+            'name' => 'Instrument B',
+        ]);
+
+        Sanctum::actingAs($admin);
+        $questionA = $this->postJson('/api/admin/inclusive-finance/instruments/'.$instrumentA.'/questions', [
+            'code' => 'QUESTION-A',
+            'prompt' => 'Question A?',
+            'answer_type' => 'boolean',
+            'required' => false,
+        ])->assertCreated()->json('data.id');
+        $questionB = $this->postJson('/api/admin/inclusive-finance/instruments/'.$instrumentB.'/questions', [
+            'code' => 'QUESTION-B',
+            'prompt' => 'Question B?',
+            'answer_type' => 'boolean',
+            'required' => false,
+        ])->assertCreated()->json('data.id');
+
+        $customer = $this->enrolledCustomer($programmeId, '256700440007');
+        Sanctum::actingAs($customer);
+
+        $this->postJson('/api/inclusive-finance/programme-check-ins/'.$instrumentA.'/responses', [
+            'channel' => 'app',
+            'answers' => [
+                ['question_id' => $questionB, 'value' => true],
+            ],
+        ])->assertStatus(422)
+            ->assertJsonPath('message', 'Programme response contains a question that does not belong to this instrument.');
+
+        $this->assertDatabaseMissing('programme_instrument_answers', [
+            'question_id' => $questionA,
+        ]);
+    }
+
+    public function test_credit_purpose_provider_adapter_forces_credit_consent_and_blocks_protected_signals(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+
+        $this->postJson('/api/admin/inclusive-finance/provider-adapters', [
+            'code' => 'CREDIT-PROTECTED',
+            'name' => 'Protected credit adapter',
+            'adapter_type' => 'other',
+            'status' => 'draft',
+            'purpose' => 'credit_assessment',
+            'allowed_signal_keys' => ['gender'],
+            'credentials_configured' => true,
+            'legal_basis_confirmed' => true,
+        ])->assertStatus(422);
+
+        $this->postJson('/api/admin/inclusive-finance/provider-adapters', [
+            'code' => 'CREDIT-INCOME',
+            'name' => 'Verified income adapter',
+            'adapter_type' => 'other',
+            'status' => 'draft',
+            'purpose' => 'affordability',
+            'allowed_signal_keys' => ['verified_monthly_income_minor'],
+            'requires_credit_processing_consent' => false,
+            'credentials_configured' => true,
+            'legal_basis_confirmed' => true,
+        ])->assertCreated()
+            ->assertJsonPath('data.requires_credit_processing_consent', true);
+    }
+
     public function test_templates_create_editable_draft_delivery_not_fake_partner_activation(): void
     {
         [$admin, $programmeId] = $this->programme();
