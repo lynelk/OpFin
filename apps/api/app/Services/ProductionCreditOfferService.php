@@ -26,6 +26,7 @@ class ProductionCreditOfferService
         private readonly AuditLogger $auditLogger,
         private readonly CreditReferenceReportingService $creditReporting,
         private readonly TransactionReceiptService $receipts,
+        private readonly FundingPoolService $fundingPools,
     ) {}
 
     public function createOffer(LoanApplication $application, User $actor, array $pricing): CreditOffer
@@ -81,11 +82,13 @@ class ProductionCreditOfferService
             'business_address' => config('opfin.regulatory.business_address'),
         ];
         $expiresInMinutes = max(5, min((int) ($pricing['expires_in_minutes'] ?? 1440), 10080));
+        $fundingPoolId = isset($pricing['funding_pool_id']) ? (int) $pricing['funding_pool_id'] : null;
+        $this->fundingPools->validateSelection($fundingPoolId, $principalMinor);
 
         return DB::transaction(function () use (
             $application, $actor, $decision, $term, $principalMinor, $interestMinor, $feesMinor,
             $accessFeeMinor, $disbursementFeeMinor, $netDisbursementMinor, $totalRepaymentMinor,
-            $durationDays, $ratePercent, $feeTreatment, $expiresInMinutes, $quote,
+            $durationDays, $ratePercent, $feeTreatment, $expiresInMinutes, $quote, $fundingPoolId,
             $totalCostOfCreditMinor, $defaultInterestRate, $defaultInterestCapMinor, $defaultInterestRules, $complaintsProcedure, $regulatedIdentity,
         ) {
             CreditOffer::query()->where('loan_application_id', $application->id)
@@ -106,6 +109,7 @@ class ProductionCreditOfferService
                 'credit_decision_id' => $decision->id,
                 'user_id' => $application->user_id,
                 'institution_id' => $application->institution_id,
+                'funding_pool_id' => $fundingPoolId,
                 'created_by' => $actor->id,
                 'offer_reference' => 'OPF-OFR-'.Str::upper(Str::random(16)),
                 'version' => $version,
@@ -126,6 +130,7 @@ class ProductionCreditOfferService
                 'pricing_snapshot' => [
                     'algorithm_version' => $quote['algorithm_version'],
                     'product_term_id' => $term->id,
+                    'funding_pool_id' => $fundingPoolId,
                     'configured_rate_percent' => $ratePercent,
                     'configured_interest_cycle' => (string) $term->interest_cycle,
                     'access_fee_minor' => $accessFeeMinor,
@@ -206,6 +211,7 @@ class ProductionCreditOfferService
                 'policy_version' => $offer->policy_version,
                 'principal_amount_minor' => $principalMinor,
                 'total_repayment_minor' => $totalRepaymentMinor,
+                'funding_pool_id' => $fundingPoolId,
             ]);
 
             return $offer;
@@ -229,6 +235,7 @@ class ProductionCreditOfferService
                 $locked->update(['status' => CreditOffer::STATUS_EXPIRED]);
                 throw new InvalidArgumentException('This offer has expired.');
             }
+            $locked = $this->fundingPools->reserve($locked);
             $locked->update(['status' => CreditOffer::STATUS_DISBURSEMENT_PENDING, 'accepted_at' => now(), 'acceptance_metadata' => $acceptanceMetadata]);
             $locked->application()->update(['status' => 'Accepted']);
             $this->auditLogger->record('credit.offer.accepted', $user, $locked, [
@@ -258,18 +265,25 @@ class ProductionCreditOfferService
 
         $existing = MobileMoneyTransaction::query()->where('credit_offer_id', $offer->id)
             ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)->latest()->first();
-        $transaction = $existing ?: $this->mobileMoney->disburse([
-            'credit_offer_id' => $offer->id,
-            'user_id' => $offer->user_id,
-            'institution_id' => $offer->institution_id,
-            'amount_minor' => $offer->net_disbursement_minor,
-            'currency' => $offer->currency,
-            'phone' => $disbursementPhone,
-            'idempotency_key' => "credit-offer:{$offer->id}:disbursement:v{$offer->version}",
-            'internal_reference' => $offer->offer_reference,
-            'description' => 'OpFin credit offer disbursement',
-            'purpose' => 'credit_offer_disbursement',
-        ]);
+
+        try {
+            $transaction = $existing ?: $this->mobileMoney->disburse([
+                'credit_offer_id' => $offer->id,
+                'user_id' => $offer->user_id,
+                'institution_id' => $offer->institution_id,
+                'amount_minor' => $offer->net_disbursement_minor,
+                'currency' => $offer->currency,
+                'phone' => $disbursementPhone,
+                'idempotency_key' => "credit-offer:{$offer->id}:disbursement:v{$offer->version}",
+                'internal_reference' => $offer->offer_reference,
+                'description' => 'OpFin credit offer disbursement',
+                'purpose' => 'credit_offer_disbursement',
+            ]);
+        } catch (\Throwable $exception) {
+            $this->fundingPools->release($offer);
+            CreditOffer::query()->whereKey($offer->id)->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
+            throw $exception;
+        }
 
         $loan = $this->syncDisbursementState($transaction);
 
@@ -287,7 +301,9 @@ class ProductionCreditOfferService
         }
 
         if ($transaction->status === MobileMoneyTransaction::STATUS_FAILED) {
-            CreditOffer::query()->whereKey($transaction->credit_offer_id)->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
+            $failedOffer = CreditOffer::query()->findOrFail($transaction->credit_offer_id);
+            $this->fundingPools->release($failedOffer);
+            $failedOffer->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
             $transaction->update([
                 'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
                 'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
@@ -307,6 +323,7 @@ class ProductionCreditOfferService
                 if ((int) $lockedTransaction->loan_id !== (int) $existing->id) {
                     $lockedTransaction->update(['loan_id' => $existing->id]);
                 }
+                $this->fundingPools->commit($offer);
                 $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $existing, $offer);
                 $lockedTransaction->update([
                     'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
@@ -335,6 +352,7 @@ class ProductionCreditOfferService
                     'loan_product_id' => $application->loan_product_id,
                     'loan_product_term_id' => $application->loan_product_term_id,
                     'institution_id' => $application->institution_id,
+                    'funding_pool_id' => $offer->funding_pool_id,
                     'loan_application_id' => $application->id,
                     'credit_offer_id' => $offer->id,
                     'amount' => $offer->principal_amount_minor,
@@ -354,6 +372,7 @@ class ProductionCreditOfferService
                 return $loan;
             });
 
+            $this->fundingPools->commit($offer);
             $this->createExactSchedule($loan, $offer, $disbursedAt);
             $lockedTransaction->update(['loan_id' => $loan->id]);
             $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $loan, $offer);
@@ -369,6 +388,7 @@ class ProductionCreditOfferService
                 'offer_reference' => $offer->offer_reference,
                 'mobile_money_transaction_id' => $lockedTransaction->id,
                 'provider_reference' => $lockedTransaction->provider_reference,
+                'funding_pool_id' => $offer->funding_pool_id,
                 'ledger_reference' => 'loan.disbursement:credit-offer:'.$offer->offer_reference,
             ]);
             DB::afterCommit(function () use ($lockedTransaction, $loan) {
@@ -397,6 +417,7 @@ class ProductionCreditOfferService
                         'failure_reason' => 'Provider reversal is linked to an original credit ledger posting but no loan record can be found.',
                     ]);
                 } else {
+                    $this->fundingPools->release($offer);
                     $lockedTransaction->update([
                         'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
                         'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
@@ -433,6 +454,7 @@ class ProductionCreditOfferService
 
             $this->feeRecognition->reverseForLoan($loan, 'credit_disbursement_reversal');
             $this->loanLedger->reverseCreditOfferDisbursement($lockedTransaction, $loan, $offer);
+            $this->fundingPools->reverseCommitted($offer);
             CreditRepaymentScheduleItem::query()->where('loan_id', $loan->id)->update([
                 'principal_outstanding_minor' => 0,
                 'interest_outstanding_minor' => 0,
