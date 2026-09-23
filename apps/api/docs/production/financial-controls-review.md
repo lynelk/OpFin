@@ -1,11 +1,11 @@
 # Financial Controls Review
 
 Date: 2026-09-01
-Status: Current production-control specification
+Status: Superseded in part by 22 September 2026 financial-control remediation; retained as control-history evidence
 
 ## Summary
 
-OpFin's current production financial architecture separates product authority from external money execution. OpFin owns product decisions, customer obligations, schedules, product state and immutable accounting; CPay owns external collection/payout execution and provider finality evidence.
+OpFin's current production financial architecture separates product authority from external money execution. OpFin owns product decisions, customer obligations, schedules, product state and immutable accounting. CPay is the preferred governed payment route through the Cito/provider fabric; an explicitly configured and production-certified direct adapter may provide controlled backup while preserving the same provider-finality, accounting and reconciliation controls.
 
 This review supersedes the May 2026 control snapshot for current implementation behavior. Historical audit files remain useful as evidence of the remediation journey but must not override this document, the root `README.md`, or `AGENTS.md`.
 
@@ -174,7 +174,7 @@ maximum finance = asset price - deposit
 0 < approved finance <= maximum finance
 ```
 
-Deposit collection requires the approved exact deposit amount and fresh customer step-up before CPay execution.
+Deposit collection requires the approved exact deposit amount and fresh customer step-up before governed provider execution.
 
 ## Savings and partner-held funds
 
@@ -235,9 +235,27 @@ A money-changing release is acceptable only when:
 1. hermetic tests pass;
 2. changed PHP files pass Pint;
 3. dependency audit passes;
-4. production money movement remains CPay-only;
+4. production money movement uses CPay as the preferred route or an explicitly configured, production-certified direct adapter;
 5. deployment health checks pass;
 6. provider finality/reconciliation jobs execute;
 7. `opfin:integrity-audit` executes successfully after deployment;
 8. `opfin:umra-credit-controls` is healthy/observable where the UMRA digital-lending controls are active;
 8. any live provider activation still lacking genuine credentials or certification remains fail-closed.
+
+
+## 22 September 2026 superseding controls
+
+For current implementation behaviour, the following supersede earlier descriptions in this document:
+
+- payment `matched` no longer means internal accounting complete; provider finality, accounting and statement reconciliation are separate;
+- affordability, offer pricing and repayment schedules use one canonical credit-economics service;
+- regulatory pricing is effective-dated and licence-class aware, without hard-coded statutory rates;
+- default-interest accrual is calculated from rate/principal/time and ledgered, not operator-entered;
+- credit fee clearing is released to income under a governed accounting policy;
+- early settlement uses a frozen quote and append-only settlement accounting;
+- paid subscription revenue is invoice/CPay/ledger driven, with entitlements activated only after successful collection;
+- revenue events post OpFin income, partner share and tax separately;
+- savings/protection provider reversals post economic reversals or recovery receivables;
+- financial regulatory reports require a true reconciliation assessment before they can be labelled `financially_reconciled`.
+
+See `financial-integrity-hardening-2026-09-01.md` (22 September addendum), `docs/FINANCIAL_CHANGE_GOVERNANCE.md` and `docs/UMRA_DIGITAL_LENDING_CONTROLS.md`.

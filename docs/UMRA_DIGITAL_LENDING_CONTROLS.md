@@ -1,6 +1,6 @@
 # UMRA digital-lending controls
 
-Updated: 21 September 2026
+Updated: 22 September 2026
 
 This document maps the OpFin product/system controls implemented against the January 2024 Uganda Microfinance Regulatory Authority Digital Lending Guidelines. It does not claim that source code alone proves licensing or regulatory approval.
 
@@ -96,9 +96,11 @@ Production loans track:
 - whether enforcement is enabled;
 - last policy evaluation time.
 
-The default-interest ceiling is calculated as one-half of initial disclosed interest. The NPL recovery ceiling tracks principal at NPL plus recoverable interest/default-interest subject to the configured statutory cap logic.
+Default-interest rate, basis, day-count convention and any cap/recovery ceiling are read from the active effective-dated `regulatory_pricing` policy for the configured licence class and product scope. Statutory percentages are not hard-coded in application logic.
 
-Enforcement defaults to enabled. An authorised admin may disable enforcement for a specific loan only as an explicit operational setting; breach monitoring remains visible. Disabling the guard is not a regulatory exemption.
+Default interest is calculated from outstanding principal, contractual default rate and elapsed time. An operator cannot supply an arbitrary accrual amount.
+
+Enforcement defaults to enabled. Disabling a regulatory financial control requires a separate, time-bounded maker-checker override with evidence and a checker different from the requestor. An override is an auditable exception mechanism, not a regulatory exemption.
 
 ## Transaction receipts
 

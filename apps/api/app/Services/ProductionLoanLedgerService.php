@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CreditOffer;
+use App\Models\CreditWriteOff;
 use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
@@ -205,7 +206,7 @@ class ProductionLoanLedgerService
 
         $amountMinor = $this->toMinorUnits($transaction->amount);
         $provider = $this->paymentProvider($transaction);
-        $currency = 'UGX';
+        $currency = $this->transactionCurrency($transaction);
         $posted = $this->ledgerService->post(
             $reference,
             'loan.disbursement',
@@ -251,6 +252,7 @@ class ProductionLoanLedgerService
         int|float $interestPaid,
         int|float $principalPaid,
         int|float $feesPaid = 0,
+        int|float $defaultInterestPaid = 0,
     ): ?LedgerTransaction {
         $reference = $this->ledgerReference('loan.repayment', $transaction);
         if (LedgerTransaction::where('reference', $reference)->exists()) {
@@ -261,13 +263,20 @@ class ProductionLoanLedgerService
         $interestMinor = $this->toMinorUnits($interestPaid);
         $principalMinor = $this->toMinorUnits($principalPaid);
         $feesMinor = $this->toMinorUnits($feesPaid);
-        $suspenseMinor = $amountMinor - $interestMinor - $principalMinor - $feesMinor;
+        $defaultInterestMinor = $this->toMinorUnits($defaultInterestPaid);
+        $suspenseMinor = $amountMinor - $interestMinor - $principalMinor - $feesMinor - $defaultInterestMinor;
         if ($suspenseMinor < 0) {
             throw new \InvalidArgumentException('Repayment ledger components exceed the collected amount.');
         }
 
         $provider = $this->paymentProvider($transaction);
-        $currency = 'UGX';
+        $currency = $this->transactionCurrency($transaction);
+        $loan = $transaction->loan;
+        if (! $loan) {
+            throw new \InvalidArgumentException('Repayment ledger posting requires a loan.');
+        }
+        $writtenOff = CreditWriteOff::query()->where('loan_id', $loan->id)->exists();
+
         $entries = [[
             'account_id' => $this->providerCashAccount($provider, 'collection', $currency)->id,
             'direction' => LedgerEntry::DIRECTION_DEBIT,
@@ -277,28 +286,52 @@ class ProductionLoanLedgerService
 
         if ($principalMinor > 0) {
             $entries[] = [
-                'account_id' => $this->loanReceivableAccount($transaction->loan, $currency)->id,
+                'account_id' => $writtenOff
+                    ? $this->creditRecoveryIncomeAccount($loan, $currency)->id
+                    : $this->loanReceivableAccount($loan, $currency)->id,
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $principalMinor,
-                'memo' => 'Loan principal repaid',
+                'memo' => $writtenOff
+                    ? 'Recovery of previously written-off principal'
+                    : 'Loan principal repaid',
+            ];
+        }
+        if ($defaultInterestMinor > 0) {
+            $entries[] = [
+                'account_id' => $writtenOff
+                    ? $this->creditRecoveryIncomeAccount($loan, $currency)->id
+                    : $this->defaultInterestReceivableAccount($loan, $currency)->id,
+                'direction' => LedgerEntry::DIRECTION_CREDIT,
+                'amount_minor' => $defaultInterestMinor,
+                'memo' => $writtenOff
+                    ? 'Recovery of previously written-off default interest'
+                    : 'Accrued default-interest receivable settled',
             ];
         }
         if ($interestMinor > 0) {
             $entries[] = [
-                'account_id' => $this->interestIncomeAccount($transaction->loan, $currency)->id,
+                'account_id' => $writtenOff
+                    ? $this->creditRecoveryIncomeAccount($loan, $currency)->id
+                    : $this->interestIncomeAccount($loan, $currency)->id,
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $interestMinor,
-                'memo' => 'Interest income recognized on repayment',
+                'memo' => $writtenOff
+                    ? 'Recovery of contractual interest after write-off'
+                    : 'Interest income recognized on repayment',
             ];
         }
         if ($feesMinor > 0) {
             $entries[] = [
-                'account_id' => $this->repaymentFeeAccount($transaction->loan, $currency)->id,
+                'account_id' => $writtenOff
+                    ? $this->creditRecoveryIncomeAccount($loan, $currency)->id
+                    : $this->repaymentFeeAccount($loan, $currency)->id,
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $feesMinor,
-                'memo' => $transaction->loan?->credit_offer_id
-                    ? 'Financed fee receivable extinguished by customer repayment'
-                    : 'Legacy cash allocated to disclosed credit fees pending accounting-policy recognition',
+                'memo' => $writtenOff
+                    ? 'Recovery of financed fees after write-off'
+                    : ($loan->credit_offer_id
+                        ? 'Financed fee receivable extinguished by customer repayment'
+                        : 'Legacy cash allocated to disclosed credit fees pending accounting-policy recognition'),
             ];
         }
         if ($suspenseMinor > 0) {
@@ -324,7 +357,9 @@ class ProductionLoanLedgerService
                 'principal_minor' => $principalMinor,
                 'interest_minor' => $interestMinor,
                 'fees_minor' => $feesMinor,
+                'default_interest_minor' => $defaultInterestMinor,
                 'suspense_minor' => $suspenseMinor,
+                'written_off_recovery' => $writtenOff,
             ]
         );
 
@@ -333,6 +368,55 @@ class ProductionLoanLedgerService
             'transaction_id' => $transaction->id,
             'amount_minor' => $amountMinor,
             'payment_provider' => strtolower($provider),
+        ]);
+
+        return $posted;
+    }
+
+    public function reverseRepayment(Transaction $transaction): ?LedgerTransaction
+    {
+        $originalReference = $this->ledgerReference('loan.repayment', $transaction);
+        $reversalReference = $this->ledgerReference('loan.repayment.reversal', $transaction);
+
+        if (LedgerTransaction::query()->where('reference', $reversalReference)->exists()) {
+            return null;
+        }
+
+        $original = LedgerTransaction::query()->with('entries')->where('reference', $originalReference)->first();
+        if (! $original) {
+            throw new \InvalidArgumentException('Cannot reverse a repayment that has no original immutable ledger posting.');
+        }
+
+        $entries = $original->entries->map(function (LedgerEntry $entry) {
+            return [
+                'account_id' => (int) $entry->ledger_account_id,
+                'direction' => $entry->direction === LedgerEntry::DIRECTION_DEBIT
+                    ? LedgerEntry::DIRECTION_CREDIT
+                    : LedgerEntry::DIRECTION_DEBIT,
+                'amount_minor' => (int) $entry->amount_minor,
+                'memo' => 'Append-only reversal of repayment ledger entry '.$entry->id,
+            ];
+        })->all();
+
+        $posted = $this->ledgerService->post(
+            $reversalReference,
+            'loan.repayment.reversal',
+            $transaction,
+            $entries,
+            null,
+            (string) $original->currency,
+            [
+                'reverses_reference' => $originalReference,
+                'loan_id' => $transaction->loan_id,
+                'legacy_transaction_id' => $transaction->id,
+                'original_ledger_transaction_id' => $original->id,
+            ],
+        );
+
+        $this->auditLogger->record('ledger.loan_repayment.reversed', null, $posted, [
+            'loan_id' => $transaction->loan_id,
+            'transaction_id' => $transaction->id,
+            'reverses_reference' => $originalReference,
         ]);
 
         return $posted;
@@ -414,6 +498,20 @@ class ProductionLoanLedgerService
         return $this->account('asset.credit_fee_receivable.product_'.$loan->loan_product_id, 'Credit fee receivable product '.$loan->loan_product_id, 'asset', $currency);
     }
 
+    private function defaultInterestReceivableAccount(?Loan $loan, string $currency): LedgerAccount
+    {
+        if (! $loan) {
+            throw new \InvalidArgumentException('Default-interest repayment posting requires a loan.');
+        }
+
+        return $this->account(
+            'asset.default_interest_receivable.product_'.$loan->loan_product_id,
+            'Default interest receivable product '.$loan->loan_product_id,
+            'asset',
+            $currency,
+        );
+    }
+
     private function interestIncomeAccount(Loan $loan, string $currency): LedgerAccount
     {
         return $this->account('income.interest.product_'.$loan->loan_product_id, 'Interest income product '.$loan->loan_product_id, 'income', $currency);
@@ -438,14 +536,45 @@ class ProductionLoanLedgerService
         return ucfirst(strtolower((string) ($provider ?: $transaction->network ?: 'unknown')));
     }
 
+    private function transactionCurrency(Transaction $transaction): string
+    {
+        $paymentCurrency = MobileMoneyTransaction::query()
+            ->where('transaction_id', $transaction->id)
+            ->latest('id')
+            ->value('currency');
+        if ($paymentCurrency) {
+            return strtoupper((string) $paymentCurrency);
+        }
+
+        $loan = $transaction->loan;
+        if ($loan?->credit_offer_id) {
+            $offerCurrency = CreditOffer::query()->whereKey($loan->credit_offer_id)->value('currency');
+            if ($offerCurrency) {
+                return strtoupper((string) $offerCurrency);
+            }
+        }
+
+        return strtoupper((string) config('services.mobile_money.currency', 'UGX'));
+    }
+
+    private function creditRecoveryIncomeAccount(Loan $loan, string $currency): LedgerAccount
+    {
+        return $this->account(
+            'income.credit_recovery.product_'.$loan->loan_product_id,
+            'Credit recovery income product '.$loan->loan_product_id,
+            'income',
+            $currency,
+        );
+    }
+
     private function account(string $code, string $name, string $type, string $currency): LedgerAccount
     {
         $currency = strtoupper($currency);
-        $existing = LedgerAccount::query()->where('code', $code)->first();
+        $existing = LedgerAccount::query()
+            ->where('code', $code)
+            ->where('currency', $currency)
+            ->first();
         if ($existing) {
-            if (strtoupper((string) $existing->currency) !== $currency) {
-                throw new \InvalidArgumentException("Ledger account {$code} is bound to {$existing->currency}; cross-currency reuse is not allowed.");
-            }
             if (! $existing->is_active) {
                 throw new \InvalidArgumentException("Ledger account {$code} is inactive.");
             }

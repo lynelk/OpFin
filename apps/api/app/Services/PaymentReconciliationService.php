@@ -45,8 +45,9 @@ class PaymentReconciliationService
 
             $transactions = MobileMoneyTransaction::query()
                 ->where('provider', $provider)
-                ->whereBetween('created_at', [$date->startOfDay(), $date->endOfDay()])
-                ->where('reconciliation_status', '!=', MobileMoneyTransaction::RECONCILIATION_MATCHED)
+                ->where('created_at', '<=', $date->endOfDay())
+                ->where('statement_reconciliation_status', '!=', MobileMoneyTransaction::STATEMENT_MATCHED)
+                ->orderBy('created_at')
                 ->orderBy('id')
                 ->get();
 
@@ -164,12 +165,29 @@ class PaymentReconciliationService
 
                 if ($status === ReconciliationItem::STATUS_MATCHED) {
                     $systemTransaction->update([
+                        'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_MATCHED,
+                        'statement_reconciled_at' => now(),
                         'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
                     ]);
+                    if ($systemTransaction->provider_reference) {
+                        DB::table('revenue_events')->where('cpay_reference', $systemTransaction->provider_reference)->update([
+                            'statement_reconciliation_status' => 'matched',
+                            'reconciliation_reference' => $providerRecord->provider_reference ?: $providerRecord->internal_reference,
+                            'updated_at' => now(),
+                        ]);
+                    }
                 } else {
                     $systemTransaction->update([
+                        'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_EXCEPTION,
+                        'statement_reconciled_at' => null,
                         'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                     ]);
+                    if ($systemTransaction->provider_reference) {
+                        DB::table('revenue_events')->where('cpay_reference', $systemTransaction->provider_reference)->update([
+                            'statement_reconciliation_status' => 'exception',
+                            'updated_at' => now(),
+                        ]);
+                    }
                 }
 
                 $this->auditLogger->record('reconciliation.provider_record.ingested', $actor, $providerRecord, [
@@ -194,6 +212,12 @@ class PaymentReconciliationService
         }
 
         DB::transaction(function () use ($run, $actor) {
+            $unmatchedIds = ReconciliationItem::query()
+                ->where('reconciliation_run_id', $run->id)
+                ->where('status', ReconciliationItem::STATUS_REQUIRES_PROVIDER_MATCH)
+                ->whereNotNull('mobile_money_transaction_id')
+                ->pluck('mobile_money_transaction_id');
+
             ReconciliationItem::query()
                 ->where('reconciliation_run_id', $run->id)
                 ->where('status', ReconciliationItem::STATUS_REQUIRES_PROVIDER_MATCH)
@@ -202,6 +226,14 @@ class PaymentReconciliationService
                     'exception_type' => ReconciliationItem::EXCEPTION_MISSING_PROVIDER_RECORD,
                     'notes' => 'No provider statement record matched this OpFin payment before run completion.',
                 ]);
+
+            if ($unmatchedIds->isNotEmpty()) {
+                MobileMoneyTransaction::query()->whereIn('id', $unmatchedIds)->update([
+                    'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_EXCEPTION,
+                    'statement_reconciled_at' => null,
+                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+                ]);
+            }
 
             $this->refreshSummary($run);
             $run->update([
@@ -232,11 +264,8 @@ class PaymentReconciliationService
 
     private function matchingSystemTransactions(ReconciliationRun $run, ProviderStatementRecord $record)
     {
-        $date = CarbonImmutable::parse($run->business_date);
-
         return MobileMoneyTransaction::query()
             ->where('provider', $run->provider)
-            ->whereBetween('created_at', [$date->startOfDay(), $date->endOfDay()])
             ->where(function ($query) use ($record) {
                 if ($record->provider_reference) {
                     $query->where('provider_reference', $record->provider_reference);
@@ -343,6 +372,8 @@ class PaymentReconciliationService
                     'Provider statement contains a duplicate provider reference.',
                 );
                 $systemTransaction->update([
+                    'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_EXCEPTION,
+                    'statement_reconciled_at' => null,
                     'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                 ]);
             }

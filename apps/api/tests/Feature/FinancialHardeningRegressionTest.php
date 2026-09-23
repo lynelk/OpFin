@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\ProductionCreditOfferService;
 use App\Services\ProductionLedgerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -20,6 +21,12 @@ use Tests\TestCase;
 class FinancialHardeningRegressionTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->installPricingPolicy();
+    }
 
     public function test_financed_fees_create_a_receivable_and_reconcile_after_disbursement_posting(): void
     {
@@ -42,7 +49,11 @@ class FinancialHardeningRegressionTest extends TestCase
 
         $loan = $service->syncDisbursementState($payment->fresh());
         $this->assertNotNull($loan);
-        $this->assertSame(MobileMoneyTransaction::RECONCILIATION_MATCHED, $payment->fresh()->reconciliation_status);
+        $payment = $payment->fresh();
+        $this->assertSame(MobileMoneyTransaction::ACCOUNTING_POSTED, $payment->accounting_status);
+        $this->assertNotNull($payment->accounting_posted_at);
+        $this->assertSame(MobileMoneyTransaction::STATEMENT_UNRECONCILED, $payment->statement_reconciliation_status);
+        $this->assertSame(MobileMoneyTransaction::RECONCILIATION_PENDING, $payment->reconciliation_status);
 
         $ledger = $this->app['db']->table('ledger_transactions')
             ->where('reference', 'loan.disbursement:credit-offer:'.$offer->offer_reference)
@@ -135,6 +146,29 @@ class FinancialHardeningRegressionTest extends TestCase
         $application->update(['status' => 'Approved', 'approved_at' => now()]);
 
         return [$customer, $operations, $application, $decision];
+    }
+
+    private function installPricingPolicy(): void
+    {
+        DB::table('financial_policies')->insert([
+            'code' => 'test-regulatory-pricing',
+            'policy_type' => 'regulatory_pricing',
+            'jurisdiction_country' => 'UG',
+            'licence_class' => null,
+            'product_scope' => null,
+            'version' => 1,
+            'status' => 'active',
+            'effective_from' => now()->subDay()->toDateString(),
+            'effective_to' => null,
+            'rules' => json_encode([
+                'interest_basis' => 'original_principal',
+                'cycle_days' => ['daily' => 1, 'weekly' => 7, 'monthly' => 30],
+                'repayment_frequency_days' => ['daily' => 1, 'weekly' => 7, 'fortnightly' => 14, 'monthly' => 30],
+            ], JSON_THROW_ON_ERROR),
+            'source_reference' => 'financial-signoff-test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function referredApplication(): array

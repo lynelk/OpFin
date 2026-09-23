@@ -53,20 +53,13 @@ class ServiceEconomicsService
         $opfinFee = $this->integerOrNull($data['opfin_platform_fee_minor'] ?? ($existing->opfin_platform_fee_minor ?? null));
         $tax = $this->integerOrNull($data['tax_amount_minor'] ?? ($existing->tax_amount_minor ?? null));
 
+        // Fee components describe who charged or received what. They are not automatically
+        // additive OpFin revenue because partner/Cito/customer/provider components may be pass-through,
+        // overlapping or payable under the governing commercial agreement. Preserve unknown totals
+        // as null until a rated commercial/accounting policy supplies them explicitly.
         $grossRevenue = $this->integerOrNull($data['gross_revenue_minor'] ?? ($existing->gross_revenue_minor ?? null));
-        if ($grossRevenue === null && $this->allKnown([$customerServiceCharge, $customerPlatformFee, $partnerCommission, $citoFee, $opfinFee])) {
-            $grossRevenue = $customerServiceCharge + $customerPlatformFee + $partnerCommission + $citoFee + $opfinFee;
-        }
-
         $netRevenue = $this->integerOrNull($data['net_revenue_minor'] ?? ($existing->net_revenue_minor ?? null));
-        if ($netRevenue === null && $grossRevenue !== null && $tax !== null) {
-            $netRevenue = $grossRevenue - $tax;
-        }
-
         $grossMargin = $this->integerOrNull($data['gross_margin_minor'] ?? ($existing->gross_margin_minor ?? null));
-        if ($grossMargin === null && $netRevenue !== null && $providerNet !== null) {
-            $grossMargin = $netRevenue - $providerNet;
-        }
 
         $values = [
             'user_id' => $data['user_id'] ?? ($existing->user_id ?? null),
@@ -138,14 +131,4 @@ class ServiceEconomicsService
         return (int) $value;
     }
 
-    private function allKnown(array $values): bool
-    {
-        foreach ($values as $value) {
-            if ($value === null) {
-                return false;
-            }
-        }
-
-        return true;
-    }
 }

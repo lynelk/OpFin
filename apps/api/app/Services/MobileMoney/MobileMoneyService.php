@@ -241,6 +241,8 @@ class MobileMoneyService
             'source_id' => Arr::get($attributes, 'source_id'),
             'savings_movement_id' => Arr::get($attributes, 'savings_movement_id'),
             'protection_premium_payment_id' => Arr::get($attributes, 'protection_premium_payment_id'),
+            'early_settlement_quote_id' => Arr::get($attributes, 'early_settlement_quote_id'),
+            'billing_invoice_id' => Arr::get($attributes, 'billing_invoice_id'),
         ];
 
         return hash('sha256', json_encode($instruction, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -314,13 +316,43 @@ class MobileMoneyService
                 ->firstOrFail();
 
             $this->assertProviderTransition($locked, $response->status);
+
+            $previousProviderReference = $locked->provider_reference;
+            $nextProviderReference = $response->providerReference ?? $locked->provider_reference;
+            $providerEvidenceChanged = $locked->status !== $response->status
+                || (string) ($previousProviderReference ?? '') !== (string) ($nextProviderReference ?? '');
+
+            $statementStatus = $providerEvidenceChanged
+                ? MobileMoneyTransaction::STATEMENT_UNRECONCILED
+                : $locked->statement_reconciliation_status;
+            $statementReconciledAt = $providerEvidenceChanged ? null : $locked->statement_reconciled_at;
+            $combinedStatus = $statementStatus === MobileMoneyTransaction::STATEMENT_MATCHED
+                ? MobileMoneyTransaction::RECONCILIATION_MATCHED
+                : MobileMoneyTransaction::RECONCILIATION_PENDING;
+
             $locked->update(array_merge([
-                'provider_reference' => $response->providerReference ?? $locked->provider_reference,
+                'provider_reference' => $nextProviderReference,
                 'status' => $response->status,
-                'reconciliation_status' => $response->reconciliationStatus,
+                'statement_reconciliation_status' => $statementStatus,
+                'statement_reconciled_at' => $statementReconciledAt,
+                'reconciliation_status' => $combinedStatus,
                 'failure_reason' => $response->successful ? $locked->failure_reason : $response->message,
                 'provider_payload' => $response->raw,
             ], $extra));
+
+            if ($providerEvidenceChanged) {
+                $references = array_values(array_filter(array_unique([
+                    $previousProviderReference,
+                    $nextProviderReference,
+                ])));
+                if ($references !== []) {
+                    DB::table('revenue_events')->whereIn('cpay_reference', $references)->update([
+                        'statement_reconciliation_status' => 'unreconciled',
+                        'reconciliation_reference' => null,
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
 
             $transaction->setRawAttributes($locked->fresh()->getAttributes(), true);
         });
@@ -330,6 +362,7 @@ class MobileMoneyService
     {
         $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
         $provider = strtolower((string) $transaction->provider);
+        $statementMatched = $transaction->statement_reconciliation_status === MobileMoneyTransaction::STATEMENT_MATCHED;
 
         $this->economics->record([
             'user_id' => $transaction->user_id,
@@ -352,15 +385,13 @@ class MobileMoneyService
                 'purpose' => $metadata['purpose'] ?? null,
                 'source_type' => $metadata['source_type'] ?? null,
                 'source_id' => $metadata['source_id'] ?? null,
-                'reconciliation_status' => $transaction->reconciliation_status,
+                'accounting_status' => $transaction->accounting_status,
+                'statement_reconciliation_status' => $transaction->statement_reconciliation_status,
+                'combined_reconciliation_status' => $transaction->reconciliation_status,
             ],
             'occurred_at' => $transaction->created_at ?? now(),
-            'reconciliation_reference' => $transaction->reconciliation_status === MobileMoneyTransaction::RECONCILIATION_MATCHED
-                ? $transaction->provider_reference
-                : null,
-            'reconciled_at' => $transaction->reconciliation_status === MobileMoneyTransaction::RECONCILIATION_MATCHED
-                ? now()
-                : null,
+            'reconciliation_reference' => $statementMatched ? $transaction->provider_reference : null,
+            'reconciled_at' => $statementMatched ? $transaction->statement_reconciled_at : null,
         ]);
     }
 

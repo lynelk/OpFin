@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\EarlySettlementService;
 use App\Services\MobileMoney\MobileMoneyService;
 use App\Services\ProductionCreditOfferService;
 use App\Services\ProductionRepaymentService;
 use App\Services\ProtectionService;
 use App\Services\SavingsService;
+use App\Services\SubscriptionBillingService;
 use App\Support\ApiResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -21,9 +23,11 @@ class CpayWebhookController extends Controller
         Request $request,
         MobileMoneyService $mobileMoney,
         ProductionCreditOfferService $creditOffers,
+        EarlySettlementService $earlySettlements,
         ProductionRepaymentService $repayments,
         SavingsService $savings,
         ProtectionService $protection,
+        SubscriptionBillingService $subscriptions,
     ): JsonResponse {
         $rawBody = $request->getContent();
 
@@ -45,9 +49,11 @@ class CpayWebhookController extends Controller
                 rawBody: $rawBody,
             );
             $disbursedLoan = $creditOffers->syncDisbursementState($transaction);
+            $settledLoan = $earlySettlements->sync($transaction);
             $repaidLoan = $repayments->syncCollectionState($transaction);
             $savingsMovement = $savings->syncMobileMoney($transaction);
             $premiumPayment = $protection->syncMobileMoney($transaction);
+            $subscriptionInvoice = $subscriptions->sync($transaction);
         } catch (InvalidArgumentException $exception) {
             $status = $exception->getMessage() === 'Invalid mobile money webhook signature.' ? 401 : 409;
 
@@ -59,9 +65,10 @@ class CpayWebhookController extends Controller
         return ApiResponse::success('CPay callback accepted.', [
             'reference' => $transaction->internal_reference,
             'status' => $transaction->status,
-            'loan_id' => $disbursedLoan?->id ?? $repaidLoan?->id,
+            'loan_id' => $disbursedLoan?->id ?? $settledLoan?->id ?? $repaidLoan?->id,
             'savings_movement_id' => $savingsMovement?->id,
             'protection_premium_payment_id' => $premiumPayment?->id,
+            'subscription_invoice_id' => $subscriptionInvoice?->id,
             'direction' => $transaction->direction,
             'reconciliation_status' => $transaction->fresh()->reconciliation_status,
         ]);

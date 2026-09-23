@@ -245,6 +245,139 @@ class SaveProtectionLedgerService
         );
     }
 
+    public function reverseSavingsCollection(
+        SavingsMovement $movement,
+        MobileMoneyTransaction $mobileMoney,
+        bool $partnerAlreadySettled,
+    ): ?LedgerTransaction {
+        $reference = 'savings.collection.reversal:'.$movement->movement_reference;
+        if (LedgerTransaction::where('reference', $reference)->exists()) {
+            return null;
+        }
+
+        $product = $movement->goal->product;
+        $debitAccount = $partnerAlreadySettled
+            ? $this->account(
+                'asset.savings_partner_recovery.product_'.$product->id,
+                'Savings partner recovery receivable - '.$product->partner_name,
+                'asset',
+                $movement->currency,
+            )
+            : $this->savingsPartnerPayableAccount($product->id, $product->partner_name, $movement->currency);
+
+        return $this->ledger->post(
+            $reference,
+            'savings.contribution_reversed',
+            $movement,
+            [
+                [
+                    'account_id' => $debitAccount->id,
+                    'direction' => LedgerEntry::DIRECTION_DEBIT,
+                    'amount_minor' => $movement->amount_minor,
+                    'memo' => $partnerAlreadySettled
+                        ? 'Recovery receivable created after customer collection reversal post partner settlement'
+                        : 'Savings partner payable reversed with customer collection',
+                ],
+                [
+                    'account_id' => $this->cashAccount($mobileMoney->provider, 'collection', $movement->currency)->id,
+                    'direction' => LedgerEntry::DIRECTION_CREDIT,
+                    'amount_minor' => $movement->amount_minor,
+                    'memo' => 'Provider reversed customer savings collection',
+                ],
+            ],
+            null,
+            $movement->currency,
+            [
+                'savings_goal_id' => $movement->savings_goal_id,
+                'partner_already_settled' => $partnerAlreadySettled,
+                'mobile_money_transaction_id' => $mobileMoney->id,
+            ],
+        );
+    }
+
+    public function reverseSavingsPayout(
+        SavingsMovement $movement,
+        MobileMoneyTransaction $mobileMoney,
+    ): ?LedgerTransaction {
+        $reference = 'savings.withdrawal_payout.reversal:'.$movement->movement_reference;
+        if (LedgerTransaction::where('reference', $reference)->exists()) {
+            return null;
+        }
+
+        return $this->ledger->post(
+            $reference,
+            'savings.withdrawal_payout_reversed',
+            $movement,
+            [
+                [
+                    'account_id' => $this->cashAccount($mobileMoney->provider, 'disbursement', $movement->currency)->id,
+                    'direction' => LedgerEntry::DIRECTION_DEBIT,
+                    'amount_minor' => $movement->amount_minor,
+                    'memo' => 'Provider reversed customer savings payout',
+                ],
+                [
+                    'account_id' => $this->withdrawalPayableAccount($movement->currency)->id,
+                    'direction' => LedgerEntry::DIRECTION_CREDIT,
+                    'amount_minor' => $movement->amount_minor,
+                    'memo' => 'Customer savings withdrawal payable reinstated',
+                ],
+            ],
+            null,
+            $movement->currency,
+            ['mobile_money_transaction_id' => $mobileMoney->id],
+        );
+    }
+
+    public function reverseProtectionPremiumCollection(
+        ProtectionPremiumPayment $payment,
+        MobileMoneyTransaction $mobileMoney,
+        bool $insurerAlreadySettled,
+    ): ?LedgerTransaction {
+        $reference = 'protection.premium_collection.reversal:'.$payment->payment_reference;
+        if (LedgerTransaction::where('reference', $reference)->exists()) {
+            return null;
+        }
+
+        $product = $payment->policy->product;
+        $debitAccount = $insurerAlreadySettled
+            ? $this->account(
+                'asset.insurer_recovery.product_'.$product->id,
+                'Insurer recovery receivable - '.$product->insurer_name,
+                'asset',
+                $payment->currency,
+            )
+            : $this->insurerPayableAccount($product->id, $product->insurer_name, $payment->currency);
+
+        return $this->ledger->post(
+            $reference,
+            'protection.premium_collection_reversed',
+            $payment,
+            [
+                [
+                    'account_id' => $debitAccount->id,
+                    'direction' => LedgerEntry::DIRECTION_DEBIT,
+                    'amount_minor' => $payment->amount_minor,
+                    'memo' => $insurerAlreadySettled
+                        ? 'Recovery receivable created after premium collection reversal post insurer settlement'
+                        : 'Insurer premium payable reversed with customer collection',
+                ],
+                [
+                    'account_id' => $this->cashAccount($mobileMoney->provider, 'collection', $payment->currency)->id,
+                    'direction' => LedgerEntry::DIRECTION_CREDIT,
+                    'amount_minor' => $payment->amount_minor,
+                    'memo' => 'Provider reversed protection premium collection',
+                ],
+            ],
+            null,
+            $payment->currency,
+            [
+                'protection_policy_id' => $payment->protection_policy_id,
+                'insurer_already_settled' => $insurerAlreadySettled,
+                'mobile_money_transaction_id' => $mobileMoney->id,
+            ],
+        );
+    }
+
     private function cashAccount(string $provider, string $purpose, string $currency): LedgerAccount
     {
         $provider = strtolower(preg_replace('/[^a-z0-9]+/i', '_', $provider) ?: 'unknown');

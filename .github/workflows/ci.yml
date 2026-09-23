@@ -48,6 +48,69 @@ jobs:
       - name: Reject committed secrets and non-source artifacts
         run: sh scripts/verify-repository-security.sh
 
+  financial-control-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=2 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
+            git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
+          fi
+
+      - name: Require independent approval for financial-control changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        shell: bash
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
+            base="origin/$GITHUB_BASE_REF"
+          else
+            base="HEAD^"
+          fi
+
+          changed="$(git diff --name-only "$base" HEAD)"
+          printf '%s\n' "$changed"
+          if ! printf '%s\n' "$changed" | grep -Eq '^(apps/api/app/(Services/(CreditEconomicsService|FinancialPolicyService|DefaultInterestService|ProductionLedgerService|ProductionLoanLedgerService|ProductionRepaymentService|PaymentReconciliationService|RevenueAccountingService|SubscriptionBillingService|TaxEngineService|EfrisService|EarlySettlementService|CreditFeeRecognitionService|RegulatoryReportingService|RegulatoryFinancialReconciliationService|SavingsService|ProtectionService|SaveProtectionLedgerService)\.php|Http/Controllers/Api/(PlatformCommerceController|UmraComplianceController|FinancialControlController|EarlySettlementController)\.php)|apps/api/database/migrations/|apps/api/config/(opfin|services)\.php|apps/api/routes/|apps/api/tests/|docs/UMRA_DIGITAL_LENDING_CONTROLS\.md|apps/api/docs/production/)'; then
+            echo "No financial-control-sensitive changes detected."
+            exit 0
+          fi
+
+          pr="$PR_NUMBER"
+          author="$PR_AUTHOR"
+          if [[ -z "$pr" ]]; then
+            pr="$(gh api -H 'Accept: application/vnd.github+json' "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].number // empty')"
+            if [[ -n "$pr" ]]; then
+              author="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr" --jq '.user.login')"
+            fi
+          fi
+
+          if [[ -z "$pr" || -z "$author" ]]; then
+            echo "Financial-control changes must reach main through a reviewed pull request."
+            exit 1
+          fi
+
+          approvals="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr/reviews" --jq "[.[] | select(.state == \"APPROVED\" and .user.login != \"$author\")] | length")"
+          if [[ "${approvals:-0}" -lt 1 ]]; then
+            echo "Financial-control changes require at least one APPROVED review from a user other than the PR author."
+            exit 1
+          fi
+          echo "Independent financial-control approval confirmed for PR #$pr."
+
   api:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -260,7 +323,7 @@ jobs:
 
   release-gate:
     if: always()
-    needs: [layout, repo-security, api, api-assets, web, client-android, client-ios]
+    needs: [layout, repo-security, financial-control-review, api, api-assets, web, client-android, client-ios]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

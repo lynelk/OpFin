@@ -14,6 +14,10 @@ class ProtectionPremiumPayment extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    public const STATUS_REVERSED = 'reversed';
+
+    public const STATUS_REVERSAL_EXCEPTION = 'reversal_exception';
+
     protected $fillable = [
         'protection_policy_id',
         'user_id',

@@ -6,3 +6,18 @@
 /infrastructure/ @lynelk
 /docs/ @lynelk
 /.github/ @lynelk
+
+# Financial-control-sensitive paths are explicitly owned and additionally require
+# a separate approving reviewer through the financial-control-review CI gate.
+/apps/api/app/Services/*LedgerService.php @lynelk
+/apps/api/app/Services/CreditEconomicsService.php @lynelk
+/apps/api/app/Services/FinancialPolicyService.php @lynelk
+/apps/api/app/Services/DefaultInterestService.php @lynelk
+/apps/api/app/Services/PaymentReconciliationService.php @lynelk
+/apps/api/app/Services/RevenueAccountingService.php @lynelk
+/apps/api/app/Services/SubscriptionBillingService.php @lynelk
+/apps/api/app/Services/TaxEngineService.php @lynelk
+/apps/api/app/Services/EfrisService.php @lynelk
+/apps/api/app/Services/EarlySettlementService.php @lynelk
+/apps/api/app/Services/CreditFeeRecognitionService.php @lynelk
+/apps/api/database/migrations/ @lynelk

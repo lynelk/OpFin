@@ -332,6 +332,8 @@ Semantics:
 - unknown/not supplied = `null`;
 - principal/premium/capital movement is stored as transaction metadata or settlement evidence and is not automatically treated as revenue;
 - commercial values may be enriched during reconciliation;
+- fee components remain separate economic facts and must not be blindly summed into OpFin revenue;
+- `gross_revenue_minor`, `net_revenue_minor` and `gross_margin_minor` are supplied by the applicable governed commercial/accounting policy or remain `null`; the reporting layer does not guess ownership or double-count overlapping fees;
 - one request/service reference remains idempotent;
 - reports expose incomplete commercial fields rather than silently guessing them.
 

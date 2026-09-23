@@ -16,6 +16,8 @@ class AppStoreCreditPolicy
 
     public const PREFERRED_FULL_REPAYMENT_DAYS = 90;
 
+    public function __construct(private readonly CreditEconomicsService $economics) {}
+
     public function validateOffer(LoanApplication $application, array $pricing): array
     {
         if (! $this->isStoreChannel((string) ($application->distribution_channel ?? 'web'))) {
@@ -35,31 +37,25 @@ class AppStoreCreditPolicy
             throw new InvalidArgumentException('This credit product cannot be offered through a mobile app store because full repayment would be required in 60 days or less.');
         }
 
-        $principal = (int) $decision->approved_amount_minor;
-        $ratePercent = (float) $term->interest_rate;
-        $cycleDays = $this->cycleDays((string) $term->interest_cycle);
-        $termRatePercent = ($ratePercent / $cycleDays) * $durationDays;
-        $interest = (int) round($principal * ($termRatePercent / 100));
-        $fees = (int) ($pricing['access_fee_minor'] ?? 0) + (int) ($pricing['disbursement_fee_minor'] ?? 0);
-        $feeTreatment = (string) ($pricing['fee_treatment'] ?? 'financed');
-        $netDisbursement = $feeTreatment === 'deducted' ? $principal - $fees : $principal;
-        $totalRepayment = $principal + $interest + ($feeTreatment === 'financed' ? $fees : 0);
+        $quote = $this->economics->quoteForApplication(
+            $application,
+            (int) $decision->approved_amount_minor,
+            $pricing,
+        );
 
-        if ($netDisbursement <= 0) {
-            throw new InvalidArgumentException('The disclosed amount received must be positive before mobile-store loan compliance can be evaluated.');
-        }
-
-        $financeCharge = $totalRepayment - $netDisbursement;
-        $equivalentApr = ($financeCharge / $netDisbursement) * (365 / $durationDays) * 100;
-        if (($application->distribution_channel ?? 'web') === 'app_store' && $equivalentApr > self::MAX_APR_PERCENT + 0.000001) {
+        $equivalentApr = (float) $quote['equivalent_apr_percent'];
+        if (($application->distribution_channel ?? 'web') === 'app_store'
+            && $equivalentApr > self::MAX_APR_PERCENT + 0.000001) {
             throw new InvalidArgumentException('This credit product cannot be offered through the iOS App Store because its equivalent maximum APR, including fees, exceeds 36%.');
         }
 
         return [
             'equivalent_maximum_apr_percent' => round($equivalentApr, 6),
-            'first_payment_due_days_after_disbursement' => $this->frequencyDays((string) $term->repayment_frequency),
+            'apr_calculation_method' => $quote['apr_algorithm_version'],
+            'schedule_calculation_method' => $quote['schedule_algorithm_version'],
+            'first_payment_due_days_after_disbursement' => (int) $quote['schedule'][0]['due_offset_days'],
             'full_repayment_due_days_after_disbursement' => $durationDays,
-            'mobile_store_policy_version' => 'personal-loan-store-v2',
+            'mobile_store_policy_version' => 'personal-loan-store-v3',
             'distribution_channel' => (string) $application->distribution_channel,
         ];
     }
@@ -67,26 +63,5 @@ class AppStoreCreditPolicy
     public function isStoreChannel(string $channel): bool
     {
         return in_array($channel, self::STORE_CHANNELS, true);
-    }
-
-    private function cycleDays(string $cycle): int
-    {
-        return match (strtolower($cycle)) {
-            'daily' => 1,
-            'weekly' => 7,
-            'monthly' => 30,
-            default => throw new InvalidArgumentException('Unsupported interest cycle for App Store credit disclosure.'),
-        };
-    }
-
-    private function frequencyDays(string $frequency): int
-    {
-        return match (strtolower($frequency)) {
-            'daily' => 1,
-            'weekly' => 7,
-            'fortnightly' => 14,
-            'monthly' => 30,
-            default => throw new InvalidArgumentException('Unsupported repayment frequency for App Store credit disclosure.'),
-        };
     }
 }

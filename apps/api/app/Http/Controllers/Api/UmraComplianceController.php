@@ -45,24 +45,28 @@ class UmraComplianceController extends Controller
 
     public function accrueDefaultInterest(Loan $loan, Request $request, UmraNplCapService $service): JsonResponse
     {
-        $request->validate(['amount_minor' => 'required|integer|min:0']);
+        $validated = $request->validate(['as_of_date' => 'nullable|date']);
+        $asOf = isset($validated['as_of_date']) ? \Illuminate\Support\Carbon::parse($validated['as_of_date'])->endOfDay() : null;
 
-        return ApiResponse::success('Default interest updated within the configured UMRA ceiling.', [
-            'loan' => $service->accrueDefaultInterest($loan, $request->integer('amount_minor')),
+        return ApiResponse::success('Default interest recalculated from governed rate, principal and elapsed time.', [
+            'loan' => $service->accrueDefaultInterest($loan, $asOf),
         ]);
     }
 
     public function setNplEnforcement(Loan $loan, Request $request, UmraNplCapService $service): JsonResponse
     {
-        $request->validate(['enabled' => 'required|boolean']);
-
-        $loan->update([
-            'umra_npl_cap_enforcement_enabled' => $request->boolean('enabled'),
-            'npl_policy_checked_at' => now(),
+        $validated = $request->validate([
+            'enabled' => 'required|boolean',
+            'override_id' => 'nullable|integer|exists:financial_control_overrides,id',
         ]);
 
-        return ApiResponse::success('UMRA NPL-cap enforcement setting updated.', [
-            'loan' => $service->evaluate($loan->fresh()),
+        return ApiResponse::success('Default-interest control setting updated under governed override rules.', [
+            'loan' => $service->setEnforcement(
+                $loan,
+                (bool) $validated['enabled'],
+                $request->user(),
+                $validated['override_id'] ?? null,
+            ),
         ]);
     }
 

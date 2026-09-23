@@ -20,6 +20,9 @@ class ProductionCreditOfferService
     public function __construct(
         private readonly MobileMoneyService $mobileMoney,
         private readonly ProductionLoanLedgerService $loanLedger,
+        private readonly CreditEconomicsService $economics,
+        private readonly AffordabilityService $affordability,
+        private readonly CreditFeeRecognitionService $feeRecognition,
         private readonly AuditLogger $auditLogger,
         private readonly CreditReferenceReportingService $creditReporting,
         private readonly TransactionReceiptService $receipts,
@@ -41,44 +44,31 @@ class ProductionCreditOfferService
         if (! $term) {
             throw new InvalidArgumentException('The selected product term is unavailable.');
         }
-        if (strcasecmp((string) $term->interest_type, 'Flat') !== 0) {
-            throw new InvalidArgumentException('Production offer generation currently requires a flat-interest product term so the disclosed schedule is exact and reproducible.');
-        }
-
-        $durationDays = (int) $term->duration;
-        if ($durationDays <= 0) {
-            throw new InvalidArgumentException('The selected product term has an invalid duration.');
-        }
-        $ratePercent = (float) $term->interest_rate;
-        if ($ratePercent < 0) {
-            throw new InvalidArgumentException('The selected product term has an invalid interest rate.');
-        }
-
-        $cycleDays = $this->cycleDays((string) $term->interest_cycle);
-        $termRatePercent = ($ratePercent / $cycleDays) * $durationDays;
         $principalMinor = (int) $decision->approved_amount_minor;
-        $interestMinor = (int) round($principalMinor * ($termRatePercent / 100));
-        $accessFeeMinor = (int) ($pricing['access_fee_minor'] ?? 0);
-        $disbursementFeeMinor = (int) ($pricing['disbursement_fee_minor'] ?? 0);
-        $feesMinor = $accessFeeMinor + $disbursementFeeMinor;
-        $feeTreatment = (string) ($pricing['fee_treatment'] ?? 'financed');
-
-        if (! in_array($feeTreatment, ['financed', 'deducted'], true)) {
-            throw new InvalidArgumentException('Fee treatment must be financed or deducted.');
-        }
-        if ($accessFeeMinor < 0 || $disbursementFeeMinor < 0) {
-            throw new InvalidArgumentException('Offer fees cannot be negative.');
-        }
-        if ($feeTreatment === 'deducted' && $feesMinor >= $principalMinor) {
-            throw new InvalidArgumentException('Deducted fees must be lower than the approved principal amount.');
+        $quote = $this->economics->quoteForApplication($application, $principalMinor, $pricing);
+        $affordability = $this->affordability->assess($application->user()->firstOrFail(), $application, $principalMinor, $quote);
+        if ($affordability['status'] !== 'eligible') {
+            throw new InvalidArgumentException('The exact offer economics do not satisfy the current affordability policy.');
         }
 
-        $netDisbursementMinor = $feeTreatment === 'deducted' ? $principalMinor - $feesMinor : $principalMinor;
-        $repayableFeesMinor = $feeTreatment === 'financed' ? $feesMinor : 0;
-        $totalRepaymentMinor = $principalMinor + $interestMinor + $repayableFeesMinor;
-        $totalCostOfCreditMinor = $interestMinor + $feesMinor;
+        $durationDays = (int) $quote['duration_days'];
+        $ratePercent = (float) $quote['interest_rate_percent'];
+        $interestMinor = (int) $quote['interest_amount_minor'];
+        $accessFeeMinor = (int) $quote['access_fee_minor'];
+        $disbursementFeeMinor = (int) $quote['disbursement_fee_minor'];
+        $feesMinor = (int) $quote['fees_minor'];
+        $feeTreatment = (string) $quote['fee_treatment'];
+        $netDisbursementMinor = (int) $quote['net_disbursement_minor'];
+        $totalRepaymentMinor = (int) $quote['total_repayment_minor'];
+        $totalCostOfCreditMinor = (int) $quote['total_cost_of_credit_minor'];
         $defaultInterestRate = max(0, (float) ($term->default_interest_rate ?? 0));
-        $defaultInterestCapMinor = intdiv($interestMinor, 2);
+        $defaultInterestRules = (array) (($quote['policy']['rules']['default_interest'] ?? []));
+        $defaultInterestCapMinor = null;
+        if (isset($defaultInterestRules['cap_percent_of_initial_interest'])) {
+            $defaultInterestCapMinor = (int) floor(
+                $interestMinor * ((float) $defaultInterestRules['cap_percent_of_initial_interest'] / 100)
+            );
+        }
         $complaintsProcedure = [
             'resolution_target_days' => (int) config('opfin.regulatory.complaint_resolution_days', 30),
             'email' => config('opfin.regulatory.complaints_email'),
@@ -98,8 +88,8 @@ class ProductionCreditOfferService
         return DB::transaction(function () use (
             $application, $actor, $decision, $term, $principalMinor, $interestMinor, $feesMinor,
             $accessFeeMinor, $disbursementFeeMinor, $netDisbursementMinor, $totalRepaymentMinor,
-            $durationDays, $ratePercent, $termRatePercent, $feeTreatment, $expiresInMinutes, $fundingPoolId,
-            $totalCostOfCreditMinor, $defaultInterestRate, $defaultInterestCapMinor, $complaintsProcedure, $regulatedIdentity,
+            $durationDays, $ratePercent, $feeTreatment, $expiresInMinutes, $quote, $fundingPoolId,
+            $totalCostOfCreditMinor, $defaultInterestRate, $defaultInterestCapMinor, $defaultInterestRules, $complaintsProcedure, $regulatedIdentity,
         ) {
             CreditOffer::query()->where('loan_application_id', $application->id)
                 ->where('status', CreditOffer::STATUS_OFFERED)->where('expires_at', '<=', now())
@@ -138,22 +128,24 @@ class ProductionCreditOfferService
                 'fee_treatment' => $feeTreatment,
                 'policy_version' => (string) $decision->policy_version,
                 'pricing_snapshot' => [
-                    'algorithm_version' => 'flat-v1',
+                    'algorithm_version' => $quote['algorithm_version'],
                     'product_term_id' => $term->id,
                     'funding_pool_id' => $fundingPoolId,
                     'configured_rate_percent' => $ratePercent,
                     'configured_interest_cycle' => (string) $term->interest_cycle,
-                    'term_rate_percent' => round($termRatePercent, 6),
                     'access_fee_minor' => $accessFeeMinor,
                     'disbursement_fee_minor' => $disbursementFeeMinor,
                     'fee_treatment' => $feeTreatment,
-                    'interest_formula' => 'principal × configured_rate_percent ÷ cycle_days × duration_days',
-                    'fee_formula' => 'access_fee + disbursement_fee',
+                    'schedule' => $quote['schedule'],
+                    'regulatory_policy' => $quote['policy'],
+                    'simple_annualised_cost_percent' => $quote['simple_annualised_cost_percent'],
+                    'equivalent_apr_percent' => $quote['equivalent_apr_percent'],
+                    'apr_algorithm_version' => $quote['apr_algorithm_version'],
+                    'schedule_algorithm_version' => $quote['schedule_algorithm_version'],
                     'fees_accrue_at' => 'offer acceptance/disbursement according to fee treatment',
                     'default_interest_rate_percent' => $defaultInterestRate,
                     'default_interest_cycle' => (string) ($term->default_interest_cycle ?? 'monthly'),
-                    'umra_default_interest_cap_minor' => $defaultInterestCapMinor,
-                    'umra_npl_cap_enforcement_enabled' => (bool) config('opfin.regulatory.enforce_umra_npl_cap', true),
+                    'default_interest_rules' => $defaultInterestRules,
                 ],
                 'disclosure_snapshot' => [
                     'currency' => (string) config('services.mobile_money.currency', 'UGX'),
@@ -168,7 +160,7 @@ class ProductionCreditOfferService
                     'interest_rate_percent' => $ratePercent,
                     'interest_type' => (string) $term->interest_type,
                     'interest_cycle' => (string) $term->interest_cycle,
-                    'interest_calculation' => 'Flat interest is calculated from principal, the disclosed rate/cycle, and the full term. Exact monetary amounts shown in this offer control.',
+                    'interest_calculation' => 'Interest and instalments are calculated by the canonical credit-economics service under the active effective-dated regulatory pricing policy. Exact monetary amounts shown in this offer control.',
                     'fee_breakdown' => [
                         'access_fee_minor' => $accessFeeMinor,
                         'disbursement_fee_minor' => $disbursementFeeMinor,
@@ -176,13 +168,24 @@ class ProductionCreditOfferService
                         'treatment' => $feeTreatment,
                     ],
                     'total_cost_of_credit_minor' => $totalCostOfCreditMinor,
-                    'first_payment_due_days_after_disbursement' => $this->frequencyDays((string) $term->repayment_frequency),
+                    'first_payment_due_days_after_disbursement' => (int) ($quote['schedule'][0]['due_offset_days'] ?? $durationDays),
                     'final_payment_due_days_after_disbursement' => $durationDays,
+                    'simple_annualised_cost_percent' => $quote['simple_annualised_cost_percent'],
+                    'equivalent_apr_percent' => $quote['equivalent_apr_percent'],
+                    'apr_calculation_method' => $quote['apr_algorithm_version'],
+                    'schedule_calculation_method' => $quote['schedule_algorithm_version'],
+                    'schedule' => $quote['schedule'],
+                    'regulatory_policy' => [
+                        'code' => $quote['policy']['code'],
+                        'version' => $quote['policy']['version'],
+                        'licence_class' => $quote['policy']['licence_class'],
+                        'effective_from' => $quote['policy']['effective_from'],
+                    ],
                     'default_and_penalty_terms' => [
                         'default_interest_rate_percent' => $defaultInterestRate,
                         'default_interest_cycle' => (string) ($term->default_interest_cycle ?? 'monthly'),
                         'default_interest_cap_minor' => $defaultInterestCapMinor,
-                        'cap_basis' => 'Default-interest penalty may not exceed half of the initial interest disclosed at offer.',
+                        'policy_rules' => $defaultInterestRules,
                         'npl_recovery_cap_tracking' => true,
                     ],
                     'complaints_procedure' => $complaintsProcedure,
@@ -301,7 +304,10 @@ class ProductionCreditOfferService
             $failedOffer = CreditOffer::query()->findOrFail($transaction->credit_offer_id);
             $this->fundingPools->release($failedOffer);
             $failedOffer->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
-            $transaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+            $transaction->update([
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
+                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+            ]);
 
             return null;
         }
@@ -319,7 +325,11 @@ class ProductionCreditOfferService
                 }
                 $this->fundingPools->commit($offer);
                 $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $existing, $offer);
-                $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                $lockedTransaction->update([
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                    'accounting_posted_at' => now(),
+                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                ]);
                 DB::afterCommit(function () use ($lockedTransaction, $existing) {
                     $this->receipts->issue(MobileMoneyTransaction::findOrFail($lockedTransaction->id), 'loan_disbursement');
                     $this->creditReporting->queueLoanEvent(Loan::findOrFail($existing->id), 'origination');
@@ -330,7 +340,11 @@ class ProductionCreditOfferService
 
             $application = LoanApplication::query()->findOrFail($offer->loan_application_id);
             $disbursedAt = now();
-            $firstDueDate = $disbursedAt->copy()->addDays($this->frequencyDays($offer->repayment_frequency));
+            $firstDueOffset = (int) ($offer->pricing_snapshot['schedule'][0]['due_offset_days'] ?? 0);
+            if ($firstDueOffset <= 0) {
+                throw new InvalidArgumentException('The accepted offer is missing a valid first-payment due offset.');
+            }
+            $firstDueDate = $disbursedAt->copy()->addDays($firstDueOffset);
             $loan = Loan::withoutEvents(function () use ($application, $offer, $firstDueDate, $disbursedAt) {
                 $loan = new Loan;
                 $loan->forceFill([
@@ -350,7 +364,8 @@ class ProductionCreditOfferService
                     'repayment_start_date' => $firstDueDate->toDateString(),
                     'umra_npl_cap_enforcement_enabled' => (bool) config('opfin.regulatory.enforce_umra_npl_cap', true),
                     'initial_interest_minor' => $offer->interest_amount_minor,
-                    'default_interest_cap_minor' => intdiv((int) $offer->interest_amount_minor, 2),
+                    'default_interest_cap_minor' => null,
+                    'default_interest_policy_snapshot' => $offer->pricing_snapshot['regulatory_policy'] ?? null,
                 ]);
                 $loan->save();
 
@@ -363,7 +378,11 @@ class ProductionCreditOfferService
             $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $loan, $offer);
             $offer->update(['status' => CreditOffer::STATUS_DISBURSED]);
             $application->update(['status' => 'Disbursed', 'disbursed_at' => $disbursedAt]);
-            $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+            $lockedTransaction->update([
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                    'accounting_posted_at' => now(),
+                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                ]);
 
             $this->auditLogger->record('credit.disbursement.fulfilled', null, $loan, [
                 'offer_reference' => $offer->offer_reference,
@@ -393,12 +412,16 @@ class ProductionCreditOfferService
                 $originalReference = 'loan.disbursement:credit-offer:'.$offer->offer_reference;
                 if (DB::table('ledger_transactions')->where('reference', $originalReference)->exists()) {
                     $lockedTransaction->update([
+                        'accounting_status' => MobileMoneyTransaction::ACCOUNTING_EXCEPTION,
                         'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                         'failure_reason' => 'Provider reversal is linked to an original credit ledger posting but no loan record can be found.',
                     ]);
                 } else {
                     $this->fundingPools->release($offer);
-                    $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+                    $lockedTransaction->update([
+                        'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
+                        'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                    ]);
                 }
 
                 return null;
@@ -407,8 +430,13 @@ class ProductionCreditOfferService
             $schedule = CreditRepaymentScheduleItem::query()->where('loan_id', $loan->id)->lockForUpdate()->get();
             $totalDue = (int) $schedule->sum('total_due_minor');
             $totalOutstanding = (int) $schedule->sum('total_outstanding_minor');
-            if ($totalOutstanding !== $totalDue) {
+            $defaultInterestOutstanding = max(
+                0,
+                (int) $loan->default_interest_accrued_minor - (int) $loan->default_interest_paid_minor,
+            );
+            if ($totalOutstanding !== $totalDue || $defaultInterestOutstanding > 0) {
                 $lockedTransaction->update([
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_EXCEPTION,
                     'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
                     'failure_reason' => 'Disbursement reversed after repayment activity; automatic economic reversal is blocked and operations review is required.',
                 ]);
@@ -418,11 +446,13 @@ class ProductionCreditOfferService
                     'mobile_money_transaction_id' => $lockedTransaction->id,
                     'total_due_minor' => $totalDue,
                     'total_outstanding_minor' => $totalOutstanding,
+                    'default_interest_outstanding_minor' => $defaultInterestOutstanding,
                 ]);
 
                 return $loan;
             }
 
+            $this->feeRecognition->reverseForLoan($loan, 'credit_disbursement_reversal');
             $this->loanLedger->reverseCreditOfferDisbursement($lockedTransaction, $loan, $offer);
             $this->fundingPools->reverseCommitted($offer);
             CreditRepaymentScheduleItem::query()->where('loan_id', $loan->id)->update([
@@ -435,7 +465,11 @@ class ProductionCreditOfferService
             ]);
             $loan->update(['status' => 'Reversed']);
             LoanApplication::query()->whereKey($offer->loan_application_id)->update(['status' => 'Disbursement Reversed']);
-            $lockedTransaction->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+            $lockedTransaction->update([
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                    'accounting_posted_at' => now(),
+                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                ]);
 
             $this->auditLogger->record('credit.disbursement.reversed', null, $loan, [
                 'credit_offer_id' => $offer->id,
@@ -453,19 +487,25 @@ class ProductionCreditOfferService
 
     private function createExactSchedule(Loan $loan, CreditOffer $offer, $anchor): void
     {
-        $frequencyDays = $this->frequencyDays($offer->repayment_frequency);
-        $installments = max(1, (int) ceil($offer->duration_days / $frequencyDays));
-        $repayableFeesMinor = $offer->fee_treatment === 'financed' ? $offer->fees_minor : 0;
-        for ($installment = 1; $installment <= $installments; $installment++) {
-            $principal = $this->allocate($offer->principal_amount_minor, $installments, $installment);
-            $interest = $this->allocate($offer->interest_amount_minor, $installments, $installment);
-            $fees = $this->allocate($repayableFeesMinor, $installments, $installment);
-            $dueOffsetDays = min($offer->duration_days, $installment * $frequencyDays);
-            $total = $principal + $interest + $fees;
+        $schedule = (array) ($offer->pricing_snapshot['schedule'] ?? []);
+        if ($schedule === []) {
+            throw new InvalidArgumentException('The accepted production offer is missing its canonical repayment schedule snapshot.');
+        }
+
+        foreach ($schedule as $row) {
+            $principal = (int) ($row['principal_minor'] ?? 0);
+            $interest = (int) ($row['interest_minor'] ?? 0);
+            $fees = (int) ($row['fees_minor'] ?? 0);
+            $total = (int) ($row['total_due_minor'] ?? ($principal + $interest + $fees));
+            $dueOffsetDays = (int) ($row['due_offset_days'] ?? 0);
+            if ($principal < 0 || $interest < 0 || $fees < 0 || $total <= 0 || $dueOffsetDays <= 0) {
+                throw new InvalidArgumentException('Canonical repayment schedule contains invalid monetary or due-date data.');
+            }
+
             CreditRepaymentScheduleItem::create([
                 'loan_id' => $loan->id,
                 'credit_offer_id' => $offer->id,
-                'installment_number' => $installment,
+                'installment_number' => (int) $row['installment_number'],
                 'due_date' => $anchor->copy()->addDays($dueOffsetDays)->toDateString(),
                 'principal_minor' => $principal,
                 'interest_minor' => $interest,
@@ -480,34 +520,4 @@ class ProductionCreditOfferService
         }
     }
 
-    private function allocate(int $total, int $count, int $position): int
-    {
-        if ($total < 0 || $count <= 0 || $position < 1 || $position > $count) {
-            throw new InvalidArgumentException('Invalid production monetary allocation parameters.');
-        }
-        $base = intdiv($total, $count);
-
-        return $position === $count ? $base + ($total % $count) : $base;
-    }
-
-    private function cycleDays(string $cycle): int
-    {
-        return match (strtolower($cycle)) {
-            'daily' => 1,
-            'weekly' => 7,
-            'monthly' => 30,
-            default => throw new InvalidArgumentException("Unsupported production interest cycle: {$cycle}"),
-        };
-    }
-
-    private function frequencyDays(string $frequency): int
-    {
-        return match (strtolower($frequency)) {
-            'daily' => 1,
-            'weekly' => 7,
-            'fortnightly' => 14,
-            'monthly' => 30,
-            default => throw new InvalidArgumentException("Unsupported production repayment frequency: {$frequency}"),
-        };
-    }
 }

@@ -25,6 +25,12 @@ class LedgerTransaction extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::updating(fn () => throw new \LogicException('Ledger transactions are immutable; post an append-only correction instead.'));
+        static::deleting(fn () => throw new \LogicException('Ledger transactions are immutable and cannot be deleted.'));
+    }
+
     public function entries()
     {
         return $this->hasMany(LedgerEntry::class);
