@@ -15,7 +15,7 @@ return [
         'max_debt_service_ratio_percent' => (float) env('OPFIN_MAX_DSR_PERCENT', 35),
         'affordability_formula' => 'estimated_monthly_obligation_minor / verified_monthly_income_minor * 100',
         'legacy_origination_enabled' => (bool) env('OPFIN_ENABLE_LEGACY_LOAN_ORIGINATION', false),
-        'require_funding_pool_assignment' => (bool) env('OPFIN_REQUIRE_FUNDING_POOL_ASSIGNMENT', false),
+        'require_funding_pool_assignment' => (bool) env('OPFIN_REQUIRE_FUNDING_POOL_ASSIGNMENT', true),
         'model_version' => env('OPFIN_CREDIT_MODEL_VERSION', 'composite-v1'),
         'auto_decision_policy_version' => env('OPFIN_AUTO_DECISION_POLICY_VERSION', 'credit-profile-v1'),
         'minimum_limit_coverage_percent' => (float) env('OPFIN_MIN_LIMIT_COVERAGE_PERCENT', 60),
