@@ -48,7 +48,12 @@ grep -q "mobile_money_provider_certified" "$production" || {
     exit 1
 }
 
-grep -q "'cpay'.*production_certified.*true" "$services" || {
+awk '
+    /'\''cpay'\'' => \[/ { in_cpay=1; next }
+    in_cpay && /'\''production_certified'\'' => true/ { found=1; exit }
+    in_cpay && /^[[:space:]]*\],/ { exit }
+    END { exit(found ? 0 : 1) }
+' "$services" || {
     echo "CPay must remain the preferred certified production payment route." >&2
     exit 1
 }
