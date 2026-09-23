@@ -1,6 +1,8 @@
 # OpFin developer start here
 
-Updated: 23 September 2026
+Status: Controlled internal developer guide  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
 Read [CURRENT_STATE.md](CURRENT_STATE.md) first. This guide is the shortest path from checkout to a safe change.
 

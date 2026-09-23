@@ -1,24 +1,32 @@
 # OpFin shared contracts
 
+Status: Controlled external developer reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 This directory is the home for shared API/schema artefacts and compatibility tooling.
 
-## Current authority
+## Runtime authority
 
-The registered Laravel API and its tests remain authoritative for runtime behaviour. Human-readable client contracts live in:
+The registered Laravel API, handlers and automated tests remain authoritative for runtime behaviour.
 
-- `apps/api/docs/api/API_QUICK_REFERENCE.md`
-- `apps/api/docs/api/current-endpoints.md`
-- `apps/api/docs/api/frontend-backend-contract.md`
+Human-readable contracts live in `apps/api/docs/api/API_QUICK_REFERENCE.md`, `apps/api/docs/api/current-endpoints.md` and `apps/api/docs/api/frontend-backend-contract.md`.
 
 Use:
 
 ```bash
-python3 scripts/search-api.py "credit"
+python3 scripts/search-api.py "programme"
 cd apps/api && php artisan route:list --json
 ```
 
 ## Contract direction
 
-Shared OpenAPI/JSON Schema/generated-client artefacts may be added here when they are generated from or mechanically validated against the authoritative API. Do not hand-maintain a second competing specification.
+OpenAPI, JSON Schema or generated-client artefacts may be added here when generated from or mechanically validated against the authoritative API.
 
-Any generated TypeScript/Dart clients must carry provenance/version information and must fail CI when their source contract drifts.
+Do not hand-maintain a second competing specification.
+
+Generated TypeScript/Dart clients must carry source/provenance/version information and fail validation when their source contract drifts.
+
+## Publication rule
+
+Developer-facing schemas and examples must not contain secrets, real customer data or invented production provider values. Run `make docs-check` and `make publication-check` before external distribution.

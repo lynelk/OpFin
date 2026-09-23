@@ -1,5 +1,9 @@
 # OpFin deployment: three application parts
 
+Status: Controlled internal deployment runbook  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 OpFin is one source repository, not one executable application. Deploying its root with automatic language detection fails because the app manifests live under `apps/`.
 
 ## 1. Backend: API, worker, scheduler and PostgreSQL

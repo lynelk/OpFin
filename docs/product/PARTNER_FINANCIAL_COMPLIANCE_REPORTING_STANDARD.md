@@ -1,8 +1,10 @@
 # OpFin Partner Financial, Compliance and Service Reporting Standard
 
-Status: Canonical product and integration contract  
+Status: Controlled external product and integration standard  
 Version: 1.0  
-Effective: 22 September 2026  
+Effective: 23 September 2026  
+Language: English (United Kingdom)
+
 Applies to: OpFin, Stolets integrations, Cito/CPay integrations, employers, CRBs/KYC providers, banks/MNOs, funding partners, insurers, savings/investment partners and future third-party services
 
 ## 1. Purpose

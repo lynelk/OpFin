@@ -1,5 +1,9 @@
 # OpFin
 
+Status: Public repository/product reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 OpFin is the canonical monorepo for the OpFin financial operating platform. One identity can participate in multiple Financial Spaces while the backend keeps identity, permissions, product eligibility, provider orchestration, financial truth, ledger and reconciliation authoritative.
 
 **Current state:** see [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md).

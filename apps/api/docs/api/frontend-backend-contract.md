@@ -1,5 +1,9 @@
 # Frontend–backend contract
 
+Status: Controlled external developer reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 This document defines what mobile/web/WhatsApp/USSD clients may assume about the current OpFin API.
 
 ## 1. One server-authoritative customer state

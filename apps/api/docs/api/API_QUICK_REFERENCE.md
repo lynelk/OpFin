@@ -1,27 +1,21 @@
 # OpFin API quick reference
 
-Updated: 21 September 2026
+Status: Controlled external developer reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
-This is a task-oriented index. Exact registered routes remain authoritative in Laravel.
+This is a task-oriented entry point. For the complete registered surface, use `api/current-endpoints.md` plus `php artisan route:list --json`.
 
-## Search the API
+## Discovery
 
 ```bash
 python3 scripts/search-api.py "credit"
+python3 scripts/search-api.py "programme"
+python3 scripts/search-api.py "financial-spaces"
 python3 scripts/search-api.py "umra"
-python3 scripts/search-api.py "receipt"
 ```
 
-Or:
-
-```bash
-cd apps/api
-php artisan route:list --path=api/credit
-php artisan route:list --path=api/admin/umra
-php artisan route:list --json
-```
-
-## Account and identity
+## Identity and account
 
 | Task | Method / endpoint |
 | --- | --- |
@@ -31,83 +25,89 @@ php artisan route:list --json
 | Login | `POST /api/login` |
 | Reset PIN | `POST /api/reset-password` |
 | Profile | `GET /api/profile` |
+| Delete account | `DELETE /api/account` |
 | KYC status | `GET /api/kyc/status` |
 | Submit KYC | `POST /api/kyc/cases` |
-
-**KYC provider contract:** Cito is primary for provider-neutral NIN and phone-ownership checks when configured. ID-front/back/selfie biometric evidence remains on the separately configured evidence-capable provider until Cito exposes and certifies that binary-evidence contract. Ambiguous Cito failures remain pending; direct fallback requires an explicit route switch after reconciliation.
 | Consents | `GET/POST /api/consents` |
 
-## Credit profile and borrowing
+Cito is the preferred NIN/phone-ownership route where configured. Biometric/document evidence uses the configured evidence-capable provider until an equivalent certified contract exists. Ambiguous primary-provider failure remains pending/error until reconciled; direct fallback is explicit.
+
+## Financial Spaces
+
+| Task | Method / endpoint |
+| --- | --- |
+| List authorised Spaces | `GET /api/financial-spaces` |
+| Create Space | `POST /api/financial-spaces` |
+| Accept invitation | `POST /api/financial-spaces/invitations/accept` |
+| Members | `GET /api/financial-spaces/{space}/members` |
+| Invite member | `POST /api/financial-spaces/{space}/invitations` |
+| Financial position | `GET /api/financial-spaces/{space}/financial-life` |
+| Assets | `GET/POST /api/financial-spaces/{space}/assets` |
+| Obligations/receivables | `GET/POST /api/financial-spaces/{space}/obligations` |
+| Institutional workspace | `GET /api/financial-spaces/{space}/workspace` |
+| Organisation onboarding | `PUT /api/financial-spaces/{space}/organisation-onboarding` |
+| Enable employer capability | `POST /api/financial-spaces/{space}/employer/enable` |
+
+Membership, role, entitlement and financial-product eligibility are separate gates.
+
+## Responsible credit
 
 | Task | Method / endpoint |
 | --- | --- |
 | Credit profile | `GET /api/credit/profile` |
 | Refresh profile | `POST /api/credit/profile/refresh` |
 | Eligible options | `GET /api/credit/options` |
-| Submit application | `POST /api/credit/applications` |
-| List applications | `GET /api/credit/applications` |
+| Applications | `GET/POST /api/credit/applications` |
 | Offer detail | `GET /api/credit/offers/{offer}` |
 | Accept offer | `POST /api/credit/offers/{offer}/accept` |
 | Repay | `POST /api/loans/{loan}/repay` |
-
-Offer acceptance requires exact disclosure acceptance and explicit credit-information reporting consent.
-
-## Phones, wallets and receipts
-
-| Task | Method / endpoint |
-| --- | --- |
-| Phone numbers | `GET /api/phone-numbers` |
-| Add second phone | `POST /api/phone-numbers/secondary` |
-| Wallets | `GET/POST /api/wallets` |
-| Default wallet | `PATCH /api/wallets/{wallet}/default` |
-| Receipt history | `GET /api/receipts` |
+| Receipts | `GET /api/receipts` |
 | Receipt detail | `GET /api/receipts/{receipt}` |
 
-## Guarantors
+A displayed limit is not guaranteed approval. Offer acceptance is bound to disclosures and required consent. Pending payout/collection is not financial finality.
+
+## Inclusive finance and programmes
+
+Key customer routes include:
+
+- `GET/PATCH /api/inclusive-finance/profile`
+- `GET /api/inclusive-finance/capability`
+- `GET /api/inclusive-finance/reputation`
+- `GET /api/inclusive-finance/programmes`
+- `POST /api/inclusive-finance/programmes/{programme}/enrol`
+- `DELETE /api/inclusive-finance/programmes/{programme}/enrol`
+- `GET /api/inclusive-finance/programme-check-ins`
+- `POST /api/inclusive-finance/programme-check-ins/{instrument}/responses`
+- `GET/POST /api/inclusive-finance/support-instruments`
+
+Programme measurement, financial-health outcomes and protected attributes remain non-credit by default.
+
+## Programme and provider operations
+
+Programme configuration, indicators, instruments/questions, translations, follow-up operations, partner invitations/access, privacy-suppressed exports, commercial attribution/costs and governed provider-adapter ingestion are role-gated operator surfaces.
+
+Use:
+
+```bash
+python3 scripts/search-api.py "inclusive-finance"
+python3 scripts/search-api.py "commercial"
+python3 scripts/search-api.py "provider-adapters"
+```
+
+This avoids maintaining a second exhaustive route catalogue here.
+
+## Governance and regulatory evidence
 
 | Task | Method / endpoint |
 | --- | --- |
-| List application guarantors | `GET /api/credit/applications/{application}/guarantors` |
-| Add guarantor | `POST /api/credit/applications/{application}/guarantors` |
-| Independent confirm/reject | `POST /api/guarantors/confirm` |
-
-A maximum of two guarantor contacts is enforced.
-
-## Support and accessibility
-
-| Task | Method / endpoint |
-| --- | --- |
-| Support cases | `GET/POST /api/support-cases` |
-| Accessibility preferences | `PATCH /api/accessibility-preferences` |
-| Account deletion | `DELETE /api/account` |
-
-Complaints carry the configured regulatory resolution deadline.
-
-## Admin UMRA controls
-
-| Task | Method / endpoint |
-| --- | --- |
-| Credit reporting register | `GET /api/admin/umra/credit-reporting` |
-| Submit eligible credit reports | `POST /api/admin/umra/credit-reporting/submit` |
-| Evaluate NPL | `POST /api/admin/umra/loans/{loan}/evaluate-npl` |
-| Accrue default interest | `POST /api/admin/umra/loans/{loan}/default-interest` |
-| Toggle NPL cap enforcement | `PATCH /api/admin/umra/loans/{loan}/npl-enforcement` |
-| Term-change register | `GET /api/admin/umra/term-changes` |
-| Request term change | `POST /api/admin/umra/product-terms/{term}/changes` |
-| Approve term change | `POST /api/admin/umra/term-changes/{change}/approve` |
-| Apply term change | `POST /api/admin/umra/term-changes/{change}/apply` |
-
-## Governance and regulator evidence
-
-| Task | Method / endpoint |
-| --- | --- |
-| Governance overview | `GET /api/admin/governance/overview` |
-| Regulatory reports | `GET /api/admin/governance/regulatory-reports` |
+| Governance dashboard | `GET /api/admin/governance/dashboard` |
+| Regulatory report register | `GET /api/admin/governance/regulatory-reports` |
 | Report detail | `GET /api/admin/governance/regulatory-reports/{report}` |
-| Generate report | `POST /api/admin/governance/regulatory-reports/generate` |
-| Approve report | governed maker-checker endpoint in governance routes |
+| Generate report | `POST /api/admin/governance/regulatory-reports` |
+| Approve report | `POST /api/admin/governance/regulatory-reports/{report}/approve` |
+| Run integrity checks | `POST /api/admin/governance/integrity-runs` |
 
-Current UMRA report profiles include digital credit supervision, credit-information exchange, books/records, NPL/default-interest, receipts, term/guarantor controls and consumer complaints.
+UMRA-specific controls remain under `/api/admin/umra/...` and are documented in `current-endpoints.md` and `docs/UMRA_DIGITAL_LENDING_CONTROLS.md`.
 
 ## Provider callbacks
 
@@ -115,125 +115,9 @@ Current UMRA report profiles include digital credit supervision, credit-informat
 | --- | --- |
 | CPay callback | `POST /api/webhooks/cpay` |
 | WhatsApp verification | `GET /api/webhooks/whatsapp` |
-| WhatsApp webhook | `POST /api/webhooks/whatsapp` |
+| WhatsApp callback | `POST /api/webhooks/whatsapp` |
 | USSD callback | `POST /api/ussd` |
 
-Read `current-endpoints.md` for request/response notes and `frontend-backend-contract.md` for client rules.
+## Client rule
 
-
-## Financial Spaces
-
-| Task | Method / endpoint |
-| --- | --- |
-| My authorised Spaces | `GET /api/financial-spaces` |
-| Create Space | `POST /api/financial-spaces` |
-| Accept invitation | `POST /api/financial-spaces/invitations/accept` |
-| Members | `GET /api/financial-spaces/{space}/members` |
-| Invite member | `POST /api/financial-spaces/{space}/invitations` |
-| Financial position | `GET /api/financial-spaces/{space}/financial-life` |
-| Assets | `GET/POST /api/financial-spaces/{space}/assets` |
-| Debt / receivables | `GET/POST /api/financial-spaces/{space}/obligations` |
-| Institutional workspace | `GET /api/financial-spaces/{space}/workspace` |
-| Organisation onboarding | `PUT /api/financial-spaces/{space}/organisation-onboarding` |
-| Enable Employer capability | `POST /api/financial-spaces/{space}/employer/enable` |
-
-## Marketplace and commercial platform
-
-| Task | Method / endpoint |
-| --- | --- |
-| Partner products | `GET /api/marketplace/products` |
-| OpFin plans | `GET /api/plans` |
-| Subscribe a Space | `POST /api/financial-spaces/{space}/subscription` |
-| Record revenue event | `POST /api/admin/revenue-events` |
-| Reconcile revenue/provider settlement | `POST /api/admin/revenue-events/{event}/reconcile` |
-| Record/enrich service economics | `POST /api/admin/service-economics-events` |
-| Service economics report | `GET /api/admin/reports/service-economics` |
-| Capital & loan-book report | `GET /api/admin/reports/capital-loan-book` |
-| Insurance report | `GET /api/admin/reports/insurance` |
-| Savings & investment report | `GET /api/admin/reports/savings-investments` |
-| Positive employment behaviour report | `GET /api/admin/reports/employment-positive-behaviour` |
-| Financial account behaviour report | `GET /api/admin/reports/financial-account-behaviour` |
-
-**Design contract:** one person may belong to many Spaces; Employer is a Business capability; permission, entitlement and eligibility are separate; Personal Space data is not exposed to employers/groups merely because a relationship exists. Cito is the preferred third-party integration gateway but OpFin remains independently operable. Verified positive employer behaviour may create a capped benefit; missing or negative employer-behaviour data is neutral.
-
-## Inclusive finance and programme delivery
-
-| Task | Method / endpoint |
-| --- | --- |
-| Inclusion/profile consent | GET/PATCH /api/inclusive-finance/profile |
-| Capability guidance | GET /api/inclusive-finance/capability |
-| Capability evidence | POST /api/inclusive-finance/capability/events |
-| Financial reputation pathway | GET /api/inclusive-finance/reputation |
-| Alternative-data signals | GET/POST /api/inclusive-finance/signals |
-| Open programmes | GET /api/inclusive-finance/programmes |
-| Programme enrolment | POST /api/inclusive-finance/programmes/{programme}/enrol |
-| Leave programme | DELETE /api/inclusive-finance/programmes/{programme}/enrol |
-| Alternative collateral/support | GET/POST /api/inclusive-finance/support-instruments |
-| Fair-treatment explanation | GET /api/inclusive-finance/fair-treatment |
-| Admin programme register | GET /api/admin/inclusive-finance/programmes |
-| Admin impact summary | GET /api/admin/inclusive-finance/impact |
-| Admin programme configuration | POST/PATCH /api/admin/inclusive-finance/programmes[/{programme}] |
-| Admin provider-signal governance | POST /api/admin/inclusive-finance/signals; PATCH /api/admin/inclusive-finance/signals/{signal}/verify |
-| Admin support verification | PATCH /api/admin/inclusive-finance/support-instruments/{instrument}/verify |
-| Admin fair-treatment assessment | POST /api/admin/inclusive-finance/fair-treatment/{application}/assess |
-
-Voluntary inclusion fields are for service adaptation/programme measurement and do not feed credit risk. Programme participation, provider-signal verification and alternative collateral evidence do not automatically change a credit decision. See `docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md`.
-
-## Impact & outcomes quick reference
-
-### Customer
-
-- `GET /api/inclusive-finance/impact/financial-health`
-- `POST /api/inclusive-finance/impact/financial-health`
-- `POST /api/inclusive-finance/impact/livelihood`
-- `POST /api/inclusive-finance/impact/empowerment`
-- `GET /api/inclusive-finance/impact/community-finance`
-- `POST /api/inclusive-finance/impact/community-finance`
-
-### Platform operations
-
-- `GET|POST /api/admin/inclusive-finance/indicators`
-- `PATCH /api/admin/inclusive-finance/indicators/{indicator}`
-- `GET /api/admin/inclusive-finance/programmes/{programme}/framework`
-- `PUT /api/admin/inclusive-finance/programmes/{programme}/theory-of-change`
-- `POST /api/admin/inclusive-finance/programmes/{programme}/indicators`
-- `POST /api/admin/inclusive-finance/programmes/{programme}/observations`
-- `GET /api/admin/inclusive-finance/programmes/{programme}/outcomes`
-- `POST /api/admin/inclusive-finance/partner-access`
-
-### Programme partner
-
-- `GET /api/partner/inclusive-finance/programmes`
-- `GET /api/partner/inclusive-finance/programmes/{programme}/impact`
-
-Impact and programme-measurement data remains non-credit-eligible. Partner reporting is aggregate-only and programme-scoped.
-
-## Programme completion quick reference
-
-Customer:
-- `GET /api/inclusive-finance/programme-check-ins`
-- `POST /api/inclusive-finance/programme-check-ins/{instrument}/responses`
-- `GET|POST /api/inclusive-finance/impact/financial-health/enrichment`
-
-Programme operations:
-- `GET|POST /api/admin/inclusive-finance/instruments`
-- `POST /api/admin/inclusive-finance/instruments/{instrument}/questions`
-- `PUT /api/admin/inclusive-finance/questions/{question}/translations`
-- `GET /api/admin/inclusive-finance/operations`
-- `GET /api/admin/inclusive-finance/templates`
-- `POST /api/admin/inclusive-finance/programmes/{programme}/templates`
-- `GET /api/admin/inclusive-finance/programmes/{programme}/partner-users`
-- `POST /api/admin/inclusive-finance/partner-invitations`
-- `GET /api/admin/inclusive-finance/programmes/{programme}/exports/{csv|xlsx|zip}`
-
-Commercial:
-- `POST /api/admin/commercial/customers/{user}/attribution`
-- `POST /api/admin/commercial/costs`
-- `GET /api/admin/commercial/dashboard`
-- `GET|POST /api/admin/commercial/graduations...`
-
-Provider evidence:
-- `GET|POST /api/admin/inclusive-finance/provider-adapters`
-- `POST /api/admin/inclusive-finance/provider-adapters/{adapter}/ingestions`
-
-Programme responses, enriched health snapshots and provider programme evidence do not automatically become credit inputs.
+Use `api/frontend-backend-contract.md` for client behaviour, error/finality handling and presentation rules. Do not infer client behaviour from route names alone.

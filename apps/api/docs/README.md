@@ -1,79 +1,76 @@
-# OpFin API Documentation
+# OpFin API documentation
 
-**Purpose:** current developer and operations documentation for the OpFin API  
-**Last regenerated:** 18 September 2026  
-**Scope:** `apps/api` plus the customer-facing contracts consumed by Flutter, web, WhatsApp and USSD
+Status: Controlled external developer reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)  
+Scope: `apps/api` and client-facing contracts used by App, Web, WhatsApp, USSD and authorised integrations
+
+## Purpose
+
+This is the publication-ready index for OpFin's API documentation. It is written for developers, integrators, testers and operations teams.
+
+Use the documentation to understand intent, permissions, state transitions and failure handling. Use the registered Laravel route table and automated tests to confirm exact runtime registration.
 
 ## Start here
 
-### Developers
+### New developer or integrator
 
-Read in this order:
+1. `../../../docs/CURRENT_STATE.md`
+2. `../../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`
+3. `api/API_QUICK_REFERENCE.md`
+4. `api/current-endpoints.md`
+5. `api/frontend-backend-contract.md`
+6. `architecture/system-overview.md`
+7. `architecture/api-design.md`
+8. `architecture/security-and-compliance.md`
 
-1. `../../README.md` – repository and verification commands
-2. `../../../docs/LAUNCH_CUSTOMER_JOURNEY.md` – launch product contract
-3. `architecture/system-overview.md`
-4. `architecture/api-design.md`
-5. `architecture/security-and-compliance.md`
-6. `architecture/testing-strategy.md`
-7. `api/current-endpoints.md`
-8. `api/frontend-backend-contract.md`
-9. `api/API_QUICK_REFERENCE.md`
-10. `../../../docs/UMRA_DIGITAL_LENDING_CONTROLS.md`
+### Operations, compliance or UAT
 
-### Testers and operations
+Use `operations/operational-runbook.md`, `operations/production-readiness-checklist.md`, `uat/customer-uat-scenarios.md`, `../../../docs/manuals/OPFIN_UAT_MANUAL.md`, `../../../docs/UMRA_DIGITAL_LENDING_CONTROLS.md` and `../../../SECURITY.md`.
 
-Use:
+## Product/API baseline
 
-- `uat/customer-uat-scenarios.md`
-- `operations/production-readiness-checklist.md`
-- `../../../SECURITY.md`
+OpFin is a financial operating platform with server-authoritative state across identity, Financial Spaces, financial management, responsible credit, financial resilience, inclusive-finance programmes, partner/provider orchestration, money movement, ledger/reconciliation and commercial/service-economics evidence.
 
-## Current launch contract
+Canonical new-customer App onboarding is:
 
-The customer account and lending path is:
+`Phone → OTP → names → six-digit PIN → Home → progressive verification → eligible financial journey`
 
-`Phone → OTP → names → 6-digit PIN → identity → credit profile → limit → request → offer → verified-wallet disbursement → repayment`.
+The Web password-compatible sign-in route is retained for existing/authorised access and does not redefine new-customer onboarding.
 
-The same API profile state drives mobile, WhatsApp and USSD. A second phone is optional. KYC requires NIN, ID front/back and a photo holding the ID. External source absence is recorded honestly rather than replaced with synthetic data.
+## API authority
 
-Accessibility is part of the contract: simple language, screen-reader semantics, text scaling, reduced motion and assisted verification must remain compatible with the same security/KYC controls.
-
-## Documentation rule
-
-Documentation changes with the code. If an endpoint, financial state, authentication step, scoring source, customer label or release control changes, update the relevant document in the same pull request. Stale financial documentation is a defect.
-
-
-## Search and API discovery
-
-From repository root:
+Exact registered routes:
 
 ```bash
-python3 scripts/search-docs.py "credit reporting" --api
-python3 scripts/search-api.py "credit"
-python3 scripts/search-api.py "umra"
-```
-
-From `apps/api`:
-
-```bash
+cd apps/api
 php artisan route:list
-php artisan route:list --path=api/credit
-php artisan route:list --path=api/admin/umra
 php artisan route:list --json
 ```
 
-The Laravel route table is authoritative for registration; the Markdown docs explain purpose, state and safe client usage.
+Search from repository root:
 
-## Current UMRA control areas
+```bash
+python3 scripts/search-api.py "financial-spaces"
+python3 scripts/search-api.py "programme"
+python3 scripts/search-api.py "umra"
+python3 scripts/search-docs.py "provider finality" --api
+```
 
-The API now includes governed contracts for:
+A route entry confirms registration. It does not by itself document permissions, request validation, idempotency, provider finality or business semantics.
 
-- positive/negative credit-information exchange;
-- separate electronic reporting consent;
-- complaint procedure and regulatory due/SLA evidence;
-- NPL/default-interest tracking and configurable enforcement;
-- transaction e-receipts;
-- guarantor confirmation controls;
-- governed term/rate changes;
-- regulator books/records and evidence packs.
+## Cross-cutting rules
+
+- clients do not calculate their own credit limits, pricing, repayment allocation or financial finality;
+- provider acknowledgement is not completed money movement;
+- ambiguous primary-provider failure does not silently invoke a direct provider;
+- programme/protected attributes remain outside underwriting;
+- Financial Space membership does not expose a member's Personal Space;
+- unknown commercial/provider values remain unknown rather than becoming zero;
+- provider, licence and certification activation must not be inferred from source code.
+
+## Documentation maintenance
+
+Every material API/runtime change updates the affected current API documentation in the same pull request. Historical audit/demo documents remain evidence of earlier states.
+
+Run `make docs-check` and `make publication-check` before publication or external distribution.

@@ -1,5 +1,9 @@
 # Current API endpoints
 
+Status: Controlled external developer reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 Updated against the registered canonical platform routes on **23 September 2026**. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:

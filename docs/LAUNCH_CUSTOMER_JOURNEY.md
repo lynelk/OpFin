@@ -1,6 +1,8 @@
 # OpFin launch customer journey
 
-Updated: 21 September 2026
+Status: Controlled external specialist credit-journey reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
 This document is the current product contract for the launch borrower journey across the mobile app, WhatsApp and USSD. It favours comprehension over feature density. The customer should see a simple next step; the platform keeps scoring, provider orchestration, compliance and accounting complexity behind the interface.
 

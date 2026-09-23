@@ -13,6 +13,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  publication-readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=2 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
+            git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
+          fi
+      - name: Verify documentation drift
+        run: python3 scripts/verify-documentation-drift.py
+      - name: Verify publication readiness
+        run: python3 scripts/verify-publication-readiness.py
+
   layout:
     runs-on: ubuntu-latest
     timeout-minutes: 5

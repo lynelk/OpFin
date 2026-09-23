@@ -1,199 +1,91 @@
 # OpFin training and user-guide foundation
 
-Updated: 21 September 2026
+Status: Controlled internal source for publication materials  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
-This document defines the reusable source material for staff training, customer guides, FAQs and onboarding content. It is not a script that must be copied word-for-word. Training material should use plain British English and preserve the product/control meaning.
+This document is the canonical reusable source for customer help, staff training, FAQs, onboarding scripts and facilitated learning. Published customer material should use plain language and the labels visible in the current product.
 
 ## Training principles
 
-- Explain one task at a time.
-- Use familiar words before technical terms.
-- Show the customer what happens next.
-- Never teach staff to ask for a customer's PIN or OTP.
-- Treat accessibility as part of the normal service, not a separate product.
-- Explain pending versus completed money movement clearly.
-- Use the same labels the live application uses.
-- Do not promise approval, a particular limit or instant provider success.
+- teach one task at a time;
+- use familiar words before technical terms;
+- distinguish recorded facts, estimates and unavailable information;
+- never ask for a customer's PIN or OTP;
+- treat accessibility as normal service design;
+- explain pending versus completed money movement;
+- never promise approval, a particular limit, provider success or regulatory activation;
+- explain that programme participation is separate from credit decisioning;
+- use synthetic/training records for demonstrations.
 
-## Customer essentials
+## Core product story
 
-### Create an account
+OpFin helps people understand, manage, plan and improve their financial position.
 
-1. Enter phone number.
-2. Confirm the OTP.
-3. Enter first name, optional other name and last name.
-4. Create a six-digit PIN.
-5. Enter Home.
+A single identity may participate in multiple Financial Spaces such as Personal, Household, Savings Group and authorised organisation contexts. Membership in another Space does not expose the person's private Personal Space.
 
-A customer should not be told to create a long password for the current mobile journey.
+## Create an account
 
-### Verify identity
+Canonical new-customer App journey:
 
-Customer provides:
+1. enter phone number;
+2. confirm OTP;
+3. enter first name, optional other name and last name;
+4. create a six-digit PIN;
+5. enter Home.
 
-- NIN;
-- National ID front;
-- National ID back;
-- photo holding the National ID.
+The Web password-compatible sign-in route is for existing/authorised access and should not be taught as the preferred new-customer registration path.
 
-A customer who cannot complete the normal camera step because of disability/access need can request assisted verification. Assistance does not mean sharing PIN/OTP or lowering identity controls.
+## Progressive verification
 
-### Understand the credit profile
+Additional identity or institutional verification is requested when the selected activity requires it. Never coach users to send identity evidence through an unauthorised channel.
 
-Explain:
+## Financial Spaces and everyday money
 
-- **OpFin Score** — the customer-friendly composite score;
-- **Available loan limit** — maximum currently available under the profile, not a guarantee of approval;
-- **Amount due** — money currently due on an active loan;
-- **Score details** — CRB/mobile/approved partner/internal components where available.
+Teach users to confirm which Space they are in before recording or approving an action.
 
-Do not explain internal probability-of-default telemetry as if it were a customer score.
+For Individuals and Savings Groups, normal everyday journeys should remain complete in the App. Web adds deeper analysis and institutional productivity.
 
-### Apply for a loan
+Teach money/accounts, money in/out, budgets, upcoming commitments, assets, debts/payables, receivables, goals and financial-health guidance. Safe-to-spend and health guidance depend on recorded information and are not guarantees.
 
-The application shows:
+## Responsible credit
 
-- available limit;
-- amount due;
-- amount requested;
-- eligible repayment period;
-- purpose.
+Explain the current credit profile/score where available, available loan limit as a maximum current exposure signal rather than guaranteed approval, amount due/next due date, affordability/eligibility, formal offer disclosures, verified-wallet payout/repayment, pending versus final provider state, and receipts after confirmed finality.
 
-The formal offer then shows the exact money/cost terms before acceptance.
+Never teach internal probability-of-default telemetry as a customer score.
 
-### Review an offer
+## Savings, investment and protection
 
-Train customers/staff to check:
+Only train on services genuinely activated in the environment. Explain the provider, eligibility, suitability, pricing and custody/settlement boundaries relevant to the service. Do not present source-code readiness as provider availability.
 
-- principal;
-- amount received;
-- interest amount/rate/method;
-- fees and when they apply;
-- total cost of credit;
-- total repayment;
-- repayment dates/frequency;
-- default-interest/penalty terms;
-- complaints procedure;
-- regulated provider identity;
-- credit-information reporting consent.
+## Financial resilience and programmes
 
-### Payments and receipts
+Teach financial-health status and financial-reputation stage as guidance, not substitute credit scores.
 
-A payment request is not the same as a completed payment.
+Programme measurement is voluntary and separate from underwriting. Teach consent, programme eligibility as a programme result rather than a credit decision, due check-ins, reviewed translations with explicit English fallback, voluntary exit, aggregate partner reporting, protected/programme attributes remaining outside underwriting, and the distinction between measured outcomes and proven causality.
 
-After provider-confirmed completion, OpFin creates an e-receipt and may send an SMS acknowledgement. Customers can view receipts under Activity.
+## Alternative credit-support evidence
 
-### Complaints
+Explain the lifecycle:
 
-A complaint is recorded as a support case with a regulatory resolution target. Staff should:
+**submitted → independently verified/rejected → recognised by the applicable product policy**
 
-1. give the case/reference;
-2. explain the expected next step;
-3. record first response and meaningful notes;
-4. monitor the regulatory due date;
-5. escalate before the deadline when resolution needs specialist review.
+Evidence submission or verification alone does not approve credit.
 
-### Guarantors
+## Channels
 
-Where a product requires guarantors:
+App, Web, verified WhatsApp, USSD and authorised assisted capture use server-authoritative backend state. High-impact financial commitments require the appropriate authenticated/step-up path. PINs and OTPs are not requested in support conversations.
 
-- borrower manually enters no more than two contacts;
-- OpFin does not scrape contacts;
-- each guarantor independently confirms/rejects;
-- a borrower should not collect the guarantor's confirmation code.
+## Accessibility and assisted use
 
-## Staff modules
+Teach supported large-text, simple-language, reduced-motion and high-contrast preferences. Physical TalkBack/VoiceOver and representative assisted-verification journeys remain release/UAT evidence, not assumptions.
 
-Recommended training modules:
+## Publication rule
 
-1. OpFin product overview and customer journey.
-2. Identity/KYC and accessible assistance.
-3. Credit profile, affordability and responsible explanations.
-4. Formal offer/disclosure interpretation.
-5. Wallets, disbursement, repayments and receipts.
-6. Complaints and support SLA.
-7. Credit-information reporting and customer consent.
-8. Guarantor handling.
-9. NPL/default-interest and collections boundaries.
-10. Admin compliance centre and UMRA evidence packs.
-11. Security, fraud, PIN/OTP protection and incident escalation.
+Before turning this foundation into a customer guide, FAQ, leaflet or training pack:
 
-## User-guide source hierarchy
-
-When producing a guide, use:
-
-1. current application labels;
-2. `docs/LAUNCH_CUSTOMER_JOURNEY.md`;
-3. `docs/UMRA_DIGITAL_LENDING_CONTROLS.md`;
-4. `apps/api/docs/api/current-endpoints.md`;
-5. relevant operational/UAT documentation.
-
-Do not use dated audit/demo/checkpoint documents as current instructions.
-
-
-## Canonical whole-product training baseline — 20 September 2026
-
-The four maintained manuals under `docs/manuals/` now supersede this file as the primary task-level guidance: `OPFIN_USER_MANUAL.md`, `OPFIN_TRAINING_MANUAL.md`, `OPFIN_OPERATIONAL_MANUAL.md` and `OPFIN_UAT_MANUAL.md`. This file remains a reusable foundation for credit/regulatory teaching.
-
-Training must now introduce **one identity, many Financial Spaces** before product-specific services. A learner should understand My Money/Personal Space, Savings Group and authorised organisation contexts; that membership does not expose Personal Space data; and that additional verification appears progressively when the activity requires it. Individuals and Savings Groups should be trained to complete normal journeys in the App without depending on Web.
-
-Whole-product modules should cover everyday money, budgeting/goals, assets, debt/receivables, net position/safe-to-spend, savings groups, partner products and support before or alongside the existing responsible-credit modules below.
-
-
-## Inclusive-finance and resilience training — 21 September 2026
-
-Training must now cover **Build financial resilience** as a normal OpFin journey.
-
-Customers should understand:
-
-- financial reputation is a progress pathway based on verified identity and actual financial behaviour; it is not a second credit score;
-- capability guidance is practical education and does not override affordability or product eligibility;
-- programme-measurement participation is optional;
-- voluntary inclusion details can be updated or withdrawn and are kept outside credit-risk decisioning;
-- some programmes may have participation criteria; missing voluntary information is not silently inferred;
-- alternative credit-support evidence such as salary undertakings, guarantees, receivables or warehouse receipts must be independently verified and recognised by the product policy before it can affect a financial product;
-- a verified support instrument is not the same thing as an approved loan.
-
-Staff must not tell customers that gender, disability status, refugee/displacement status or other programme-measurement attributes improve a credit score or guarantee approval.
-
-Accessibility training should demonstrate large text, simple wording, reduced motion, high contrast and device screen-reader use. Physical-device UAT remains required before claiming support for a specific assistive technology or device.
-
-## Impact and programme measurement
-
-### Customer guidance
-
-Financial-health check-ins are optional personal-finance tools. Explain the status using the displayed reasons and never describe it as a credit score, approval indicator or loan-limit signal.
-
-Where a check-in is linked to an inclusive-finance programme:
-
-1. confirm programme measurement consent is active;
-2. confirm the customer is actively enrolled;
-3. explain what will be measured and why;
-4. capture only the information required for the configured programme;
-5. remind the customer that programme measurement does not automatically change credit eligibility, pricing or limits.
-
-Livelihood, dignified-work, agency/empowerment and community-finance questions must not be inserted into the standard borrowing journey merely because the platform can store them.
-
-### Operator guidance
-
-Programme operators configure:
-
-- theory of change;
-- indicator registry entries;
-- programme indicator assignments and targets;
-- authorised observations;
-- partner reporting access.
-
-Use programme-specific language as configuration. Do not hard-code external partner terminology into OpFin's core credit or personal-finance domain.
-
-### Programme-partner guidance
-
-Dedicated programme-partner users receive aggregate reporting only. They may review programme delivery, outcome coverage and configured indicators for programmes explicitly assigned to them. Small participant cohorts are suppressed and individual customer records are not exposed.
-
-## Programme delivery and commercial completion training
-
-Customer guidance now includes due programme check-ins across App, Web, verified WhatsApp and USSD, with assisted capture available where authorised. Programme questions come from one configurable instrument registry and should never be re-authored as channel-specific policy.
-
-Staff training must cover reviewed translations/English fallback, follow-up scheduling, consent exceptions, partner-user provisioning, aggregate exports, commercial cost/acquisition evidence and provider-adapter gates.
-
-The commercial dashboard is management evidence, not a customer scoring surface. The programme-to-commercial graduation label is likewise analytics-only.
+1. confirm current application labels;
+2. confirm which providers/features are activated;
+3. remove internal-only implementation detail;
+4. run `make publication-check`;
+5. obtain required legal/compliance/brand approval for the intended audience.

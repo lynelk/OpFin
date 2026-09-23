@@ -1,6 +1,8 @@
 # OpFin web application
 
-Updated: 23 September 2026
+Status: Controlled external developer/product reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
 The Next.js application provides the public marketing site, customer Web access, institutional Workspaces and authorised operational/admin surfaces. It consumes `apps/api`; it does not own authoritative credit calculations, balances, financial finality, ledger state, provider routing or regulatory truth.
 

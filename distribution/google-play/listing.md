@@ -1,6 +1,8 @@
-# Store listing — English (Uganda)
+# Google Play store listing — English (Uganda)
 
-Updated: 18 September 2026
+Status: Public copy pending final contact/URL verification  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
 ## App name
 
@@ -8,59 +10,64 @@ OpFin
 
 ## Short description
 
-See your loan limit, review clear costs, borrow responsibly and track repayments.
+Understand your money, manage credit and build financial resilience with OpFin.
 
 ## Full description
 
-OpFin gives eligible customers a simple way to understand their borrowing position and manage responsible credit.
+OpFin helps you understand, manage, plan and improve your financial position from one secure financial platform.
 
-With OpFin you can:
+Depending on the services available to you, OpFin can help you:
 
-- verify your account securely with your phone;
-- complete identity verification using your National ID;
-- see your current OpFin Score and available loan limit when your profile is ready;
-- view any amount due and next repayment information;
-- request a loan within your available limit;
-- review the amount you receive, interest, fees, equivalent APR where applicable, repayment period and total repayment before accepting an offer;
-- choose a verified mobile-money wallet for payout and repayment;
-- track loan requests, offers and repayments;
-- view transaction receipts after completed disbursements or repayments;
-- understand how interest, fees and default terms are calculated before accepting a loan; and
+- register securely with your phone;
+- complete identity verification when a regulated service requires it;
+- understand money you have, money you owe, amounts owed to you and upcoming commitments;
+- build financial resilience using clear, practical guidance;
+- view your current credit position and available loan limit when eligible;
+- request responsible credit within the limits shown to you;
+- review the amount received, interest, fees, equivalent APR where applicable, repayment period and total repayment before accepting an offer;
+- use a verified mobile-money wallet for supported payout and repayment journeys;
+- track loan requests, offers, repayments and confirmed transaction receipts;
+- participate voluntarily in eligible financial-inclusion programmes without turning programme demographics into hidden credit inputs; and
 - access support, privacy, accessibility and account controls.
 
-Credit is subject to identity verification, explicit consent, eligibility, affordability assessment, provider/lender rules and applicable law. A displayed credit limit is not a guarantee that every loan request will be approved. Submitting a request does not itself disburse money.
+Not every service is available to every customer. Financial products may depend on identity verification, consent, eligibility, affordability, suitability, provider availability, partner rules and applicable law.
 
-Personal-loan terms made available through the Google Play version require more than 60 days for full repayment. OpFin prefers eligible 90-day-or-longer mobile terms where available.
+A displayed credit limit is not a guarantee that every loan request will be approved. Submitting a financial request does not itself mean that money has moved. Pending and completed transactions remain separate until confirmed.
 
-Before accepting an offer, you will see the key costs and repayment terms for that specific offer.
+For personal-loan products distributed through the Google Play version, the approved product catalogue must comply with the applicable Play repayment-period requirements before publication. The exact terms for an offer are shown before acceptance.
 
 ### Privacy and permissions
 
-OpFin uses camera access to capture the front and back of your National ID and a photo of you holding the ID for identity verification.
+OpFin uses camera access for identity-document and selfie/identity evidence where required by the selected regulated service.
 
 OpFin does not require access to your contacts, call history, SMS contents, photo library or broad device storage for personal-loan decisions. On supported Android devices, OTP auto-fill uses the SMS Retriever mechanism without reading your SMS inbox.
 
-Accessibility options include support for device text scaling, screen readers and reduced motion. Customers who cannot complete the normal camera identity step because of an access need can request assisted verification without sharing their PIN or OTP.
+Accessibility support includes device text scaling, simple wording, reduced motion and other supported accessibility preferences. Assisted verification must never require you to share your PIN or OTP.
 
-Provider and regulatory availability may vary. Features that are not approved or connected remain unavailable.
+Provider and regulatory availability may vary. Features that are not approved, configured or connected remain unavailable.
 
 ## Classification
 
 - Category: Finance
 - Intended audience: 18 years and older
 - Initial country: Uganda
-- Ads: No, unless the submitted build/declaration is later changed
+- Ads: No, unless the submitted build/declaration is changed
 
-## Required contact fields
+## Publication gates for Play Console fields
 
-- Developer/legal entity: `[VERIFY LEGAL ENTITY]`
-- Support email: `[VERIFY SUPPORT EMAIL]`
-- Support telephone: `[VERIFY SUPPORT TELEPHONE]`
-- Website: `https://opfin.co` only after live-domain verification
-- Privacy policy: `[VERIFY LIVE PRIVACY POLICY URL]`
-- Account deletion: `https://opfin-web-production.up.railway.app/account/delete` until a verified custom-domain replacement is approved
+Before copying this document into Play Console, verify and insert the approved values for:
 
+- developer/legal entity;
+- primary support email;
+- support telephone;
+- verified public website;
+- verified public privacy-policy URL;
+- account-deletion URL.
 
-### Credit information
+The current repository-supported deletion path is `https://opfin-web-production.up.railway.app/account/delete` until a verified custom-domain replacement is approved.
+
+Do not publish dummy values. Keep the final approved contact/URL values in the Play Console release record and update this file when they become canonical.
+
+## Credit information
 
 Where applicable and with the required electronic consent, OpFin may report complete and accurate positive or negative credit information about a loan to an authorised credit-reference mechanism in support of responsible lending and credit reporting.

@@ -1,50 +1,78 @@
 # Google Play release checklist
 
-Updated: 20 September 2026
+Status: Controlled internal release checklist  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
+Complete against the exact signed candidate. An unchecked item is not silently waived.
 
 ## Product and compliance
 
-- `[ ]` Approved Play product catalogue has no full-repayment term of 60 days or less.
-- `[ ]` A 90-day-or-longer eligible term is available where that is the intended standard mobile route.
-- `[ ]` Maximum term, fee-inclusive APR and representative example match the live catalogue.
-- `[ ]` Legal lender/provider and licence evidence approved.
-- `[ ]` Identity/KYC provider relationship and privacy disclosures approved.
-- `[ ]` CRB/MNO/third-party scoring sources in use are documented and consented.
-- `[ ]` Verified affordability source is operational for automatic approval.
-- `[ ]` Financial features and Data Safety declarations match the submitted AAB.
-- `[ ]` Privacy policy and deletion URL load without the app installed.
+- [ ] Submitted build exposes only financial features supported by approved legal/provider arrangements.
+- [ ] Personal-loan catalogue satisfies applicable Google Play repayment-period requirements.
+- [ ] Maximum term, fee-inclusive APR and representative example match the approved live catalogue.
+- [ ] Legal lender/facilitator/provider role and licence basis are approved.
+- [ ] Identity/KYC provider relationship and privacy disclosures are approved.
+- [ ] CRB/MNO/third-party sources actually used are documented and consented.
+- [ ] Verified affordability source is operational where automatic approval requires it.
+- [ ] Financial Features and Data Safety declarations match the submitted AAB.
+- [ ] Privacy-policy and account-deletion URLs load without the App installed.
+
+## Publication fields
+
+- [ ] Approved developer/legal entity inserted in Play Console.
+- [ ] Primary support email verified.
+- [ ] Support telephone verified.
+- [ ] Public website verified.
+- [ ] Public privacy-policy URL verified.
+- [ ] Account-deletion URL verified.
+- [ ] No dummy/placeholder values remain in submitted public fields.
 
 ## Engineering
 
-- `[ ]` Package name is `org.rotaryo.opfin`, matching the existing Core-Synergies Play listing.
-- `[ ]` Version code exceeds every prior Play upload.
-- `[ ]` Production API uses public HTTPS and ends in `/api`.
-- `[ ]` Exact release SHA passes API, web, Flutter, security and deployment-contract gates. Record equivalent local results while GitHub Actions is disabled; do not skip the checks.
-- `[ ]` Android manifest requests only permissions justified by the launch build: Internet and Camera.
-- `[ ]` No READ_SMS, contacts, call-log, gallery/media or broad storage permission is present for lending.
-- `[ ]` KYC private-storage configuration has been tested in the production environment.
-- `[ ]` WhatsApp/USSD external capabilities are declared live only if their provider configuration is actually complete.
-- `[ ]` Signed AAB checksum retained with release record.
-- `[ ]` Play App Signing enabled; upload-key backup/recovery owners recorded.
-- `[ ]` No keystore, key properties, service-account JSON or reviewer secret is committed.
+- [ ] Package name is `org.rotaryo.opfin`.
+- [ ] Version code exceeds every prior Play upload.
+- [ ] Registered upload key signs the candidate.
+- [ ] Production API base uses public HTTPS and ends in `/api`.
+- [ ] Mock/demo shortcuts are disabled.
+- [ ] Android release-contract guard passes.
+- [ ] Flutter analysis/tests pass.
+- [ ] Exact candidate has the applicable API/Web/client/security/deployment evidence recorded.
+- [ ] Required camera features remain optional for installation.
+- [ ] Sensitive backup/cleartext controls pass.
+- [ ] No provider secret is embedded in the AAB.
 
-## Accessibility/UAT
+## Customer journey
 
-- `[ ]` TalkBack tested on the exact Android candidate.
-- `[ ]` Large text tested on onboarding, KYC, Home, loan application, offer and repayment.
-- `[ ]` Reduced motion verified.
-- `[ ]` Low-literacy moderated UAT completed.
-- `[ ]` PWD/assisted-KYC route tested without PIN/OTP sharing.
+- [ ] Phone → OTP → names → PIN works on representative physical Android devices.
+- [ ] Home and Financial Space context are understandable.
+- [ ] Regulated services request progressive verification only when required.
+- [ ] Credit limit is not presented as guaranteed approval.
+- [ ] Formal offer disclosures match backend truth.
+- [ ] Pending payout/collection is not presented as complete.
+- [ ] Receipts appear only after confirmed financial finality.
+- [ ] Programme/protected attributes remain outside underwriting.
+- [ ] Account deletion works in-app and through the public Web resource.
 
-## Play Console
+## Accessibility and device support
 
-- `[ ]` Organisation developer identity verified.
-- `[ ]` Listing copy and graphics uploaded.
-- `[ ]` Reviewer credentials/navigation notes work.
-- `[ ]` Internal test and Play pre-launch report reviewed.
-- `[ ]` Closed-test/UAT sign-off recorded where required.
-- `[ ]` Production rollout is staged with monitoring/support owners available.
+- [ ] Text scaling and large-text mode tested.
+- [ ] TalkBack tested on key journeys.
+- [ ] Reduced-motion/high-contrast behaviour tested.
+- [ ] Front-camera-only/no-rear-camera installation compatibility reviewed.
+- [ ] Assisted identity-verification path tested.
+- [ ] Play supported-device counts reviewed after upload.
 
-## Go/no-go
+## Reviewer environment
 
-Any missing licence evidence, prohibited short-term offer, incorrect APR disclosure, broken deletion/KYC path, unverified production storage/provider setup, failed release/security gate, unresolved High/Critical accessibility defect or unexplained Data Safety mismatch is a **no-go**.
+- [ ] Dedicated reviewer account prepared.
+- [ ] Reviewer PIN supplied only in Play Console.
+- [ ] Reviewer-safe OTP/test-number path documented.
+- [ ] Reviewer journey cannot create an unauthorised real financial obligation.
+- [ ] Test identity/financial data are authorised.
+
+## Release decision
+
+Do not promote the candidate with unresolved Critical/High defects or missing mandatory legal/provider/store evidence.
+
+Record final version code, signing certificate fingerprint, source commit, AAB checksum, Play track, submission date and reviewer-release evidence in the controlled release record.

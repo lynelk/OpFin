@@ -1,5 +1,9 @@
 # OpFin Community Finance and Member Cooperative Core
 
+Status: Controlled external product reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 This document defines the member-friendly naming, product boundaries, dormant activation controls and implementation scope for OpFin's community finance foundation.
 
 The foundation is intentionally built but not activated. It must not collect member shares, savings, investment funds, insurance premiums, asset deposits or employer deductions until the approved activation runbook, licensing/partner checks, custody model, disclosures, support readiness and reconciliation drills are complete.

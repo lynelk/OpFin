@@ -1,6 +1,8 @@
 # OpFin Training Manual
 
+Status: Controlled internal training manual  
 Version: 23 September 2026  
+Language: English (United Kingdom)  
 Audience: customers, savings-group members, facilitators, support and authorised programme staff
 
 ## Training outcome

@@ -1,7 +1,7 @@
 # Inclusive Finance and Programme Delivery Framework
 
-Status: Canonical product and implementation contract  
-Updated: 22 September 2026  
+Status: Controlled external product and implementation contract  
+Updated: 23 September 2026  
 Language: English (United Kingdom)
 
 ## Purpose
