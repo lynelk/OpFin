@@ -92,7 +92,7 @@ class AdminEssentialsController extends Controller
             ->get();
 
         $fundingPools = DB::table('capital_mandates')
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'approved'])
             ->whereNotNull('approved_at')
             ->select('id', 'reference', 'partner_id', 'name', 'committed_capital_minor', 'deployed_capital_minor', 'reserved_capital_minor', 'status')
             ->orderBy('name')
@@ -247,7 +247,7 @@ class AdminEssentialsController extends Controller
             if (! empty($validated['funding_pool_id'])) {
                 $pool = DB::table('capital_mandates')->where('id', $validated['funding_pool_id'])->lockForUpdate()->first();
                 if (! $pool
-                    || strtolower((string) $pool->status) !== 'active'
+                    || ! in_array(strtolower((string) $pool->status), ['active', 'approved'], true)
                     || ! $pool->approved_at
                     || (int) $pool->committed_capital_minor <= 0) {
                     throw new InvalidArgumentException('The selected funding pool must be approved, active and funded.');
