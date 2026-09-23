@@ -246,7 +246,13 @@ Admin/operations:
 | POST | `/api/admin/umra/product-terms/{term}/changes` | Submit governed term change |
 | POST | `/api/admin/umra/term-changes/{change}/approve` | Maker-checker approval; interest change requires prior UMRA evidence |
 | POST | `/api/admin/umra/term-changes/{change}/apply` | Apply approved change to future offers |
+| GET | `/api/admin/governance/dashboard` | Governance dashboard and control summary |
+| GET | `/api/admin/governance/regulatory-reports` | List generated regulatory reports |
 | GET | `/api/admin/governance/regulatory-reports/{report}` | Inspect generated report/books payload and validation evidence |
+| POST | `/api/admin/governance/regulatory-reports` | Generate a regulatory report under the governed workflow |
+| POST | `/api/admin/governance/regulatory-reports/{report}/approve` | Approve a generated report under the role-gated workflow |
+| POST | `/api/admin/governance/integrity-runs` | Run governed integrity checks |
+| POST | `/api/admin/governance/integrity-alerts/{alert}/resolve` | Resolve an integrity alert with audit evidence |
 
 Offer acceptance now additionally records explicit electronic consent for complete positive/negative credit-information reporting.
 
