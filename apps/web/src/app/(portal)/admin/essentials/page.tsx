@@ -1,6 +1,8 @@
 import {
   reconcileEssentialsAdvanceAction,
   reconcileEssentialsRepaymentAction,
+  createFundingMandateAction,
+  reviewFundingMandateAction,
   saveEssentialsBillerAction,
   saveEssentialsLenderAction,
   verifyEssentialsAccountAdminAction
@@ -16,7 +18,9 @@ const notices: Record<string, string> = {
   "lender-saved": "Third-party lender configuration saved.",
   "verification-updated": "Account verification updated.",
   reconciled: "Provider fulfilment reconciliation completed.",
-  "repayment-reconciled": "Repayment reconciliation completed."
+  "repayment-reconciled": "Repayment reconciliation completed.",
+  "mandate-created": "Capital mandate created and queued for independent review.",
+  "mandate-reviewed": "Capital mandate review recorded."
 };
 
 export default async function AdminEssentialsPage({
@@ -34,6 +38,9 @@ export default async function AdminEssentialsPage({
     ]);
     const portfolio = portfolioResponse.data;
     const queue = queueResponse.data;
+    const fundingPartners = Array.from(
+      new Map(queue.lenders.map((row) => [row.partner_id, { id: row.partner_id, name: row.partner_name, status: row.partner_status }])).values()
+    );
 
     return (
       <Screen
@@ -188,6 +195,64 @@ export default async function AdminEssentialsPage({
         </div>
 
         <section className="panel">
+          <h2>Third-party capital mandates</h2>
+          <p className="muted">
+            Create committed lender capital here, then have a different authorised operator approve it before any production credit product can use the pool.
+          </p>
+          <div className="grid grid-2">
+            <form action={createFundingMandateAction} className="form-grid">
+              <div className="field">
+                <label htmlFor="partner_id">Lender</label>
+                <select id="partner_id" name="partner_id" defaultValue="" required>
+                  <option value="" disabled>Choose an onboarded lender</option>
+                  {fundingPartners.map((partner) => (
+                    <option value={partner.id} key={partner.id}>{partner.name} · {partner.status}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field"><label htmlFor="mandate_name">Mandate name</label><input id="mandate_name" name="mandate_name" required placeholder="e.g. Q4 Essentials & salary credit pool" /></div>
+              <div className="field">
+                <label htmlFor="mandate_type">Mandate type</label>
+                <select id="mandate_type" name="mandate_type" defaultValue="warehouse_line">
+                  <option value="warehouse_line">Warehouse line</option>
+                  <option value="co_lending">Co-lending</option>
+                  <option value="managed_capital">Managed capital</option>
+                  <option value="private_loan_book">Private loan book</option>
+                </select>
+              </div>
+              <div className="field"><label htmlFor="committed_capital_minor">Committed capital (UGX)</label><input id="committed_capital_minor" name="committed_capital_minor" type="number" min="1" required /></div>
+              <div className="field"><label htmlFor="mandate_categories">Permitted categories</label><input id="mandate_categories" name="mandate_categories" placeholder="essentials,salary,working_capital" /></div>
+              <div className="field"><label htmlFor="mandate_notes">Policy notes</label><input id="mandate_notes" name="mandate_notes" placeholder="Lender mandate restrictions or purpose" /></div>
+              <button className="button" type="submit">Create for review</button>
+            </form>
+
+            <div>
+              <h3>Awaiting independent review</h3>
+              {queue.pending_funding_pools.length === 0 ? (
+                <StateNotice state="empty" message="No capital mandates are awaiting review." />
+              ) : (
+                <div className="case-list">
+                  {queue.pending_funding_pools.map((mandate) => (
+                    <article className="case-card" key={mandate.id}>
+                      <div className="case-card-head">
+                        <div><strong>{mandate.name}</strong><p className="muted">{mandate.mandate_type} · {formatUgx(mandate.committed_capital_minor)}</p></div>
+                        <span className="badge warn">{mandate.status.replaceAll("_", " ")}</span>
+                      </div>
+                      <p className="muted">Lender partner {mandate.partner_id} · created by user {mandate.owner_user_id}</p>
+                      <form action={reviewFundingMandateAction} className="inline-form">
+                        <input type="hidden" name="mandate_id" value={mandate.id} />
+                        <button className="button" name="status" value="approved" type="submit">Approve</button>
+                        <button className="button secondary" name="status" value="rejected" type="submit">Reject</button>
+                      </form>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="panel">
           <h2>Configure a third-party Essentials lender</h2>
           <p className="muted">
             OpFin is intentionally blocked from being configured as the primary Essentials lender. Active lenders require licensing evidence and a funded mandate or a Cito-managed lender decision route.
@@ -196,6 +261,13 @@ export default async function AdminEssentialsPage({
             <div className="grid grid-3">
               <div className="field"><label htmlFor="partner_code">Lender code</label><input id="partner_code" name="partner_code" required /></div>
               <div className="field"><label htmlFor="partner_name">Lender name</label><input id="partner_name" name="partner_name" required /></div>
+              <div className="field">
+                <label htmlFor="lender_status">Lifecycle</label>
+                <select id="lender_status" name="lender_status" defaultValue="onboarding">
+                  <option value="onboarding">Onboarding / draft product</option>
+                  <option value="active">Activate product</option>
+                </select>
+              </div>
               <div className="field">
                 <label htmlFor="partner_type">Lender type</label>
                 <select id="partner_type" name="partner_type" defaultValue="financial_institution">
@@ -234,7 +306,7 @@ export default async function AdminEssentialsPage({
                 </select>
               </div>
               <div className="field">
-                <label htmlFor="funding_pool_id">Funding pool (required for capital mandate)</label>
+                <label htmlFor="funding_pool_id">Approved funding pool (required when activating capital-mandate route)</label>
                 <select id="funding_pool_id" name="funding_pool_id" defaultValue="">
                   <option value="">No pool / Cito route</option>
                   {queue.funding_pools.map((pool) => (
