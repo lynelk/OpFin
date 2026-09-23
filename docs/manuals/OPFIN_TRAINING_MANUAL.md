@@ -74,3 +74,18 @@ After this module, a trainee should be able to:
 9. Record an institutional aggregate observation and confirm it can be reported without exposing participant records.
 
 Never train users or partners to interpret a programme outcome as proof that OpFin caused that outcome unless the evaluation design independently supports causal attribution.
+
+## Module 13 — Programme delivery across channels
+
+Demonstrate one due programme instrument through the App or Web, then explain how the same server-authoritative instrument can be used through verified WhatsApp, USSD or assisted capture.
+
+Training checks:
+
+1. consent withdrawal removes programme-measurement prompts from customer channels;
+2. a reviewed translation is shown where configured, otherwise English fallback is explicit;
+3. assisted capture records the staff actor separately;
+4. partner users are dedicated programme identities, not customer accounts;
+5. exports remain aggregate and preserve small-cohort suppression;
+6. provider-adapter evidence remains outside underwriting unless it separately passes the governed credit-data pathway.
+
+Also demonstrate the Commercial performance dashboard to staff who manage the business. Explain that CAC and contribution are only as complete as the acquisition, cost and revenue evidence actually recorded.

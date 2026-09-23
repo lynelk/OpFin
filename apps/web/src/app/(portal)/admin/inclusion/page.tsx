@@ -244,6 +244,7 @@ export default async function InclusionPage({
                     <div className="case-list">
                       <Link className="button secondary" href={`/admin/inclusion?programme_id=${programme.id}`}>View outcomes</Link>
                       <Link className="button secondary" href={`/admin/inclusion/framework?programme_id=${programme.id}`}>Impact framework</Link>
+                      <Link className="button secondary" href={`/admin/inclusion/delivery?programme_id=${programme.id}`}>Programme delivery</Link>
                     </div>
                   </div>
                   <p>

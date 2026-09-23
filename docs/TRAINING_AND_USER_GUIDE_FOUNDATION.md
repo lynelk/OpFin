@@ -189,3 +189,11 @@ Use programme-specific language as configuration. Do not hard-code external part
 ### Programme-partner guidance
 
 Dedicated programme-partner users receive aggregate reporting only. They may review programme delivery, outcome coverage and configured indicators for programmes explicitly assigned to them. Small participant cohorts are suppressed and individual customer records are not exposed.
+
+## Programme delivery and commercial completion training
+
+Customer guidance now includes due programme check-ins across App, Web, verified WhatsApp and USSD, with assisted capture available where authorised. Programme questions come from one configurable instrument registry and should never be re-authored as channel-specific policy.
+
+Staff training must cover reviewed translations/English fallback, follow-up scheduling, consent exceptions, partner-user provisioning, aggregate exports, commercial cost/acquisition evidence and provider-adapter gates.
+
+The commercial dashboard is management evidence, not a customer scoring surface. The programme-to-commercial graduation label is likewise analytics-only.

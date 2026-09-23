@@ -126,3 +126,28 @@ Non-negotiable implementation boundary:
 - programme frameworks do not alter credit eligibility, pricing or limits;
 - Stolets remains a separate SME operating platform and may only provide data through explicitly consented, governed interfaces;
 - external credentials, programme agreements, regulatory approvals and physical-device accessibility certification remain external activation matters, not values to fabricate in source code.
+
+## Programme and commercial completion P0-P2 — 23 September 2026
+
+Implemented code now includes:
+
+- metadata-driven programme instruments/questions;
+- staged follow-up scheduling and an hourly maintenance command;
+- reviewed localisation with explicit English fallback;
+- customer App and Web check-in experiences;
+- verified WhatsApp and feature-phone USSD check-ins;
+- staff-assisted capture with actor separation;
+- five reusable programme starting templates;
+- programme-delivery operations workspace;
+- dedicated programme-partner invitation, OTP activation, listing and revocation;
+- aggregate CSV/XLSX/ZIP partner/MEL exports;
+- canonical customer acquisition attribution;
+- governed commercial cost events;
+- commercial funnel, portfolio and unit-economics dashboard;
+- programme-to-commercial graduation evidence;
+- system-enriched financial-health snapshots from existing financial-life truth;
+- governed provider-adapter registry and allow-listed evidence ingestion for gnuGrid/CRB, MNO, employer, VSLA, Stolets and future providers.
+
+All new programme responses, enrichment records and provider ingestions retain explicit non-credit boundaries. Provider evidence does not become underwriting merely because it has verified provenance.
+
+Stolets remains a separate SME operating product. A Stolets adapter is an explicit minimum-necessary data interface, not an OpFin merchant-operations module.

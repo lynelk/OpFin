@@ -126,3 +126,20 @@ Do not sign off with unresolved Critical/High defects in identity, permissions, 
 **Procedure:** Review admin and partner outcome pages.
 
 **Expected result:** The interface states that measured programme observations do not prove programme causality unless the evaluation design supports causal attribution.
+
+## UAT suite: Programme delivery P0-P2
+
+| ID | Scenario | Expected result |
+| --- | --- | --- |
+| PGM-01 | Create typed instrument and due baseline | Customer sees only due, channel-enabled instrument |
+| PGM-02 | Withdraw measurement consent | Measurement check-ins disappear from customer channels; operations show consent exception |
+| PGM-03 | Reviewed locale missing/present | English fallback is explicit; reviewed translation replaces fallback |
+| PGM-04 | Submit through App/Web/USSD/WhatsApp/assisted | All write the same response model; assisted actor is separate |
+| PGM-05 | Partner invitation activation | Wrong/unverified phone fails; OTP-verified dedicated account succeeds |
+| PGM-06 | Partner access/revocation | Only granted programme visible; revoke removes access |
+| PGM-07 | CSV/XLSX/ZIP export | Aggregate-only; suppressed cohorts remain suppressed; no participant identifiers |
+| COM-01 | Record acquisition + acquisition cost + revenue | CAC/contribution reconcile to recorded events; unknown data remains incomplete |
+| COM-02 | Graduation evaluation | Transparent criteria; no credit score/price/limit changes |
+| P2-01 | Financial-health enrichment | Uses only recorded OpFin evidence, carries provenance and remains non-credit |
+| P2-02 | Adapter activation | Active status blocked until configuration/credentials evidence and legal basis confirmed |
+| P2-03 | Adapter ingestion | Non-allow-listed key rejected; accepted evidence is verified but risk-eligible remains false |
