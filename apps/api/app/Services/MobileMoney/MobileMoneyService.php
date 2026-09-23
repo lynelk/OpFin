@@ -308,15 +308,43 @@ class MobileMoneyService
                 ->firstOrFail();
 
             $this->assertProviderTransition($locked, $response->status);
+
+            $previousProviderReference = $locked->provider_reference;
+            $nextProviderReference = $response->providerReference ?? $locked->provider_reference;
+            $providerEvidenceChanged = $locked->status !== $response->status
+                || (string) ($previousProviderReference ?? '') !== (string) ($nextProviderReference ?? '');
+
+            $statementStatus = $providerEvidenceChanged
+                ? MobileMoneyTransaction::STATEMENT_UNRECONCILED
+                : $locked->statement_reconciliation_status;
+            $statementReconciledAt = $providerEvidenceChanged ? null : $locked->statement_reconciled_at;
+            $combinedStatus = $statementStatus === MobileMoneyTransaction::STATEMENT_MATCHED
+                ? MobileMoneyTransaction::RECONCILIATION_MATCHED
+                : MobileMoneyTransaction::RECONCILIATION_PENDING;
+
             $locked->update(array_merge([
-                'provider_reference' => $response->providerReference ?? $locked->provider_reference,
+                'provider_reference' => $nextProviderReference,
                 'status' => $response->status,
-                'reconciliation_status' => $locked->statement_reconciliation_status === MobileMoneyTransaction::STATEMENT_MATCHED
-                    ? MobileMoneyTransaction::RECONCILIATION_MATCHED
-                    : MobileMoneyTransaction::RECONCILIATION_PENDING,
+                'statement_reconciliation_status' => $statementStatus,
+                'statement_reconciled_at' => $statementReconciledAt,
+                'reconciliation_status' => $combinedStatus,
                 'failure_reason' => $response->successful ? $locked->failure_reason : $response->message,
                 'provider_payload' => $response->raw,
             ], $extra));
+
+            if ($providerEvidenceChanged) {
+                $references = array_values(array_filter(array_unique([
+                    $previousProviderReference,
+                    $nextProviderReference,
+                ])));
+                if ($references !== []) {
+                    DB::table('revenue_events')->whereIn('cpay_reference', $references)->update([
+                        'statement_reconciliation_status' => 'unreconciled',
+                        'reconciliation_reference' => null,
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
 
             $transaction->setRawAttributes($locked->fresh()->getAttributes(), true);
         });
