@@ -16,10 +16,12 @@ return new class extends Migration
             $table->timestamp('statement_reconciled_at')->nullable()->after('accounting_posted_at');
         });
 
+        // Do not infer accounting completion from the legacy reconciliation field.
+        // Historical successful/reversed movements remain unposted until immutable ledger
+        // evidence is rebuilt or verified. Failed movements require no product accounting.
         DB::table('mobile_money_transactions')
-            ->where('reconciliation_status', 'matched')
-            ->whereIn('status', ['successful', 'reversed'])
-            ->update(['accounting_status' => 'posted']);
+            ->where('status', 'failed')
+            ->update(['accounting_status' => 'not_required']);
 
         Schema::create('financial_policies', function (Blueprint $table) {
             $table->id();
