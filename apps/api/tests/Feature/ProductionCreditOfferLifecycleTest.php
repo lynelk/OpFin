@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CreditDecision;
 use App\Models\CreditOffer;
+use App\Models\CreditScoreComponent;
 use App\Models\CreditRepaymentScheduleItem;
 use App\Models\Institution;
 use App\Models\LoanApplication;
@@ -13,12 +14,19 @@ use App\Models\MobileMoneyTransaction;
 use App\Models\User;
 use App\Services\ProductionCreditOfferService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ProductionCreditOfferLifecycleTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->installPricingPolicy();
+    }
 
     public function test_operations_can_approve_referred_decision_and_generate_immutable_offer(): void
     {
@@ -206,6 +214,29 @@ class ProductionCreditOfferLifecycleTest extends TestCase
         return [$customer, $operations, $application, $decision];
     }
 
+    private function installPricingPolicy(): void
+    {
+        DB::table('financial_policies')->insert([
+            'code' => 'test-regulatory-pricing',
+            'policy_type' => 'regulatory_pricing',
+            'jurisdiction_country' => 'UG',
+            'licence_class' => null,
+            'product_scope' => null,
+            'version' => 1,
+            'status' => 'active',
+            'effective_from' => now()->subDay()->toDateString(),
+            'effective_to' => null,
+            'rules' => json_encode([
+                'interest_basis' => 'original_principal',
+                'cycle_days' => ['daily' => 1, 'weekly' => 7, 'monthly' => 30],
+                'repayment_frequency_days' => ['daily' => 1, 'weekly' => 7, 'fortnightly' => 14, 'monthly' => 30],
+            ], JSON_THROW_ON_ERROR),
+            'source_reference' => 'financial-signoff-test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
     private function referredApplication(): array
     {
         $institution = Institution::create([
@@ -216,6 +247,22 @@ class ProductionCreditOfferLifecycleTest extends TestCase
         ]);
         $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER, 'institution_id' => $institution->id]);
         $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS, 'institution_id' => $institution->id]);
+
+        CreditScoreComponent::create([
+            'user_id' => $customer->id,
+            'source' => 'crb',
+            'status' => CreditScoreComponent::STATUS_READY,
+            'score' => 80,
+            'weight_percent' => 40,
+            'source_reference' => 'financial-signoff-affordability',
+            'reason_codes' => ['VERIFIED_AFFORDABILITY_INPUTS'],
+            'raw_payload' => [
+                'verified_monthly_income_minor' => 600000,
+                'verified_external_obligation_excluding_opfin_minor' => 0,
+            ],
+            'received_at' => now(),
+            'expires_at' => now()->addMonth(),
+        ]);
         $product = LoanProduct::create(['name' => 'Controlled Credit', 'type' => 'Cash', 'institution_id' => $institution->id]);
         $term = LoanProductTerm::create([
             'loan_product_id' => $product->id,
