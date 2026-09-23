@@ -1,6 +1,8 @@
 # Canonical Programme Implementation Status
 
-Updated: 23 September 2026
+Status: Controlled internal implementation evidence index  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
 This file is an implementation evidence index. A capability is only marked complete when code and automated acceptance evidence exist.
 

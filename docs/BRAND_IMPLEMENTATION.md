@@ -1,5 +1,9 @@
 # OpFin brand implementation
 
+Status: Public brand implementation reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 ## Direction and provenance
 
 This implementation follows the 15 September 2026 decision to keep and refine the existing OpFin monogram with the Indigo, Apricot and Warm Ivory direction. It is not the rejected Open Path symbol or the retired Pipiya identity. The earlier September guideline remains useful for typography, truthful communications and layout principles; its earlier blue/sky-blue palette is not the colour direction implemented here.

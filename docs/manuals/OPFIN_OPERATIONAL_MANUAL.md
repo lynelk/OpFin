@@ -1,7 +1,9 @@
 # OpFin Operational Manual
 
+Status: Controlled internal operational manual  
 Version: 23 September 2026  
-Audience: OpFin operations, support, finance, compliance and authorised institutional/programme administrators
+Language: English (United Kingdom)  
+Audience: operations, support, finance, compliance and authorised institutional/programme administrators
 
 ## Operating model
 

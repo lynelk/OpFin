@@ -1,4 +1,4 @@
-.PHONY: help test api-test web-test client-test layout docs-check docs-search api-search
+.PHONY: help test api-test web-test client-test layout docs-check publication-check docs-search api-search
 
 help:
 	@printf '%s\n' \
@@ -8,6 +8,7 @@ help:
 	  '  make web-test                     Run web tests/build checks' \
 	  '  make client-test                  Run Flutter checks' \
 	  '  make docs-check                   Verify current documentation drift rules' \
+	  '  make publication-check            Verify publication-facing documentation' \
 	  '  make docs-search QUERY="receipt" Search current repository documentation' \
 	  '  make api-search QUERY="umra"      Search registered Laravel API routes'
 
@@ -27,6 +28,10 @@ client-test:
 
 docs-check:
 	python3 scripts/verify-documentation-drift.py
+	python3 scripts/verify-publication-readiness.py
+
+publication-check:
+	python3 scripts/verify-publication-readiness.py
 
 docs-search:
 	@test -n "$(QUERY)" || (echo 'Set QUERY, e.g. make docs-search QUERY="credit reporting"' && exit 2)

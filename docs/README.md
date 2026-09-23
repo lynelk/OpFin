@@ -1,8 +1,10 @@
 # OpFin documentation hub
 
-Updated: 23 September 2026
+Status: Publication-ready documentation index  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
-This is the navigation point for current OpFin documentation. It separates current product truth, API contracts, manuals, deployment evidence and historical records so yesterday's design note does not become tomorrow's production policy by accident.
+This is the navigation point for current OpFin documentation. Publication class, audience and evidence boundaries are controlled by [PUBLICATION_STANDARD.md](PUBLICATION_STANDARD.md) and [PUBLICATION_REGISTER.md](PUBLICATION_REGISTER.md).
 
 ## Start by role
 
@@ -14,7 +16,24 @@ This is the navigation point for current OpFin documentation. It separates curre
 | Developer | [Developer start](DEVELOPER_START_HERE.md) | [API docs](../apps/api/docs/README.md), `AGENTS.md`, `SECURITY.md` |
 | API integrator | [API quick reference](../apps/api/docs/api/API_QUICK_REFERENCE.md) | [Current endpoints](../apps/api/docs/api/current-endpoints.md) |
 | Programme / MEL partner | [Inclusive-finance framework](product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md) | [Partner reporting standard](product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md) |
-| Release owner | [Current state](CURRENT_STATE.md) | [Railway topology](../infrastructure/railway/README.md), store/release documentation |
+| Release owner | [Current state](CURRENT_STATE.md) | [Publication register](PUBLICATION_REGISTER.md), [Railway topology](../infrastructure/railway/README.md), store/release documentation |
+
+## Publication control
+
+Use the publication register before sharing a repository document externally.
+
+- **Public** documents may be shared externally once any stated legal/compliance gates are complete.
+- **Controlled external** documents are suitable for a defined professional audience.
+- **Controlled internal** documents are polished operating/engineering artefacts, not unrestricted public copy.
+- **Historical evidence** remains dated evidence and must not be presented as current policy.
+
+Run:
+
+```bash
+make publication-check
+```
+
+The check rejects unresolved editorial markers in the current Public and Controlled external set. Release worksheets with deliberately unresolved factual inputs are not disguised as finished public copy.
 
 ## Current product baseline
 
@@ -26,14 +45,7 @@ Stolets remains a separate SME operating product. Any OpFin use of Stolets evide
 
 ## Website documentation boundary
 
-The public Web homepage describes the broad platform proposition. It is not the source of truth for:
-
-- provider activation;
-- credit policy;
-- regulatory status;
-- exact API behaviour;
-- app-store publication;
-- release certification.
+The public Web homepage describes the broad platform proposition. It is not the source of truth for provider activation, credit policy, regulatory status, exact API behaviour, app-store publication or release certification.
 
 The homepage's Web sign-in is a Workspace/customer compatibility route. The canonical new-customer onboarding journey remains phone → OTP → names → six-digit PIN in the mobile experience.
 
@@ -75,10 +87,10 @@ Apply this hierarchy:
 6. specialist regulatory/release/deployment guides;
 7. dated audit/demo/migration/checkpoint evidence.
 
-Historical evidence should retain its original date and context. Do not rewrite it to pretend the past was current all along.
+Historical evidence should retain its original date and context.
 
 ## Documentation quality rule
 
 Every material system/API/customer-workflow change must update the relevant current documentation in the same change. Unknown provider, commercial or release facts remain unknown. Missing values are not zero; unavailable evidence is not success; deployed source is not automatically release-certified.
 
-The manual set and website copy were reconciled against `main` on 23 September 2026. See [current state](CURRENT_STATE.md) for the exact reviewed commit and evidence limits.
+The manual set and website copy were reconciled against `main` on 23 September 2026. See [current state](CURRENT_STATE.md) for the reviewed evidence boundary.

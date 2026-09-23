@@ -1,102 +1,70 @@
-# OpFin Google Play launch: version 1.0.0
+# OpFin Google Play launch — version 1.0.0
 
-Updated 20 September 2026 for the unified launch borrower journey and the verified existing Play listing. This is a release handover, not proof of publication of the new build, provider certification or activation of lending capital.
+Status: Controlled internal release handover  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
-## Canonical launch materials
+This document coordinates the Google Play release. It is not proof of publication, licensing, provider certification, lending-capital activation or Play approval.
 
-Use `distribution/google-play/README.md` and its linked listing, financial-features, data-safety, reviewer-notes, release-automation and release-checklist documents together with `docs/LAUNCH_CUSTOMER_JOURNEY.md`.
+## Canonical release materials
+
+Use together:
+
+- `distribution/google-play/README.md`
+- `distribution/google-play/listing.md`
+- `distribution/google-play/financial-features.md`
+- `distribution/google-play/data-safety.md`
+- `distribution/google-play/reviewer-notes.md`
+- `distribution/google-play/release-automation.md`
+- `distribution/google-play/release-checklist.md`
+- `docs/LAUNCH_CUSTOMER_JOURNEY.md`
+
+## Listing identity
 
 - App name: **OpFin**
 - Category: **Finance**
-- Initial territory: **Uganda (UG)**
-- Listing language: English (United Kingdom), en-GB
+- Initial territory: **Uganda**
+- Listing language: English (United Kingdom)
 - Source release line: **1.0.0**
-- Android application ID: **org.rotaryo.opfin**, under the **Core-Synergies** developer account
+- Android application ID: **org.rotaryo.opfin**
 
-Verify the signed artifact's actual build/version code, package identity and signing certificate before upload.
+Verify the signed artefact's actual version code, package identity and signing certificate before upload.
 
-Keep GitHub Actions disabled as instructed by the owner. Follow the local signing procedure in `distribution/google-play/release-automation.md` and retain equivalent release-validation evidence.
+## Customer journey represented by the release
 
-## Launch customer journey
+The canonical new-customer App journey begins:
 
-The mobile journey is:
+**Phone → OTP → names → six-digit PIN → Home → progressive verification → eligible financial journey.**
 
-**Phone → OTP → names → 6-digit PIN → Home → National ID verification → credit profile/limit → loan request → formal offer → verified-wallet disbursement → repayment.**
+Credit, savings, investment, protection and partner services remain subject to their actual activation, eligibility and provider/regulatory gates.
 
-Registration no longer asks a new customer for a long password or forces a second login. A second phone is optional.
+## Personal-loan release boundary
 
-Home prioritises amount due or available-to-borrow, then score and the next action. Launch navigation is **Home | Borrow | Activity | More**. Provider-gated savings, investments, peer lending, insurance, SACCO/community capital and asset-finance capabilities should not crowd the initial borrower experience until activated.
+Before submitting a build that exposes personal loans:
 
-## KYC and Android permissions
+- confirm every distributed product satisfies applicable Google Play repayment-period requirements;
+- confirm approved maximum term and fee-inclusive APR from the product catalogue;
+- confirm representative pricing examples independently;
+- confirm legally correct lender/facilitator role and licence/provider evidence;
+- confirm affordability, KYC, consent and complaints controls;
+- confirm store copy and Data Safety declarations match the exact build.
 
-KYC captures:
+Do not infer any of these values from sample configuration.
 
-- NIN
-- National ID front
-- National ID back
-- Photo of the customer holding the ID
+## Privacy and permissions
 
-Automatic verification records NIN, liveness, face-match and NIN/phone-link results. Inconclusive/provider-unavailable results stay pending/manual review.
+The submitted build must match the declared KYC capture, camera permissions, SMS Retriever behaviour, storage/backup controls and account-deletion path.
 
-Android requests camera access for direct KYC capture. Do not add broad photo-library/storage permissions for this journey. OTP auto-fill uses SMS Retriever/app signature rather than broad SMS-read permissions.
+Do not add broad contacts, call-log, SMS-reading, gallery or storage access merely for credit decisioning.
 
-Production KYC evidence must use a private persistent/object storage disk configured by `KYC_FILESYSTEM_DISK`.
+## Release evidence
 
-## Lending disclosures and store terms
+The exact release candidate should have the applicable repository test/security/deployment evidence or an explicitly approved equivalent release record where a particular automation path is unavailable.
 
-The backend retains the minimum **61-day** full-repayment restriction for store-distributed personal loans and prefers eligible **90-day-plus** routes.
+A successful source deployment is not automatically a signed mobile release or Play publication.
 
-The customer Loan Application page uses the server-authoritative available limit and eligible terms. Before acceptance, the formal offer shows:
+## External gates
 
-- amount received;
-- interest;
-- mandatory fees;
-- total repayment;
-- duration/frequency;
-- equivalent APR where required;
-- first and final payment timing; and
-- offer expiry.
+The repository cannot supply legal approvals, provider contracts/credentials, final Play declarations, reviewer credentials, signed artefacts, app-store review decisions or physical-device accessibility evidence.
 
-Offer acceptance uses the disclosure hash and a verified payout wallet. Pending provider disbursement is not displayed as completed.
-
-Before publication, verify the actual legal lender/provider, approved terms, fee-inclusive maximum APR and representative example against the live operating arrangement and Play declarations.
-
-## Accessibility
-
-The release supports system text scaling, an additional large-text option, TalkBack semantics, reduced motion and simple wording. Assisted identity verification can be requested where disability/access needs prevent normal camera use. Assistance does not weaken KYC and neither helpers nor support staff should handle customer PINs or OTPs.
-
-Real-device accessibility/UAT remains a required release check because compilation cannot prove a usable screen-reader or camera experience.
-
-## Security and release gates
-
-Read `SECURITY.md`. The exact candidate must pass `release-gate`, `security-gate` and the deployment contract. Android/iOS release compilation is not production signing or store acceptance.
-
-No signing secret, provider credential, PIN, OTP or identity evidence belongs in source or public logs.
-
-## Brand consistency
-
-Read `docs/BRAND_IMPLEMENTATION.md`. Web, mobile and store assets must use the shared OpFin tokens, retained monogram and bundled typography.
-
-Regenerate Play icon/feature assets using the repository asset script where required and visually inspect them. Marketing art is not a production screenshot.
-
-## Public URLs
-
-- Website: `https://opfin-web-production.up.railway.app/`
-- Privacy policy: `https://opfin-production.up.railway.app/privacy-policy`
-- Account deletion: `https://opfin-web-production.up.railway.app/account/delete`
-
-Verify public accessibility and content before store submission. Do not publish an unverified support/security address.
-
-## Production screenshots
-
-Capture final signed-build screens using authorised test data:
-
-1. Phone/OTP onboarding
-2. Identity/KYC capture guidance
-3. Home with profile/limit
-4. Loan Application with available limit and amount due
-5. Formal offer disclosure
-6. Active-loan/repayment state
-7. Accessibility/Profile controls
-
-Record package ID, commit, version, signing-certificate digest, artifact checksum, backend environment and device. Do not create unauthorised real loans/payments merely to obtain screenshots.
+Record those in the release checklist and Play Console from approved source evidence.

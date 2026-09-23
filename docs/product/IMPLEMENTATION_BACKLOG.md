@@ -1,6 +1,8 @@
 # OpFin Canonical Implementation Backlog
 
-Updated: 23 September 2026
+Status: Controlled internal delivery backlog  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
 ## P0 — Foundation
 - FS-001 Create Financial Space schema, Personal Space bootstrap and backfill.

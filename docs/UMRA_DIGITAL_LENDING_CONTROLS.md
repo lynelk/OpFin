@@ -1,6 +1,8 @@
 # UMRA digital-lending controls
 
-Updated: 22 September 2026
+Status: Controlled external regulatory-control mapping  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
 This document maps the OpFin product/system controls implemented against the January 2024 Uganda Microfinance Regulatory Authority Digital Lending Guidelines. It does not claim that source code alone proves licensing or regulatory approval.
 

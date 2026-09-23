@@ -1,91 +1,66 @@
 # OpFin mobile application
 
-Updated: 22 September 2026
+Status: Controlled external developer/product reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
-The Flutter application is OpFin's primary customer mobile experience. It deliberately presents a simple borrower journey while the API keeps identity, scoring, affordability, accounting, reconciliation and regulatory complexity behind the interface.
+The Flutter application is OpFin's primary customer mobile experience. It presents a mobile-complete financial journey while the API remains authoritative for identity, permissions, eligibility, money, credit, provider finality, programme state, ledger and reconciliation.
 
-## Launch navigation
+## Product position
 
-**Home | Borrow | Activity | More**
+The customer proposition is to understand, manage, plan and improve money. Borrowing is one capability rather than the application boundary.
 
-Provider/regulator-gated products may exist in the platform architecture but must not crowd the launch journey until genuinely activated.
+One person may access authorised Personal, Household, Savings Group and organisation Financial Spaces without creating separate identities.
 
-## Account journey
+## New-customer journey
 
-`Phone → OTP → First/Other/Last names → 6-digit PIN → authenticated Home`
+`Phone → OTP → names → six-digit PIN → authenticated Home`
 
-- Android OTP auto-fill uses SMS Retriever/app-signature support; manual entry remains available.
-- New customers use a six-digit PIN. Legacy password compatibility is a migration concern, not the current UX.
+- Android OTP auto-fill uses SMS Retriever/app-signature support where available; manual entry remains possible.
+- Legacy password compatibility is a migration concern, not the preferred mobile UX.
 - A second phone is optional.
 
-## KYC
+## Financial Spaces and everyday money
 
-Required identity evidence:
+Individuals and Savings Groups should be able to complete normal everyday journeys in the App without Web being a hidden prerequisite.
 
-- NIN;
-- National ID front;
-- National ID back;
-- photo of the customer holding the ID.
+The App supports server-authoritative Space context and financial-life features such as money/accounts, budgets, goals, assets, liabilities/receivables, net position and supported financial-health guidance.
 
-The app uses direct camera capture and does not require broad SMS/gallery/storage permissions for personal-loan decisioning.
+## Identity verification
 
-Customers who cannot complete normal camera capture because of a disability/access need can request assisted identity verification. Helpers/support must never ask for or handle the customer's PIN or OTP.
+Where a selected service requires identity evidence, the App follows the configured KYC contract, including NIN and required document/selfie evidence.
 
-## Credit and borrowing
+The App must not request broad SMS/gallery/storage permissions merely to support personal-loan decisioning.
 
-The app reads server-authoritative state from the API:
+Customers who cannot complete normal capture because of an accessibility need can request assisted verification. Assistance never means sharing a PIN or OTP or lowering identity assurance.
 
-- OpFin Composite Score and understandable component detail;
-- available-to-borrow amount;
-- amount due and total outstanding;
-- next payment date;
-- next customer action.
+## Responsible credit
 
-The Loan Application screen uses the live server limit and eligible terms. It does not maintain a hard-coded loan ceiling or short-term product rules.
+The App reads server-authoritative credit profile, available-to-borrow amount, amount due/total outstanding, next due date, next action, eligible terms, formal offer disclosures and verified wallet choices.
 
-The formal offer displays the exact disclosure snapshot, including interest calculation, fee breakdown/timing, total cost, repayment timing, default terms, complaints procedure and regulated-provider information where configured.
-
-Offer acceptance separately records consent for complete positive/negative credit-information reporting.
-
-## Wallets, repayments and receipts
-
-Only verified customer wallets can be selected for payout/repayment.
-
-A payment request is not a completed payment. Customer balances change only after provider-confirmed finality.
-
-Completed disbursement/repayment events create auditable e-receipts. Customers can view receipts under **Activity**.
+A profile limit is not guaranteed approval. Pending provider requests are not completed payments or disbursements. Completed provider-finality-backed events may create auditable receipts under **Activity**.
 
 ## Financial resilience and inclusive finance
 
-Home now exposes **Build financial resilience**. The mobile experience includes:
+The App supports financial-health guidance, a financial-reputation stage that is not a second credit score, optional programme-measurement consent, due programme check-ins, reviewed translations with explicit English fallback, voluntary programme exit, alternative credit-support evidence and optional recorded-data health enrichment.
 
-- a financial-reputation stage that is explicitly not a second credit score;
-- current amount due/outstanding and practical capability guidance;
-- optional programme-measurement consent and editable voluntary inclusion details;
-- a fair-treatment explanation showing that programme demographics stay outside credit decisioning;
-- active inclusive-finance programmes and enrolment;
-- alternative credit-support evidence such as salary undertakings, guarantees, receivables and warehouse receipts.
+Programme/protected attributes remain outside underwriting. Programme outcomes are not causal claims by default.
 
-Programme measurement is optional and is never required to borrow or manage money. Withdrawing measurement consent clears stored voluntary inclusion attributes. Credit-support evidence must be verified and recognised by the relevant product policy before it can affect a financial product.
-
-Customers can also leave an enrolled inclusive-finance programme from the Financial Resilience surface. Exit is explicit and keeps historical evidence only through the recorded exit time; the client does not silently re-enrol an exited participation.
-
-Stolets remains a separate SME automation/digitisation product. The OpFin mobile app does not absorb POS, inventory or merchant-operation journeys merely because an approved external business signal may later be consumed with customer consent.
+Stolets remains a separate SME automation and commerce product; approved external evidence must arrive through explicit governed integration.
 
 ## Accessibility
 
-The app supports large-text preference, simple-language preference, reduced motion, semantic controls for platform screen readers and a branded high-contrast mode. These preferences change the customer experience without becoming underwriting inputs. Device-level VoiceOver/TalkBack and other assistive-technology claims remain subject to physical-device accessibility UAT.
+Supported design requirements include TalkBack/VoiceOver semantics, operating-system text scaling, optional larger-text/simple-language preferences, reduced motion, high contrast, practical touch targets and assisted verification paths.
 
+Certification-level accessibility claims require physical-device acceptance evidence.
 
-The app supports:
+## Android compatibility and identity
 
-- TalkBack/VoiceOver semantics;
-- operating-system text scaling;
-- optional larger-text mode;
-- reduced motion;
-- simple wording;
-- practical touch targets;
-- assisted KYC support.
+The Android build currently requires compile SDK 37, targets SDK 36 and retains Flutter's configured minimum Android version.
+
+Camera features must remain optional for installation so devices without a rear camera are not filtered merely because the App requests camera permission.
+
+The existing Play application ID is `org.rotaryo.opfin`. The Kotlin namespace remains `co.opfin.app`. Distribution builds must use the registered upload key.
 
 ## Development
 
@@ -96,81 +71,16 @@ flutter test
 flutter run
 ```
 
-Production release checks also compile Android APK/AAB and iOS release targets.
+Run the Android release-contract guard before distribution:
 
-API base URL is supplied through the established build/environment configuration. Never place provider secrets in Flutter.
+```bash
+python3 scripts/verify-android-release-contract.py
+```
+
+Never place provider secrets in Flutter.
 
 ## Documentation
 
-Start with:
+Start with `../../docs/CURRENT_STATE.md`, `../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`, `../../docs/manuals/OPFIN_USER_MANUAL.md`, `../../docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md`, `../api/docs/api/API_QUICK_REFERENCE.md` and `../../SECURITY.md`.
 
-- `../../docs/LAUNCH_CUSTOMER_JOURNEY.md`
-- `../../docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md`
-- `../api/docs/api/API_QUICK_REFERENCE.md` via `apps/api/docs/api/API_QUICK_REFERENCE.md`
-- `../../SECURITY.md`
-
-Search all documentation from repository root:
-
-```bash
-python3 scripts/search-docs.py "repayment"
-python3 scripts/search-api.py "receipts"
-```
-
-
-## 20 September 2026 product-surface update
-
-Financial Spaces are now part of the canonical OpFin experience. One person may access Personal, Household, Savings Group and authorised organisation contexts without creating separate identities. Individuals and Savings Groups remain mobile-complete; Web provides enhanced analysis and institutional workspace capabilities. The customer proposition is to understand, manage, plan and improve money, with borrowing as one capability rather than the product boundary.
-
-
-## Android compile SDK
-
-Android builds require compile SDK 37 because the secure-storage dependency requires that API level. The target SDK remains 36 and the minimum supported Android version remains the Flutter-configured minimum. Install the Android 37 platform in local SDK environments before compiling; CI can provision it through Gradle when SDK licences are already accepted.
-
-## Android device compatibility
-
-Camera access is used for direct KYC capture, but a rear camera and autofocus are explicitly optional for installation. Without these declarations, Google Play infers a required rear camera from the CAMERA permission and filters out otherwise supported devices. Keep both camera feature declarations set to `android:required="false"`; the release-contract guard checks this.
-
-Account access and existing-account management remain available on devices without a rear camera. Customers who cannot capture the required evidence should use **Verify your identity → I need help with this step → Request assistance**. A support request is not identity verification or credit approval: the API retains the normal identity-evidence, consent and eligibility requirements. Camera permission and the restrictions on gallery/storage permissions remain in place.
-
-Before rollout, test a front-camera-only device and the assisted path on a device without usable camera access. Confirm that the newly uploaded bundle's required features no longer contain `android.hardware.camera` and compare Play's supported-device counts with the previous production release. Build 17 was uploaded as a draft with the camera filter; build 18 is the compatibility replacement. Actual Play support must be checked after uploading the new signed AAB.
-
-## Android Play identity and signing
-
-The existing Play Store application ID is `org.rotaryo.opfin` under **Core-Synergies**, verified in Play Console on 20 September 2026. The Kotlin namespace remains `co.opfin.app`; the manifest names its activity explicitly. Android updates must retain the Play application ID and use the registered upload key.
-
-GitHub Actions must remain disabled. Build and validate on an authorised local release workstation using `../../distribution/google-play/release-automation.md`. Never use a CI/debug-signed build for distribution.
-
-
-### Release contract guard
-
-Run `python3 ../../scripts/verify-android-release-contract.py` from `apps/client` (or `python3 scripts/verify-android-release-contract.py` from repository root) before any Android release build. The standard repository layout validation also runs this guard. It protects the existing Play application ID, API 37 compile requirement, launcher resolution, minimum release target, sensitive backup/cleartext controls, optional camera features and launch permission boundary without requiring the private signing key.
-
-## Financial health and impact check-ins
-
-The **Financial resilience** experience now includes a short customer financial-health check-in.
-
-Current mobile behaviour:
-
-- loads the latest transparent financial-health status alongside reputation and credit position;
-- lets the customer report income stability, essential-expense coverage, emergency savings, repayment stress, insurance protection and savings direction;
-- explains that the result is a wellbeing/resilience indicator, not a credit score;
-- keeps the check-in outside credit eligibility, pricing and limit decisions;
-- continues to make programme measurement consent optional.
-
-The API also supports programme-linked livelihood, dignified-work, economic-agency and community-finance observations. These richer programme check-ins are deliberately not forced into the normal customer journey. Programme-linked outcome capture requires active measurement consent and enrolment and should be surfaced only where a configured programme genuinely needs it.
-
-Physical VoiceOver/TalkBack, large-text, reduced-motion and touch-target verification remains a release/UAT requirement before making certification-level accessibility claims.
-
-## Programme check-ins and recorded-data financial health
-
-The Flutter Financial resilience journey now exposes:
-
-- due programme check-ins rendered dynamically from the API;
-- typed questions without partner-specific app builds;
-- reviewed locale content with explicit English fallback;
-- programme measurement notices and non-credit boundaries;
-- optional **Use recorded data** financial-health enrichment.
-
-The App never invents missing provider data or translations. Programme questions are not hard-coded into the lending journey and disappear when programme-measurement consent is withdrawn.
-
-WhatsApp, USSD and assisted capture use the same server-side instrument/response model; they are not separate financial logic.
+Run `make publication-check` before externally publishing product/developer documentation.

@@ -1,5 +1,9 @@
 # OpFin security
 
+Status: Controlled internal security standard  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 Security is maintained through layered controls, verified changes and timely response. A successful scan is not a certification that a system is free of vulnerabilities. Do not describe this repository or a release as permanently secure.
 
 ## Reporting

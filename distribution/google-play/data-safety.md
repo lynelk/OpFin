@@ -1,6 +1,8 @@
 # Google Play Data Safety worksheet
 
-Updated: 18 September 2026
+Status: Controlled internal Google Play verification worksheet  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
 This is a verification worksheet, not a completed legal declaration. The release owner must reconcile it against the exact production AAB, API, SDK inventory, privacy policy and provider contracts.
 

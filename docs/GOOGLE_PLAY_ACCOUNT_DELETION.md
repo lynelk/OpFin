@@ -1,5 +1,9 @@
 # Google Play account deletion configuration
 
+Status: Public publication reference  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 ## Canonical deletion paths
 
 OpFin supports both deletion paths required for an Android app that permits account creation:

@@ -1,6 +1,8 @@
 # OpFin User Acceptance Testing Manual
 
-Version: 23 September 2026
+Status: Controlled internal UAT manual  
+Version: 23 September 2026  
+Language: English (United Kingdom)
 
 Record tester, exact build/commit, environment, date, evidence and result for every case. Use synthetic data unless an authorised production acceptance plan explicitly requires otherwise.
 

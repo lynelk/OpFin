@@ -1,6 +1,8 @@
 # OpFin User Manual
 
-Version: 23 September 2026
+Status: Public user guidance  
+Version: 23 September 2026  
+Language: English (United Kingdom)
 
 ## What OpFin is
 

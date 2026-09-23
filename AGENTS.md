@@ -1,5 +1,9 @@
 # OpFin monorepo engineering rules
 
+Status: Controlled internal engineering standard  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 ## Boundaries
 
 - `apps/api` owns identity, consent, eligibility, credit profiles, financial decisions, obligations, ledger postings, provider finality and reconciliation.

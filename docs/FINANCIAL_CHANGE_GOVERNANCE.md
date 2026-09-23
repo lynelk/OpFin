@@ -1,7 +1,8 @@
 # Financial Change Governance
 
-Status: Required control  
-Updated: 22 September 2026
+Status: Controlled internal mandatory control  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
 
 Financial-control code is treated as higher-risk than ordinary product code.
 

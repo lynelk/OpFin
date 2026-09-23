@@ -1,5 +1,9 @@
 # Secure Android release automation setup
 
+Status: Controlled internal Android release procedure  
+Updated: 23 September 2026  
+Language: English (United Kingdom)
+
 ## Current release method: local build, Actions disabled
 
 The owner instructed on 20 September 2026 that **GitHub Actions remain disabled**. Do not enable Actions, dispatch workflows or create a release tag to trigger a build. The workflow below is retained for reference; its presence is not authorisation to run it.
