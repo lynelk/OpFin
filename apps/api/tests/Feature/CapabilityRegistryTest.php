@@ -30,7 +30,8 @@ class CapabilityRegistryTest extends TestCase
             ->assertJsonPath('data.capabilities.member_cooperative_core.status', 'DORMANT_READY')
             ->assertJsonPath('data.capabilities.linked_accounts.status', 'AVAILABLE')
             ->assertJsonPath('data.capabilities.partner_distribution.status', 'AVAILABLE')
-            ->assertJsonPath('data.capabilities.payments.owner', 'cpay')
+            ->assertJsonPath('data.capabilities.payments.owner', 'opfin')
+            ->assertJsonPath('data.capabilities.payments.primary_gateway', 'cpay_via_cito')
             ->assertJsonPath('data.capabilities.payments.status', 'AVAILABLE');
     }
 
