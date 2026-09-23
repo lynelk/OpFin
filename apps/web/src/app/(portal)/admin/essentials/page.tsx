@@ -107,7 +107,7 @@ export default async function AdminEssentialsPage({
                     <span className="badge warn">{advance.status.replaceAll("_", " ")}</span>
                   </div>
                   <p>Principal {formatUgx(advance.principal_outstanding_minor)} · Total outstanding {formatUgx(advance.outstanding_minor)}</p>
-                  {["funding_reserved", "fulfilment_pending"].includes(advance.status) ? (
+                  {["funding_reserved", "lender_funding_pending", "lender_reversal_pending", "fulfilment_pending"].includes(advance.status) ? (
                     <form action={reconcileEssentialsAdvanceAction}>
                       <input type="hidden" name="advance_id" value={advance.id} />
                       <button className="button secondary" type="submit">Reconcile provider status</button>
