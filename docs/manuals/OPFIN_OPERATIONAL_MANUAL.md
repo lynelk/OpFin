@@ -91,3 +91,29 @@ Before granting partner access:
 5. verify the partner portal exposes aggregate data only.
 
 Access-level labels do not expand the API beyond the aggregate-only boundary in this release.
+
+## P0-P2 programme delivery operations
+
+### Instruments and follow-ups
+
+Use **Programme delivery** to manage versioned instruments, typed questions, channels, reviewed translations and follow-up schedules. The hourly maintenance command reconciles due/overdue items and programme-to-commercial graduation evidence.
+
+Programme-measurement questions must not be shown after consent withdrawal. Historical schedules remain available to operations as data-quality/consent exceptions.
+
+### Partner identities
+
+Create partner invitations only for programmes already linked to the intended partner. A partner account requires the invitation plus fresh OTP-backed phone verification and a dedicated identity. Pending invitation tokens are stored encrypted only for authorised delivery display and cleared after acceptance.
+
+### Commercial performance
+
+Use **Commercial performance** to record acquisition attribution and governed costs, then review funnel, repeat usage, NPL/overdue state, recorded revenue and contribution. Do not replace unknown costs or revenues with zero.
+
+Commercial graduation is analytics only. It never approves credit or changes price/limit.
+
+### Provider adapters
+
+Adapters are disabled until credentials/configuration and legal basis are explicitly confirmed. Store no provider secret in the adapter registry. Enforce the signal allow-list and purpose/consent/enrolment gates. Successful ingestion verifies provenance but leaves signals non-risk-eligible.
+
+### Exports
+
+CSV, XLSX and ZIP report packs are aggregate-only and retain privacy suppression and causal-attribution notices.
