@@ -13,18 +13,36 @@ class ProgrammeReportExportService
         private readonly CommercialInsightsService $commercial,
     ) {}
 
-    public function reportData(int $programmeId): array
+    public function reportData(int $programmeId, bool $includeCommercial = false): array
     {
-        return [
+        $operations = $this->delivery->operationsSummary($programmeId);
+        $aggregateOperations = [
+            'programme_id' => $operations['programme_id'],
+            'active_enrolments' => $operations['active_enrolments'],
+            'scheduled' => $operations['scheduled'],
+            'due_next_7_days' => $operations['due_next_7_days'],
+            'overdue' => $operations['overdue'],
+            'completed' => $operations['completed'],
+            'consent_exceptions' => $operations['consent_exceptions'],
+            'baseline_missing' => $operations['baseline_missing'],
+            'data_quality' => $operations['data_quality'],
+        ];
+
+        $data = [
             'generated_at' => now()->toIso8601String(),
             'programme_id' => $programmeId,
             'outcomes' => $this->impact->programmeOutcomes($programmeId),
-            'operations' => $this->delivery->operationsSummary($programmeId),
+            'operations' => $aggregateOperations,
             'graduation' => $this->commercial->graduationSummary($programmeId),
-            'commercial' => $this->commercial->dashboard(null, null, null, $programmeId),
             'privacy_notice' => 'This export is aggregate-only. Individual participant records and suppressed small-cohort values are not exported.',
             'causality_notice' => 'Measured change must not be represented as programme-caused unless the evaluation design supports causal attribution.',
         ];
+
+        if ($includeCommercial) {
+            $data['commercial'] = $this->commercial->dashboard(null, null, null, $programmeId);
+        }
+
+        return $data;
     }
 
     public function csv(int $programmeId): string
@@ -93,7 +111,7 @@ class ProgrammeReportExportService
         }
 
         $zip = new ZipArchive();
-        if ($zip->open($path, ZipArchive::OVERWRITE) !== true) {
+        if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             @unlink($path);
             throw new RuntimeException('Unable to create XLSX export.');
         }
@@ -115,20 +133,20 @@ class ProgrammeReportExportService
         return $bytes;
     }
 
-    public function reportPack(int $programmeId): string
+    public function reportPack(int $programmeId, bool $includeCommercial = false): string
     {
         if (! class_exists(ZipArchive::class)) {
             throw new RuntimeException('Report-pack export requires the PHP zip extension.');
         }
 
-        $data = $this->reportData($programmeId);
+        $data = $this->reportData($programmeId, $includeCommercial);
         $path = tempnam(sys_get_temp_dir(), 'opfin-report-pack-');
         if ($path === false) {
             throw new RuntimeException('Unable to prepare report pack.');
         }
 
         $zip = new ZipArchive();
-        if ($zip->open($path, ZipArchive::OVERWRITE) !== true) {
+        if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             @unlink($path);
             throw new RuntimeException('Unable to create report pack.');
         }
