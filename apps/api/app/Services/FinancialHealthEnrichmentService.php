@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -21,8 +22,7 @@ class FinancialHealthEnrichmentService
         $position = $compass['position'] ?? [];
 
         $monthStart = Carbon::now()->subDays(30)->startOfDay();
-        $entries = DB::table('financial_entries')
-            ->where('user_id', $user->id)
+        $entries = $this->financialEntries($user)
             ->where('currency', 'UGX')
             ->where('occurred_at', '>=', $monthStart)
             ->get();
@@ -168,8 +168,7 @@ class FinancialHealthEnrichmentService
         for ($offset = 0; $offset < 3; $offset++) {
             $start = now()->subMonths($offset)->startOfMonth();
             $end = now()->subMonths($offset)->endOfMonth();
-            $monthly[] = (int) DB::table('financial_entries')
-                ->where('user_id', $user->id)
+            $monthly[] = (int) $this->financialEntries($user)
                 ->where('currency', 'UGX')
                 ->where('direction', 'income')
                 ->whereBetween('occurred_at', [$start, $end])
@@ -195,15 +194,13 @@ class FinancialHealthEnrichmentService
 
     private function savingsDirection(User $user): string
     {
-        $current = (int) DB::table('financial_entries')
-            ->where('user_id', $user->id)
+        $current = (int) $this->financialEntries($user)
             ->where('direction', 'expense')
             ->where('category', 'Savings')
             ->whereBetween('occurred_at', [now()->subDays(30), now()])
             ->sum('amount_minor');
 
-        $previous = (int) DB::table('financial_entries')
-            ->where('user_id', $user->id)
+        $previous = (int) $this->financialEntries($user)
             ->where('direction', 'expense')
             ->where('category', 'Savings')
             ->whereBetween('occurred_at', [now()->subDays(60), now()->subDays(31)])
@@ -225,6 +222,15 @@ class FinancialHealthEnrichmentService
         }
 
         return 'stable';
+    }
+
+    private function financialEntries(User $user): Builder
+    {
+        $query = DB::table('financial_entries')->where('user_id', $user->id);
+
+        return $user->institution_id === null
+            ? $query->whereNull('institution_id')
+            : $query->where('institution_id', $user->institution_id);
     }
 
     private function classify(array $data): array
