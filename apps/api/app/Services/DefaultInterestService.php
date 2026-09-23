@@ -214,7 +214,10 @@ class DefaultInterestService
     private function account(string $code, string $name, string $type, string $currency): LedgerAccount
     {
         $currency = strtoupper($currency);
-        $account = LedgerAccount::query()->where('code', $code)->first();
+        $account = LedgerAccount::query()
+            ->where('code', $code)
+            ->where('currency', $currency)
+            ->first();
         if ($account) {
             if (strtoupper((string) $account->currency) !== $currency || ! $account->is_active) {
                 throw new InvalidArgumentException("Ledger account {$code} is unavailable for {$currency} postings.");
