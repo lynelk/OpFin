@@ -196,6 +196,13 @@ class _HomePageState extends State<_HomePage>{
           child:Padding(
             padding:const EdgeInsets.all(20),
             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('FINANCIAL COMPASS',
+                style:TextStyle(
+                  color:OpFinColors.indigo,
+                  fontSize:12,
+                  fontWeight:FontWeight.w800,
+                  letterSpacing:1.1)),
+              const SizedBox(height:6),
               Text(safe==null?'Available money':'Safe to spend',
                 style:const TextStyle(color:OpFinColors.muted)),
               const SizedBox(height:5),
@@ -207,6 +214,10 @@ class _HomePageState extends State<_HomePage>{
                 safe==null
                   ?'Record the money you can actually use so OpFin can plan without guessing.'
                   :'After confirmed and scheduled obligations over the next 30 days.'),
+              const SizedBox(height:6),
+              const Text(
+                'Recorded information stays separate from estimates and unavailable data.',
+                style:TextStyle(color:OpFinColors.muted,height:1.4)),
               const SizedBox(height:18),
               Row(children:[
                 Expanded(child:_HomeStat(label:'Savings',value:_ugx(savings))),
@@ -221,13 +232,38 @@ class _HomePageState extends State<_HomePage>{
 
         if(next.isNotEmpty)
           Card(
-            child:ListTile(
-              leading:const Icon(Icons.auto_awesome_outlined),
-              title:Text(next['title']?.toString()??'Review your money',
-                style:const TextStyle(fontWeight:FontWeight.w700)),
-              subtitle:Text(next['text']?.toString()??''),
-              trailing:const Icon(Icons.chevron_right),
-              onTap:()=>_next(next,credit),
+            color:OpFinColors.indigoStrong,
+            child:Padding(
+              padding:const EdgeInsets.all(20),
+              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                const Text('YOUR NEXT STEP',
+                  style:TextStyle(
+                    color:OpFinColors.apricot,
+                    fontSize:12,
+                    fontWeight:FontWeight.w800,
+                    letterSpacing:1.1)),
+                const SizedBox(height:8),
+                Text(next['title']?.toString()??'Review your money',
+                  style:const TextStyle(
+                    color:OpFinColors.white,
+                    fontSize:22,
+                    fontWeight:FontWeight.w800)),
+                if((next['text']?.toString()??'').isNotEmpty)...[
+                  const SizedBox(height:8),
+                  Text(next['text']?.toString()??'',
+                    style:const TextStyle(
+                      color:OpFinColors.periwinkle,
+                      height:1.45)),
+                ],
+                const SizedBox(height:16),
+                FilledButton.icon(
+                  style:FilledButton.styleFrom(
+                    backgroundColor:OpFinColors.apricot,
+                    foregroundColor:OpFinColors.ink),
+                  onPressed:()=>_next(next,credit),
+                  icon:const Icon(Icons.arrow_forward),
+                  label:const Text('Continue')),
+              ]),
             ),
           ),
 
