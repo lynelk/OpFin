@@ -103,6 +103,16 @@ class FinancialSpaceStatementController extends Controller
         }
     }
 
+    public function imports(
+        FinancialSpace $space,
+        FinancialSpaceTreasuryAccount $account,
+        Request $request
+    ): JsonResponse {
+        return ApiResponse::success('Statement imports loaded.', [
+            'imports' => $this->statements->imports($space, $account, $request->user()),
+        ]);
+    }
+
     public function importStatement(
         FinancialSpace $space,
         FinancialSpaceTreasuryAccount $account,
