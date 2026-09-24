@@ -30,7 +30,7 @@ Web uses one sign-in surface and routes the authenticated person to the correct 
 - **Programme Partner Workspace** for `programme_partner` aggregate programme reporting; and
 - **OpFin Operations** for `platform_admin`, `operations` and `support`, with modules filtered by role.
 
-The legacy `/admin-login` URL is a compatibility redirect to the unified sign-in screen. Programme check-ins remain inside the Personal experience. Support, inclusion/programmes, impact, programme delivery and commercial performance are modules inside role-gated Operations rather than separate authentication portals.
+The legacy `/admin-login` URL is a compatibility redirect to the unified sign-in screen. Programme check-ins remain inside the Personal experience. Support, inclusion/programmes, impact, programme delivery and commercial performance are modules inside role-gated Operations rather than separate authentication portals.\n\nWithin OpFin Operations, navigation is grouped into **Overview & automation**, **Finance & risk**, **Customer service**, **Governance & assurance** and **Programmes & growth**. Each operational module carries an explicit role allow-list; `support` is limited to its assigned overview, ledger, support and audit surfaces rather than inheriting every `/admin` route.
 
 ## Customer and Workspace experience
 
