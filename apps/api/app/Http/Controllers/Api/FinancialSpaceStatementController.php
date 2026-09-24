@@ -85,8 +85,31 @@ class FinancialSpaceStatementController extends Controller
             'counterparty_name' => ['nullable', 'string', 'max:200'],
             'transaction_date' => ['required', 'date'],
             'value_date' => ['nullable', 'date'],
+            'idempotency_key' => ['nullable', 'string', 'max:255'],
             'metadata' => ['nullable', 'array'],
         ]);
+
+        $idempotencyKey = trim((string) (
+            $request->header('Idempotency-Key')
+            ?: ($validated['idempotency_key'] ?? '')
+        ));
+        if ($idempotencyKey === '') {
+            return ApiResponse::error('A treasury cashbook idempotency key is required.', 422, [
+                'idempotency_key' => ['Provide Idempotency-Key header or idempotency_key body field.'],
+            ]);
+        }
+
+        unset($validated['idempotency_key']);
+        $validated['source_type'] = 'manual';
+        $validated['source_reference'] = 'manual:'.hash(
+            'sha256',
+            implode('|', [
+                (string) $space->id,
+                (string) $account->id,
+                (string) $request->user()->id,
+                $idempotencyKey,
+            ])
+        );
 
         try {
             $transaction = $this->statements->recordTransaction(
