@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:opfin/complete_registration_screen.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/login_screen.dart';
+import 'package:opfin/widgets/auth_scaffold.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -201,78 +202,67 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Verify phone')),
-        body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              const Icon(Icons.sms_outlined, size: 64),
-              const SizedBox(height: 24),
-              const Text(
-                'Enter the 6-digit code',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                ),
+  Widget build(BuildContext context) => OpFinAuthScaffold(
+        eyebrow: widget.registration ? 'Create account' : 'Secure verification',
+        title: 'Enter the 6-digit code',
+        description:
+            'We sent it to ' +
+            widget.phone +
+            '. On supported phones, OpFin fills it in automatically.',
+        showBackButton: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _controller,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              autofillHints: const [AutofillHints.oneTimeCode],
+              decoration: const InputDecoration(
+                labelText: 'Verification code',
+                hintText: '6 digits',
+                prefixIcon: Icon(Icons.sms_outlined),
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'We sent it to ${widget.phone}. On supported phones, OpFin fills it in automatically.',
-                textAlign: TextAlign.center,
+              onChanged: (value) {
+                if (value.length == 6 && !_autoSubmitted) {
+                  _autoSubmitted = true;
+                  _verify();
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _countdown > 0
+                  ? 'Code expires in ' + _countdown.toString() + ' seconds'
+                  : 'Code expired',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: _loading || _countdown <= 0 ? null : _verify,
+                child: _loading
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Continue'),
               ),
-              const SizedBox(height: 32),
-              TextField(
-                controller: _controller,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                autofillHints: const [AutofillHints.oneTimeCode],
-                decoration: const InputDecoration(
-                  labelText: 'Verification code',
-                  hintText: '6 digits',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) {
-                  if (value.length == 6 && !_autoSubmitted) {
-                    _autoSubmitted = true;
-                    _verify();
-                  }
-                },
+            ),
+            if (_resend)
+              TextButton(
+                onPressed: _loading ? null : _sendAgain,
+                child: const Text('Send a new code'),
               ),
-              const SizedBox(height: 18),
-              Text(
-                _countdown > 0
-                    ? 'Code expires in $_countdown seconds'
-                    : 'Code expired',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                height: 52,
-                child: FilledButton(
-                  onPressed: _loading || _countdown <= 0 ? null : _verify,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Continue'),
-                ),
-              ),
-              if (_resend)
-                TextButton(
-                  onPressed: _loading ? null : _sendAgain,
-                  child: const Text('Send a new code'),
-                ),
-              const SizedBox(height: 12),
-              const Text(
-                'Never share this code with anyone.',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+            const SizedBox(height: 12),
+            const Text(
+              'Never share this code with anyone, including OpFin staff.',
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       );
 }
