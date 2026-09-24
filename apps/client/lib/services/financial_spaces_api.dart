@@ -24,6 +24,9 @@ class FinancialSpacesApi {
   static Future<Map<String,dynamic>> financialLife(int id) async => (await _request('/financial-spaces/$id/financial-life') as Map).cast<String,dynamic>();
   static Future<List<dynamic>> members(int id) async => ((await _request('/financial-spaces/$id/members'))['members'] as List?)??[];
   static Future<void> invite(int id,String phone,String role) async { await _request('/financial-spaces/$id/invitations',method:'POST',body:{'phone':phone,'role':role}); }
+  static Future<List<Map<String,dynamic>>> credentials(int id) async => (((await _request('/financial-spaces/$id/credentials'))['credentials'] as List?)??[]).whereType<Map>().map((e)=>e.cast<String,dynamic>()).toList();
+  static Future<Map<String,dynamic>> declareCredential(int id,{required String type,required String issuerCode,required String issuerName,required String value,String? country}) async => ((await _request('/financial-spaces/$id/credentials',method:'POST',body:{'credential_type':type,'issuer_code':issuerCode,'issuer_name':issuerName,'credential_value':value,if(country!=null)'jurisdiction_country':country}))['credential'] as Map).cast<String,dynamic>();
+  static Future<List<Map<String,dynamic>>> groupProtectionProducts(int id) async => (((await _request('/financial-spaces/$id/protection/products'))['products'] as List?)??[]).whereType<Map>().map((e)=>e.cast<String,dynamic>()).toList();
   static Future<void> addAsset(int id,String type,String name,int value) async { await _request('/financial-spaces/$id/assets',method:'POST',body:{'asset_type':type,'name':name,'value_minor':value}); }
   static Future<void> addObligation(int id,String kind,String direction,String counterparty,int amount) async { await _request('/financial-spaces/$id/obligations',method:'POST',body:{'kind':kind,'direction':direction,'counterparty_name':counterparty,'amount_minor':amount}); }
 }
