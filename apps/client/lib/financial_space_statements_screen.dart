@@ -45,7 +45,15 @@ class _FinancialSpaceStatementsScreenState
             spaceId,
             accountId: _accountId,
           );
-    return {'accounts': accounts, 'statements': statements};
+    final allStatements = await FinancialSpacesApi.generatedStatements(spaceId);
+    final consolidated = allStatements
+        .where((statement) => statement['statement_scope'] == 'consolidated')
+        .toList();
+    return {
+      'accounts': accounts,
+      'statements': statements,
+      'consolidated': consolidated,
+    };
   }
 
   Future<void> _refresh() async {
@@ -139,6 +147,84 @@ class _FinancialSpaceStatementsScreenState
     }
   }
 
+  Future<void> _issueConsolidatedStatement() async {
+    final now = DateTime.now();
+    var from = DateTime(now.year, now.month, 1);
+    var to = DateTime(now.year, now.month + 1, 0);
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setLocal) => AlertDialog(
+          title: const Text('Issue consolidated statement'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'This statement includes all treasury accounts and the recorded Financial Space position. Different currencies remain separate.',
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('From'),
+                subtitle: Text(DateFormat('d MMM y').format(from)),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: dialogContext,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                    initialDate: from,
+                  );
+                  if (picked != null) setLocal(() => from = picked);
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('To'),
+                subtitle: Text(DateFormat('d MMM y').format(to)),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: dialogContext,
+                    firstDate: from,
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                    initialDate: to.isBefore(from) ? from : to,
+                  );
+                  if (picked != null) setLocal(() => to = picked);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Issue'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok != true) return;
+
+    try {
+      final statement = await FinancialSpacesApi.issueConsolidatedStatement(
+        spaceId,
+        DateFormat('yyyy-MM-dd').format(from),
+        DateFormat('yyyy-MM-dd').format(to),
+      );
+      if (!mounted) return;
+      await _refresh();
+      await _openStatement((statement['id'] as num).toInt());
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
   Future<void> _openStatement(int statementId) async {
     try {
       final data =
@@ -176,6 +262,10 @@ class _FinancialSpaceStatementsScreenState
                 .map((item) => item.cast<String, dynamic>())
                 .toList();
             final statements = (data['statements'] as List? ?? const [])
+                .whereType<Map>()
+                .map((item) => item.cast<String, dynamic>())
+                .toList();
+            final consolidated = (data['consolidated'] as List? ?? const [])
                 .whereType<Map>()
                 .map((item) => item.cast<String, dynamic>())
                 .toList();
@@ -350,10 +440,19 @@ class BankStyleStatementDetailScreen extends StatelessWidget {
     final statement =
         (data['statement'] as Map?)?.cast<String, dynamic>() ?? {};
     final account = (data['account'] as Map?)?.cast<String, dynamic>() ?? {};
+    final sections = (data['sections'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => item.cast<String, dynamic>())
+        .toList();
+    final totalsByCurrency =
+        (data['totals_by_currency'] as Map?)?.cast<String, dynamic>() ?? {};
+    final positionByCurrency =
+        (data['position_by_currency'] as Map?)?.cast<String, dynamic>() ?? {};
     final rows = (data['rows'] as List? ?? const [])
         .whereType<Map>()
         .map((item) => item.cast<String, dynamic>())
         .toList();
+    final consolidated = statement['statement_scope'] == 'consolidated';
     final currency = account['currency']?.toString() ?? 'UGX';
     final hash = statement['content_hash']?.toString() ?? '';
 
@@ -366,7 +465,11 @@ class BankStyleStatementDetailScreen extends StatelessWidget {
             'OpFin',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
           ),
-          const Text('Financial Space Statement'),
+          Text(
+            consolidated
+                ? 'Consolidated Financial Space Statement'
+                : 'Financial Space Statement',
+          ),
           const Divider(height: 30),
           Text(
             statement['statement_number']?.toString() ?? '',
@@ -378,24 +481,77 @@ class BankStyleStatementDetailScreen extends StatelessWidget {
                 (statement['period_end']?.toString() ?? ''),
           ),
           const SizedBox(height: 14),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    account['account_name']?.toString() ?? 'Treasury account',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  if (account['institution_name'] != null)
-                    Text(account['institution_name'].toString()),
-                  if (account['account_reference_masked'] != null)
-                    Text(account['account_reference_masked'].toString()),
-                ],
+          if (!consolidated)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      account['account_name']?.toString() ?? 'Treasury account',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    if (account['institution_name'] != null)
+                      Text(account['institution_name'].toString()),
+                    if (account['account_reference_masked'] != null)
+                      Text(account['account_reference_masked'].toString()),
+                  ],
+                ),
               ),
             ),
-          ),
+          if (consolidated) ...[
+            const Text(
+              'Totals by currency',
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+            ),
+            ...totalsByCurrency.entries.map(
+              (entry) {
+                final values = (entry.value as Map).cast<String, dynamic>();
+                return Card(
+                  child: ListTile(
+                    title: Text(entry.key),
+                    subtitle: Text(
+                      'Opening ' +
+                          _money(values['opening_balance_minor'], entry.key) +
+                          ' · Closing ' +
+                          _money(values['closing_balance_minor'], entry.key),
+                    ),
+                    trailing: Text(
+                      ((values['transaction_count'] as num?)?.toInt() ?? 0)
+                              .toString() +
+                          ' txns',
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Recorded financial position',
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+            ),
+            ...positionByCurrency.entries.map(
+              (entry) {
+                final values = (entry.value as Map).cast<String, dynamic>();
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Text(
+                      entry.key +
+                          ': assets ' +
+                          _money(values['recorded_assets_minor'], entry.key) +
+                          ' · owed ' +
+                          _money(values['amount_owed_minor'], entry.key) +
+                          ' · receivable ' +
+                          _money(values['amount_receivable_minor'], entry.key),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+          if (!consolidated)
           Row(
             children: [
               Expanded(
@@ -418,6 +574,7 @@ class BankStyleStatementDetailScreen extends StatelessWidget {
               ),
             ],
           ),
+          if (!consolidated)
           Row(
             children: [
               Expanded(
@@ -445,7 +602,64 @@ class BankStyleStatementDetailScreen extends StatelessWidget {
             'Transactions',
             style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
           ),
-          if (rows.isEmpty)
+          if (consolidated && sections.isNotEmpty)
+            ...sections.map(
+              (section) {
+                final sectionAccount =
+                    (section['account'] as Map?)?.cast<String, dynamic>() ?? {};
+                final sectionRows = (section['rows'] as List? ?? const [])
+                    .whereType<Map>()
+                    .map((item) => item.cast<String, dynamic>())
+                    .toList();
+                final sectionCurrency =
+                    sectionAccount['currency']?.toString() ?? 'UGX';
+                return Card(
+                  child: ExpansionTile(
+                    title: Text(
+                      sectionAccount['account_name']?.toString() ??
+                          'Treasury account',
+                    ),
+                    subtitle: Text(
+                      sectionCurrency +
+                          ' · closing ' +
+                          _money(
+                            section['closing_balance_minor'],
+                            sectionCurrency,
+                          ),
+                    ),
+                    children: sectionRows
+                        .map(
+                          (row) => ListTile(
+                            title: Text(
+                              row['description']?.toString() ?? 'Transaction',
+                            ),
+                            subtitle: Text(
+                              (row['date']?.toString() ?? '') +
+                                  (row['reference'] == null
+                                      ? ''
+                                      : ' · ' + row['reference'].toString()),
+                            ),
+                            trailing: Text(
+                              row['debit_minor'] != null
+                                  ? '- ' +
+                                      _money(
+                                        row['debit_minor'],
+                                        sectionCurrency,
+                                      )
+                                  : '+ ' +
+                                      _money(
+                                        row['credit_minor'],
+                                        sectionCurrency,
+                                      ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                );
+              },
+            )
+          else if (rows.isEmpty)
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
