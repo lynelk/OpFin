@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\FinancialSpace;
 use App\Models\ProtectionClaim;
 use App\Models\ProtectionPolicy;
 use App\Models\ProtectionProduct;
@@ -10,6 +11,7 @@ use App\Services\ProtectionService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use InvalidArgumentException;
 
@@ -22,8 +24,31 @@ class ProtectionController extends Controller
         $country = strtoupper((string) $request->query('country', config('opfin.default_country', 'UG')));
 
         return ApiResponse::success('Protection products loaded.', [
-            'products' => $this->protection->activeProducts($country),
+            'products' => $this->protection->activeProducts($country, 'personal'),
             'risk_notice' => 'The disclosed insurer or underwriter issues the cover and owns underwriting and claim decisions. OpFin orchestrates enrollment, premium collection and servicing.',
+        ]);
+    }
+
+    public function spaceProducts(FinancialSpace $space, Request $request): JsonResponse
+    {
+        $isMember = DB::table('financial_space_memberships')
+            ->where('financial_space_id', $space->id)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'active')
+            ->exists();
+
+        abort_unless($isMember, 403);
+
+        return ApiResponse::success('Group protection products loaded.', [
+            'products' => $this->protection->activeProducts($space->country, 'group'),
+            'space' => [
+                'id' => $space->id,
+                'type' => $space->type,
+                'name' => $space->name,
+                'country' => $space->country,
+                'currency' => $space->currency,
+            ],
+            'risk_notice' => 'Only approved group-capable products are shown. Group enrolment, member consent, premium collection and policy issuance remain separately gated and are not activated by viewing this catalogue.',
         ]);
     }
 
