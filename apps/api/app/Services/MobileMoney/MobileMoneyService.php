@@ -204,14 +204,6 @@ class MobileMoneyService
 
         try {
             $provider = $this->providers->provider($providerName);
-            $response = $direction === MobileMoneyTransaction::DIRECTION_DISBURSEMENT
-                ? $provider->disburse($transaction->fresh())
-                : $provider->collect($transaction->fresh());
-
-            $this->applyProviderResponse($transaction, $response);
-            $this->audit("mobile_money.{$direction}.provider_response", $transaction, [
-                'response' => $response->raw,
-            ]);
         } catch (InvalidArgumentException $exception) {
             $transaction->refresh();
             $transaction->update([
@@ -228,6 +220,17 @@ class MobileMoneyService
             $this->syncEconomics($transaction->fresh());
 
             throw $exception;
+        }
+
+        try {
+            $response = $direction === MobileMoneyTransaction::DIRECTION_DISBURSEMENT
+                ? $provider->disburse($transaction->fresh())
+                : $provider->collect($transaction->fresh());
+
+            $this->applyProviderResponse($transaction, $response);
+            $this->audit("mobile_money.{$direction}.provider_response", $transaction, [
+                'response' => $response->raw,
+            ]);
         } catch (\Throwable $exception) {
             $transaction->refresh();
             $transaction->update([
