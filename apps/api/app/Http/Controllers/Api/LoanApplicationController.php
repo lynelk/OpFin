@@ -67,6 +67,13 @@ class LoanApplicationController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
+        if (! (bool) config('opfin.credit.legacy_manual_application_status_enabled', false)) {
+            return ApiResponse::error(
+                'Legacy manual loan-application status mutation is retired. Use governed decision, offer and provider-finality workflows.',
+                410
+            );
+        }
+
         if (!$this->canManageLoans($request)) {
             return ApiResponse::error('Unauthorized.', 403);
         }
