@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class FinancialSpaceGeneratedStatement extends Model
 {
     protected $fillable = [
-        'public_id','statement_number','financial_space_id','treasury_account_id','generated_by_user_id',
+        'public_id','statement_number','financial_space_id','treasury_account_id','generated_by_user_id','statement_scope',
         'period_start','period_end','opening_balance_minor','closing_balance_minor','total_debits_minor',
         'total_credits_minor','transaction_count','reconciliation_status','content_hash','statement_payload','generated_at','summary',
     ];
