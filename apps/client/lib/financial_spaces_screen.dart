@@ -397,3 +397,111 @@ class _GroupProtectionCatalogueScreenState
         ),
       );
 }
+
+
+class FinancialAssetLocationsScreen extends StatefulWidget {
+  const FinancialAssetLocationsScreen({super.key, required this.space});
+  final Map<String, dynamic> space;
+
+  @override
+  State<FinancialAssetLocationsScreen> createState() =>
+      _FinancialAssetLocationsScreenState();
+}
+
+class _FinancialAssetLocationsScreenState
+    extends State<FinancialAssetLocationsScreen> {
+  late Future<List<Map<String, dynamic>>> _assets;
+
+  int get spaceId => (widget.space['id'] as num).toInt();
+
+  @override
+  void initState() {
+    super.initState();
+    _assets = FinancialSpacesApi.assets(spaceId);
+  }
+
+  Future<void> _reload() async {
+    setState(() => _assets = FinancialSpacesApi.assets(spaceId));
+    await _assets;
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Assets & project locations')),
+        body: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _assets,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(snapshot.error.toString()),
+                ),
+              );
+            }
+
+            final assets = snapshot.data ?? const <Map<String, dynamic>>[];
+            return RefreshIndicator(
+              onRefresh: _reload,
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  const Text(
+                    'Map only the assets where location adds real value.',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Property, farms, project sites and other physical investments can carry a precise risk or project location. Financial assets that do not need a location can remain unmapped.',
+                  ),
+                  const SizedBox(height: 16),
+                  if (assets.isEmpty)
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'No assets are recorded in this Financial Space yet.',
+                        ),
+                      ),
+                    )
+                  else
+                    ...assets.map(
+                      (asset) => Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.location_city_outlined),
+                          title: Text(asset['name']?.toString() ?? 'Asset'),
+                          subtitle: Text(
+                            (asset['asset_type']?.toString() ?? 'asset')
+                                .replaceAll('_', ' '),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LocationContextScreen(
+                                subjectType: 'financial_asset',
+                                subjectId: (asset['id'] as num).toInt(),
+                                purpose: 'investment_asset_location',
+                                title: asset['name']?.toString() ??
+                                    'Asset location',
+                                description:
+                                    'Use precise location only where the asset or investment genuinely depends on a physical site.',
+                                countryCode:
+                                    widget.space['country']?.toString() ?? 'UG',
+                                preciseRecommended: true,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+}
