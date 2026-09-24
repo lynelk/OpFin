@@ -390,7 +390,7 @@ class FinancialSpaceStatementService
 
         $statementNumber = 'OFS-'.strtoupper(substr(str_replace('-', '', $space->public_id), 0, 8))
             .'-'.$fromDate->format('Ymd').'-'.$toDate->format('Ymd')
-            .'-'.str_pad((string) ($account->id % 10000), 4, '0', STR_PAD_LEFT);
+            .'-'.strtoupper(substr(str_replace('-', '', (string) Str::uuid()), 0, 6));
 
         $canonical = [
             'statement_number' => $statementNumber,
@@ -408,35 +408,67 @@ class FinancialSpaceStatementService
         ];
         $contentHash = hash('sha256', json_encode($canonical, JSON_THROW_ON_ERROR));
 
-        $statement = FinancialSpaceGeneratedStatement::query()->firstOrNew([
+        $statementPayload = [
             'statement_number' => $statementNumber,
+            'space' => [
+                'id' => $space->id,
+                'public_id' => $space->public_id,
+                'name' => $space->name,
+                'type' => $space->type,
+            ],
+            'account' => [
+                'id' => $account->id,
+                'public_id' => $account->public_id,
+                'account_name' => $account->account_name,
+                'account_type' => $account->account_type,
+                'institution_name' => $account->institution_name,
+                'account_reference_masked' => $account->account_reference_masked,
+                'currency' => $account->currency,
+            ],
+            'period_start' => $fromDate->toDateString(),
+            'period_end' => $toDate->toDateString(),
+            'opening_balance_minor' => $opening,
+            'closing_balance_minor' => $balance,
+            'total_debits_minor' => $totalDebits,
+            'total_credits_minor' => $totalCredits,
+            'transaction_count' => count($rows),
+            'reconciliation_status' => $reconciliationStatus,
+            'rows' => $rows,
+        ];
+
+        $statement = FinancialSpaceGeneratedStatement::query()->create([
+            'public_id' => (string) Str::uuid(),
+            'statement_number' => $statementNumber,
+            'financial_space_id' => $space->id,
+            'treasury_account_id' => $account->id,
+            'generated_by_user_id' => $actor->id,
+            'period_start' => $fromDate->toDateString(),
+            'period_end' => $toDate->toDateString(),
+            'opening_balance_minor' => $opening,
+            'closing_balance_minor' => $balance,
+            'total_debits_minor' => $totalDebits,
+            'total_credits_minor' => $totalCredits,
+            'transaction_count' => count($rows),
+            'reconciliation_status' => $reconciliationStatus,
+            'content_hash' => $contentHash,
+            'statement_payload' => $statementPayload,
+            'generated_at' => now(),
+            'summary' => [
+                'space_name' => $space->name,
+                'account_name' => $account->account_name,
+                'institution_name' => $account->institution_name,
+                'account_reference_masked' => $account->account_reference_masked,
+                'currency' => $account->currency,
+            ],
         ]);
-        if (! $statement->exists) {
-            $statement->public_id = (string) Str::uuid();
-        }
-        $statement->fill([
-                'financial_space_id' => $space->id,
-                'treasury_account_id' => $account->id,
-                'generated_by_user_id' => $actor->id,
-                'period_start' => $fromDate->toDateString(),
-                'period_end' => $toDate->toDateString(),
-                'opening_balance_minor' => $opening,
-                'closing_balance_minor' => $balance,
-                'total_debits_minor' => $totalDebits,
-                'total_credits_minor' => $totalCredits,
-                'transaction_count' => count($rows),
-                'reconciliation_status' => $reconciliationStatus,
-                'content_hash' => $contentHash,
-                'generated_at' => now(),
-                'summary' => [
-                    'space_name' => $space->name,
-                    'account_name' => $account->account_name,
-                    'institution_name' => $account->institution_name,
-                    'account_reference_masked' => $account->account_reference_masked,
-                    'currency' => $account->currency,
-                ],
+
+        $this->auditLogger->record('financial_space.statement.generated', $actor, $statement, [
+            'financial_space_id' => $space->id,
+            'treasury_account_id' => $account->id,
+            'period_start' => $fromDate->toDateString(),
+            'period_end' => $toDate->toDateString(),
+            'content_hash' => $contentHash,
         ]);
-        $statement->save();
 
         return [
             'statement' => $statement->fresh(),
@@ -444,6 +476,42 @@ class FinancialSpaceStatementService
             'account' => $account,
             'rows' => $rows,
         ];
+    }
+
+    public function statementData(
+        FinancialSpace $space,
+        FinancialSpaceGeneratedStatement $statement,
+        User $actor,
+    ): array {
+        $this->assertTreasurySpace($space);
+        $this->assertMember($space, $actor);
+        abort_unless($statement->financial_space_id === $space->id, 404);
+
+        $payload = $statement->statement_payload ?? [];
+        $account = FinancialSpaceTreasuryAccount::query()->withTrashed()->findOrFail($statement->treasury_account_id);
+
+        return [
+            'statement' => $statement,
+            'space' => $space,
+            'account' => $account,
+            'rows' => is_array($payload['rows'] ?? null) ? $payload['rows'] : [],
+        ];
+    }
+
+    public function generatedStatements(
+        FinancialSpace $space,
+        User $actor,
+        ?int $accountId = null,
+    ): Collection {
+        $this->assertTreasurySpace($space);
+        $this->assertMember($space, $actor);
+
+        return FinancialSpaceGeneratedStatement::query()
+            ->where('financial_space_id', $space->id)
+            ->when($accountId, fn ($query) => $query->where('treasury_account_id', $accountId))
+            ->orderByDesc('generated_at')
+            ->limit(24)
+            ->get();
     }
 
     public function renderBankStyleHtml(array $data): string
