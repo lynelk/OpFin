@@ -4,6 +4,32 @@ import { financialSpacesApi, locationContextsApi } from "@/lib/api/client";
 import { getAccessToken } from "@/lib/auth/session";
 import { formatUgx } from "@/lib/format";
 
+
+async function staticMapDataUrl(
+  contextId: number,
+  token: string | undefined,
+  zoom = 14
+): Promise<string | null> {
+  const apiBase = process.env.NEXT_PUBLIC_OPFIN_API_URL;
+  if (!apiBase) return null;
+
+  try {
+    const response = await fetch(
+      apiBase + "/location/static-map/" + contextId + "?zoom=" + zoom,
+      {
+        headers: token ? { Authorization: "Bearer " + token } : {},
+        cache: "no-store"
+      }
+    );
+    if (!response.ok) return null;
+    const type = response.headers.get("content-type") ?? "image/png";
+    const bytes = Buffer.from(await response.arrayBuffer());
+    return "data:" + type + ";base64," + bytes.toString("base64");
+  } catch {
+    return null;
+  }
+}
+
 export default async function SpacePage({
   params
 }: {
@@ -39,10 +65,7 @@ export default async function SpacePage({
       locationStatus?.data.static_maps_enabled &&
       previewLocation.latitude != null &&
       previewLocation.longitude != null
-        ? await locationContextsApi.staticMapDataUrl(
-            previewLocation.id,
-            token
-          )
+        ? await staticMapDataUrl(previewLocation.id, token)
         : null;
 
     return (
