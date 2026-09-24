@@ -1316,10 +1316,20 @@ class FinancialSpaceStatementService
             ->whereNotIn('reconciliation_status', ['matched', 'resolved'])
             ->get();
 
+        $suggestedTransactionIds = $unresolvedRows
+            ->flatMap(fn (FinancialSpaceStatementRow $row) => collect($row->suggested_matches ?? [])
+                ->pluck('transaction_id'))
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
         $unmatchedBookTransactions = FinancialSpaceTransaction::query()
             ->where('treasury_account_id', $import->treasury_account_id)
             ->whereBetween('transaction_date', [$import->period_start, $import->period_end])
             ->where('reconciliation_status', 'unreconciled')
+            ->when($suggestedTransactionIds !== [], fn ($query) => $query->whereNotIn('id', $suggestedTransactionIds))
             ->orderBy('transaction_date')
             ->orderBy('id')
             ->get();
@@ -1409,7 +1419,7 @@ class FinancialSpaceStatementService
                     $method = 'exact_reference';
                 }
 
-                $days = abs($date->diffInDays(CarbonImmutable::parse($transaction->transaction_date)));
+                $days = (int) abs($date->diffInDays(CarbonImmutable::parse($transaction->transaction_date)));
                 $score += match (true) {
                     $days === 0 => 20,
                     $days <= 1 => 15,
