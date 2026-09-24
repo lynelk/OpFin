@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import {
   confirmTreasuryReconciliationAction,
@@ -65,6 +66,7 @@ export default async function TreasuryPage({
   const token = await getAccessToken();
   const spaceId = Number(id);
   const defaults = monthRange();
+  const cashbookIdempotencyKey = randomUUID();
 
   try {
     const [spacesResponse, accountsResponse] = await Promise.all([
@@ -1019,6 +1021,11 @@ export default async function TreasuryPage({
                     type="hidden"
                     name="account_id"
                     value={selectedAccount.id}
+                  />
+                  <input
+                    type="hidden"
+                    name="idempotency_key"
+                    value={cashbookIdempotencyKey}
                   />
                   <div className="field">
                     <label htmlFor="direction">Direction</label>
