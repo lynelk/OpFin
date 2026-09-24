@@ -52,6 +52,21 @@ require('OpFinTheme.light' in (ROOT / 'apps/client/lib/main.dart').read_text(), 
 for path in (ROOT / 'apps/client/lib').glob('*.dart'):
     require('Colors.black' not in path.read_text(), f'Legacy unthemed mobile black override: {path.name}')
 
+brand_tokens = json.loads((ROOT / 'brand/opfin.tokens.json').read_text())
+require(brand_tokens.get('version', '').startswith('3.0.0-rc.'), 'Brand token source must remain on the controlled v3 release candidate until freeze gates pass')
+require(brand_tokens.get('logo', {}).get('source') == 'brand/v3/assets/opfin-symbol-master.svg', 'Web/mobile brand source must point to the v3 vector master')
+require(brand_tokens.get('appIcon', {}).get('source') == 'brand/v3/assets/opfin-app-icon-master.svg', 'App icon must point to the v3 vector master')
+
+legacy_web_tokens = ('#0f766e', '#115e59', '#0b1f3a', '#dff7f2', '#f4f8f7', '#d7e1df', 'arial, helvetica')
+for relative in ('apps/web/src/app/globals.css', 'apps/web/src/app/marketing.css', 'apps/web/src/app/experience.css'):
+    css = (ROOT / relative).read_text().lower()
+    for retired in legacy_web_tokens:
+        require(retired not in css, f'Legacy colour/type token {retired} remains in {relative}')
+
+symbol_component = (ROOT / 'apps/web/src/components/OpFinSymbol.tsx').read_text()
+require('/brand/opfin-symbol.svg' in symbol_component, 'Web must use the v3 vector monogram')
+require('/brand/opfin-symbol-reverse.svg' in symbol_component, 'Web reverse mark must use the v3 vector monogram')
+
 assets = json.loads((ROOT / 'brand/asset-manifest.json').read_text())
 for path, expected in assets['files'].items():
     target = (ROOT / path).resolve()
@@ -64,4 +79,4 @@ for path in (ROOT / 'apps/client/lib').rglob('*.dart'):
 if errors:
     print('\n'.join('Control failure: ' + item for item in errors), file=sys.stderr)
     sys.exit(1)
-print('Dependency floor, mobile transport/backup, nonce rendering and brand provenance checks passed.')
+print('Dependency floor, mobile transport/backup, nonce rendering and OpFin v3 brand provenance checks passed.')
