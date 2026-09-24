@@ -270,12 +270,7 @@ class FinancialSpaceStatementController extends Controller
         return ApiResponse::success('Generated statement loaded.', [
             'statement' => $data['statement'],
             'account' => $data['account'],
-            'space' => [
-                'id' => $space->id,
-                'public_id' => $space->public_id,
-                'name' => $space->name,
-                'type' => $space->type,
-            ],
+            'space' => $data['space'],
             'rows' => $data['rows'],
         ]);
     }
