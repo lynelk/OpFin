@@ -192,6 +192,15 @@ export const financialSpaceStatementsApi = {
       { method: "POST" }
     ),
 
+  statements: (spaceId: number, accountId?: number, token?: string) =>
+    jsonRequest<{ statements: GeneratedStatement[] }>(
+      "/financial-spaces/" +
+        spaceId +
+        "/statements" +
+        (accountId ? "?account_id=" + accountId : ""),
+      token
+    ),
+
   generate: (
     spaceId: number,
     accountId: number,
@@ -208,10 +217,21 @@ export const financialSpaceStatementsApi = {
         spaceId +
         "/treasury/accounts/" +
         accountId +
-        "/statements/generate?from=" +
-        encodeURIComponent(from) +
-        "&to=" +
-        encodeURIComponent(to),
+        "/statements",
+      token,
+      {
+        method: "POST",
+        bodyJson: { from, to }
+      }
+    ),
+
+  statement: (spaceId: number, statementId: number, token?: string) =>
+    jsonRequest<{
+      statement: GeneratedStatement;
+      account: TreasuryAccount;
+      rows: Array<Record<string, unknown>>;
+    }>(
+      "/financial-spaces/" + spaceId + "/statements/" + statementId,
       token
     )
 };
