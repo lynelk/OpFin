@@ -416,7 +416,6 @@ class FinancialSpaceStatementService
         }
         $statement->fill([
                 'financial_space_id' => $space->id,
-                'financial_space_id' => $space->id,
                 'treasury_account_id' => $account->id,
                 'generated_by_user_id' => $actor->id,
                 'period_start' => $fromDate->toDateString(),
