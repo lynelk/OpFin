@@ -399,16 +399,30 @@ class FinancialSpaceStatementService
 
             $this->refreshImportState($lockedImport);
 
+            $account = $lockedImport->account;
+            $summary = $lockedImport->fresh()->summary ?? [];
+
+            if ($lockedImport->opening_balance_minor !== null) {
+                $bookOpening = $this->bookBalanceBefore(
+                    $account,
+                    CarbonImmutable::parse($lockedImport->period_start),
+                );
+                $summary['book_opening_balance_minor'] = $bookOpening;
+                $summary['statement_opening_balance_minor'] = $lockedImport->opening_balance_minor;
+                $summary['opening_balance_variance_minor'] = $bookOpening - $lockedImport->opening_balance_minor;
+            }
+
             if ($lockedImport->closing_balance_minor !== null) {
-                $account = $lockedImport->account;
-                $bookClosing = $this->bookBalanceAsOf($account, CarbonImmutable::parse($lockedImport->period_end));
-                $summary = $lockedImport->fresh()->summary ?? [];
+                $bookClosing = $this->bookBalanceAsOf(
+                    $account,
+                    CarbonImmutable::parse($lockedImport->period_end),
+                );
                 $summary['book_closing_balance_minor'] = $bookClosing;
                 $summary['statement_closing_balance_minor'] = $lockedImport->closing_balance_minor;
                 $summary['closing_balance_variance_minor'] = $bookClosing - $lockedImport->closing_balance_minor;
-                $lockedImport->update(['summary' => $summary]);
             }
 
+            $lockedImport->update(['summary' => $summary]);
             $this->refreshImportState($lockedImport);
 
             $this->auditLogger->record('financial_space.statement_import.reconciled', $actor, $lockedImport, [
@@ -616,24 +630,38 @@ class FinancialSpaceStatementService
             abort_if($lockedImport->confirmed_at !== null, 409, 'A confirmed reconciliation is immutable.');
 
             $summary = $lockedImport->summary ?? [];
-            $variance = (int) ($summary['closing_balance_variance_minor'] ?? 0);
-            if ($variance === 0) {
+            $openingVariance = (int) ($summary['opening_balance_variance_minor'] ?? 0);
+            $closingVariance = (int) ($summary['closing_balance_variance_minor'] ?? 0);
+            if ($openingVariance === 0 && $closingVariance === 0) {
                 return $lockedImport->fresh();
             }
 
-            $summary['accepted_closing_balance_variance'] = [
-                'amount_minor' => $variance,
+            $resolution = [
                 'reason' => trim($reason),
                 'resolved_by_user_id' => $actor->id,
                 'resolved_at' => now()->toIso8601String(),
             ];
+            if ($openingVariance !== 0) {
+                $summary['accepted_opening_balance_variance'] = [
+                    ...$resolution,
+                    'amount_minor' => $openingVariance,
+                ];
+            }
+            if ($closingVariance !== 0) {
+                $summary['accepted_closing_balance_variance'] = [
+                    ...$resolution,
+                    'amount_minor' => $closingVariance,
+                ];
+            }
+
             $lockedImport->update(['summary' => $summary]);
             $this->refreshImportState($lockedImport);
 
             $this->auditLogger->record('financial_space.statement_balance_variance.accepted', $actor, $lockedImport, [
                 'financial_space_id' => $space->id,
                 'statement_import_id' => $lockedImport->id,
-                'variance_minor' => $variance,
+                'opening_variance_minor' => $openingVariance,
+                'closing_variance_minor' => $closingVariance,
                 'reason' => trim($reason),
             ]);
 
@@ -683,8 +711,11 @@ class FinancialSpaceStatementService
                 ->values();
 
             $summary = $fresh->summary ?? [];
-            $acceptedVariance = $summary['accepted_closing_balance_variance'] ?? null;
-            $acceptedExceptions = $resolvedRows->count() + $bookExceptions->count() + ($acceptedVariance ? 1 : 0);
+            $acceptedVariances = collect([
+                $summary['accepted_opening_balance_variance'] ?? null,
+                $summary['accepted_closing_balance_variance'] ?? null,
+            ])->filter()->values();
+            $acceptedExceptions = $resolvedRows->count() + $bookExceptions->count() + $acceptedVariances->count();
 
             $resolverIds = $resolvedRows
                 ->pluck('resolved_by_user_id')
@@ -694,10 +725,7 @@ class FinancialSpaceStatementService
                         'reconciliation_exception.resolved_by_user_id'
                     )
                 ))
-                ->when(
-                    $acceptedVariance,
-                    fn (Collection $ids) => $ids->push($acceptedVariance['resolved_by_user_id'] ?? null)
-                )
+                ->merge($acceptedVariances->pluck('resolved_by_user_id'))
                 ->filter()
                 ->map(fn ($id) => (int) $id)
                 ->unique()
@@ -1604,11 +1632,16 @@ class FinancialSpaceStatementService
         }
 
         $summary = $import->summary ?? [];
-        $variance = (int) ($summary['closing_balance_variance_minor'] ?? 0);
-        if ($variance !== 0 && empty($summary['accepted_closing_balance_variance'])) {
+        $openingVariance = (int) ($summary['opening_balance_variance_minor'] ?? 0);
+        $closingVariance = (int) ($summary['closing_balance_variance_minor'] ?? 0);
+        $unacceptedOpening = $openingVariance !== 0 && empty($summary['accepted_opening_balance_variance']);
+        $unacceptedClosing = $closingVariance !== 0 && empty($summary['accepted_closing_balance_variance']);
+        if ($unacceptedOpening || $unacceptedClosing) {
             $todos[] = [
                 'type' => 'balance_variance',
-                'amount_minor' => $variance,
+                'amount_minor' => $unacceptedClosing ? $closingVariance : $openingVariance,
+                'opening_balance_variance_minor' => $unacceptedOpening ? $openingVariance : 0,
+                'closing_balance_variance_minor' => $unacceptedClosing ? $closingVariance : 0,
                 'allowed_actions' => ['accept_balance_variance'],
             ];
         }
