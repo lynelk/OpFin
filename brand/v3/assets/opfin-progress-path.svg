@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" role="img" aria-labelledby="title">
+  <title id="title">OpFin progress path motif</title>
+  <path d="M70 390V210C70 122 141 50 230 50h70c88 0 160 72 160 160v180" fill="none" stroke="#E8EAF6" stroke-width="72" stroke-linecap="round"/>
+  <path d="M250 390V242c0-54 44-98 98-98h54c54 0 98 44 98 98v148" fill="none" stroke="#F2B38D" stroke-width="54" stroke-linecap="round"/>
+</svg>
