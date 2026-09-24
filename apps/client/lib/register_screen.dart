@@ -7,6 +7,7 @@ import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/login_screen.dart';
 import 'package:opfin/otp_screen.dart';
+import 'package:opfin/widgets/auth_scaffold.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -69,72 +70,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() { _phone.dispose(); super.dispose(); }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: OpFinColors.ivory,
-    body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          const SizedBox(height: 28),
-          const Icon(Icons.account_balance_wallet_outlined,
-              size: 64, color: OpFinColors.indigo),
-          const SizedBox(height: 24),
-          Semantics(
-            header: true,
-            child: Text('Start with your phone',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'We will send a 6-digit code to confirm the number belongs to you.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: OpFinColors.muted),
-          ),
-          const SizedBox(height: 34),
-          Form(
-            key: _formKey,
-            child: TextFormField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              autofillHints: const [AutofillHints.telephoneNumber],
-              decoration: const InputDecoration(
-                labelText: 'Phone number', hintText: '07XXXXXXXX',
-                prefixIcon: Icon(Icons.phone_outlined)),
-              validator: (value) {
-                final phone = value?.trim().replaceAll(' ', '') ?? '';
-                return RegExp(r'^(0\d{9}|256\d{9}|\+256\d{9})$').hasMatch(phone)
-                  ? null : 'Enter a valid Ugandan phone number';
-              },
+  Widget build(BuildContext context) => OpFinAuthScaffold(
+        eyebrow: 'Create account',
+        title: 'Start with your phone',
+        description:
+            'We will send a 6-digit code to confirm that the number belongs to you.',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Form(
+              key: _formKey,
+              child: TextFormField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                autofillHints: const [AutofillHints.telephoneNumber],
+                decoration: const InputDecoration(
+                  labelText: 'Phone number',
+                  hintText: '07XXXXXXXX',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+                validator: (value) {
+                  final phone = value?.trim().replaceAll(' ', '') ?? '';
+                  return RegExp(r'^(0\d{9}|256\d{9}|\+256\d{9})$')
+                          .hasMatch(phone)
+                      ? null
+                      : 'Enter a valid Ugandan phone number';
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 18),
-          CheckboxListTile(
-            value: _accepted,
-            onChanged: (v) => setState(() => _accepted = v == true),
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            title: const Text('I agree to the Terms and Privacy Notice.'),
-            subtitle: const Text('Permission to check credit information is requested separately.'),
-          ),
-          const SizedBox(height: 22),
-          SizedBox(
-            height: 52,
-            child: FilledButton(
-              onPressed: _loading ? null : _sendOtp,
-              child: _loading
-                ? const SizedBox(height:22,width:22,child:CircularProgressIndicator(strokeWidth:2))
-                : const Text('Send code'),
+            const SizedBox(height: 18),
+            CheckboxListTile(
+              value: _accepted,
+              onChanged: (v) => setState(() => _accepted = v == true),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text('I agree to the Terms and Privacy Notice.'),
+              subtitle: const Text(
+                'Permission to check credit information is requested separately.',
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          TextButton(
-            onPressed: () => Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => const LoginScreen())),
-            child: const Text('I already have an account'),
-          ),
-        ],
-      ),
-    ),
-  );
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: _loading ? null : _sendOtp,
+                child: _loading
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Send code'),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextButton(
+              onPressed: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              ),
+              child: const Text('I already have an account'),
+            ),
+          ],
+        ),
+      );
 }
