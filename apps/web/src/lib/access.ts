@@ -1,3 +1,4 @@
+import { navigationItems } from "./navigation";
 import type { UserRole } from "./types";
 
 export const USER_ROLES: readonly UserRole[] = [
@@ -65,6 +66,14 @@ function matchesPrefix(path: string, prefix: string): boolean {
   return path === prefix || path.startsWith(prefix + "/");
 }
 
+function rolesForAdminPath(pathname: string): UserRole[] | undefined {
+  const match = navigationItems
+    .filter((item) => item.group === "admin" && matchesPrefix(pathname, item.href))
+    .sort((left, right) => right.href.length - left.href.length)[0];
+
+  return match?.roles;
+}
+
 export function isUserRole(value: string | undefined): value is UserRole {
   return USER_ROLES.includes(value as UserRole);
 }
@@ -86,7 +95,12 @@ export function canRoleOpenPath(role: UserRole, path: string): boolean {
   }
 
   if (matchesPrefix(pathname, "/admin")) {
-    return ["platform_admin", "operations", "support"].includes(role);
+    const explicitRoles = rolesForAdminPath(pathname);
+    if (explicitRoles) return explicitRoles.includes(role);
+
+    // Unlisted operational modules remain staff-only, but Support does not
+    // inherit new modules merely because they happen to sit under /admin.
+    return role === "platform_admin" || role === "operations";
   }
 
   if (matchesPrefix(pathname, "/employer")) {
