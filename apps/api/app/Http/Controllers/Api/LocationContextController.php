@@ -72,49 +72,57 @@ class LocationContextController extends Controller
             'resolve_with_google' => ['sometimes', 'boolean'],
         ]);
 
-        try {
-            if (($validated['source'] ?? null) === 'google_place'
-                && empty($validated['google_place_id'])) {
-                return ApiResponse::error(
-                    'Google-place provenance requires a server-resolved Place ID.',
-                    422
-                );
-            }
+        $this->locations->assertWritable(
+            $request->user(),
+            (string) $validated['subject_type'],
+            (int) $validated['subject_id'],
+            (string) $validated['purpose'],
+            (string) $validated['consent_purpose'],
+        );
 
-            $attributes = $validated;
-            unset($attributes['resolve_with_google']);
-
-            if (! empty($validated['google_place_id'])) {
-                $details = $this->google->placeDetails((string) $validated['google_place_id']);
-                $attributes = array_merge($attributes, array_filter(
-                    $details,
-                    fn ($value) => $value !== null && $value !== ''
-                ));
-                $attributes['source'] = 'google_place';
-            } elseif (($validated['resolve_with_google'] ?? false)
-                && isset($validated['latitude'], $validated['longitude'])) {
-                try {
-                    $details = $this->google->reverseGeocode(
-                        (float) $validated['latitude'],
-                        (float) $validated['longitude'],
-                    );
-                    $attributes = array_merge($details, $attributes);
-                } catch (InvalidArgumentException|RuntimeException) {
-                    $attributes['metadata'] = array_merge(
-                        $attributes['metadata'] ?? [],
-                        ['google_resolution' => 'unavailable_at_capture']
-                    );
-                }
-            }
-
-            $context = $this->locations->save($request->user(), $attributes);
-
-            return ApiResponse::success('Location context saved.', [
-                'location' => $this->locations->present($context),
-            ], 201);
-        } catch (InvalidArgumentException|RuntimeException $exception) {
-            return ApiResponse::error($exception->getMessage(), 503);
+        if (($validated['source'] ?? null) === 'google_place'
+            && empty($validated['google_place_id'])) {
+            return ApiResponse::error(
+                'Google-place provenance requires a server-resolved Place ID.',
+                422
+            );
         }
+
+        $attributes = $validated;
+        unset($attributes['resolve_with_google']);
+
+        if (! empty($validated['google_place_id'])) {
+            try {
+                $details = $this->google->placeDetails((string) $validated['google_place_id']);
+            } catch (InvalidArgumentException|RuntimeException $exception) {
+                return ApiResponse::error($exception->getMessage(), 503);
+            }
+
+            $attributes = array_merge($attributes, array_filter(
+                $details,
+                fn ($value) => $value !== null && $value !== ''
+            ));
+            $attributes['source'] = 'google_place';
+        } elseif (($validated['resolve_with_google'] ?? false)
+            && isset($validated['latitude'], $validated['longitude'])) {
+            try {
+                $details = $this->google->reverseGeocode(
+                    (float) $validated['latitude'],
+                    (float) $validated['longitude'],
+                );
+                $attributes = array_merge($details, $attributes);
+            } catch (InvalidArgumentException|RuntimeException) {
+                $attributes['metadata'] = [
+                    'google_resolution' => 'unavailable_at_capture',
+                ];
+            }
+        }
+
+        $context = $this->locations->save($request->user(), $attributes);
+
+        return ApiResponse::success('Location context saved.', [
+            'location' => $this->locations->present($context),
+        ], 201);
     }
 
     public function destroy(LocationContext $context, Request $request): JsonResponse
