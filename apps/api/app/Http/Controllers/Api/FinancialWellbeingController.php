@@ -67,6 +67,7 @@ class FinancialWellbeingController extends Controller
         $user = $this->user($request);
         $id = DB::table('financial_accounts')->insertGetId([
             'user_id' => $user->id,
+            'financial_space_id' => $this->personalSpaceId($user),
             'institution_id' => $user->institution_id,
             'display_name' => $validated['display_name'],
             'account_type' => $validated['account_type'],
@@ -150,6 +151,7 @@ class FinancialWellbeingController extends Controller
         $user = $this->user($request);
         $id = DB::table('financial_budgets')->insertGetId([
             'user_id' => $user->id,
+            'financial_space_id' => $this->personalSpaceId($user),
             'institution_id' => $user->institution_id,
             'category' => $validated['category'],
             'monthly_limit_minor' => $validated['monthly_limit_minor'],
@@ -238,6 +240,7 @@ class FinancialWellbeingController extends Controller
             ?? ($validated['direction'] === 'income' ? 'Other' : $this->service->suggestCategory($validated['description'] ?? null));
         $id = DB::table('financial_entries')->insertGetId([
             'user_id' => $user->id,
+            'financial_space_id' => $this->personalSpaceId($user),
             'institution_id' => $user->institution_id,
             'direction' => $validated['direction'],
             'amount_minor' => $validated['amount_minor'],
@@ -325,6 +328,7 @@ class FinancialWellbeingController extends Controller
         $user = $this->user($request);
         $id = DB::table('financial_calendar_events')->insertGetId([
             'user_id' => $user->id,
+            'financial_space_id' => $this->personalSpaceId($user),
             'institution_id' => $user->institution_id,
             'title' => $validated['title'],
             'event_type' => $validated['event_type'],
@@ -475,9 +479,31 @@ class FinancialWellbeingController extends Controller
     private function scope(Builder $query, User $user): Builder
     {
         $query->where('user_id', $user->id);
+        $spaceId = $this->personalSpaceId($user);
+        if ($spaceId !== null) {
+            $query->where(function (Builder $spaceQuery) use ($spaceId) {
+                $spaceQuery->where('financial_space_id', $spaceId)
+                    ->orWhereNull('financial_space_id');
+            });
+        }
 
         return $user->institution_id === null
             ? $query->whereNull('institution_id')
             : $query->where('institution_id', $user->institution_id);
+    }
+
+    private function personalSpaceId(User $user): ?int
+    {
+        $spaceId = DB::table('financial_spaces as spaces')
+            ->join('financial_space_memberships as memberships', 'memberships.financial_space_id', '=', 'spaces.id')
+            ->where('memberships.user_id', $user->id)
+            ->where('memberships.status', 'active')
+            ->whereNull('memberships.deleted_at')
+            ->where('spaces.type', 'personal')
+            ->where('spaces.status', 'active')
+            ->whereNull('spaces.deleted_at')
+            ->value('spaces.id');
+
+        return $spaceId === null ? null : (int) $spaceId;
     }
 }
