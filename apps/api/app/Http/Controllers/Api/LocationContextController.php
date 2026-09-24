@@ -245,6 +245,14 @@ class LocationContextController extends Controller
         ]);
     }
 
+    public function partnerNetwork(Request $request): JsonResponse
+    {
+        return ApiResponse::success('Partner location network loaded.', [
+            'service_points' => $this->locations->partnerNetwork($request->user()),
+            'individual_customer_locations_exposed' => false,
+        ]);
+    }
+
     public function insights(Request $request): JsonResponse
     {
         abort_unless($request->user()->hasAnyRole([User::ROLE_PLATFORM_ADMIN, User::ROLE_OPERATIONS]), 403);
