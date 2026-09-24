@@ -85,8 +85,6 @@ class FinancialSpaceStatementController extends Controller
             'counterparty_name' => ['nullable', 'string', 'max:200'],
             'transaction_date' => ['required', 'date'],
             'value_date' => ['nullable', 'date'],
-            'source_type' => ['sometimes', 'string', 'max:80'],
-            'source_reference' => ['nullable', 'string', 'max:200'],
             'metadata' => ['nullable', 'array'],
         ]);
 
