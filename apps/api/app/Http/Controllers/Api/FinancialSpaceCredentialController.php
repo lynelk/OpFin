@@ -113,6 +113,7 @@ class FinancialSpaceCredentialController extends Controller
                 ->where('financial_space_id', $space->id)
                 ->where('user_id', $request->user()->id)
                 ->where('status', 'active')
+                ->whereNull('deleted_at')
                 ->exists(),
             403
         );
@@ -124,6 +125,7 @@ class FinancialSpaceCredentialController extends Controller
             ->where('financial_space_id', $space->id)
             ->where('user_id', $request->user()->id)
             ->where('status', 'active')
+            ->whereNull('deleted_at')
             ->value('role');
 
         abort_unless(
