@@ -4,10 +4,11 @@ import type { ReactNode } from "react";
 import { logoutAction } from "@/app/actions";
 import { canSeeGroup, getCurrentSession } from "@/lib/auth/session";
 import { navigationItems } from "@/lib/navigation";
+import { homeForRole } from "@/lib/access";
 
 export async function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const session = await getCurrentSession();
-  const homeHref = session.role === "programme_partner" ? "/partner/impact" : "/dashboard";
+  const homeHref = homeForRole(session.role);
   const visibleItems = navigationItems.filter((item) => {
     if (!canSeeGroup(session.role, item.group)) return false;
     return !item.roles || item.roles.includes(session.role);
