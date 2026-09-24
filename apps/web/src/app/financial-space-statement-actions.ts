@@ -161,3 +161,30 @@ export async function generateTreasuryStatementAction(formData: FormData) {
     fail(spaceId, error, "Unable to generate statement.");
   }
 }
+
+
+export async function matchTreasuryStatementRowAction(formData: FormData) {
+  const token = await getAccessToken();
+  const spaceId = integer(formData, "space_id");
+  const accountId = integer(formData, "account_id");
+  const importId = integer(formData, "import_id");
+  const rowId = integer(formData, "row_id");
+  const transactionId = integer(formData, "transaction_id");
+
+  try {
+    await financialSpaceStatementsApi.matchRow(
+      spaceId,
+      rowId,
+      transactionId,
+      token
+    );
+  } catch (error) {
+    fail(spaceId, error, "Unable to match this statement row.");
+  }
+
+  destination(spaceId, {
+    account: String(accountId),
+    import: String(importId),
+    status: "row-matched"
+  });
+}
