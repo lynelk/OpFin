@@ -357,11 +357,49 @@ class _FinancialSpaceStatementsScreenState
                       ),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'All activity',
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 6),
+                  if (canManage)
+                    FilledButton.icon(
+                      onPressed: _issueConsolidatedStatement,
+                      icon: const Icon(Icons.account_balance_outlined),
+                      label: const Text('Issue consolidated all-activity statement'),
+                    ),
+                  if (consolidated.isNotEmpty)
+                    ...consolidated.take(6).map(
+                      (statement) => Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.library_books_outlined),
+                          title: Text(
+                            statement['statement_number']?.toString() ??
+                                'Consolidated statement',
+                          ),
+                          subtitle: Text(
+                            (statement['period_start']?.toString() ?? '') +
+                                ' to ' +
+                                (statement['period_end']?.toString() ?? ''),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _openStatement(
+                            (statement['id'] as num).toInt(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Account statement',
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                  ),
                   if (canManage)
                     FilledButton.icon(
                       onPressed: _issueStatement,
                       icon: const Icon(Icons.description_outlined),
-                      label: const Text('Issue statement'),
+                      label: const Text('Issue account statement'),
                     )
                   else
                     const Card(
