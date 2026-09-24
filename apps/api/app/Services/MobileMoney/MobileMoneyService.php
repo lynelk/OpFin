@@ -164,9 +164,6 @@ class MobileMoneyService
                 $phone,
                 $currency,
             );
-            $metadata['provider_submission_state'] = 'intent_persisted';
-            $metadata['provider_submission_intent_at'] = now()->toISOString();
-
             $transaction = MobileMoneyTransaction::create([
                 'transaction_id' => Arr::get($attributes, 'transaction_id'),
                 'credit_offer_id' => Arr::get($attributes, 'credit_offer_id'),
@@ -181,6 +178,7 @@ class MobileMoneyService
                 'idempotency_key' => $idempotencyKey,
                 'internal_reference' => Arr::get($attributes, 'internal_reference', (string) Str::uuid()),
                 'status' => MobileMoneyTransaction::STATUS_PROCESSING,
+                'provider_submission_state' => 'intent_persisted',
                 'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_UNRECONCILED,
                 'metadata' => $metadata,
             ]);
@@ -199,10 +197,10 @@ class MobileMoneyService
             return $transaction->fresh();
         }
 
-        $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
-        $metadata['provider_submission_state'] = 'submission_started';
-        $metadata['provider_submission_started_at'] = now()->toISOString();
-        $transaction->update(['metadata' => $metadata]);
+        $transaction->update([
+            'provider_submission_state' => 'submission_started',
+            'provider_submission_started_at' => now(),
+        ]);
 
         try {
             $provider = $this->providers->provider($providerName);
@@ -216,16 +214,13 @@ class MobileMoneyService
             ]);
         } catch (InvalidArgumentException $exception) {
             $transaction->refresh();
-            $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
-            $metadata['provider_submission_state'] = 'rejected_before_provider_finality';
-            $metadata['provider_submission_failed_at'] = now()->toISOString();
-
             $transaction->update([
                 'status' => MobileMoneyTransaction::STATUS_FAILED,
+                'provider_submission_state' => 'rejected_before_provider_finality',
+                'provider_submission_resolved_at' => now(),
                 'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
                 'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
                 'failure_reason' => $exception->getMessage(),
-                'metadata' => $metadata,
             ]);
             $this->audit("mobile_money.{$direction}.submission_rejected", $transaction, [
                 'reason' => $exception->getMessage(),
@@ -235,13 +230,9 @@ class MobileMoneyService
             throw $exception;
         } catch (\Throwable $exception) {
             $transaction->refresh();
-            $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
-            $metadata['provider_submission_state'] = 'ambiguous';
-            $metadata['provider_submission_ambiguous_at'] = now()->toISOString();
-
             $transaction->update([
+                'provider_submission_state' => 'ambiguous',
                 'failure_reason' => 'Provider submission outcome is ambiguous. Preserve this intent and reconcile by canonical reference before any retry.',
-                'metadata' => $metadata,
             ]);
             $this->audit("mobile_money.{$direction}.submission_ambiguous", $transaction, [
                 'exception_class' => $exception::class,
@@ -421,6 +412,8 @@ class MobileMoneyService
             $locked->update(array_merge([
                 'provider_reference' => $nextProviderReference,
                 'status' => $response->status,
+                'provider_submission_state' => 'provider_response_received',
+                'provider_submission_resolved_at' => now(),
                 'statement_reconciliation_status' => $statementStatus,
                 'statement_reconciled_at' => $statementReconciledAt,
                 'reconciliation_status' => $combinedStatus,
