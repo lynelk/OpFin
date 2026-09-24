@@ -1,11 +1,15 @@
 # Google Play asset manifest
 
-Updated: 18 September 2026
+Updated: 24 September 2026  
+Brand system: 3.0.0-rc.1
 
 ## Required graphics
 
 - 512 × 512 Play Store icon: `assets/opfin-play-icon-512.png`
 - 1024 × 500 feature graphic: `assets/opfin-feature-graphic-1024x500.png`
+- v3 feature-graphic vector source: `../../brand/v3/assets/opfin-feature-graphic-master.svg`
+
+The v3 feature graphic uses the Progress Path as a supporting device and places the Apricot accent below the word **clearer.** so it cannot read as a strike-through.
 
 Regenerate using the repository brand-asset process where required and retain provenance/checksums.
 
@@ -16,12 +20,14 @@ Capture screenshots from the **exact signed release candidate** with authorised 
 Recommended phone sequence:
 
 1. **Phone verification** – simple phone/OTP onboarding.
-2. **Identity verification** – guidance showing the three required photo steps, using non-personal test data.
-3. **Home** – available limit and OpFin Score, or amount-due state.
-4. **Loan Application** – available loan limit, amount due, amount input and eligible repayment period.
+2. **Identity verification** – progressive guidance using non-personal test data.
+3. **Home** – the v3 Next Step treatment and available financial-position context.
+4. **Responsible credit** – available limit/application state only where activated in the submitted build.
 5. **Formal credit offer** – amount received, interest, fees, total repayment and repayment timing/APR where applicable.
 6. **Repayment** – outstanding amount, verified wallet choice and provider-pending wording.
 7. **Accessibility / More** – larger-text/reduced-motion and account/privacy controls.
+
+See `../../brand/v3/SCREENSHOT_CAPTURE_STANDARD.md` for the evidence contract.
 
 ## Screenshot evidence record
 
