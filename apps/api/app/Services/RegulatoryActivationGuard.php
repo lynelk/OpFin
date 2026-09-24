@@ -25,6 +25,7 @@ class RegulatoryActivationGuard
         $required = (bool) config('opfin.regulatory.require_credit_disclosure', false);
         $fields = [
             'licensed_entity_name' => config('opfin.regulatory.licensed_entity_name'),
+            'licence_class' => config('opfin.regulatory.licence_class'),
             'umra_license_number' => config('opfin.regulatory.umra_license_number'),
             'business_address' => config('opfin.regulatory.business_address'),
             'complaints_email' => config('opfin.regulatory.complaints_email'),
