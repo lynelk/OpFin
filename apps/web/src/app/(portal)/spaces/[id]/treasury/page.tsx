@@ -1,11 +1,14 @@
 import Link from "next/link";
 import {
+  confirmTreasuryReconciliationAction,
   createTreasuryAccountAction,
+  generateConsolidatedStatementAction,
   generateTreasuryStatementAction,
   importTreasuryStatementAction,
   matchTreasuryStatementRowAction,
   reconcileTreasuryStatementAction,
-  recordTreasuryTransactionAction
+  recordTreasuryTransactionAction,
+  resolveReconciliationTodoAction
 } from "@/app/financial-space-statement-actions";
 import { Screen, StateNotice } from "@/components/Screen";
 import { financialSpacesApi } from "@/lib/api/client";
@@ -88,20 +91,29 @@ export default async function TreasuryPage({
     let statements: Awaited<
       ReturnType<typeof financialSpaceStatementsApi.statements>
     >["statements"] = [];
+    let consolidatedStatements: Awaited<
+      ReturnType<typeof financialSpaceStatementsApi.statements>
+    >["statements"] = [];
     let selectedImport: Record<string, unknown> | null = null;
     let selectedStatement:
       | Awaited<ReturnType<typeof financialSpaceStatementsApi.statement>>
       | null = null;
 
     if (selectedAccount) {
-      const [txResponse, importResponse, statementResponse] = await Promise.all([
+      const [txResponse, importResponse, statementResponse, allStatementResponse] = await Promise.all([
         financialSpaceStatementsApi.transactions(spaceId, selectedAccount.id, token),
         financialSpaceStatementsApi.imports(spaceId, selectedAccount.id, token),
-        financialSpaceStatementsApi.statements(spaceId, selectedAccount.id, token)
+        financialSpaceStatementsApi.statements(spaceId, selectedAccount.id, token),
+        financialSpaceStatementsApi.statements(spaceId, undefined, token)
       ]);
       transactions = txResponse.transactions;
       imports = importResponse.imports;
-      statements = statementResponse.statements;
+      statements = statementResponse.statements.filter(
+        (statement) => statement.statement_scope !== "consolidated"
+      );
+      consolidatedStatements = allStatementResponse.statements.filter(
+        (statement) => statement.statement_scope === "consolidated"
+      );
 
       const importId = Number(query?.import ?? 0);
       if (importId) {
@@ -126,7 +138,10 @@ export default async function TreasuryPage({
       "statement-imported": "External statement imported.",
       reconciled: "Statement reconciliation completed.",
       "statement-generated": "Bank-style statement issued.",
-      "row-matched": "Statement exception matched to the selected OpFin transaction."
+      "consolidated-statement-generated": "Consolidated all-activity statement issued.",
+      "row-matched": "Statement exception matched to the selected OpFin transaction.",
+      "todo-resolved": "Reconciliation to-do resolved.",
+      "reconciliation-confirmed": "Reconciliation confirmed."
     };
 
     return (
@@ -194,6 +209,67 @@ export default async function TreasuryPage({
             }
           />
         )}
+
+        {canManage && accounts.length ? (
+          <section className="panel">
+            <div className="case-card-head">
+              <div>
+                <p className="eyebrow">All activity</p>
+                <h2>Consolidated OpFin statement</h2>
+              </div>
+              <span className="badge">all treasury accounts</span>
+            </div>
+            <p className="muted">
+              Combines all treasury-account activity for the period and adds the
+              recorded Financial Space asset/obligation position. Currencies stay
+              separate unless an explicit FX valuation policy is introduced.
+            </p>
+            <form action={generateConsolidatedStatementAction} className="form-grid">
+              <input type="hidden" name="space_id" value={spaceId} />
+              <div className="field">
+                <label htmlFor="consolidated_from">From</label>
+                <input
+                  id="consolidated_from"
+                  name="from"
+                  type="date"
+                  defaultValue={defaults.from}
+                  required
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="consolidated_to">To</label>
+                <input
+                  id="consolidated_to"
+                  name="to"
+                  type="date"
+                  defaultValue={defaults.to}
+                  required
+                />
+              </div>
+              <button className="button" type="submit">
+                Issue consolidated statement
+              </button>
+            </form>
+            {consolidatedStatements.length ? (
+              <div style={{ marginTop: 16 }}>
+                <h3>Recent consolidated statements</h3>
+                <div className="inline-form">
+                  {consolidatedStatements.slice(0, 6).map((statement) => (
+                    <a
+                      key={statement.id}
+                      className="button secondary"
+                      href={"/api/space-statements/" + spaceId + "/" + statement.id + "/html"}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {statement.statement_number}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         {selectedAccount ? (
           <>
@@ -346,6 +422,273 @@ export default async function TreasuryPage({
                     {String(selectedImport.row_count ?? 0)} · Exceptions:{" "}
                     {String(selectedImport.exception_count ?? 0)}
                   </p>
+                  {Array.isArray(selectedImport.review_todos) &&
+                  selectedImport.review_todos.length ? (
+                    <section className="case-card" style={{ marginTop: 12 }}>
+                      <p className="eyebrow">Reconciliation review</p>
+                      <h3>{selectedImport.review_todos.length} to-do(s) before confirmation</h3>
+                      <p className="muted">
+                        OpFin has already auto-matched the high-confidence items.
+                        Review only the remaining decisions.
+                      </p>
+                      <div className="grid grid-2">
+                        {(selectedImport.review_todos as Array<Record<string, unknown>>).map(
+                          (todo, index) => {
+                            const type = String(todo.type ?? "");
+                            const suggestions = Array.isArray(todo.suggested_matches)
+                              ? (todo.suggested_matches as Array<Record<string, unknown>>)
+                              : [];
+                            return (
+                              <article className="case-card" key={type + "-" + index}>
+                                <p className="eyebrow">
+                                  {type.replaceAll("_", " ")}
+                                </p>
+                                <h3>{String(todo.description ?? "Review reconciliation item")}</h3>
+                                {todo.amount_minor != null ? (
+                                  <p>
+                                    {money(
+                                      todo.amount_minor,
+                                      selectedAccount.currency
+                                    )}{" "}
+                                    · {String(todo.direction ?? "")}
+                                  </p>
+                                ) : null}
+
+                                {type === "statement_row" && suggestions.length ? (
+                                  <div>
+                                    <p className="muted">Suggested matches</p>
+                                    {suggestions.map((suggestion) => (
+                                      <form
+                                        key={String(suggestion.transaction_id)}
+                                        action={resolveReconciliationTodoAction}
+                                        className="inline-form"
+                                      >
+                                        <input type="hidden" name="space_id" value={spaceId} />
+                                        <input
+                                          type="hidden"
+                                          name="account_id"
+                                          value={selectedAccount.id}
+                                        />
+                                        <input
+                                          type="hidden"
+                                          name="import_id"
+                                          value={String(selectedImport.id)}
+                                        />
+                                        <input type="hidden" name="todo_type" value="statement_row" />
+                                        <input
+                                          type="hidden"
+                                          name="row_id"
+                                          value={String(todo.row_id)}
+                                        />
+                                        <input
+                                          type="hidden"
+                                          name="action"
+                                          value="match_transaction"
+                                        />
+                                        <input
+                                          type="hidden"
+                                          name="transaction_id"
+                                          value={String(suggestion.transaction_id)}
+                                        />
+                                        <button className="button secondary" type="submit">
+                                          Match {String(suggestion.reference ?? suggestion.transaction_id)} ·{" "}
+                                          {String(suggestion.confidence_percent)}%
+                                        </button>
+                                      </form>
+                                    ))}
+                                  </div>
+                                ) : null}
+
+                                {type === "statement_row" ? (
+                                  <>
+                                    <form
+                                      action={resolveReconciliationTodoAction}
+                                      className="form-grid"
+                                    >
+                                      <input type="hidden" name="space_id" value={spaceId} />
+                                      <input
+                                        type="hidden"
+                                        name="account_id"
+                                        value={selectedAccount.id}
+                                      />
+                                      <input
+                                        type="hidden"
+                                        name="import_id"
+                                        value={String(selectedImport.id)}
+                                      />
+                                      <input type="hidden" name="todo_type" value="statement_row" />
+                                      <input
+                                        type="hidden"
+                                        name="row_id"
+                                        value={String(todo.row_id)}
+                                      />
+                                      <input type="hidden" name="action" value="create_book_entry" />
+                                      <div className="field">
+                                        <label htmlFor={"create-reason-" + index}>Note (optional)</label>
+                                        <input
+                                          id={"create-reason-" + index}
+                                          name="reason"
+                                          placeholder="Why should this statement item be added to the cashbook?"
+                                        />
+                                      </div>
+                                      <button className="button secondary" type="submit">
+                                        Create missing book entry
+                                      </button>
+                                    </form>
+
+                                    <form
+                                      action={resolveReconciliationTodoAction}
+                                      className="form-grid"
+                                    >
+                                      <input type="hidden" name="space_id" value={spaceId} />
+                                      <input
+                                        type="hidden"
+                                        name="account_id"
+                                        value={selectedAccount.id}
+                                      />
+                                      <input
+                                        type="hidden"
+                                        name="import_id"
+                                        value={String(selectedImport.id)}
+                                      />
+                                      <input type="hidden" name="todo_type" value="statement_row" />
+                                      <input
+                                        type="hidden"
+                                        name="row_id"
+                                        value={String(todo.row_id)}
+                                      />
+                                      <div className="field">
+                                        <label htmlFor={"accept-reason-" + index}>
+                                          Reason for accepted exception
+                                        </label>
+                                        <input
+                                          id={"accept-reason-" + index}
+                                          name="reason"
+                                          required
+                                        />
+                                      </div>
+                                      <div className="inline-form">
+                                        <button
+                                          className="button secondary"
+                                          type="submit"
+                                          name="action"
+                                          value="mark_external_only"
+                                        >
+                                          External-only item
+                                        </button>
+                                        <button
+                                          className="button secondary"
+                                          type="submit"
+                                          name="action"
+                                          value="mark_duplicate"
+                                        >
+                                          Mark duplicate
+                                        </button>
+                                      </div>
+                                    </form>
+                                  </>
+                                ) : null}
+
+                                {type === "book_transaction" ? (
+                                  <form
+                                    action={resolveReconciliationTodoAction}
+                                    className="form-grid"
+                                  >
+                                    <input type="hidden" name="space_id" value={spaceId} />
+                                    <input
+                                      type="hidden"
+                                      name="account_id"
+                                      value={selectedAccount.id}
+                                    />
+                                    <input
+                                      type="hidden"
+                                      name="import_id"
+                                      value={String(selectedImport.id)}
+                                    />
+                                    <input type="hidden" name="todo_type" value="book_transaction" />
+                                    <input
+                                      type="hidden"
+                                      name="transaction_id"
+                                      value={String(todo.transaction_id)}
+                                    />
+                                    <div className="field">
+                                      <label htmlFor={"book-reason-" + index}>
+                                        Why is this book-only?
+                                      </label>
+                                      <input id={"book-reason-" + index} name="reason" required />
+                                    </div>
+                                    <button className="button secondary" type="submit">
+                                      Accept book-only item
+                                    </button>
+                                  </form>
+                                ) : null}
+
+                                {type === "balance_variance" ? (
+                                  <form
+                                    action={resolveReconciliationTodoAction}
+                                    className="form-grid"
+                                  >
+                                    <input type="hidden" name="space_id" value={spaceId} />
+                                    <input
+                                      type="hidden"
+                                      name="account_id"
+                                      value={selectedAccount.id}
+                                    />
+                                    <input
+                                      type="hidden"
+                                      name="import_id"
+                                      value={String(selectedImport.id)}
+                                    />
+                                    <input type="hidden" name="todo_type" value="balance_variance" />
+                                    <div className="field">
+                                      <label htmlFor={"variance-reason-" + index}>
+                                        Reason for accepting variance
+                                      </label>
+                                      <input id={"variance-reason-" + index} name="reason" required />
+                                    </div>
+                                    <button className="button secondary" type="submit">
+                                      Accept variance with reason
+                                    </button>
+                                  </form>
+                                ) : null}
+                              </article>
+                            );
+                          }
+                        )}
+                      </div>
+                    </section>
+                  ) : canManage &&
+                    String(selectedImport.confirmation_status ?? "") === "ready" ? (
+                    <section className="case-card" style={{ marginTop: 12 }}>
+                      <p className="eyebrow">Ready to close</p>
+                      <h3>All reconciliation to-dos are cleared</h3>
+                      <form action={confirmTreasuryReconciliationAction} className="form-grid">
+                        <input type="hidden" name="space_id" value={spaceId} />
+                        <input
+                          type="hidden"
+                          name="account_id"
+                          value={selectedAccount.id}
+                        />
+                        <input
+                          type="hidden"
+                          name="import_id"
+                          value={String(selectedImport.id)}
+                        />
+                        <div className="field">
+                          <label htmlFor="confirmation-note">Confirmation note (optional)</label>
+                          <input
+                            id="confirmation-note"
+                            name="note"
+                            placeholder="e.g. Reviewed against September bank statement"
+                          />
+                        </div>
+                        <button className="button" type="submit">
+                          Confirm reconciliation
+                        </button>
+                      </form>
+                    </section>
+                  ) : null}
+
                   {Array.isArray(selectedImport.rows) &&
                   selectedImport.rows.length ? (
                     <div style={{ overflowX: "auto" }}>
@@ -575,7 +918,7 @@ export default async function TreasuryPage({
                       <strong>
                         {money(
                           selectedStatement.statement.opening_balance_minor,
-                          selectedStatement.account.currency
+                          selectedStatement.account?.currency ?? space.currency
                         )}
                       </strong>
                     </div>
@@ -584,7 +927,7 @@ export default async function TreasuryPage({
                       <strong>
                         {money(
                           selectedStatement.statement.closing_balance_minor,
-                          selectedStatement.account.currency
+                          selectedStatement.account?.currency ?? space.currency
                         )}
                       </strong>
                     </div>
