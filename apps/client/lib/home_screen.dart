@@ -126,6 +126,8 @@ class _HomePageState extends State<_HomePage>{
       final setup=(credit['setup'] as Map?)?.cast<String,dynamic>()??{};
       final policies=(data['policies'] as List? ?? const []);
       final spaces=(data['spaces'] as List? ?? const []);
+      final availability=(data['availability'] as Map?)?.cast<String,dynamic>()??{};
+      final creditAvailable=availability['credit']==true;
       final activePolicies=policies.where((p)=>p is Map&&p['status']=='active').length;
       final otherSpaces=spaces.where((x)=>x is Map&&x['type']!='personal').length;
       final available=position['available_money_minor'];
@@ -225,11 +227,13 @@ class _HomePageState extends State<_HomePage>{
         const SizedBox(height:6),
         Card(child:ListTile(
           leading:const Icon(Icons.account_balance_wallet_outlined),
-          title:Text(creditReady?'Available credit '+_ugx(availableCredit):'Build your credit profile',
+          title:Text(!creditAvailable?'Credit temporarily unavailable':creditReady?'Available credit '+_ugx(availableCredit):'Build your credit profile',
             style:const TextStyle(fontWeight:FontWeight.w700)),
-          subtitle:const Text('Credit is one financial tool. Review affordability and every cost before borrowing.'),
-          trailing:const Icon(Icons.chevron_right),
-          onTap:creditReady
+          subtitle:Text(!creditAvailable
+            ?'Your personal money view remains available while the credit service recovers.'
+            :'Credit is one financial tool. Review affordability and every cost before borrowing.'),
+          trailing:creditAvailable?const Icon(Icons.chevron_right):null,
+          onTap:!creditAvailable?null:creditReady
             ?()=>_open(const LoanApplicationScreen())
             :()=>_open(const KycSetupScreen()))),
 
