@@ -49,6 +49,27 @@ class FinancialWellbeingApi {
     return _decode(response, 'Unable to add the account.');
   }
 
+  static Future<Map<String, dynamic>> updateAccount(
+    int accountId, {
+    required int balanceMinor,
+    String? displayName,
+    String? currency,
+  }) async {
+    final body = <String, dynamic>{
+      'balance_minor': balanceMinor,
+      'observed_at': DateTime.now().toIso8601String(),
+    };
+    if (displayName != null) body['display_name'] = displayName;
+    if (currency != null) body['currency'] = currency;
+
+    final response = await http.patch(
+      Uri.parse('$apiUrl/financial-accounts/$accountId'),
+      headers: await _headers(),
+      body: jsonEncode(body),
+    );
+    return _decode(response, 'Unable to update the account balance.');
+  }
+
   static Map<String, dynamic> _decode(http.Response response, String fallback) {
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300) {
