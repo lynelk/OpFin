@@ -18,7 +18,7 @@ def outputs(tokens):
     for name, value in colours.items():
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9]*', name) or not re.fullmatch(r'#[0-9A-Fa-f]{6}', value):
             raise ValueError('Invalid colour token')
-    for foreground, background in [('ink', 'ivory'), ('white', 'indigo'), ('ink', 'apricot'), ('muted', 'white'), ('success', 'white'), ('warning', 'white'), ('danger', 'white')]:
+    for foreground, background in [('ink', 'ivory'), ('white', 'indigo'), ('indigo', 'ivory'), ('indigo', 'white'), ('ink', 'apricot'), ('indigoStrong', 'apricot'), ('muted', 'white'), ('muted', 'ivory'), ('success', 'white'), ('warning', 'white'), ('danger', 'white')]:
         values = sorted((luminance(colours[foreground]), luminance(colours[background])))
         ratio = (values[1] + 0.05) / (values[0] + 0.05)
         if ratio < 4.5:
