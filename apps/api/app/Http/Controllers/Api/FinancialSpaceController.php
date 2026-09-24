@@ -17,13 +17,17 @@ class FinancialSpaceController extends Controller
         $spaces = DB::table('financial_space_memberships as m')
             ->join('financial_spaces as s', 's.id', '=', 'm.financial_space_id')
             ->where('m.user_id', $request->user()->id)->where('m.status', 'active')->whereNull('s.deleted_at')
-            ->select('s.id','s.public_id','s.type','s.name','s.country','s.currency','s.status','m.role')->orderBy('s.id')->get();
+            ->select('s.id','s.public_id','s.type','s.name','s.country','s.currency','s.status','m.role')
+            ->orderByRaw("CASE WHEN s.type = 'personal' THEN 0 ELSE 1 END")
+            ->orderBy('s.name')
+            ->orderBy('s.id')
+            ->get();
         return response()->json(['data'=>['spaces'=>$spaces]]);
     }
 
     public function store(Request $request): JsonResponse
     {
-        $v=$request->validate(['type'=>['required',Rule::in(['household','savings_group','business','sacco','investment_fund','partner'])],'name'=>['required','string','max:160'],'country'=>['sometimes','string','size:2'],'currency'=>['sometimes','string','size:3']]);
+        $v=$request->validate(['type'=>['required',Rule::in(['household','savings_group','investment_club','business','sacco','investment_fund','partner'])],'name'=>['required','string','max:160'],'country'=>['sometimes','string','size:2'],'currency'=>['sometimes','string','size:3']]);
         return DB::transaction(function() use($request,$v){
             $id=DB::table('financial_spaces')->insertGetId(['public_id'=>(string)Str::uuid(),'type'=>$v['type'],'name'=>$v['name'],'country'=>strtoupper($v['country']??'UG'),'currency'=>strtoupper($v['currency']??'UGX'),'status'=>'active','created_at'=>now(),'updated_at'=>now()]);
             DB::table('financial_space_memberships')->insert(['financial_space_id'=>$id,'user_id'=>$request->user()->id,'role'=>'owner','status'=>'active','joined_at'=>now(),'approved_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);
