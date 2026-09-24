@@ -74,7 +74,8 @@ export async function recordTreasuryTransactionAction(formData: FormData) {
         description: value(formData, "description"),
         counterparty_name: value(formData, "counterparty_name") || undefined,
         transaction_date: value(formData, "transaction_date"),
-        value_date: value(formData, "value_date") || undefined
+        value_date: value(formData, "value_date") || undefined,
+        idempotency_key: value(formData, "idempotency_key")
       },
       token
     );
