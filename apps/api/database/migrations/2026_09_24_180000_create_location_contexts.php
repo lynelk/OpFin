@@ -32,6 +32,7 @@ return new class extends Migration
             $table->unsignedInteger('accuracy_metres')->nullable();
             $table->string('consent_purpose', 120);
             $table->string('verification_status', 32)->default('user_declared')->index();
+            $table->boolean('credit_decision_eligible')->default(false)->index();
             $table->timestamp('captured_at')->nullable();
             $table->timestamp('verified_at')->nullable();
             $table->json('metadata')->nullable();
