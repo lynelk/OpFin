@@ -1,7 +1,7 @@
 # OpFin launch customer journey
 
-Status: Controlled external specialist credit-journey reference  
-Updated: 23 September 2026  
+Status: Controlled external specialist credit-journey reference within the personal-first OpFin experience  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 This document is the current product contract for the launch borrower journey across the mobile app, WhatsApp and USSD. It favours comprehension over feature density. The customer should see a simple next step; the platform keeps scoring, provider orchestration, compliance and accounting complexity behind the interface.
@@ -45,15 +45,15 @@ Successful registration returns an authenticated session and lands directly on H
 
 ## 3. Home before identity verification
 
-Show a simple setup state such as:
+Home remains useful before credit/KYC activation. It starts with the person's recorded financial picture: available money or a prompt to record it, safe-to-spend when calculable, savings, recorded debt, upcoming obligations and one practical next action.
+
+Identity setup is shown as a secondary, clear task:
 
 - Primary phone: verified
 - Identity: not yet verified
 - Second phone: optional
 
-Primary action: **Verify your National ID**.
-
-The second phone must never block baseline identity or scoring. It can improve confidence and add another verified wallet.
+Identity verification becomes a required step only when the selected regulated service requires it. The second phone must never block baseline personal-finance use. It can improve confidence and add another verified wallet.
 
 ## 4. Identity verification
 
@@ -121,24 +121,23 @@ Do not show probability-of-default as a customer-facing metric.
 
 ## 7. Home after scoring
 
-If an amount is due, repayment becomes the primary state. Otherwise show available-to-borrow.
+Scoring does not turn Home into a lending dashboard. The primary hierarchy remains the person's financial position:
 
-Typical hierarchy:
+- safe-to-spend or available money;
+- savings;
+- total known debt, including recorded non-OpFin Personal-Space debt;
+- upcoming confirmed/scheduled obligations;
+- one server-authoritative next financial action.
 
-- Amount due, when greater than zero
-- Available to borrow
-- OpFin Score and band
-- Total outstanding
-- Next payment date
-- One primary action
+Credit appears as a secondary capability with available credit and amount-due information where relevant. When an OpFin loan instalment is due, the Financial Compass may surface repayment as the next action because it is an actual upcoming obligation, not because lending owns the Home screen.
 
-Optional profile-strengthening tasks, including a second phone, remain secondary. If policy permits only one active loan, available-to-borrow is shown as zero while that loan remains active so the UI never invites a request the backend will reject.
+Protection, savings and Financial Spaces remain accessible from the same Personal experience. Product availability never outranks a warning about an upcoming shortfall, debt obligation or missing current-balance information.
 
 ### Financial resilience entry point
 
-Home may also expose **Build financial resilience** as a secondary, non-blocking destination. It can show financial-capability guidance, the non-score financial-reputation pathway, optional programme participation and alternative credit-support evidence.
+Financial resilience is part of the Personal financial journey rather than a separate onboarding funnel. It can show financial-capability guidance, the non-score financial-reputation pathway, optional programme participation and alternative credit-support evidence.
 
-This surface must not become another mandatory onboarding funnel. Voluntary inclusion attributes require explicit programme-measurement consent, remain outside credit-risk inputs and are cleared when that consent is withdrawn. Recording a warehouse receipt, guarantee or other support instrument is evidence submission only; it is not credit approval.
+Voluntary inclusion attributes require explicit programme-measurement consent, remain outside credit-risk inputs and are cleared when that consent is withdrawn. Recording a warehouse receipt, guarantee or other support instrument is evidence submission only; it is not credit approval.
 
 OpFin does not absorb Stolets merchant operations through this surface. POS, inventory, purchasing and day-to-day SME operations remain Stolets product responsibilities.
 
@@ -206,13 +205,15 @@ OpFin does not scrape the customer's address book. Each guarantor independently 
 
 ## 11. WhatsApp
 
-Secure WhatsApp commands include:
+Secure WhatsApp interactions should prioritise everyday personal-finance tasks and expose credit only as one capability. Supported intents may include:
 
-- STATUS
-- PROFILE
-- LIMIT
-- KYC
-- BORROW <amount>
+- MY MONEY / STATUS
+- WHAT IS DUE
+- SAVINGS
+- MY GROUPS
+- PROTECTION
+- PROFILE / KYC
+- LIMIT / BORROW <amount>
 - REPAY
 - CONSENTS
 - SUPPORT <message>
@@ -224,12 +225,16 @@ WhatsApp can explain state and create secure hand-offs. It must not collect the 
 
 Core menu:
 
-1. My limit
-2. Borrow
-3. Repay
-4. My loan
-5. Complete profile
-6. Help
+1. My money
+2. Save
+3. Pay / repay
+4. Borrow
+5. My group
+6. Protection
+7. Goals
+8. More
+
+`More` can expose profile/KYC, loan detail, consents and help without forcing those items into the first screen.
 
 USSD cannot capture KYC photos. It directs the customer to an authenticated app/secure assisted channel. A production USSD aggregator must authenticate callbacks with the configured shared secret or an equivalent approved provider-native mechanism.
 
@@ -254,7 +259,7 @@ Primary mobile navigation:
 
 **Home | Borrow | Activity | More**
 
-Savings, investments, peer lending, SACCO/community capital, insurance and asset finance may remain implemented behind capabilities, but should not crowd the initial borrower journey until the relevant regulated/provider arrangements and operational journeys are activated.
+Savings, protection and My Spaces are reachable from Home without becoming additional primary navigation tabs. Investment, group-finance and other regulated actions remain behind capability and activation controls. The four-tab shell reduces training/promotion burden while Home progressively exposes what is relevant.
 
 ## 15. Source-of-truth APIs
 

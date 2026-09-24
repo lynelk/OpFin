@@ -1,16 +1,16 @@
 # OpFin mobile application
 
 Status: Controlled external developer/product reference  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 The Flutter application is OpFin's primary customer mobile experience. It presents a mobile-complete financial journey while the API remains authoritative for identity, permissions, eligibility, money, credit, provider finality, programme state, ledger and reconciliation.
 
 ## Product position
 
-The customer proposition is to understand, manage, plan and improve money. Borrowing is one capability rather than the application boundary.
+The customer proposition is to understand, manage, plan, protect and improve money. Borrowing is one capability rather than the application boundary. The signed-in customer lands in the Personal context; Financial Spaces extend that financial life rather than replacing it.
 
-One person may access authorised Personal, Household, Savings Group and organisation Financial Spaces without creating separate identities.
+One person may access authorised Personal, Household, Savings Group, Investment Club, SACCO and organisation Financial Spaces without creating separate identities.
 
 ## New-customer journey
 
@@ -20,11 +20,19 @@ One person may access authorised Personal, Household, Savings Group and organisa
 - Legacy password compatibility is a migration concern, not the preferred mobile UX.
 - A second phone is optional.
 
+## Personal Home and everyday money
+
+Home is personal-finance first. It uses the server-authoritative Financial Compass to show recorded available money/safe-to-spend, savings, debt, upcoming obligations, cash-flow context and one useful next action before presenting product choices.
+
+**My Money** supports current cash/mobile-money/bank balances and personal debt planning. A debt recorded in the person's Personal Space contributes to the Financial Compass and, when it has a due date, the upcoming commitment view. OpFin-originated loan schedules remain server-derived; customers do not have to re-enter them manually.
+
+Protection is available as a normal personal-finance destination. The App distinguishes premium initiation, partner settlement, insurer issuance and active cover, and routes claim decisions to the disclosed insurer/underwriter.
+
 ## Financial Spaces and everyday money
 
-Individuals and Savings Groups should be able to complete normal everyday journeys in the App without Web being a hidden prerequisite.
+Individuals and Savings Groups should be able to complete normal everyday journeys in the App without Web being a hidden prerequisite. Investment Club members use the same App and identity. Group/SACCO administrators can use the Web Workspace for deeper administration, but member participation is not split into another consumer app.
 
-The App supports server-authoritative Space context and financial-life features such as money/accounts, budgets, goals, assets, liabilities/receivables, net position and supported financial-health guidance.
+The App supports server-authoritative Space context and financial-life features such as money/accounts, budgets, goals, assets, liabilities/receivables, net position and supported financial-health guidance. Savings Groups, Investment Clubs and SACCOs can attach external government/regulator identifiers to their existing Space record as those schemes become applicable. Group protection catalogues are visible only for approved group-capable products; group enrolment and premium collection remain fail-closed until separately activated.
 
 ## Identity verification
 

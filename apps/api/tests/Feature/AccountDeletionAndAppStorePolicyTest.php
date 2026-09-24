@@ -98,6 +98,52 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         $this->assertNull($deleted->accessibility_preferences);
     }
 
+    public function test_account_deletion_purges_personal_space_planning_records(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_CUSTOMER,
+            'password' => Hash::make('DeleteMe!123'),
+        ]);
+        Sanctum::actingAs($user);
+
+        $spaceId = (int) $this->getJson('/api/financial-spaces')
+            ->assertOk()
+            ->json('data.spaces.0.id');
+
+        $this->postJson('/api/financial-spaces/'.$spaceId.'/obligations', [
+            'kind' => 'personal_debt',
+            'direction' => 'i_owe',
+            'counterparty_name' => 'Informal lender',
+            'amount_minor' => 80000,
+        ])->assertCreated();
+
+        $this->postJson('/api/financial-spaces/'.$spaceId.'/assets', [
+            'asset_type' => 'household',
+            'name' => 'Personal planning asset',
+            'value_minor' => 250000,
+        ])->assertCreated();
+
+        $this->deleteJson('/api/account', [
+            'password' => 'DeleteMe!123',
+            'confirmation' => 'DELETE',
+        ])->assertOk()
+            ->assertJsonPath('data.deletion_status', 'completed');
+
+        $this->assertDatabaseMissing('financial_obligations', [
+            'financial_space_id' => $spaceId,
+        ]);
+        $this->assertDatabaseMissing('financial_assets', [
+            'financial_space_id' => $spaceId,
+        ]);
+        $this->assertDatabaseMissing('financial_space_memberships', [
+            'financial_space_id' => $spaceId,
+            'user_id' => $user->id,
+        ]);
+        $this->assertDatabaseMissing('financial_spaces', [
+            'id' => $spaceId,
+        ]);
+    }
+
     public function test_deletion_request_stays_open_when_peer_finance_obligations_exist(): void
     {
         $user = User::factory()->create([

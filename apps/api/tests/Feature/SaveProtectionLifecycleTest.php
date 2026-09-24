@@ -244,6 +244,11 @@ class SaveProtectionLifecycleTest extends TestCase
         ])->assertStatus(202)
             ->assertJsonPath('data.premium_payment.id', $premiumId);
 
+        $this->postJson("/api/protection/policies/{$policyId}/premiums", [
+            'idempotency_key' => 'premium-payment-002',
+        ])->assertStatus(409);
+        $this->assertDatabaseCount('protection_premium_payments', 1);
+
         MobileMoneyTransaction::query()->whereKey($mobileMoneyId)->update([
             'status' => MobileMoneyTransaction::STATUS_SUCCESSFUL,
             'provider_reference' => 'mock-premium-success-001',
@@ -284,6 +289,39 @@ class SaveProtectionLifecycleTest extends TestCase
         ]);
         $this->assertDatabaseHas('ledger_transactions', [
             'event_type' => 'protection.premium_partner_settled',
+        ]);
+    }
+
+    public function test_group_only_protection_cannot_be_enrolled_through_personal_endpoint(): void
+    {
+        [$customer, $maker, $checker] = $this->actors();
+
+        Sanctum::actingAs($maker);
+        $payload = $this->protectionProductPayload();
+        $payload['audience_scope'] = 'group';
+        $payload['code'] = 'GROUP-ONLY-'.fake()->unique()->numerify('####');
+        $productId = (int) $this->postJson('/api/admin/protection-products', $payload)
+            ->assertCreated()
+            ->json('data.product.id');
+
+        Sanctum::actingAs($checker);
+        $activation = $this->postJson("/api/admin/protection-products/{$productId}/activate", $this->approvalPayload('GROUP-ONLY-APPROVED'))
+            ->assertOk();
+        $hash = (string) $activation->json('data.disclosure_hash');
+
+        Sanctum::actingAs($customer);
+        $this->getJson('/api/protection/products')
+            ->assertOk()
+            ->assertJsonMissing(['code' => $payload['code']]);
+
+        $this->postJson("/api/protection/products/{$productId}/enroll", [
+            'accept_disclosures' => true,
+            'disclosure_hash' => $hash,
+        ])->assertStatus(409);
+
+        $this->assertDatabaseMissing('protection_policies', [
+            'user_id' => $customer->id,
+            'protection_product_id' => $productId,
         ]);
     }
 

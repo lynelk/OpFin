@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\EarlySettlementController;
 use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\FinancialSpaceController;
+use App\Http\Controllers\Api\FinancialSpaceCredentialController;
 use App\Http\Controllers\Api\FinancialWellbeingController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\GuarantorController;
@@ -75,6 +76,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/financial-spaces/{space}/members', [FinancialSpaceController::class, 'members']);
     Route::post('/financial-spaces/{space}/invitations', [FinancialSpaceController::class, 'invite']);
     Route::put('/financial-spaces/{space}/capabilities', [FinancialSpaceController::class, 'enableCapability']);
+    Route::get('/financial-spaces/{space}/credentials', [FinancialSpaceCredentialController::class, 'index']);
+    Route::post('/financial-spaces/{space}/credentials', [FinancialSpaceCredentialController::class, 'store']);
+    Route::get('/financial-spaces/{space}/protection/products', [ProtectionController::class, 'spaceProducts']);
     Route::get('/financial-spaces/{space}/financial-life', [FinancialLifeController::class, 'summary']);
     Route::get('/financial-spaces/{space}/obligations', [FinancialLifeController::class, 'obligations']);
     Route::post('/financial-spaces/{space}/obligations', [FinancialLifeController::class, 'storeObligation']);
@@ -214,6 +218,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::patch('/admin/financial-space-credentials/{credential}/verification', [FinancialSpaceCredentialController::class, 'verify']);
     Route::post('/admin/hardship/{case}/approve', [V5P0PlatformController::class, 'approveHardship']);
     Route::post('/admin/product-factory/products', [V5P0PlatformController::class, 'createProduct']);
     Route::post('/admin/product-factory/products/{product}/transition', [V5P0PlatformController::class, 'transitionProduct']);

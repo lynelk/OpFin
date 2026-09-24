@@ -24,6 +24,8 @@ class ProtectionPolicy extends Model
         'protection_product_id',
         'user_id',
         'institution_id',
+        'financial_space_id',
+        'coverage_scope',
         'policy_reference',
         'external_policy_number',
         'partner_reference',
@@ -59,6 +61,11 @@ class ProtectionPolicy extends Model
     public function product()
     {
         return $this->belongsTo(ProtectionProduct::class, 'protection_product_id');
+    }
+
+    public function financialSpace()
+    {
+        return $this->belongsTo(FinancialSpace::class);
     }
 
     public function premiumPayments()

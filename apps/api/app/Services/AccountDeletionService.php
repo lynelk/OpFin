@@ -166,6 +166,17 @@ class AccountDeletionService
 
     private function purgeOptionalCustomerContext(int $userId): void
     {
+        $personalSpaceIds = [];
+        if (Schema::hasTable('financial_spaces') && Schema::hasTable('financial_space_memberships')) {
+            $personalSpaceIds = DB::table('financial_spaces as spaces')
+                ->join('financial_space_memberships as memberships', 'memberships.financial_space_id', '=', 'spaces.id')
+                ->where('memberships.user_id', $userId)
+                ->where('spaces.type', 'personal')
+                ->pluck('spaces.id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
         foreach ([
             'financial_accounts',
             'financial_budgets',
@@ -183,6 +194,23 @@ class AccountDeletionService
             if (Schema::hasTable($table) && Schema::hasColumn($table, 'user_id')) {
                 DB::table($table)->where('user_id', $userId)->delete();
             }
+        }
+
+        if ($personalSpaceIds !== []) {
+            foreach (['financial_obligations', 'financial_assets'] as $table) {
+                if (Schema::hasTable($table) && Schema::hasColumn($table, 'financial_space_id')) {
+                    DB::table($table)->whereIn('financial_space_id', $personalSpaceIds)->delete();
+                }
+            }
+
+            DB::table('financial_space_memberships')
+                ->where('user_id', $userId)
+                ->whereIn('financial_space_id', $personalSpaceIds)
+                ->delete();
+
+            DB::table('financial_spaces')
+                ->whereIn('id', $personalSpaceIds)
+                ->delete();
         }
     }
 }
