@@ -1,42 +1,91 @@
 # OpFin brand implementation
 
-Status: Public brand implementation reference  
-Updated: 23 September 2026  
+Status: Brand System v3 release-candidate implementation reference  
+Version: 3.0.0-rc.1  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
-## Direction and provenance
+## Canonical direction
 
-This implementation follows the 15 September 2026 decision to keep and refine the existing OpFin monogram with the Indigo, Apricot and Warm Ivory direction. It is not the rejected Open Path symbol or the retired Pipiya identity. The earlier September guideline remains useful for typography, truthful communications and layout principles; its earlier blue/sky-blue palette is not the colour direction implemented here.
+OpFin retains the established monogram and the Indigo, Apricot and Warm Ivory identity. The brand promise remains **Your next step, clearer.**
 
-`brand/opfin.tokens.json` is the machine-readable implementation source, not a claim that a new externally approved brand-guideline edition has been issued. Current values are Indigo `#353B78`, Apricot `#F2B38D`, Warm Ivory `#FAF8F2`, Periwinkle `#E8EAF6` and Ink `#202436`, with separate supporting and semantic status colours.
+The complete v3 usage standard is `brand/v3/OPFIN_BRAND_SYSTEM_V3.md`. The machine-readable source is `brand/opfin.tokens.json`.
 
-The existing raster master is `apps/client/assets/logo.png`; its recorded Git blob is checked before deriving assets. The upper monogram is isolated from the supplied stacked lock-up at its genuine blank separation band, then resized/recoloured without replacing its geometry. Compact app icons contain the symbol, not a miniature unreadable wordmark. The original source is retained unchanged. Text displaying the application name beside the symbol is interface text and is not represented as an exact reconstruction of the supplied vector wordmark.
+Core values:
+- Indigo `#353B78`;
+- Strong Indigo `#29305F`;
+- Apricot `#F2B38D`;
+- Warm Ivory `#FAF8F2`;
+- Periwinkle `#E8EAF6`;
+- Ink `#202436`;
+- Muted `#555D72`;
+- Line `#D7DAE8`;
+- White `#FFFFFF`.
 
-Inter is self-hosted and bundled, using the pinned official `rsms/inter` revision and licence recorded in the token file. The asset generator checks the exact official file digests; applications do not need a runtime request to an external font CDN. Licence notices are retained in the repository.
+Semantic Success, Warning and Danger colours remain reserved for status.
+
+## Vector identity
+
+The v3 vector source files are under `brand/v3/assets/`:
+
+- `opfin-symbol-master.svg` — canonical monogram;
+- `opfin-wordmark.svg` — controlled wordmark artwork;
+- `opfin-lockup-horizontal.svg`;
+- `opfin-lockup-stacked.svg`;
+- `opfin-app-icon-master.svg`;
+- `opfin-progress-path.svg`;
+- `opfin-feature-graphic-master.svg`.
+
+Web renders the vector monogram directly. Mobile and store raster exports remain provenance-controlled through `brand/asset-manifest.json` and the asset-generation scripts.
+
+Inter is self-hosted and bundled from the pinned official source recorded in `brand/opfin.tokens.json`. Applications do not rely on a runtime external font CDN.
+
+## Product visual language
+
+Brand System v3 introduces three repeatable product signals.
+
+### Progress Path
+
+A rounded directional motif derived from the monogram. Periwinkle represents context; Apricot represents the active or next route. It may frame, underline or connect, but must not cross important text.
+
+### Financial Compass
+
+A calm evidence-first presentation of financial position. Recorded facts, estimates and unavailable information remain distinct. Financial figures stay connected to provenance and explanation rather than being presented as decorative certainty.
+
+### Next Step
+
+One recommended action, one reason and one primary action. Web and mobile Home now use the pattern as a signature OpFin interaction.
 
 ## Application surfaces
 
-- Web marketing header/footer and portal sidebar: original OpFin symbol instead of O/OF placeholder tiles.
-- Web application and website: shared colour tokens, Inter typography, indigo actions, light customer-facing surfaces and apricot accents. Existing semantic error/success/warning colours keep their meanings.
-- Mobile: shared Material theme, brand-colour controls, Inter body text, enlarged-text support, 48-pixel minimum interactive controls in the theme and a branded splash screen.
-- Legacy mobile presentation overrides: black-only text and primary buttons migrated to the shared tokens without changing lending, payment or API rules.
-- Android launcher, iOS icon catalogue and web icon: assets derived from the same retained mark, with a SHA-256 provenance manifest.
-- Marketing preview: explicitly labelled illustrative, not presented as a production Android screenshot. Product claims still require actual availability and regulatory/provider verification.
+- Web: v3 vector symbol, Inter, direct token-based styles and signature Financial Compass / Next Step treatments.
+- Mobile: shared Material theme, Inter, 48-pixel target baseline and branded Next Step treatment.
+- Store: v3 copy, app-icon direction and feature-graphic source; the Apricot accent sits below “clearer.” rather than crossing it.
+- Documents, presentations, social and partner co-branding: controlled starter artwork under `brand/v3/templates/`.
 
-The customer navigation remains Home | Borrow | Save | Grow | More. Branding is not permission to add unavailable products or bypass approval, account-deletion, identity or financial controls.
+The brand system does not activate financial products, providers, permissions, licences or store publication.
 
-## Updating the identity safely
+## Updating safely
 
-1. Update approved token values in `brand/opfin.tokens.json`.
-2. Run `python3 scripts/sync-brand.py` to regenerate CSS and Dart constants.
-3. When an approved master or derived asset changes, review its provenance, run `node scripts/prepare-brand-assets.mjs` with the locked web dependencies installed, and review the result visually. The source hash is intentionally a review boundary, not a value to replace blindly.
-4. Commit assets, their manifest and relevant documentation together.
-5. Run the required web/mobile/security jobs before release.
+1. Follow `brand/v3/BRAND_CHANGE_POLICY.md`.
+2. Change approved values in `brand/opfin.tokens.json`.
+3. Update the vector master only through a reviewed brand-system change.
+4. Run `python3 scripts/sync-brand.py` when tokens change.
+5. Run `node scripts/prepare-brand-assets.mjs` when vector/font-derived platform assets need regeneration.
+6. Run `sh scripts/build-play-store-assets.sh` when store artwork changes.
+7. Commit sources, generated assets, manifest and relevant documentation together.
+8. Run the required Web/mobile/security jobs and complete visual review.
 
-`python3 scripts/sync-brand.py --check` rejects token drift and checks the specified normal-text colour pairs at a minimum 4.5:1 contrast ratio. `python3 scripts/verify-security-controls.py` verifies that both apps load the theme, rejects legacy black presentation overrides and validates recorded asset hashes. These checks are not a full accessibility audit or a visual review of every device and screen.
+`python3 scripts/sync-brand.py --check` rejects token drift and verifies required contrast pairs. `python3 scripts/verify-security-controls.py` validates v3 provenance, rejects retired Web palette/type values in active style sheets, verifies platform theme wiring and validates asset hashes.
 
-## Release review
+## External release gates
 
-Review login, registration, password recovery, OTP, the home screen, products/terms, application status, repayment screens, profile, help and account deletion on real release builds. Check enlarged text, keyboard focus, screen-reader labels, financial-number wrapping, low-resolution devices and provider error states. Keep UGX amounts and terms legible. Do not crop or obscure disclosures to make a screenshot look cleaner.
+Do not call v3 frozen merely because source and templates exist.
 
-The release notes and store listing must describe the release actually tested. Source changes, CI renders and illustration boards are not evidence that the production Android build has been captured or published.
+Before changing the status to Brand System 3.0.0 Frozen, complete:
+- `brand/v3/SCREENSHOT_CAPTURE_STANDARD.md` against the exact signed release candidate;
+- `brand/v3/TRADEMARK_CLEARANCE.md` through official registers/legal review;
+- `brand/v3/VISUAL_QA_CHECKLIST.md` on representative real/rendered outputs;
+- public Play Console replacement and verification.
+
+Source changes, CI renders and illustration boards are not evidence that a production Android build was captured, tested or published.
