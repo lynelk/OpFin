@@ -643,6 +643,26 @@ export default async function TreasuryPage({
                                       <label htmlFor={"variance-reason-" + index}>
                                         Reason for accepting variance
                                       </label>
+                                      <p className="muted">
+                                        {Number(todo.opening_balance_variance_minor ?? 0) !== 0
+                                          ? "Opening variance: " +
+                                            money(
+                                              todo.opening_balance_variance_minor,
+                                              selectedAccount.currency
+                                            )
+                                          : ""}
+                                        {Number(todo.opening_balance_variance_minor ?? 0) !== 0 &&
+                                        Number(todo.closing_balance_variance_minor ?? 0) !== 0
+                                          ? " · "
+                                          : ""}
+                                        {Number(todo.closing_balance_variance_minor ?? 0) !== 0
+                                          ? "Closing variance: " +
+                                            money(
+                                              todo.closing_balance_variance_minor,
+                                              selectedAccount.currency
+                                            )
+                                          : ""}
+                                      </p>
                                       <input id={"variance-reason-" + index} name="reason" required />
                                     </div>
                                     <button className="button secondary" type="submit">
@@ -661,6 +681,9 @@ export default async function TreasuryPage({
                     <section className="case-card" style={{ marginTop: 12 }}>
                       <p className="eyebrow">Ready to close</p>
                       <h3>All reconciliation to-dos are cleared</h3>
+                      <p className="muted">
+                        If any exception or balance variance was accepted, confirmation must be completed by a different authorised finance officer.
+                      </p>
                       <form action={confirmTreasuryReconciliationAction} className="form-grid">
                         <input type="hidden" name="space_id" value={spaceId} />
                         <input
@@ -972,8 +995,11 @@ export default async function TreasuryPage({
                   />
                 </div>
                 <div className="field">
-                  <label htmlFor="balance_as_of">Balance as of</label>
+                  <label htmlFor="balance_as_of">Opening balance as of</label>
                   <input id="balance_as_of" name="balance_as_of" type="date" />
+                  <p className="muted">
+                    Required when the opening balance is not zero. This date remains the cashbook baseline.
+                  </p>
                 </div>
                 <button className="button" type="submit">
                   Create account
