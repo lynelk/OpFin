@@ -86,11 +86,18 @@ class LocationContextController extends Controller
                 $attributes['source'] = 'google_place';
             } elseif (($validated['resolve_with_google'] ?? false)
                 && isset($validated['latitude'], $validated['longitude'])) {
-                $details = $this->google->reverseGeocode(
-                    (float) $validated['latitude'],
-                    (float) $validated['longitude'],
-                );
-                $attributes = array_merge($details, $attributes);
+                try {
+                    $details = $this->google->reverseGeocode(
+                        (float) $validated['latitude'],
+                        (float) $validated['longitude'],
+                    );
+                    $attributes = array_merge($details, $attributes);
+                } catch (InvalidArgumentException|RuntimeException) {
+                    $attributes['metadata'] = array_merge(
+                        $attributes['metadata'] ?? [],
+                        ['google_resolution' => 'unavailable_at_capture']
+                    );
+                }
             }
 
             $context = $this->locations->save($request->user(), $attributes);
