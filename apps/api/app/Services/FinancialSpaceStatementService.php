@@ -542,6 +542,22 @@ class FinancialSpaceStatementService
             ->get();
     }
 
+    public function imports(
+        FinancialSpace $space,
+        FinancialSpaceTreasuryAccount $account,
+        User $actor,
+    ): Collection {
+        $this->assertTreasurySpace($space);
+        $this->assertMember($space, $actor);
+        $this->assertAccount($space, $account);
+
+        return FinancialSpaceStatementImport::query()
+            ->where('treasury_account_id', $account->id)
+            ->orderByDesc('created_at')
+            ->limit(24)
+            ->get();
+    }
+
     public function transactions(
         FinancialSpace $space,
         FinancialSpaceTreasuryAccount $account,
