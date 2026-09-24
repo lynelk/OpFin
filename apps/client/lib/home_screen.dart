@@ -4,6 +4,8 @@ import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/credit_offers_screen.dart';
 import 'package:opfin/financial_spaces_screen.dart';
 import 'package:opfin/connected_financial_life_screen.dart';
+import 'package:opfin/financial_hubs.dart';
+import 'package:opfin/protection_screen.dart';
 import 'package:opfin/kyc_setup_screen.dart';
 import 'package:opfin/inclusive_finance_screen.dart';
 import 'package:opfin/loan_application_screen.dart';
@@ -13,6 +15,7 @@ import 'package:opfin/profile_screen.dart';
 import 'package:opfin/receipts_screen.dart';
 import 'package:opfin/secondary_phone_screen.dart';
 import 'package:opfin/services/credit_profile_api.dart';
+import 'package:opfin/services/personal_home_api.dart';
 import 'package:opfin/store_ready_more_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,36 +48,43 @@ class _HomePage extends StatefulWidget{
   const _HomePage();
   @override State<_HomePage> createState()=>_HomePageState();
 }
+
 class _HomePageState extends State<_HomePage>{
   late Future<Map<String,dynamic>> _state;
   String _name='there';
   final _money=NumberFormat('#,##0','en_US');
 
-  @override void initState(){super.initState();_state=CreditProfileApi.load();_loadName();}
+  @override void initState(){super.initState();_state=PersonalHomeApi.load();_loadName();}
+
   Future<void> _loadName() async{
     final p=await SharedPreferences.getInstance();
     if(mounted)setState(()=>_name=(p.getString('name')??'there').split(' ').first);
   }
+
   int _n(dynamic v)=>v is num?v.toInt():int.tryParse('$v')??0;
-  String _ugx(dynamic v)=>'UGX ${_money.format(_n(v))}';
-  Future<void> _reload() async{setState(()=>_state=CreditProfileApi.load());await _state;}
+  String _ugx(dynamic v)=>'UGX '+_money.format(_n(v));
+
+  Future<void> _reload() async{
+    setState(()=>_state=PersonalHomeApi.load());
+    await _state;
+  }
+
   Future<void> _open(Widget page) async{
     await Navigator.push(context,MaterialPageRoute(builder:(_)=>page));
     await _reload();
   }
 
-  Future<void> _next(Map<String,dynamic> data) async{
-    final next=(data['next_action'] as Map?)?.cast<String,dynamic>()??{};
+  Future<void> _openSavings() async{
+    await _open(Scaffold(
+      appBar:AppBar(title:const Text('Savings & goals')),
+      body:const SaveMobileScreen(),
+    ));
+  }
+
+  Future<void> _next(Map<String,dynamic> next,Map<String,dynamic> credit) async{
     final code=next['code']?.toString()??'';
-    if(code=='VERIFY_IDENTITY'||code=='GRANT_CREDIT_CONSENT'){
-      await _open(const KycSetupScreen());return;
-    }
-    if(code=='CALCULATE_PROFILE'){
-      setState(()=>_state=CreditProfileApi.refresh());await _state;return;
-    }
-    if(code=='BORROW'){await _open(const LoanApplicationScreen());return;}
-    if(code=='REPAY'){
-      final loan=(data['active_loan'] as Map?)?.cast<String,dynamic>();
+    if(code=='loan_due'){
+      final loan=(credit['active_loan'] as Map?)?.cast<String,dynamic>();
       if(loan!=null){
         await _open(LoanRepaymentScreen(
           loanId:_n(loan['id']),
@@ -82,27 +92,11 @@ class _HomePageState extends State<_HomePage>{
         return;
       }
     }
-    await _open(const ProfileScreen());
-  }
-
-  void _scoreDetails(Map<String,dynamic> profile){
-    final components=(profile['component_breakdown'] as Map?)?.cast<String,dynamic>()??{};
-    showModalBottomSheet<void>(context:context,isScrollControlled:true,builder:(_)=>SafeArea(
-      child:Padding(padding:const EdgeInsets.all(24),child:Column(
-        mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('What makes up my score?',style:TextStyle(fontSize:22,fontWeight:FontWeight.w800)),
-          const SizedBox(height:8),
-          const Text('These parts combine into your OpFin Score. Missing partner data does not become a made-up score.'),
-          const SizedBox(height:16),
-          if(components.isEmpty)const Text('Score details are still being collected.'),
-          ...components.entries.map((e){
-            final d=(e.value as Map?)?.cast<String,dynamic>()??{};
-            final label={'crb':'Credit history','mno':'Mobile activity','third_party':'Approved partner data','internal':'OpFin behaviour'}[e.key]??e.key;
-            return ListTile(contentPadding:EdgeInsets.zero,title:Text(label),
-              trailing:Text('${(d['score'] as num?)?.round()??0}/100',
-                style:const TextStyle(fontWeight:FontWeight.w700)));
-          }),
-        ]))));
+    if(code=='build_goal'){
+      await _openSavings();
+      return;
+    }
+    await _open(const ConnectedFinancialLifeScreen());
   }
 
   @override Widget build(BuildContext context)=>RefreshIndicator(
@@ -116,90 +110,159 @@ class _HomePageState extends State<_HomePage>{
           const SizedBox(height:100),
           const Icon(Icons.cloud_off_outlined,size:52),
           const SizedBox(height:12),
-          const Text('We could not load your account right now.',textAlign:TextAlign.center),
+          const Text('We could not load your financial picture right now.',textAlign:TextAlign.center),
           const SizedBox(height:12),
           FilledButton(onPressed:_reload,child:const Text('Try again')),
         ]);
       }
+
       final data=s.data??{};
-      final profile=(data['profile'] as Map?)?.cast<String,dynamic>()??{};
-      final setup=(data['setup'] as Map?)?.cast<String,dynamic>()??{};
-      final next=(data['next_action'] as Map?)?.cast<String,dynamic>()??{};
-      final pending=profile['status']?.toString()=='pending'||profile.isEmpty;
-      final amountDue=_n(profile['amount_due_minor']);
-      final available=_n(profile['available_to_borrow_minor']);
-      final score=(profile['composite_score'] as num?)?.round();
+      final compass=(data['compass'] as Map?)?.cast<String,dynamic>()??{};
+      final position=(compass['position'] as Map?)?.cast<String,dynamic>()??{};
+      final cashFlow=(compass['cash_flow'] as Map?)?.cast<String,dynamic>()??{};
+      final next=(compass['next_best_action'] as Map?)?.cast<String,dynamic>()??{};
+      final credit=(data['credit'] as Map?)?.cast<String,dynamic>()??{};
+      final profile=(credit['profile'] as Map?)?.cast<String,dynamic>()??{};
+      final setup=(credit['setup'] as Map?)?.cast<String,dynamic>()??{};
+      final policies=(data['policies'] as List? ?? const []);
+      final spaces=(data['spaces'] as List? ?? const []);
+      final activePolicies=policies.where((p)=>p is Map&&p['status']=='active').length;
+      final otherSpaces=spaces.where((x)=>x is Map&&x['type']!='personal').length;
+      final available=position['available_money_minor'];
+      final safe=position['safe_to_spend_minor'];
+      final debt=_n(position['debt_obligations_minor']);
+      final savings=_n(position['current_savings_minor']);
+      final upcoming=_n(position['upcoming_obligations_minor']);
+      final income=_n(cashFlow['income_minor']);
+      final expenses=_n(cashFlow['expense_minor']);
+      final creditReady=profile.isNotEmpty&&profile['status']?.toString()!='pending';
+      final availableCredit=_n(profile['available_to_borrow_minor']);
+
       return ListView(padding:const EdgeInsets.all(20),children:[
-        Semantics(header:true,child:Text('Hi, $_name',
+        Semantics(header:true,child:Text('Good morning, $_name',
           style:const TextStyle(fontSize:27,fontWeight:FontWeight.w800))),
         const SizedBox(height:4),
-        Text(pending?'One step at a time. Build your financial picture as you go.'
-          :amountDue>0?'Your repayment comes first.':'Understand, manage, plan and improve your money.',
-          style:const TextStyle(color:OpFinColors.muted)),
+        const Text('Your financial life today.',style:TextStyle(color:OpFinColors.muted)),
         const SizedBox(height:18),
+
         Card(
-          child:Padding(padding:const EdgeInsets.all(20),child:Column(
-            crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Text(amountDue>0?'Amount due':pending?'Loan limit':'Available to borrow',
+          child:Padding(
+            padding:const EdgeInsets.all(20),
+            child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text(safe==null?'Available money':'Safe to spend',
                 style:const TextStyle(color:OpFinColors.muted)),
               const SizedBox(height:5),
-              Text(amountDue>0?_ugx(amountDue):pending?'Not ready yet':_ugx(available),
+              Text(
+                safe!=null?_ugx(safe):available!=null?_ugx(available):'Add your balances',
                 style:const TextStyle(fontSize:32,fontWeight:FontWeight.w800)),
-              if(!pending&&score!=null)...[
-                const SizedBox(height:12),
-                Row(children:[
-                  Expanded(child:Text('OpFin Score  $score / 100 · ${profile['band']??''}',
-                    style:const TextStyle(fontWeight:FontWeight.w700))),
-                  TextButton(onPressed:()=>_scoreDetails(profile),child:const Text('Details')),
-                ]),
-              ],
-              if(_n(profile['total_outstanding_minor'])>0)...[
-                const SizedBox(height:8),
-                Text('Total outstanding: ${_ugx(profile['total_outstanding_minor'])}'),
-                if(profile['next_due_date']!=null)
-                  Text('Next payment date: ${profile['next_due_date']}'),
-              ],
+              const SizedBox(height:8),
+              Text(
+                safe==null
+                  ?'Record the money you can actually use so OpFin can plan without guessing.'
+                  :'After confirmed and scheduled obligations over the next 30 days.'),
               const SizedBox(height:18),
-              SizedBox(width:double.infinity,height:50,child:FilledButton(
-                onPressed:()=>_next(data),
-                child:Text(next['label']?.toString()??'Continue'))),
-            ])),
+              Row(children:[
+                Expanded(child:_HomeStat(label:'Savings',value:_ugx(savings))),
+                const SizedBox(width:8),
+                Expanded(child:_HomeStat(label:'Debt',value:_ugx(debt))),
+                const SizedBox(width:8),
+                Expanded(child:_HomeStat(label:'Coming up',value:_ugx(upcoming))),
+              ]),
+            ]),
+          ),
         ),
-        const SizedBox(height:14),
-        Card(child:ListTile(
-          leading:const Icon(Icons.account_balance_wallet_outlined),
-          title:const Text('My money & spaces',style:TextStyle(fontWeight:FontWeight.w700)),
-          subtitle:const Text('Personal money, savings groups, household and organisations in one place.'),
-          trailing:const Icon(Icons.chevron_right),
-          onTap:()=>_open(const FinancialSpacesScreen()))),
+
+        if(next.isNotEmpty)
+          Card(
+            child:ListTile(
+              leading:const Icon(Icons.auto_awesome_outlined),
+              title:Text(next['title']?.toString()??'Review your money',
+                style:const TextStyle(fontWeight:FontWeight.w700)),
+              subtitle:Text(next['text']?.toString()??''),
+              trailing:const Icon(Icons.chevron_right),
+              onTap:()=>_next(next,credit),
+            ),
+          ),
+
+        const SizedBox(height:12),
+        const Text('My financial life',style:TextStyle(fontSize:19,fontWeight:FontWeight.w700)),
+        const SizedBox(height:6),
+
         Card(child:ListTile(
           leading:const Icon(Icons.insights_outlined),
-          title:const Text('Plan my financial life',style:TextStyle(fontWeight:FontWeight.w700)),
-          subtitle:const Text('Accounts, goals, household, business and community context.'),
+          title:const Text('Plan my money',style:TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:Text('This month: '+_ugx(income)+' in · '+_ugx(expenses)+' out. Plan cash flow, debts and upcoming obligations.'),
           trailing:const Icon(Icons.chevron_right),
           onTap:()=>_open(const ConnectedFinancialLifeScreen()))),
+
+        Card(child:ListTile(
+          leading:const Icon(Icons.savings_outlined),
+          title:const Text('Savings & goals',style:TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:Text(savings>0?'You have '+_ugx(savings)+' in partner-confirmed savings.':'Build an emergency fund or another goal at your pace.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:_openSavings)),
+
         Card(child:ListTile(
           leading:const Icon(Icons.health_and_safety_outlined),
-          title:const Text('Build financial resilience',style:TextStyle(fontWeight:FontWeight.w700)),
-          subtitle:const Text('Financial capability, reputation, fair treatment, programmes and alternative credit support.'),
+          title:const Text('Protection',style:TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:Text(activePolicies>0
+            ?activePolicies.toString()+' active protection '+(activePolicies==1?'policy.':'policies.')
+            :'Review approved insurance and protection when it is useful to you.'),
           trailing:const Icon(Icons.chevron_right),
-          onTap:()=>_open(const InclusiveFinanceScreen()))),
+          onTap:()=>_open(const ProtectionScreen()))),
+
+        Card(child:ListTile(
+          leading:const Icon(Icons.groups_outlined),
+          title:const Text('My spaces',style:TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:Text(otherSpaces>0
+            ?otherSpaces.toString()+' group or organisation '+(otherSpaces==1?'space':'spaces')+' connected to your OpFin identity.'
+            :'Saving groups, investment clubs, SACCOs and other relationships appear here.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>_open(const FinancialSpacesScreen()))),
+
+        const SizedBox(height:12),
+        const Text('Credit when you need it',style:TextStyle(fontSize:19,fontWeight:FontWeight.w700)),
+        const SizedBox(height:6),
+        Card(child:ListTile(
+          leading:const Icon(Icons.account_balance_wallet_outlined),
+          title:Text(creditReady?'Available credit '+_ugx(availableCredit):'Build your credit profile',
+            style:const TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:const Text('Credit is one financial tool. Review affordability and every cost before borrowing.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:creditReady
+            ?()=>_open(const LoanApplicationScreen())
+            :()=>_open(const KycSetupScreen()))),
+
+        if(setup['kyc_status']!='verified')
+          Card(child:ListTile(
+            leading:const Icon(Icons.verified_user_outlined),
+            title:const Text('Complete identity verification',style:TextStyle(fontWeight:FontWeight.w700)),
+            subtitle:const Text('Verify progressively when a financial service needs it.'),
+            trailing:const Icon(Icons.chevron_right),
+            onTap:()=>_open(const KycSetupScreen()))),
+
         if(setup['secondary_phone_verified']!=true)
           Card(child:ListTile(
             leading:const Icon(Icons.add_call),
             title:const Text('Add another phone (optional)',style:TextStyle(fontWeight:FontWeight.w700)),
-            subtitle:const Text('It can strengthen your profile and add another wallet.'),
+            subtitle:const Text('Useful for another verified wallet, but never required for baseline access.'),
             trailing:const Icon(Icons.chevron_right),
             onTap:()=>_open(const SecondaryPhoneScreen()))),
-        Card(child:ListTile(
-          leading:const Icon(Icons.security_outlined),
-          title:const Text('Your setup'),
-          subtitle:Text('Phone ✓  ·  Identity ${setup['kyc_status']=='verified'?'✓':'not yet'}'),
-          trailing:const Icon(Icons.chevron_right),
-          onTap:()=>_open(const ProfileScreen()))),
       ]);
     }),
   );
+}
+
+class _HomeStat extends StatelessWidget{
+  const _HomeStat({required this.label,required this.value});
+  final String label,value;
+  @override Widget build(BuildContext context)=>Column(
+    crossAxisAlignment:CrossAxisAlignment.start,
+    children:[
+      Text(label,style:const TextStyle(color:OpFinColors.muted,fontSize:12)),
+      const SizedBox(height:3),
+      Text(value,style:const TextStyle(fontWeight:FontWeight.w700)),
+    ]);
 }
 
 class _BorrowPage extends StatefulWidget{
