@@ -3,6 +3,7 @@ import {
   createTreasuryAccountAction,
   generateTreasuryStatementAction,
   importTreasuryStatementAction,
+  matchTreasuryStatementRowAction,
   reconcileTreasuryStatementAction,
   recordTreasuryTransactionAction
 } from "@/app/financial-space-statement-actions";
@@ -124,7 +125,8 @@ export default async function TreasuryPage({
       "transaction-recorded": "Treasury transaction recorded.",
       "statement-imported": "External statement imported.",
       reconciled: "Statement reconciliation completed.",
-      "statement-generated": "Bank-style statement issued."
+      "statement-generated": "Bank-style statement issued.",
+      "row-matched": "Statement exception matched to the selected OpFin transaction."
     };
 
     return (
@@ -380,10 +382,55 @@ export default async function TreasuryPage({
                                   ).replaceAll("_", " ")}
                                 </td>
                                 <td>
-                                  {String(row.exception_type ?? "—").replaceAll(
-                                    "_",
-                                    " "
-                                  )}
+                                  <div>
+                                    {String(row.exception_type ?? "—").replaceAll(
+                                      "_",
+                                      " "
+                                    )}
+                                    {canManage &&
+                                    row.reconciliation_status !== "matched" ? (
+                                      <form
+                                        action={matchTreasuryStatementRowAction}
+                                        className="inline-form"
+                                        style={{ marginTop: 8 }}
+                                      >
+                                        <input
+                                          type="hidden"
+                                          name="space_id"
+                                          value={spaceId}
+                                        />
+                                        <input
+                                          type="hidden"
+                                          name="account_id"
+                                          value={selectedAccount.id}
+                                        />
+                                        <input
+                                          type="hidden"
+                                          name="import_id"
+                                          value={String(selectedImport.id)}
+                                        />
+                                        <input
+                                          type="hidden"
+                                          name="row_id"
+                                          value={String(row.id)}
+                                        />
+                                        <input
+                                          name="transaction_id"
+                                          type="number"
+                                          min="1"
+                                          placeholder="OpFin transaction ID"
+                                          aria-label="OpFin transaction ID"
+                                          required
+                                        />
+                                        <button
+                                          className="button secondary"
+                                          type="submit"
+                                        >
+                                          Match
+                                        </button>
+                                      </form>
+                                    ) : null}
+                                  </div>
                                 </td>
                               </tr>
                             ))}
