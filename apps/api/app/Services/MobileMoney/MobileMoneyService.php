@@ -202,6 +202,32 @@ class MobileMoneyService
 
     private function submitPersistedIntent(MobileMoneyTransaction $transaction): MobileMoneyTransaction
     {
+        $direction = (string) $transaction->direction;
+        $providerName = strtolower((string) $transaction->provider);
+
+        try {
+            $this->providers->assertReadyForSubmission($providerName);
+            $provider = $this->providers->provider($providerName);
+        } catch (InvalidArgumentException $exception) {
+            $transaction->refresh();
+            if ($transaction->provider_submission_state === 'intent_persisted') {
+                $transaction->update([
+                    'status' => MobileMoneyTransaction::STATUS_FAILED,
+                    'provider_submission_state' => 'rejected_before_provider_finality',
+                    'provider_submission_resolved_at' => now(),
+                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
+                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                    'failure_reason' => $exception->getMessage(),
+                ]);
+                $this->audit("mobile_money.{$direction}.submission_rejected", $transaction, [
+                    'reason' => $exception->getMessage(),
+                ]);
+                $this->syncEconomics($transaction->fresh());
+            }
+
+            throw $exception;
+        }
+
         [$claimed, $transaction] = DB::transaction(function () use ($transaction) {
             $locked = MobileMoneyTransaction::query()
                 ->whereKey($transaction->id)
@@ -226,29 +252,6 @@ class MobileMoneyService
             return $transaction->fresh();
         }
 
-        $direction = (string) $transaction->direction;
-        $providerName = strtolower((string) $transaction->provider);
-
-        try {
-            $provider = $this->providers->provider($providerName);
-        } catch (InvalidArgumentException $exception) {
-            $transaction->refresh();
-            $transaction->update([
-                'status' => MobileMoneyTransaction::STATUS_FAILED,
-                'provider_submission_state' => 'rejected_before_provider_finality',
-                'provider_submission_resolved_at' => now(),
-                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
-                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
-                'failure_reason' => $exception->getMessage(),
-            ]);
-            $this->audit("mobile_money.{$direction}.submission_rejected", $transaction, [
-                'reason' => $exception->getMessage(),
-            ]);
-            $this->syncEconomics($transaction->fresh());
-
-            throw $exception;
-        }
-
         try {
             $response = $direction === MobileMoneyTransaction::DIRECTION_DISBURSEMENT
                 ? $provider->disburse($transaction->fresh())
@@ -270,7 +273,7 @@ class MobileMoneyService
             ]);
             $this->syncEconomics($transaction->fresh());
 
-            throw $exception;
+            return $transaction->fresh();
         }
 
         $this->syncEconomics($transaction->fresh());
