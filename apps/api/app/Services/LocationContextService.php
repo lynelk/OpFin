@@ -208,16 +208,24 @@ class LocationContextService
                     (float) $context->longitude,
                 );
 
-                $partner = DB::table('partners')->where('id', $context->subject_id)->whereNull('deleted_at')->first();
+                $partner = DB::table('partners')
+                    ->where('id', $context->subject_id)
+                    ->where('status', 'active')
+                    ->whereNull('deleted_at')
+                    ->first();
+
+                if (! $partner) {
+                    return null;
+                }
 
                 return [
                     ...$this->present($context),
-                    'partner_name' => $partner?->name,
-                    'partner_type' => $partner?->partner_type,
+                    'partner_name' => $partner->name,
+                    'partner_type' => $partner->partner_type,
                     'distance_km' => round($distance, 1),
                 ];
             })
-            ->filter(fn (array $item) => $item['distance_km'] <= $radiusKm)
+            ->filter(fn ($item) => is_array($item) && $item['distance_km'] <= $radiusKm)
             ->sortBy('distance_km')
             ->take(25)
             ->values()
@@ -295,7 +303,7 @@ class LocationContextService
     private function validatePurpose(string $subjectType, string $purpose): void
     {
         $allowed = match ($subjectType) {
-            'user' => ['personal_service_discovery', 'partner_aggregate_insights'],
+            'user' => ['personal_service_discovery'],
             'financial_space' => ['group_operating_area', 'group_meeting_place'],
             'financial_asset' => ['investment_asset_location'],
             'protection_policy' => ['insured_risk_location'],
