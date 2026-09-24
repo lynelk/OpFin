@@ -40,7 +40,7 @@ class LocationContextTest extends TestCase
             ->assertJsonPath('data.location.longitude', 32.583)
             ->assertJsonPath('data.location.precision_level', 'approximate')
             ->assertJsonPath('data.location.credit_decision_eligible', false)
-            ->assertJsonPath('data.location.verification_status', 'device_confirmed');
+            ->assertJsonPath('data.location.verification_status', 'user_declared');
 
         $contextId = (int) $response->json('data.location.id');
 
