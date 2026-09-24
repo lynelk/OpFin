@@ -43,6 +43,7 @@ class FinancialSpaceStatementsTest extends TestCase
         $accountId = (int) $account->json('data.account.id');
 
         $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-001',
             'transaction_reference' => 'DEP-001',
             'transaction_type' => 'member_contribution',
             'direction' => 'credit',
@@ -52,6 +53,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ])->assertCreated();
 
         $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-002',
             'transaction_reference' => 'INV-001',
             'transaction_type' => 'investment_purchase',
             'direction' => 'debit',
@@ -135,6 +137,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ]);
 
         $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-003',
             'transaction_reference' => 'LATE-001',
             'transaction_type' => 'late_correction',
             'direction' => 'credit',
@@ -272,6 +275,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ])->assertForbidden();
 
         $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-004',
             'direction' => 'credit',
             'amount_minor' => 50000,
             'description' => 'Should fail',
@@ -296,6 +300,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ])->assertCreated()->json('data.account.id');
 
         $transactionId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-005',
             'transaction_reference' => 'BOOK-900',
             'direction' => 'credit',
             'amount_minor' => 90000,
@@ -345,6 +350,7 @@ class FinancialSpaceStatementsTest extends TestCase
             ->assertJsonPath('data.import.confirmation_status', 'confirmed');
 
         $wrongTransactionId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-006',
             'transaction_reference' => 'WRONG-1',
             'direction' => 'debit',
             'amount_minor' => 1000,
@@ -374,6 +380,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ])->assertCreated()->json('data.account.id');
 
         $autoId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-007',
             'transaction_reference' => 'AUTO-001',
             'direction' => 'credit',
             'amount_minor' => 120000,
@@ -382,6 +389,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ])->assertCreated()->json('data.transaction.id');
 
         $suggestedId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-008',
             'transaction_reference' => 'BOOK-002',
             'direction' => 'debit',
             'amount_minor' => 45000,
@@ -493,6 +501,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ]);
 
         $bookOnlyId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-009',
             'transaction_reference' => 'BOOK-ONLY',
             'direction' => 'credit',
             'amount_minor' => 20000,
@@ -591,6 +600,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ])->assertCreated()->json('data.account.id');
 
         $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$ugxAccountId}/transactions", [
+            'idempotency_key' => 'treasury-test-010',
             'direction' => 'credit',
             'amount_minor' => 250000,
             'description' => 'Member contributions',
@@ -598,6 +608,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ])->assertCreated();
 
         $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$usdAccountId}/transactions", [
+            'idempotency_key' => 'treasury-test-011',
             'direction' => 'debit',
             'amount_minor' => 500,
             'description' => 'Custody fee',
@@ -649,6 +660,61 @@ class FinancialSpaceStatementsTest extends TestCase
             ->assertSee('Account,Currency,Date', false);
     }
 
+    public function test_manual_treasury_posting_idempotency_is_canonical_and_conflict_safe(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($owner);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'investment_club',
+            'name' => 'Idempotent Treasury Club',
+        ])->assertCreated()->json('data.space.id');
+
+        $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'Idempotent Account',
+            'account_type' => 'bank',
+            'currency' => 'UGX',
+        ])->assertCreated()->json('data.account.id');
+
+        $payload = [
+            'idempotency_key' => 'treasury-idempotency-001',
+            'transaction_reference' => 'IDEMP-001',
+            'direction' => 'credit',
+            'amount_minor' => 25000,
+            'description' => 'Member contribution',
+            'transaction_date' => '2026-09-04',
+        ];
+
+        $first = $this->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
+            $payload,
+        )->assertCreated();
+        $second = $this->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
+            $payload,
+        )->assertCreated();
+
+        $this->assertSame($first->json('data.transaction.id'), $second->json('data.transaction.id'));
+        $this->assertDatabaseCount('financial_space_transactions', 1);
+        $this->assertSame(
+            25000,
+            (int) FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->current_balance_minor,
+        );
+
+        $conflicting = $payload;
+        $conflicting['amount_minor'] = 30000;
+
+        $this->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
+            $conflicting,
+        )->assertStatus(409);
+        $this->assertDatabaseCount('financial_space_transactions', 1);
+        $this->assertSame(
+            25000,
+            (int) FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->current_balance_minor,
+        );
+    }
+
     public function test_opening_balance_variance_blocks_confirmation_even_when_closing_balance_matches(): void
     {
         $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
@@ -668,6 +734,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ])->assertCreated()->json('data.account.id');
 
         $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-012',
             'transaction_reference' => 'FEE-001',
             'direction' => 'debit',
             'amount_minor' => 1000,
@@ -728,6 +795,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ])->assertCreated()->json('data.account.id');
 
         $transactionId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'idempotency_key' => 'treasury-test-013',
             'transaction_reference' => 'LOCK-001',
             'direction' => 'credit',
             'amount_minor' => 10000,
