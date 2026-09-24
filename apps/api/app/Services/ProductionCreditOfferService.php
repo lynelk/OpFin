@@ -28,10 +28,12 @@ class ProductionCreditOfferService
         private readonly FundingPoolService $fundingPools,
         private readonly CreditProductAvailabilityService $productAvailability,
         private readonly VerifiedWalletService $wallets,
+        private readonly RegulatoryActivationGuard $regulatoryGuard,
     ) {}
 
     public function createOffer(LoanApplication $application, User $actor, array $pricing): CreditOffer
     {
+        $this->regulatoryGuard->assertCreditDisclosuresReady();
         $this->productAvailability->assertApplicationAvailable($application);
         $application->loadMissing(['loanProductTerm', 'creditDecision']);
         $decision = $application->creditDecision;
