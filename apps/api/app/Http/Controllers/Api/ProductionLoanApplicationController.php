@@ -13,6 +13,7 @@ use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
 use App\Services\AppStoreCreditPolicy;
 use App\Services\AuditLogger;
+use App\Services\CreditProductAvailabilityService;
 use App\Services\ProductionCreditDecisionService;
 use App\Services\ProductionCreditOfferService;
 use App\Support\ApiResponse;
@@ -30,6 +31,7 @@ class ProductionLoanApplicationController extends Controller
         private readonly ProductionCreditDecisionService $decisionService,
         private readonly ProductionCreditOfferService $offerService,
         private readonly AppStoreCreditPolicy $appStorePolicy,
+        private readonly CreditProductAvailabilityService $productAvailability,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -153,6 +155,12 @@ class ProductionLoanApplicationController extends Controller
 
             $term = $product->terms->first();
             $institutionId = (int) $product->institution_id;
+        }
+
+        try {
+            $this->productAvailability->assertAvailable($product, $term, $institutionId);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), 422, ['code' => ['CREDIT_PRODUCT_UNAVAILABLE']]);
         }
 
         if (in_array($distributionChannel, AppStoreCreditPolicy::STORE_CHANNELS, true) && (int) $term->duration < AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS) {
