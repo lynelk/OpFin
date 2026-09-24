@@ -38,6 +38,14 @@ class ProductionConfiguration
             throw new RuntimeException('Legacy loan origination must remain disabled in production.');
         }
 
+        if (($config['legacy_manual_application_status_enabled'] ?? false) === true) {
+            throw new RuntimeException('Legacy manual loan-application status mutation must remain disabled in production.');
+        }
+
+        if (($config['legacy_manual_transaction_approval_enabled'] ?? false) === true) {
+            throw new RuntimeException('Legacy manual transaction approval must remain disabled in production.');
+        }
+
         if (($config['require_funding_pool_assignment'] ?? false) !== true) {
             throw new RuntimeException('Production credit requires OPFIN_REQUIRE_FUNDING_POOL_ASSIGNMENT=true.');
         }
