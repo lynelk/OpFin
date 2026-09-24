@@ -13,6 +13,7 @@ use App\Models\LoanProductTerm;
 use App\Models\MobileMoneyTransaction;
 use App\Models\ReconciliationItem;
 use App\Models\ReconciliationRun;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Services\FinancialReadinessService;
 use App\Services\MobileMoney\MobileMoneyService;
@@ -227,6 +228,65 @@ class FinancialHardeningRegressionTest extends TestCase
         $this->assertSame('OPF-DURABLE-001', $intent->internal_reference);
     }
 
+    public function test_never_submitted_durable_money_intent_can_resume_exactly_once(): void
+    {
+        $intent = MobileMoneyTransaction::create([
+            'provider' => 'mock',
+            'direction' => MobileMoneyTransaction::DIRECTION_COLLECTION,
+            'amount_minor' => 12000,
+            'currency' => 'UGX',
+            'phone' => '256700006666',
+            'idempotency_key' => 'resume-persisted-intent-001',
+            'internal_reference' => 'OPF-RESUME-001',
+            'status' => MobileMoneyTransaction::STATUS_PROCESSING,
+            'provider_submission_state' => 'intent_persisted',
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_UNRECONCILED,
+            'metadata' => ['purpose' => 'resume_regression'],
+        ]);
+
+        $first = app(MobileMoneyService::class)->collect([
+            'amount_minor' => 12000,
+            'currency' => 'UGX',
+            'phone' => '256700006666',
+            'idempotency_key' => 'resume-persisted-intent-001',
+            'internal_reference' => 'OPF-RESUME-001',
+            'purpose' => 'resume_regression',
+        ], 'mock');
+
+        $this->assertSame($intent->id, $first->id);
+        $this->assertSame(MobileMoneyTransaction::STATUS_PENDING, $first->status);
+        $this->assertSame('provider_response_received', $first->provider_submission_state);
+        $this->assertNotNull($first->provider_submission_started_at);
+        $this->assertNotNull($first->provider_submission_resolved_at);
+        $this->assertSame('mock-OPF-RESUME-001', $first->provider_reference);
+
+        $again = app(MobileMoneyService::class)->collect([
+            'amount_minor' => 12000,
+            'currency' => 'UGX',
+            'phone' => '256700006666',
+            'idempotency_key' => 'resume-persisted-intent-001',
+            'internal_reference' => 'OPF-RESUME-001',
+            'purpose' => 'resume_regression',
+        ], 'mock');
+
+        $this->assertSame($first->id, $again->id);
+        $this->assertSame('mock-OPF-RESUME-001', $again->provider_reference);
+        $this->assertDatabaseCount('mobile_money_transactions', 1);
+    }
+
+    public function test_legacy_manual_financial_mutation_routes_are_retired_by_default(): void
+    {
+        $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
+        Sanctum::actingAs($operations);
+
+        $this->postJson('/api/loan-applications/999999/status', [
+            'status' => 'Disbursed',
+        ])->assertStatus(410);
+
+        $this->patchJson('/api/transactions/999999/approve')
+            ->assertStatus(410);
+    }
+
     public function test_reconciliation_matching_is_evidence_only_and_write_off_is_maker_checker(): void
     {
         $maker = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
@@ -327,6 +387,7 @@ class FinancialHardeningRegressionTest extends TestCase
             'opfin.credit.require_funding_pool_assignment' => true,
             'opfin.regulatory.require_credit_disclosure' => true,
             'opfin.regulatory.licensed_entity_name' => 'Test Regulated Lender',
+            'opfin.regulatory.licence_class' => 'digital_credit_provider',
             'opfin.regulatory.umra_license_number' => 'TEST-LICENCE',
             'opfin.regulatory.business_address' => 'Kampala',
             'opfin.regulatory.complaints_email' => 'complaints@example.test',
