@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\FinancialSpaceTransaction;
+use App\Models\FinancialSpaceTreasuryAccount;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -57,6 +59,11 @@ class FinancialSpaceStatementsTest extends TestCase
             'description' => 'Investment purchase',
             'transaction_date' => '2026-09-10',
         ])->assertCreated();
+
+        $accountState = FinancialSpaceTreasuryAccount::query()->findOrFail($accountId);
+        $this->assertSame('2026-09-01', $accountState->balance_as_of?->toDateString());
+        $this->assertSame(1150000, (int) $accountState->current_balance_minor);
+        $this->assertNotNull($accountState->current_balance_as_of);
 
         $csv = implode("\n", [
             'Date,Value Date,Description,Reference,Debit,Credit,Balance',
@@ -640,6 +647,114 @@ class FinancialSpaceStatementsTest extends TestCase
         $this->get("/api/financial-spaces/{$spaceId}/statements/{$statementId}/csv")
             ->assertOk()
             ->assertSee('Account,Currency,Date', false);
+    }
+
+    public function test_opening_balance_variance_blocks_confirmation_even_when_closing_balance_matches(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($owner);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'investment_club',
+            'name' => 'Opening Control Club',
+        ])->assertCreated()->json('data.space.id');
+
+        $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'Controlled Account',
+            'account_type' => 'bank',
+            'currency' => 'UGX',
+            'opening_balance_minor' => 100000,
+            'balance_as_of' => '2026-09-01',
+        ])->assertCreated()->json('data.account.id');
+
+        $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'transaction_reference' => 'FEE-001',
+            'direction' => 'debit',
+            'amount_minor' => 1000,
+            'description' => 'Bank fee',
+            'transaction_date' => '2026-09-03',
+        ])->assertCreated();
+
+        $csv = "Date,Description,Reference,Debit,Credit\n2026-09-03,Bank fee,FEE-001,1000,\n";
+        $import = $this->post(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statement-imports",
+            [
+                'statement_file' => UploadedFile::fake()->createWithContent('opening-mismatch.csv', $csv),
+                'mapping' => json_encode([
+                    'date' => 'Date',
+                    'description' => 'Description',
+                    'reference' => 'Reference',
+                    'debit' => 'Debit',
+                    'credit' => 'Credit',
+                ]),
+                'opening_balance_minor' => 90000,
+                'closing_balance_minor' => 99000,
+            ],
+            ['Accept' => 'application/json']
+        )->assertCreated();
+        $importId = (int) $import->json('data.import.id');
+
+        $review = $this->postJson("/api/financial-spaces/{$spaceId}/statement-imports/{$importId}/reconcile")
+            ->assertOk()
+            ->assertJsonPath('data.import.summary.opening_balance_variance_minor', 10000)
+            ->assertJsonPath('data.import.summary.closing_balance_variance_minor', 0)
+            ->assertJsonPath('data.import.confirmation_status', 'not_ready');
+
+        $varianceTodo = collect($review->json('data.import.review_todos'))
+            ->firstWhere('type', 'balance_variance');
+        $this->assertSame(10000, (int) $varianceTodo['opening_balance_variance_minor']);
+        $this->assertSame(0, (int) $varianceTodo['closing_balance_variance_minor']);
+
+        $this->postJson("/api/financial-spaces/{$spaceId}/statement-imports/{$importId}/confirm")
+            ->assertUnprocessable();
+    }
+
+    public function test_treasury_economic_entries_and_opening_baseline_are_append_only(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($owner);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'investment_club',
+            'name' => 'Append Only Club',
+        ])->assertCreated()->json('data.space.id');
+
+        $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'Append Only Account',
+            'account_type' => 'bank',
+            'currency' => 'UGX',
+            'opening_balance_minor' => 50000,
+            'balance_as_of' => '2026-09-01',
+        ])->assertCreated()->json('data.account.id');
+
+        $transactionId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'transaction_reference' => 'LOCK-001',
+            'direction' => 'credit',
+            'amount_minor' => 10000,
+            'description' => 'Locked cashbook event',
+            'transaction_date' => '2026-09-02',
+        ])->assertCreated()->json('data.transaction.id');
+
+        try {
+            FinancialSpaceTransaction::query()->findOrFail($transactionId)->update(['amount_minor' => 99999]);
+            $this->fail('Treasury transaction economics must be append-only.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('append-only', $exception->getMessage());
+        }
+
+        try {
+            FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->update([
+                'opening_balance_minor' => 40000,
+            ]);
+            $this->fail('Opening balance must lock after the first cashbook transaction.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('locked', $exception->getMessage());
+        }
+
+        $this->assertSame(10000, (int) FinancialSpaceTransaction::query()->findOrFail($transactionId)->amount_minor);
+        $account = FinancialSpaceTreasuryAccount::query()->findOrFail($accountId);
+        $this->assertSame(50000, (int) $account->opening_balance_minor);
+        $this->assertSame('2026-09-01', $account->balance_as_of?->toDateString());
     }
 
     public function test_statement_money_import_uses_exact_minor_unit_precision(): void
