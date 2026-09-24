@@ -45,7 +45,8 @@ class FinancialLifeController extends Controller
         $v = $request->validate(['amount_minor' => ['required', 'integer', 'min:1']]);
         $o = DB::table('financial_obligations')->where('financial_space_id', $space->id)->where('id', $obligation)->whereNull('deleted_at')->first();
         abort_if(! $o, 404);
-        $remaining = max(0, (int) $o->outstanding_amount_minor - (int) $v['amount_minor']);
+        abort_if((int) $v['amount_minor'] > (int) $o->outstanding_amount_minor, 422, 'Recorded payment cannot exceed the outstanding debt.');
+        $remaining = (int) $o->outstanding_amount_minor - (int) $v['amount_minor'];
         DB::table('financial_obligations')->where('id', $o->id)->update(['outstanding_amount_minor' => $remaining, 'status' => $remaining === 0 ? 'settled' : 'open', 'updated_at' => now()]);
 
         return response()->json(['data' => ['outstanding_amount_minor' => $remaining, 'status' => $remaining === 0 ? 'settled' : 'open']]);
