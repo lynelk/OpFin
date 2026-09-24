@@ -1512,6 +1512,11 @@ class FinancialSpaceStatementService
 
     private function refreshImportState(FinancialSpaceStatementImport $import): void
     {
+        $import->refresh();
+        if ($import->confirmed_at !== null) {
+            return;
+        }
+
         $matchedTotal = FinancialSpaceStatementRow::query()
             ->where('statement_import_id', $import->id)
             ->where('reconciliation_status', 'matched')
