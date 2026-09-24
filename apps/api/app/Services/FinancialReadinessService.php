@@ -49,12 +49,15 @@ class FinancialReadinessService
                 'detail' => $integrations['sms'] ?? null,
             ],
             'identity_and_kyc_route' => [
-                'status' => $citoReady || $directIdentityReady ? 'ready' : 'blocked',
+                'status' => $directIdentityReady ? 'ready' : 'blocked',
                 'routes' => [
-                    'cito' => $citoReady,
+                    'cito_nin_phone_route' => $citoReady,
                     'cito_financial_data_certified' => (bool) config('services.cito.financial_data_certified', false),
-                    'direct_identity_provider' => $directIdentityReady,
+                    'biometric_document_evidence_provider' => $directIdentityReady,
                 ],
+                'reason' => $directIdentityReady
+                    ? null
+                    : 'Current OpFin KYC requires ID-image/selfie evidence that the certified Cito capability contract does not yet replace.',
             ],
             'credit_reference_route' => [
                 'status' => $citoReady || $directCrbReady ? 'ready' : 'blocked',
