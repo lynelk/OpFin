@@ -170,6 +170,93 @@ class FinancialSpaceStatementController extends Controller
         ]);
     }
 
+    public function resolveRow(
+        FinancialSpace $space,
+        FinancialSpaceStatementRow $row,
+        Request $request
+    ): JsonResponse {
+        $validated = $request->validate([
+            'action' => ['required', Rule::in([
+                'match_transaction',
+                'create_book_entry',
+                'mark_external_only',
+                'mark_duplicate',
+            ])],
+            'transaction_id' => ['nullable', 'integer', 'min:1'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        return ApiResponse::success('Reconciliation to-do resolved.', [
+            'row' => $this->statements->resolveStatementRow(
+                $space,
+                $row,
+                $request->user(),
+                (string) $validated['action'],
+                isset($validated['transaction_id']) ? (int) $validated['transaction_id'] : null,
+                $validated['reason'] ?? null,
+            ),
+        ]);
+    }
+
+    public function resolveBookTransaction(
+        FinancialSpace $space,
+        FinancialSpaceStatementImport $import,
+        FinancialSpaceTransaction $transaction,
+        Request $request
+    ): JsonResponse {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        return ApiResponse::success('Book-only reconciliation item accepted.', [
+            'transaction' => $this->statements->resolveBookTransaction(
+                $space,
+                $import,
+                $transaction,
+                $request->user(),
+                (string) $validated['reason'],
+            ),
+        ]);
+    }
+
+    public function resolveBalanceVariance(
+        FinancialSpace $space,
+        FinancialSpaceStatementImport $import,
+        Request $request
+    ): JsonResponse {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        return ApiResponse::success('Closing-balance variance accepted with reason.', [
+            'import' => $this->statements->resolveBalanceVariance(
+                $space,
+                $import,
+                $request->user(),
+                (string) $validated['reason'],
+            ),
+        ]);
+    }
+
+    public function confirm(
+        FinancialSpace $space,
+        FinancialSpaceStatementImport $import,
+        Request $request
+    ): JsonResponse {
+        $validated = $request->validate([
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        return ApiResponse::success('Reconciliation confirmed.', [
+            'import' => $this->statements->confirmReconciliation(
+                $space,
+                $import,
+                $request->user(),
+                $validated['note'] ?? null,
+            ),
+        ]);
+    }
+
     public function matchRow(
         FinancialSpace $space,
         FinancialSpaceStatementRow $row,
@@ -260,6 +347,42 @@ class FinancialSpaceStatementController extends Controller
         ], 201);
     }
 
+    public function generateConsolidated(
+        FinancialSpace $space,
+        Request $request
+    ): JsonResponse {
+        $validated = $request->validate([
+            'from' => ['required', 'date'],
+            'to' => ['required', 'date'],
+        ]);
+
+        $data = $this->statements->generateConsolidatedStatement(
+            $space,
+            $request->user(),
+            (string) $validated['from'],
+            (string) $validated['to'],
+        );
+        $statement = $data['statement'];
+
+        return ApiResponse::success('Consolidated OpFin statement issued.', [
+            'statement' => $statement,
+            'space' => $data['space'],
+            'sections' => $data['sections'],
+            'totals_by_currency' => $data['totals_by_currency'],
+            'position_by_currency' => $data['position_by_currency'],
+            'downloads' => [
+                'html' => route('financial-spaces.statements.html', [
+                    'space' => $space->id,
+                    'statement' => $statement->id,
+                ], false),
+                'csv' => route('financial-spaces.statements.csv', [
+                    'space' => $space->id,
+                    'statement' => $statement->id,
+                ], false),
+            ],
+        ], 201);
+    }
+
     public function show(
         FinancialSpace $space,
         FinancialSpaceGeneratedStatement $statement,
@@ -272,6 +395,9 @@ class FinancialSpaceStatementController extends Controller
             'account' => $data['account'],
             'space' => $data['space'],
             'rows' => $data['rows'],
+            'sections' => $data['sections'] ?? [],
+            'totals_by_currency' => $data['totals_by_currency'] ?? [],
+            'position_by_currency' => $data['position_by_currency'] ?? [],
         ]);
     }
 
