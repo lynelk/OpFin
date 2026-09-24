@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Screen, StateNotice } from "@/components/Screen";
 import { financialSpacesApi, locationContextsApi } from "@/lib/api/client";
 import { getAccessToken } from "@/lib/auth/session";
@@ -135,9 +136,12 @@ export default async function SpacePage({
 
               {mapImage ? (
                 <div>
-                  <img
+                  <Image
                     src={mapImage}
                     alt={"Map preview for " + (previewLocation.place_name ?? space.name)}
+                    width={640}
+                    height={320}
+                    unoptimized
                     style={{
                       width: "100%",
                       height: 240,
