@@ -99,6 +99,49 @@ class _HomePageState extends State<_HomePage>{
     await _open(const PersonalMoneyScreen());
   }
 
+  Future<void> _handleCredit(Map<String,dynamic> credit) async {
+    final profile=(credit['profile'] as Map?)?.cast<String,dynamic>()??{};
+    final next=(credit['next_action'] as Map?)?.cast<String,dynamic>()??{};
+    final amountDue=_n(profile['amount_due_minor']);
+    final activeLoan=(credit['active_loan'] as Map?)?.cast<String,dynamic>();
+
+    if(amountDue>0){
+      if(activeLoan!=null){
+        await _open(LoanRepaymentScreen(
+          loanId:_n(activeLoan['id']),
+          repaymentAmount:amountDue));
+      }else{
+        await _open(const LoanApplicationsScreen());
+      }
+      return;
+    }
+
+    switch(next['code']?.toString()??''){
+      case 'CALCULATE_PROFILE':
+        await CreditProfileApi.refresh();
+        await _reload();
+        return;
+      case 'VERIFY_IDENTITY':
+      case 'GRANT_CREDIT_CONSENT':
+        await _open(const KycSetupScreen());
+        return;
+      case 'BORROW':
+        await _open(const LoanApplicationScreen());
+        return;
+      case 'REPAY':
+        if(activeLoan!=null){
+          await _open(LoanRepaymentScreen(
+            loanId:_n(activeLoan['id']),
+            repaymentAmount:_n(activeLoan['outstanding_minor'])));
+          return;
+        }
+        await _open(const LoanApplicationsScreen());
+        return;
+      default:
+        await _open(const ProfileScreen());
+    }
+  }
+
   @override Widget build(BuildContext context)=>RefreshIndicator(
     onRefresh:_reload,
     child:FutureBuilder<Map<String,dynamic>>(future:_state,builder:(context,s){
@@ -139,6 +182,8 @@ class _HomePageState extends State<_HomePage>{
       final expenses=_n(cashFlow['expense_minor']);
       final creditReady=profile.isNotEmpty&&profile['status']?.toString()!='pending';
       final availableCredit=_n(profile['available_to_borrow_minor']);
+      final amountDue=_n(profile['amount_due_minor']);
+      final creditNext=(credit['next_action'] as Map?)?.cast<String,dynamic>()??{};
 
       return ListView(padding:const EdgeInsets.all(20),children:[
         Semantics(header:true,child:Text('Good morning, $_name',
@@ -226,18 +271,24 @@ class _HomePageState extends State<_HomePage>{
         const Text('Credit when you need it',style:TextStyle(fontSize:19,fontWeight:FontWeight.w700)),
         const SizedBox(height:6),
         Card(child:ListTile(
-          leading:const Icon(Icons.account_balance_wallet_outlined),
-          title:Text(!creditAvailable?'Credit temporarily unavailable':creditReady?'Available credit '+_ugx(availableCredit):'Build your credit profile',
+          leading:Icon(amountDue>0?Icons.warning_amber_rounded:Icons.account_balance_wallet_outlined),
+          title:Text(!creditAvailable
+            ?'Credit temporarily unavailable'
+            :amountDue>0
+              ?'Amount due '+_ugx(amountDue)
+              :creditReady
+                ?'Available credit '+_ugx(availableCredit)
+                :(creditNext['label']?.toString()??'Build your credit profile'),
             style:const TextStyle(fontWeight:FontWeight.w700)),
           subtitle:Text(!creditAvailable
             ?'Your personal money view remains available while the credit service recovers.'
-            :'Credit is one financial tool. Review affordability and every cost before borrowing.'),
+            :amountDue>0
+              ?'Repayment comes before another loan request.'
+              :'Credit is one financial tool. Review affordability and every cost before borrowing.'),
           trailing:creditAvailable?const Icon(Icons.chevron_right):null,
-          onTap:!creditAvailable?null:creditReady
-            ?()=>_open(const LoanApplicationScreen())
-            :()=>_open(const KycSetupScreen()))),
+          onTap:!creditAvailable?null:()=>_handleCredit(credit))),
 
-        if(setup['kyc_status']!='verified')
+        if(creditAvailable&&setup['kyc_status']!='verified')
           Card(child:ListTile(
             leading:const Icon(Icons.verified_user_outlined),
             title:const Text('Complete identity verification',style:TextStyle(fontWeight:FontWeight.w700)),
@@ -245,7 +296,7 @@ class _HomePageState extends State<_HomePage>{
             trailing:const Icon(Icons.chevron_right),
             onTap:()=>_open(const KycSetupScreen()))),
 
-        if(setup['secondary_phone_verified']!=true)
+        if(creditAvailable&&setup['secondary_phone_verified']!=true)
           Card(child:ListTile(
             leading:const Icon(Icons.add_call),
             title:const Text('Add another phone (optional)',style:TextStyle(fontWeight:FontWeight.w700)),
@@ -284,6 +335,8 @@ class _BorrowPageState extends State<_BorrowPage>{
       final data=s.data??{};
       final p=(data['profile'] as Map?)?.cast<String,dynamic>()??{};
       final available=_n(p['available_to_borrow_minor']);
+      final due=_n(p['amount_due_minor']);
+      final loan=(data['active_loan'] as Map?)?.cast<String,dynamic>();
       return ListView(padding:const EdgeInsets.all(20),children:[
         const Text('Borrow',style:TextStyle(fontSize:27,fontWeight:FontWeight.w800)),
         const SizedBox(height:8),
@@ -291,14 +344,17 @@ class _BorrowPageState extends State<_BorrowPage>{
         const SizedBox(height:20),
         Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(
           crossAxisAlignment:CrossAxisAlignment.start,children:[
-            const Text('Available loan limit',style:TextStyle(color:OpFinColors.muted)),
-            Text('UGX ${_money.format(available)}',
+            Text(due>0?'Amount due':'Available loan limit',style:const TextStyle(color:OpFinColors.muted)),
+            Text('UGX ${_money.format(due>0?due:available)}',
               style:const TextStyle(fontSize:30,fontWeight:FontWeight.w800)),
             const SizedBox(height:16),
             SizedBox(width:double.infinity,child:FilledButton(
-              onPressed:available>0?()=>Navigator.push(context,
-                MaterialPageRoute(builder:(_)=>const LoanApplicationScreen())):null,
-              child:const Text('Apply for a loan'))),
+              onPressed:due>0
+                ?(loan==null?null:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>LoanRepaymentScreen(
+                    loanId:_n(loan['id']),repaymentAmount:due))))
+                :available>0?()=>Navigator.push(context,
+                    MaterialPageRoute(builder:(_)=>const LoanApplicationScreen())):null,
+              child:Text(due>0?'Repay amount due':'Apply for a loan'))),
           ]))),
         Card(child:ListTile(
           leading:const Icon(Icons.list_alt_outlined),
