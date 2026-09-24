@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 240" role="img" aria-labelledby="title">
   <title id="title">OpFin horizontal lock-up</title>
   <g transform="translate(24 18) scale(.40)" style="color:#353B78">
-    <path d="M96 74h184c82 0 148 66 148 148v64c0 82-66 148-148 148h-54v-52h54c53 0 96-43 96-96v-64c0-53-43-96-96-96H96V74Z" fill="currentColor"/>
-    <path d="M96 158h176c25 0 45 20 45 45s-20 45-45 45H96v-90Z" fill="currentColor"/>
-    <path d="M96 248h154c25 0 45 20 45 45s-20 45-45 45H148v96l-52-43V248Z" fill="currentColor"/>
+    <path d="M96 76h184c78 0 142 64 142 142v50c0 78-64 142-142 142h-50l-52 48V354h102c48 0 86-38 86-86v-50c0-48-38-86-86-86H96V76Z" fill="currentColor"/>
+    <path d="M96 157h174c15 0 27 12 27 27s-12 27-27 27H96v-54Z" fill="currentColor"/>
+    <path d="M96 247h144c15 0 27 12 27 27s-12 27-27 27h-90v130l-54-45V247Z" fill="currentColor"/>
   </g>
   <text x="250" y="157" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="108" font-weight="600" letter-spacing="-4">OpFin</text>
 </svg>
