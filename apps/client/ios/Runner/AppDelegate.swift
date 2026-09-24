@@ -122,13 +122,20 @@ import UIKit
     let result = pendingLocationResult
     pendingLocationResult = nil
 
+    let actualPrecision: String
+    if #available(iOS 14.0, *) {
+      actualPrecision = manager.accuracyAuthorization == .fullAccuracy ? "precise" : "approximate"
+    } else {
+      actualPrecision = "precise"
+    }
+
     result?([
       "latitude": location.coordinate.latitude,
       "longitude": location.coordinate.longitude,
       "accuracy_metres": max(0, Int(location.horizontalAccuracy)),
       "captured_at": Int(location.timestamp.timeIntervalSince1970 * 1000),
       "requested_precision": requestedPrecise ? "precise" : "approximate",
-      "actual_precision": manager.accuracyAuthorization == .fullAccuracy ? "precise" : "approximate"
+      "actual_precision": actualPrecision
     ])
   }
 
