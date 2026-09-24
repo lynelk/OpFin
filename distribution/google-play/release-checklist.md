@@ -1,10 +1,20 @@
 # Google Play release checklist
 
 Status: Controlled internal release checklist  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 Complete against the exact signed candidate. An unchecked item is not silently waived.
+
+## Brand System v3
+
+- [ ] Brand token source is `3.0.0-rc.1` or the formally frozen `3.0.0`.
+- [ ] v3 vector monogram/lock-ups are the approved sources.
+- [ ] Feature graphic uses the v3 Progress Path and does not strike through “clearer.”
+- [ ] Exact-candidate screenshots satisfy `brand/v3/SCREENSHOT_CAPTURE_STANDARD.md`.
+- [ ] Representative visual/accessibility QA satisfies `brand/v3/VISUAL_QA_CHECKLIST.md`.
+- [ ] Trademark/name status has a documented legal disposition; a preliminary Web search is not treated as clearance.
+- [ ] Play Console listing/icon/feature graphic/screenshots have actually been replaced and verified.
 
 ## Product and compliance
 
