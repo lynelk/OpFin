@@ -92,25 +92,48 @@ OpFin stores normalised statement rows and a SHA-256 source-file hash. Importing
 
 The raw uploaded file is not treated as the OpFin cashbook and does not silently overwrite internal transactions.
 
-## Reconciliation
+## Smart reconciliation
 
-Automatic reconciliation matches external rows against unreconciled OpFin treasury transactions.
+OpFin performs deterministic, confidence-scored reconciliation before asking a user to intervene.
 
-Primary matching evidence:
+Candidate matching starts with hard financial constraints:
 
 1. same treasury account;
 2. same currency;
 3. same debit/credit direction;
-4. same amount;
-5. exact normalised transaction reference where available; otherwise
-6. a unique amount/direction/date match within a controlled date tolerance.
+4. same amount; and
+5. a controlled transaction-date window.
 
-Outcomes:
+It then ranks plausible candidates using:
 
-- matched;
-- exception: ambiguous match;
-- exception: missing OpFin transaction; or
-- future exception classifications as reconciliation depth expands.
+- exact normalised transaction reference;
+- date proximity; and
+- description-token similarity.
+
+High-confidence matches are automatically reconciled. Lower-confidence plausible matches are not forced; OpFin stores up to three ranked suggestions with confidence percentages and presents them as user to-dos.
+
+The user should see only unresolved decisions, not every transaction OpFin already reconciled.
+
+Typical to-dos are:
+
+- confirm a suggested match;
+- choose another matching transaction;
+- create a missing cashbook entry from an external statement row;
+- accept an external-only item with a reason;
+- mark a genuine duplicate external row with a reason;
+- accept a book-only transaction, for example where provider cut-off timing explains the absence; or
+- accept a closing-balance variance with an explanation.
+
+User-applied resolutions are audit logged. OpFin never treats a suggestion as a user decision until the authorised user applies it.
+
+Reconciliation has a separate confirmation step. A clean review becomes **ready for confirmation**. Once all to-dos are cleared, an authorised finance role confirms the reconciliation.
+
+Confirmation state distinguishes:
+
+- confirmed; and
+- confirmed with accepted exceptions.
+
+The latter preserves the accepted exceptions and their reasons rather than hiding them.
 
 The import summary records:
 
@@ -170,6 +193,27 @@ Current authorised roles:
 - manager.
 
 A Personal Financial Space cannot be converted into an Investment Club treasury through these endpoints.
+
+## Consolidated all-activity statements
+
+In addition to individual treasury-account statements, an authorised club officer can issue one **Consolidated Financial Space Statement** for a period.
+
+It includes:
+
+- all active treasury accounts;
+- all recorded treasury transactions in the selected period;
+- a separate running-balance section per treasury account;
+- opening, debit, credit and closing totals by currency;
+- recorded Financial Space assets by currency;
+- open amounts owed by currency;
+- open receivables by currency;
+- transaction count;
+- reconciliation status; and
+- one immutable statement number/content hash.
+
+For multi-currency clubs, OpFin does not fabricate a converted grand total. Each currency remains separate unless a future explicit FX valuation policy defines permitted rates and valuation dates.
+
+This makes the consolidated statement suitable for member meetings, board packs, treasurer reporting and external review while preserving the difference between treasury activity and valuation/accounting policy.
 
 ## Bank-style statement standard
 
@@ -258,10 +302,14 @@ The Web Workspace supports:
 - cashbook transaction entry;
 - CSV statement import;
 - column mapping;
-- reconciliation;
-- exception inspection;
-- manual matching;
-- statement issue;
+- confidence-based automatic reconciliation;
+- a short reconciliation to-do queue;
+- suggested-match acceptance;
+- user-requested creation of missing cashbook entries;
+- accepted-exception reasons;
+- explicit reconciliation confirmation;
+- individual account statement issue;
+- consolidated all-activity statement issue;
 - HTML statement view; and
 - CSV statement export.
 
