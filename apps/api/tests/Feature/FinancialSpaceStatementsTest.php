@@ -96,9 +96,10 @@ class FinancialSpaceStatementsTest extends TestCase
             ->assertJsonPath('data.import.exception_count', 0)
             ->assertJsonPath('data.import.summary.closing_balance_variance_minor', 0);
 
-        $statement = $this->getJson(
-            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statements/generate?from=2026-09-01&to=2026-09-30"
-        )->assertOk()
+        $statement = $this->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statements",
+            ['from' => '2026-09-01', 'to' => '2026-09-30']
+        )->assertCreated()
             ->assertJsonPath('data.statement.opening_balance_minor', 1000000)
             ->assertJsonPath('data.statement.total_credits_minor', 250000)
             ->assertJsonPath('data.statement.total_debits_minor', 100000)
@@ -108,10 +109,26 @@ class FinancialSpaceStatementsTest extends TestCase
             ->assertJsonCount(2, 'data.rows');
 
         $statementNumber = (string) $statement->json('data.statement.statement_number');
+        $statementId = (int) $statement->json('data.statement.id');
+        $statementHash = (string) $statement->json('data.statement.content_hash');
         $this->assertStringStartsWith('OFS-', $statementNumber);
 
+        $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'transaction_reference' => 'LATE-001',
+            'transaction_type' => 'late_correction',
+            'direction' => 'credit',
+            'amount_minor' => 50000,
+            'description' => 'Later book entry after statement issue',
+            'transaction_date' => '2026-09-20',
+        ])->assertCreated();
+
+        $this->getJson("/api/financial-spaces/{$spaceId}/statements/{$statementId}")
+            ->assertOk()
+            ->assertJsonPath('data.statement.content_hash', $statementHash)
+            ->assertJsonCount(2, 'data.rows');
+
         $html = $this->get(
-            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statements/html?from=2026-09-01&to=2026-09-30",
+            "/api/financial-spaces/{$spaceId}/statements/{$statementId}/html",
             ['Accept' => 'text/html']
         )->assertOk();
 
@@ -123,7 +140,7 @@ class FinancialSpaceStatementsTest extends TestCase
             ->assertSee('not a statement issued by Example Bank', false);
 
         $this->get(
-            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statements/csv?from=2026-09-01&to=2026-09-30"
+            "/api/financial-spaces/{$spaceId}/statements/{$statementId}/csv"
         )->assertOk()
             ->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
     }
@@ -207,9 +224,10 @@ class FinancialSpaceStatementsTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data.accounts');
 
-        $this->getJson(
-            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statements/generate?from=2026-09-01&to=2026-09-30"
-        )->assertOk()
+        $this->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statements",
+            ['from' => '2026-09-01', 'to' => '2026-09-30']
+        )->assertCreated()
             ->assertJsonPath('data.statement.opening_balance_minor', 300000)
             ->assertJsonPath('data.statement.closing_balance_minor', 300000);
 
