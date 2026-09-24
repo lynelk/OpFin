@@ -164,35 +164,39 @@ class GoogleMapsLocationService
             throw new InvalidArgumentException('Unsupported travel mode.');
         }
 
+        $payload = [
+            'origin' => [
+                'location' => [
+                    'latLng' => [
+                        'latitude' => $originLatitude,
+                        'longitude' => $originLongitude,
+                    ],
+                ],
+            ],
+            'destination' => [
+                'location' => [
+                    'latLng' => [
+                        'latitude' => $destinationLatitude,
+                        'longitude' => $destinationLongitude,
+                    ],
+                ],
+            ],
+            'travelMode' => $travelMode,
+            'computeAlternativeRoutes' => false,
+            'languageCode' => 'en',
+            'units' => 'METRIC',
+        ];
+        if ($travelMode === 'DRIVE') {
+            $payload['routingPreference'] = 'TRAFFIC_UNAWARE';
+        }
+
         $response = Http::timeout(12)
             ->acceptJson()
             ->withHeaders([
                 'X-Goog-Api-Key' => $this->key(),
                 'X-Goog-FieldMask' => 'routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline',
             ])
-            ->post('https://routes.googleapis.com/directions/v2:computeRoutes', [
-                'origin' => [
-                    'location' => [
-                        'latLng' => [
-                            'latitude' => $originLatitude,
-                            'longitude' => $originLongitude,
-                        ],
-                    ],
-                ],
-                'destination' => [
-                    'location' => [
-                        'latLng' => [
-                            'latitude' => $destinationLatitude,
-                            'longitude' => $destinationLongitude,
-                        ],
-                    ],
-                ],
-                'travelMode' => $travelMode,
-                'routingPreference' => $travelMode === 'DRIVE' ? 'TRAFFIC_UNAWARE' : null,
-                'computeAlternativeRoutes' => false,
-                'languageCode' => 'en',
-                'units' => 'METRIC',
-            ]);
+            ->post('https://routes.googleapis.com/directions/v2:computeRoutes', $payload);
 
         $this->assertSuccessful($response, 'Google Routes');
 
