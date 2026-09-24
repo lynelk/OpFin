@@ -19,6 +19,21 @@ describe("role-aware workspace access", () => {
     expect(canRoleOpenPath("programme_partner", "/dashboard")).toBe(false);
   });
 
+  it("limits support users to the operations modules assigned to their role", () => {
+    expect(canRoleOpenPath("support", "/admin/dashboard")).toBe(true);
+    expect(canRoleOpenPath("support", "/admin/ledger")).toBe(true);
+    expect(canRoleOpenPath("support", "/admin/audit-trail")).toBe(true);
+    expect(canRoleOpenPath("support", "/admin/compliance")).toBe(false);
+    expect(canRoleOpenPath("support", "/admin/autopilot")).toBe(false);
+    expect(canRoleOpenPath("support", "/admin/platform-governance")).toBe(false);
+  });
+
+  it("allows operations users into governed operations modules", () => {
+    expect(canRoleOpenPath("operations", "/admin/compliance")).toBe(true);
+    expect(canRoleOpenPath("operations", "/admin/platform-governance")).toBe(true);
+    expect(canRoleOpenPath("operations", "/admin/inclusion/delivery")).toBe(true);
+  });
+
   it("keeps participant check-ins and Financial Spaces in the personal experience", () => {
     expect(canRoleOpenPath("customer", "/programme/check-ins")).toBe(true);
     expect(canRoleOpenPath("programme_partner", "/programme/check-ins")).toBe(false);
