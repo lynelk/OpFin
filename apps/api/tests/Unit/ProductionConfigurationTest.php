@@ -32,6 +32,9 @@ class ProductionConfigurationTest extends TestCase
             'app_debug' => true,
             'mobile_money_provider' => 'mtn',
             'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => true,
         ]);
     }
 
@@ -45,6 +48,9 @@ class ProductionConfigurationTest extends TestCase
             'mobile_money_provider' => 'mtn',
             'mobile_money_provider_certified' => false,
             'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => true,
         ]);
     }
 
@@ -55,6 +61,9 @@ class ProductionConfigurationTest extends TestCase
             'mobile_money_provider' => 'mtn',
             'mobile_money_provider_certified' => true,
             'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => true,
         ]);
 
         $this->assertTrue(true);
@@ -73,6 +82,54 @@ class ProductionConfigurationTest extends TestCase
         ]);
     }
 
+    public function test_blocks_legacy_origination_in_production(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Legacy loan origination must remain disabled in production.');
+
+        ProductionConfiguration::assertSafe(true, [
+            'app_debug' => false,
+            'mobile_money_provider' => 'cpay',
+            'mobile_money_provider_certified' => true,
+            'enable_demo_routes' => false,
+            'legacy_origination_enabled' => true,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => true,
+        ]);
+    }
+
+    public function test_blocks_production_credit_without_funding_provenance_requirement(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('OPFIN_REQUIRE_FUNDING_POOL_ASSIGNMENT=true');
+
+        ProductionConfiguration::assertSafe(true, [
+            'app_debug' => false,
+            'mobile_money_provider' => 'cpay',
+            'mobile_money_provider_certified' => true,
+            'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'require_funding_pool_assignment' => false,
+            'require_regulated_credit_disclosure' => true,
+        ]);
+    }
+
+    public function test_blocks_production_credit_when_regulated_disclosure_guard_is_disabled(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('regulated lender and complaints disclosures');
+
+        ProductionConfiguration::assertSafe(true, [
+            'app_debug' => false,
+            'mobile_money_provider' => 'cpay',
+            'mobile_money_provider_certified' => true,
+            'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => false,
+        ]);
+    }
+
     public function test_blocks_community_finance_live_mode_in_production(): void
     {
         $this->expectException(RuntimeException::class);
@@ -83,6 +140,9 @@ class ProductionConfigurationTest extends TestCase
             'mobile_money_provider' => 'cpay',
             'mobile_money_provider_certified' => true,
             'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => true,
             'community_finance_mode' => 'live',
         ]);
     }
@@ -97,6 +157,9 @@ class ProductionConfigurationTest extends TestCase
             'mobile_money_provider' => 'cpay',
             'mobile_money_provider_certified' => true,
             'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => true,
             'community_finance_live_enabled' => true,
         ]);
     }
@@ -111,6 +174,9 @@ class ProductionConfigurationTest extends TestCase
             'mobile_money_provider' => 'cpay',
             'mobile_money_provider_certified' => true,
             'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => true,
             'sacco_core_enabled' => true,
         ]);
     }
@@ -125,6 +191,9 @@ class ProductionConfigurationTest extends TestCase
             'mobile_money_provider' => 'cpay',
             'mobile_money_provider_certified' => true,
             'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => true,
             'community_finance_public_routes_enabled' => true,
         ]);
     }
