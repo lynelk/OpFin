@@ -129,7 +129,7 @@ class FinancialSpaceStatementService
                 'metadata' => $data['metadata'] ?? null,
             ]);
 
-            $this->refreshAccountBalance($lockedAccount);
+            $this->applyAccountBalanceDelta($lockedAccount, $transaction);
 
             $this->auditLogger->record('financial_space.treasury.transaction_recorded', $actor, $transaction, [
                 'financial_space_id' => $space->id,
@@ -1805,10 +1805,21 @@ class FinancialSpaceStatementService
         return $balance;
     }
 
-    private function refreshAccountBalance(FinancialSpaceTreasuryAccount $account): void
-    {
+    private function applyAccountBalanceDelta(
+        FinancialSpaceTreasuryAccount $account,
+        FinancialSpaceTransaction $transaction,
+    ): void {
+        $current = (int) $account->current_balance_minor;
+        $amount = (int) $transaction->amount_minor;
+        $delta = $transaction->direction === 'credit' ? $amount : -$amount;
+        $next = $current + $delta;
+
+        if ($next > 9000000000000000 || $next < -9000000000000000) {
+            throw new InvalidArgumentException('Treasury balance would exceed the supported monetary range.');
+        }
+
         $account->update([
-            'current_balance_minor' => $this->bookBalanceAsOf($account, CarbonImmutable::today()->addYears(100)),
+            'current_balance_minor' => $next,
             'current_balance_as_of' => now()->toDateString(),
         ]);
     }
