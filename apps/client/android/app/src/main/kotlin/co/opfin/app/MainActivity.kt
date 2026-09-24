@@ -158,7 +158,11 @@ class MainActivity : FlutterActivity() {
             "longitude" to location.longitude,
             "accuracy_metres" to location.accuracy.toInt().coerceAtLeast(0),
             "captured_at" to location.time,
-            "requested_precision" to if (requestedPrecise) "precise" else "approximate"
+            "requested_precision" to if (requestedPrecise) "precise" else "approximate",
+            "actual_precision" to if (
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED
+            ) "precise" else "approximate"
         )
     }
 
