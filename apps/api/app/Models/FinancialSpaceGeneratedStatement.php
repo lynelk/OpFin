@@ -12,6 +12,16 @@ class FinancialSpaceGeneratedStatement extends Model
         'total_credits_minor','transaction_count','reconciliation_status','content_hash','statement_payload','generated_at','summary',
     ];
 
+    protected static function booted(): void
+    {
+        static::updating(fn () => throw new \LogicException(
+            'Issued statements are immutable. Generate a new statement after corrections.'
+        ));
+        static::deleting(fn () => throw new \LogicException(
+            'Issued statements are immutable and cannot be deleted.'
+        ));
+    }
+
     protected function casts(): array
     {
         return [
