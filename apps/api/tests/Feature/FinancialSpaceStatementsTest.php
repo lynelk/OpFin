@@ -81,6 +81,7 @@ class FinancialSpaceStatementsTest extends TestCase
                 ]),
                 'minor_unit_exponent' => 0,
                 'opening_balance_minor' => 1000000,
+                'balance_as_of' => '2026-09-01',
                 'closing_balance_minor' => 1150000,
             ],
             ['Accept' => 'application/json']
@@ -219,6 +220,7 @@ class FinancialSpaceStatementsTest extends TestCase
             'account_type' => 'bank',
             'currency' => 'UGX',
             'opening_balance_minor' => 300000,
+            'balance_as_of' => '2026-09-01',
         ])->assertCreated()->json('data.account.id');
 
         $member = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
@@ -453,7 +455,7 @@ class FinancialSpaceStatementsTest extends TestCase
         ]);
     }
 
-    public function test_user_can_accept_exceptions_before_confirming_reconciliation(): void
+    public function test_exception_resolver_cannot_self_confirm_reconciliation(): void
     {
         $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
         Sanctum::actingAs($owner);
@@ -468,7 +470,20 @@ class FinancialSpaceStatementsTest extends TestCase
             'account_type' => 'bank',
             'currency' => 'UGX',
             'opening_balance_minor' => 100000,
+            'balance_as_of' => '2026-09-01',
         ])->assertCreated()->json('data.account.id');
+
+        $checker = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        DB::table('financial_space_memberships')->insert([
+            'financial_space_id' => $spaceId,
+            'user_id' => $checker->id,
+            'role' => 'treasurer',
+            'status' => 'active',
+            'joined_at' => now(),
+            'approved_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $bookOnlyId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
             'transaction_reference' => 'BOOK-ONLY',
@@ -522,9 +537,21 @@ class FinancialSpaceStatementsTest extends TestCase
         }
 
         $this->postJson("/api/financial-spaces/{$spaceId}/statement-imports/{$importId}/confirm", [
-            'note' => 'Confirmed with documented timing and bank-fee exceptions.',
+            'note' => 'Resolver must not approve their own exception.',
+        ])->assertUnprocessable();
+
+        Sanctum::actingAs($checker);
+        $this->postJson("/api/financial-spaces/{$spaceId}/statement-imports/{$importId}/confirm", [
+            'note' => 'Independently confirmed with documented timing and bank-fee exceptions.',
         ])->assertOk()
             ->assertJsonPath('data.import.confirmation_status', 'confirmed_with_exceptions');
+
+        Sanctum::actingAs($owner);
+        if ($varianceTodo) {
+            $this->postJson("/api/financial-spaces/{$spaceId}/statement-imports/{$importId}/balance-variance", [
+                'reason' => 'Confirmed evidence must now be immutable.',
+            ])->assertStatus(409);
+        }
     }
 
     public function test_consolidated_statement_covers_all_accounts_and_keeps_currencies_separate(): void
@@ -544,6 +571,7 @@ class FinancialSpaceStatementsTest extends TestCase
             'institution_name' => 'Uganda Bank',
             'currency' => 'UGX',
             'opening_balance_minor' => 1000000,
+            'balance_as_of' => '2026-09-01',
         ])->assertCreated()->json('data.account.id');
 
         $usdAccountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
@@ -552,6 +580,7 @@ class FinancialSpaceStatementsTest extends TestCase
             'institution_name' => 'Global Custodian',
             'currency' => 'USD',
             'opening_balance_minor' => 5000,
+            'balance_as_of' => '2026-09-01',
         ])->assertCreated()->json('data.account.id');
 
         $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$ugxAccountId}/transactions", [
@@ -611,6 +640,65 @@ class FinancialSpaceStatementsTest extends TestCase
         $this->get("/api/financial-spaces/{$spaceId}/statements/{$statementId}/csv")
             ->assertOk()
             ->assertSee('Account,Currency,Date', false);
+    }
+
+    public function test_statement_money_import_uses_exact_minor_unit_precision(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($owner);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'investment_club',
+            'name' => 'Precision Club',
+        ])->assertCreated()->json('data.space.id');
+
+        $ugxAccountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'UGX Precision',
+            'account_type' => 'bank',
+            'currency' => 'UGX',
+        ])->assertCreated()->json('data.account.id');
+
+        $fractionalUgx = "Date,Description,Debit,Credit\n2026-09-03,Fractional UGX,10.50,\n";
+        $this->post(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$ugxAccountId}/statement-imports",
+            [
+                'statement_file' => UploadedFile::fake()->createWithContent('fractional-ugx.csv', $fractionalUgx),
+                'mapping' => json_encode([
+                    'date' => 'Date',
+                    'description' => 'Description',
+                    'debit' => 'Debit',
+                    'credit' => 'Credit',
+                ]),
+                'minor_unit_exponent' => 0,
+            ],
+            ['Accept' => 'application/json']
+        )->assertUnprocessable();
+
+        $usdAccountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'USD Precision',
+            'account_type' => 'custodian',
+            'currency' => 'USD',
+        ])->assertCreated()->json('data.account.id');
+
+        $usdCsv = "Date,Description,Debit,Credit,Balance\n2026-09-03,Custody fee,10.50,,89.50\n";
+        $import = $this->post(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$usdAccountId}/statement-imports",
+            [
+                'statement_file' => UploadedFile::fake()->createWithContent('usd.csv', $usdCsv),
+                'mapping' => json_encode([
+                    'date' => 'Date',
+                    'description' => 'Description',
+                    'debit' => 'Debit',
+                    'credit' => 'Credit',
+                    'balance' => 'Balance',
+                ]),
+                'minor_unit_exponent' => 2,
+            ],
+            ['Accept' => 'application/json']
+        )->assertCreated();
+
+        $this->assertSame(1050, (int) $import->json('data.import.rows.0.amount_minor'));
+        $this->assertSame(8950, (int) $import->json('data.import.rows.0.running_balance_minor'));
     }
 
     public function test_personal_space_cannot_be_turned_into_investment_club_treasury(): void
