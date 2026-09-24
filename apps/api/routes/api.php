@@ -93,6 +93,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/financial-spaces/{space}/treasury/accounts', [FinancialSpaceStatementController::class, 'createAccount']);
     Route::get('/financial-spaces/{space}/treasury/accounts/{account}/transactions', [FinancialSpaceStatementController::class, 'transactions']);
     Route::post('/financial-spaces/{space}/treasury/accounts/{account}/transactions', [FinancialSpaceStatementController::class, 'recordTransaction']);
+    Route::get('/financial-spaces/{space}/treasury/accounts/{account}/statement-imports', [FinancialSpaceStatementController::class, 'imports']);
     Route::post('/financial-spaces/{space}/treasury/accounts/{account}/statement-imports', [FinancialSpaceStatementController::class, 'importStatement']);
     Route::get('/financial-spaces/{space}/statement-imports/{import}', [FinancialSpaceStatementController::class, 'importDetail']);
     Route::post('/financial-spaces/{space}/statement-imports/{import}/reconcile', [FinancialSpaceStatementController::class, 'reconcile']);
