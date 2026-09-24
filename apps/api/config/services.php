@@ -147,4 +147,12 @@ return [
     'ussd' => [
         'shared_secret' => env('USSD_SHARED_SECRET'),
     ],
+
+    'google_maps' => [
+        'enabled' => env('GOOGLE_MAPS_PLATFORM_ENABLED', false),
+        'server_api_key' => env('GOOGLE_MAPS_SERVER_API_KEY'),
+        'static_maps_enabled' => env('GOOGLE_MAPS_STATIC_MAPS_ENABLED', false),
+        'routes_enabled' => env('GOOGLE_MAPS_ROUTES_ENABLED', false),
+    ],
+
 ];
