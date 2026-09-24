@@ -76,6 +76,19 @@ Record tester, exact build/commit, environment, date, evidence and result for ev
 | UAT-65 | Aggregate geography | Create cohorts below/above five | Below five suppressed; individual user contexts excluded |
 | UAT-66 | Account deletion | Delete account after adding personal location | Optional personal location is purged with other optional context |
 
+| UAT-67 | Financial readiness | Call `/api/health/ready` then `/api/health/financial-ready` with a missing required financial dependency | Runtime may remain healthy; financial endpoint returns blocked/503 with non-secret failed checks |
+| UAT-68 | Retired credit product | Submit known IDs for paused product/term and attempt offer/acceptance | Rejected at authoritative service boundary; no offer/disbursement created |
+| UAT-69 | Invalid payout wallet | Accept valid offer using another user's/unverified wallet | Rejected before offer state/funding mutation; no money intent created |
+| UAT-70 | Durable payment intent | Force provider configuration rejection after a money instruction | Canonical local intent remains durable with failed/non-accounting state and same reference |
+| UAT-71 | Ambiguous provider submission | Inject timeout/transport ambiguity after intent persistence | Intent remains processing/pending with explicit ambiguous marker; no blind duplicate submission |
+| UAT-72 | Manual reconciliation match | Support attempts to mark exception as matched/written off | Rejected; only provider evidence can match |
+| UAT-73 | Reconciliation write-off | Maker requests write-off, attempts self-approval, checker approves, maker applies | Self-approval rejected; approved write-off succeeds; payment statement remains exception; complete audit evidence retained |
+| UAT-74 | Funding provenance | Generate/accept production-equivalent offer with no approved funding pool | Fails closed when funding-pool assignment is required |
+| UAT-75 | Regulated disclosure | Remove licensed entity/licence/address/complaints configuration and attempt production credit | Offer generation blocked before customer commitment |
+| UAT-76 | Tax/EFRIS determination | Leave `OPFIN_EFRIS_REQUIRED` unset, then test explicit applicable/not-applicable configurations | Unset is blocked; applicable requires enabled credentials; not-applicable requires documented determination reference |
+| UAT-77 | Integrity gate | Create a high/critical financial-integrity exception and run `php artisan opfin:financial-readiness` | Command fails until latest run is balanced and open high/critical alerts are zero |
+
+
 ## Impact and causality acceptance
 
 Programme dashboards and partner exports must state or imply only measured/observed change unless the evaluation design separately supports causal attribution.
@@ -89,3 +102,5 @@ Do not sign off with unresolved Critical/High defects in identity, permissions, 
 Record medium/low exceptions with owner, rationale and accepted disposition.
 
 A deployment-success status is not sufficient release evidence when the required exact-head CI/security/deployment gates have not also run.
+
+Financial UAT additionally requires `php artisan opfin:financial-readiness` to pass on the exact candidate environment. Do not use production for destructive/failure-injection UAT.
