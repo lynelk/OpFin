@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
 use App\Models\FinancialSpaceGeneratedStatement;
 use App\Models\FinancialSpaceStatementImport;
+use App\Models\FinancialSpaceStatementRow;
+use App\Models\FinancialSpaceTransaction;
 use App\Models\FinancialSpaceTreasuryAccount;
 use App\Services\FinancialSpaceStatementService;
 use App\Support\ApiResponse;
@@ -168,6 +170,29 @@ class FinancialSpaceStatementController extends Controller
         ]);
     }
 
+    public function matchRow(
+        FinancialSpace $space,
+        FinancialSpaceStatementRow $row,
+        Request $request
+    ): JsonResponse {
+        $validated = $request->validate([
+            'transaction_id' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $transaction = FinancialSpaceTransaction::query()->findOrFail(
+            (int) $validated['transaction_id']
+        );
+
+        return ApiResponse::success('Statement row matched.', [
+            'row' => $this->statements->matchStatementRow(
+                $space,
+                $row,
+                $transaction,
+                $request->user(),
+            ),
+        ]);
+    }
+
     public function reconcile(
         FinancialSpace $space,
         FinancialSpaceStatementImport $import,
@@ -220,12 +245,7 @@ class FinancialSpaceStatementController extends Controller
         return ApiResponse::success('Bank-style statement issued.', [
             'statement' => $statement,
             'account' => $data['account'],
-            'space' => [
-                'id' => $space->id,
-                'public_id' => $space->public_id,
-                'name' => $space->name,
-                'type' => $space->type,
-            ],
+            'space' => $data['space'],
             'rows' => $data['rows'],
             'downloads' => [
                 'html' => route('financial-spaces.statements.html', [
