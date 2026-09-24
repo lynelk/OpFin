@@ -298,13 +298,27 @@ class FinancialSpaceStatementService
         abort_if(in_array($import->confirmation_status, ['confirmed', 'confirmed_with_exceptions'], true), 409, 'A confirmed reconciliation cannot be re-run.');
 
         return DB::transaction(function () use ($space, $import, $actor) {
+            $lockedImport = FinancialSpaceStatementImport::query()
+                ->whereKey($import->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            abort_if(
+                in_array($lockedImport->confirmation_status, ['confirmed', 'confirmed_with_exceptions'], true),
+                409,
+                'A confirmed reconciliation cannot be re-run.'
+            );
+
             foreach (
-                $import->rows()
+                $lockedImport->rows()
                     ->whereNotIn('reconciliation_status', ['matched', 'resolved'])
                     ->orderBy('transaction_date')
                     ->orderBy('id')
-                    ->get() as $row
+                    ->get() as $candidateRow
             ) {
+                $row = FinancialSpaceStatementRow::query()
+                    ->whereKey($candidateRow->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
                 $ranked = $this->rankedCandidateTransactions($row);
                 $top = $ranked->first();
                 $second = $ranked->skip(1)->first();
@@ -313,25 +327,41 @@ class FinancialSpaceStatementService
                 $margin = $topScore - $secondScore;
 
                 if ($top && $topScore >= 95 && ($ranked->count() === 1 || $margin >= 10)) {
-                    $transaction = $top['transaction'];
-                    $row->update([
-                        'matched_transaction_id' => $transaction->id,
-                        'reconciliation_status' => 'matched',
-                        'exception_type' => null,
-                        'match_method' => $top['method'],
-                        'match_confidence_percent' => $topScore,
-                        'suggested_matches' => null,
-                        'user_resolution' => null,
-                        'resolved_by_user_id' => null,
-                        'resolved_at' => null,
-                        'notes' => 'Automatically matched by OpFin using high-confidence reconciliation evidence.',
-                    ]);
-                    $transaction->update([
-                        'reconciliation_status' => 'matched',
-                        'reconciled_at' => now(),
-                    ]);
+                    $transaction = FinancialSpaceTransaction::query()
+                        ->whereKey($top['transaction']->id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-                    continue;
+                    $alreadyUsed = FinancialSpaceStatementRow::query()
+                        ->where('matched_transaction_id', $transaction->id)
+                        ->where('reconciliation_status', 'matched')
+                        ->whereKeyNot($row->id)
+                        ->exists();
+
+                    if ($transaction->reconciliation_status === 'unreconciled' && ! $alreadyUsed) {
+                        $row->update([
+                            'matched_transaction_id' => $transaction->id,
+                            'reconciliation_status' => 'matched',
+                            'exception_type' => null,
+                            'match_method' => $top['method'],
+                            'match_confidence_percent' => $topScore,
+                            'suggested_matches' => null,
+                            'user_resolution' => null,
+                            'resolved_by_user_id' => null,
+                            'resolved_at' => null,
+                            'notes' => 'Automatically matched by OpFin using high-confidence reconciliation evidence.',
+                        ]);
+                        $transaction->update([
+                            'reconciliation_status' => 'matched',
+                            'reconciled_at' => now(),
+                        ]);
+
+                        continue;
+                    }
+
+                    $ranked = $this->rankedCandidateTransactions($row);
+                    $top = $ranked->first();
+                    $topScore = (int) ($top['score'] ?? 0);
                 }
 
                 $suggestions = $ranked
@@ -367,28 +397,28 @@ class FinancialSpaceStatementService
                 ]);
             }
 
-            $this->refreshImportState($import);
+            $this->refreshImportState($lockedImport);
 
-            if ($import->closing_balance_minor !== null) {
-                $account = $import->account;
-                $bookClosing = $this->bookBalanceAsOf($account, CarbonImmutable::parse($import->period_end));
-                $summary = $import->fresh()->summary ?? [];
+            if ($lockedImport->closing_balance_minor !== null) {
+                $account = $lockedImport->account;
+                $bookClosing = $this->bookBalanceAsOf($account, CarbonImmutable::parse($lockedImport->period_end));
+                $summary = $lockedImport->fresh()->summary ?? [];
                 $summary['book_closing_balance_minor'] = $bookClosing;
-                $summary['statement_closing_balance_minor'] = $import->closing_balance_minor;
-                $summary['closing_balance_variance_minor'] = $bookClosing - $import->closing_balance_minor;
-                $import->update(['summary' => $summary]);
+                $summary['statement_closing_balance_minor'] = $lockedImport->closing_balance_minor;
+                $summary['closing_balance_variance_minor'] = $bookClosing - $lockedImport->closing_balance_minor;
+                $lockedImport->update(['summary' => $summary]);
             }
 
-            $this->refreshImportState($import);
+            $this->refreshImportState($lockedImport);
 
-            $this->auditLogger->record('financial_space.statement_import.reconciled', $actor, $import, [
+            $this->auditLogger->record('financial_space.statement_import.reconciled', $actor, $lockedImport, [
                 'financial_space_id' => $space->id,
-                'matched_count' => $import->fresh()->matched_count,
-                'exception_count' => $import->fresh()->exception_count,
-                'review_todo_count' => count($import->fresh()->review_todos ?? []),
+                'matched_count' => $lockedImport->fresh()->matched_count,
+                'exception_count' => $lockedImport->fresh()->exception_count,
+                'review_todo_count' => count($lockedImport->fresh()->review_todos ?? []),
             ]);
 
-            return $import->fresh(['rows.matchedTransaction', 'account']);
+            return $lockedImport->fresh(['rows.matchedTransaction', 'account']);
         });
     }
 
