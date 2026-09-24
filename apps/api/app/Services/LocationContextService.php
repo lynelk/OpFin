@@ -71,9 +71,19 @@ class LocationContextService
         $subjectType = (string) $attributes['subject_type'];
         $subjectId = (int) $attributes['subject_id'];
         $this->authorise($actor, $subjectType, $subjectId, true);
+        $this->validatePurpose($subjectType, (string) $attributes['purpose']);
+
+        if ((string) $attributes['consent_purpose'] !== (string) $attributes['purpose']) {
+            throw ValidationException::withMessages([
+                'consent_purpose' => ['Location consent must match the financial task that is using the location.'],
+            ]);
+        }
 
         [$userId, $spaceId] = $this->ownership($subjectType, $subjectId);
         $precision = (string) $attributes['precision_level'];
+        if ($subjectType === 'user' && $attributes['purpose'] === 'personal_service_discovery') {
+            $precision = 'approximate';
+        }
         [$latitude, $longitude] = $this->privacyCoordinates(
             isset($attributes['latitude']) ? (float) $attributes['latitude'] : null,
             isset($attributes['longitude']) ? (float) $attributes['longitude'] : null,
@@ -108,9 +118,9 @@ class LocationContextService
             'longitude' => $longitude,
             'accuracy_metres' => $attributes['accuracy_metres'] ?? null,
             'consent_purpose' => $attributes['consent_purpose'],
-            'verification_status' => $attributes['verification_status'] ?? 'user_declared',
+            'verification_status' => $this->verificationStatus($actor, (string) $attributes['source']),
             'captured_at' => $attributes['captured_at'] ?? now(),
-            'verified_at' => ($attributes['verification_status'] ?? null) === 'verified' ? now() : null,
+            'verified_at' => $this->verificationStatus($actor, (string) $attributes['source']) === 'user_declared' ? null : now(),
             'metadata' => $attributes['metadata'] ?? null,
         ];
 
@@ -174,6 +184,7 @@ class LocationContextService
             'accuracy_metres' => $context->accuracy_metres,
             'consent_purpose' => $context->consent_purpose,
             'verification_status' => $context->verification_status,
+            'credit_decision_eligible' => false,
             'captured_at' => $context->captured_at?->toIso8601String(),
             'maps_url' => $this->google->mapsUrl($context->google_place_id, $latitude, $longitude),
         ];
@@ -281,6 +292,40 @@ class LocationContextService
             ->all();
     }
 
+    private function validatePurpose(string $subjectType, string $purpose): void
+    {
+        $allowed = match ($subjectType) {
+            'user' => ['personal_service_discovery', 'partner_aggregate_insights'],
+            'financial_space' => ['group_operating_area', 'group_meeting_place'],
+            'financial_asset' => ['investment_asset_location'],
+            'protection_policy' => ['insured_risk_location'],
+            'protection_claim' => ['claim_incident_location'],
+            'partner_service_point' => ['partner_service_point'],
+            default => [],
+        };
+
+        if (! in_array($purpose, $allowed, true)) {
+            throw ValidationException::withMessages([
+                'purpose' => ['This location purpose is not valid for the selected financial context.'],
+            ]);
+        }
+    }
+
+    private function verificationStatus(User $actor, string $source): string
+    {
+        return match ($source) {
+            'device' => 'device_confirmed',
+            'google_place' => 'place_confirmed',
+            'partner' => $actor->hasAnyRole([User::ROLE_PLATFORM_ADMIN, User::ROLE_OPERATIONS])
+                ? 'partner_confirmed'
+                : 'user_declared',
+            'field_verified' => $actor->hasAnyRole([User::ROLE_PLATFORM_ADMIN, User::ROLE_OPERATIONS])
+                ? 'verified'
+                : 'user_declared',
+            default => 'user_declared',
+        };
+    }
+
     private function ownership(string $subjectType, int $subjectId): array
     {
         return match ($subjectType) {
@@ -289,7 +334,7 @@ class LocationContextService
             'financial_asset' => [null, (int) DB::table('financial_assets')->where('id', $subjectId)->whereNull('deleted_at')->value('financial_space_id')],
             'protection_policy' => $this->protectionOwnership($subjectId),
             'protection_claim' => $this->claimOwnership($subjectId),
-            'partner_service_point' => [null, null],
+            'partner_service_point' => $this->partnerOwnership($subjectId),
             default => throw ValidationException::withMessages(['subject_type' => ['Unsupported location subject type.']]),
         };
     }
@@ -331,6 +376,16 @@ class LocationContextService
                 403
             );
         }
+    }
+
+    private function partnerOwnership(int $partnerId): array
+    {
+        abort_unless(
+            DB::table('partners')->where('id', $partnerId)->whereNull('deleted_at')->exists(),
+            404
+        );
+
+        return [null, null];
     }
 
     private function protectionOwnership(int $policyId): array
