@@ -109,6 +109,8 @@ export type GeneratedStatement = {
   id: number;
   public_id: string;
   statement_number: string;
+  treasury_account_id?: number | null;
+  statement_scope: "account" | "consolidated";
   period_start: string;
   period_end: string;
   opening_balance_minor: number;
@@ -349,8 +351,11 @@ export const financialSpaceStatementsApi = {
   statement: (spaceId: number, statementId: number, token?: string) =>
     jsonRequest<{
       statement: GeneratedStatement;
-      account: TreasuryAccount;
+      account: TreasuryAccount | null;
       rows: Array<Record<string, unknown>>;
+      sections: Array<Record<string, unknown>>;
+      totals_by_currency: Record<string, Record<string, number>>;
+      position_by_currency: Record<string, Record<string, number>>;
     }>(
       "/financial-spaces/" + spaceId + "/statements/" + statementId,
       token
