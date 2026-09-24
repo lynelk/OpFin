@@ -10,7 +10,7 @@ class FinancialSpaceStatementImport extends Model
         'public_id','financial_space_id','treasury_account_id','imported_by_user_id',
         'source_format','original_filename','source_hash','period_start','period_end',
         'opening_balance_minor','closing_balance_minor','row_count','matched_count',
-        'exception_count','status','column_mapping','summary',
+        'exception_count','status','confirmation_status','confirmed_by_user_id','confirmed_at','column_mapping','summary','review_todos',
     ];
 
     protected function casts(): array
@@ -25,6 +25,8 @@ class FinancialSpaceStatementImport extends Model
             'exception_count' => 'integer',
             'column_mapping' => 'array',
             'summary' => 'array',
+            'review_todos' => 'array',
+            'confirmed_at' => 'datetime',
         ];
     }
 
