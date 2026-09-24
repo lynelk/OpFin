@@ -188,6 +188,31 @@ function mockRequest<T>(path: string, init: RequestOptions = {}): Promise<ApiEnv
     } as T, "Sandbox login successful"));
   }
   if (path === "/profile") return Promise.resolve(envelope(mockProfile as T));
+  if (path === "/location/status") {
+    return Promise.resolve(envelope({
+      google_maps_configured: false,
+      static_maps_enabled: false,
+      routes_enabled: false,
+      background_tracking: false,
+      default_precision: "approximate"
+    } as T, "Sandbox location capability loaded"));
+  }
+  if (path.startsWith("/location-contexts")) {
+    return Promise.resolve(envelope({ locations: [] } as T, "Sandbox location contexts loaded"));
+  }
+  if (path === "/admin/location-insights") {
+    return Promise.resolve(envelope({
+      minimum_cohort: 5,
+      individual_locations_exposed: false,
+      rows: []
+    } as T, "Sandbox aggregate location insights loaded"));
+  }
+  if (path === "/partner/location-network") {
+    return Promise.resolve(envelope({
+      service_points: [],
+      individual_customer_locations_exposed: false
+    } as T, "Sandbox partner location network loaded"));
+  }
   if (path.startsWith("/capabilities")) return Promise.resolve(envelope(mockCapabilityRegistry() as T, "Sandbox capability registry loaded"));
   if (path === "/kyc/status") return Promise.resolve(envelope({ latest_case: mockKycCase } as T, "Production KYC sandbox state loaded"));
   if (path === "/kyc/cases" && init.method === "POST") {
