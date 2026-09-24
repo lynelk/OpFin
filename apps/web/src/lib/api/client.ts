@@ -521,6 +521,12 @@ export const locationContextsApi = {
       rows: LocationInsightRow[];
     }>("/admin/location-insights", { token }),
 
+  partnerNetwork: (token?: string) =>
+    request<{
+      service_points: Array<LocationContext & { partner_name?: string | null }>;
+      individual_customer_locations_exposed: false;
+    }>("/partner/location-network", { token }),
+
   staticMapDataUrl: async (
     contextId: number,
     token?: string,
