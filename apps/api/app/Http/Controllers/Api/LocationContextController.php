@@ -68,7 +68,6 @@ class LocationContextController extends Controller
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'accuracy_metres' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'consent_purpose' => ['required', Rule::in(LocationContextService::PURPOSES)],
-            'verification_status' => ['nullable', Rule::in(['user_declared', 'device_confirmed', 'place_confirmed', 'partner_confirmed', 'verified'])],
             'captured_at' => ['nullable', 'date'],
             'metadata' => ['nullable', 'array'],
             'resolve_with_google' => ['sometimes', 'boolean'],
@@ -85,18 +84,13 @@ class LocationContextController extends Controller
                     fn ($value) => $value !== null && $value !== ''
                 ));
                 $attributes['source'] = 'google_place';
-                $attributes['verification_status'] = 'place_confirmed';
             } elseif (($validated['resolve_with_google'] ?? false)
                 && isset($validated['latitude'], $validated['longitude'])) {
                 $details = $this->google->reverseGeocode(
                     (float) $validated['latitude'],
                     (float) $validated['longitude'],
                 );
-                $attributes = array_merge(
-                    $details,
-                    $attributes,
-                    ['verification_status' => $validated['source'] === 'device' ? 'device_confirmed' : 'place_confirmed'],
-                );
+                $attributes = array_merge($details, $attributes);
             }
 
             $context = $this->locations->save($request->user(), $attributes);
