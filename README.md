@@ -1,113 +1,76 @@
 # OpFin
 
-Status: Public repository/product reference  
-Updated: 23 September 2026  
+Status: Public repository and product reference  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
-OpFin is the canonical monorepo for the OpFin financial operating platform. One identity can participate in multiple Financial Spaces while the backend keeps identity, permissions, product eligibility, provider orchestration, financial truth, ledger and reconciliation authoritative.
+OpFin is the canonical monorepo for the financial operating platform. One identity can participate in several Financial Spaces while the API owns permissions, product eligibility, provider orchestration, financial state, ledger and reconciliation.
 
-**Current state:** see [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md).
+Start with the [current state](docs/CURRENT_STATE.md) and [achievements against the concept and plan](docs/product/CONCEPT_AND_PLAN_COMPARISON.md). Current implementation is substantial, but the latest API/Web build failures and unresolved Essentials controls prevent a blanket production-readiness claim.
 
 ## Product position
 
-OpFin helps people and organisations understand, manage, plan and improve their financial position. Lending is one capability, not the platform boundary.
+OpFin helps people and organisations understand, manage, plan and improve their financial position. Lending is one capability, not the product boundary.
 
-Current product layers include:
+Current source includes Personal, Household, Savings Group and authorised organisation Spaces; everyday money, budgets, goals, assets, liabilities and health guidance; governed credit, offers, repayment and receipts; provider-gated savings, investment and protection; employer wellbeing; inclusive-finance programmes, follow-ups, localisation and suppressed reporting; commercial/service-economics reporting; investment-club treasury/statements; and Essentials bill/rent lender orchestration.
 
-- Personal, Household, Savings Group and authorised organisation Financial Spaces;
-- everyday money, budgets, goals, assets, liabilities and financial-health guidance;
-- responsible credit with disclosed offers, affordability, verified-wallet disbursement, repayment and receipts;
-- provider-gated savings, investment and protection;
-- employer financial-wellbeing capabilities;
-- inclusive-finance programme delivery, follow-ups, localisation and privacy-suppressed reporting;
-- partner/provider integrations through Cito where configured, with governed direct-provider fallback;
-- CPay-preferred money movement;
-- commercial/service-economics reporting that remains downstream of customer need, suitability and financial truth.
+These are source capabilities, not a claim that every service is activated or every journey accepted. Club treasury is not complete member-capital/NAV/distribution accounting. Programme measurement is not underwriting, and dashboards are not proof of profitability or impact.
 
-Stolets remains a separate SME automation and commerce product. Cross-product evidence must use explicit, consented, governed interfaces.
+Stolets remains a separate SME operating product. Any cross-product evidence requires an explicit, consented and governed interface.
 
 ## New-customer journey
 
-The canonical mobile journey is:
+`Phone → OTP → names → six-digit PIN → Home → progressive verification → financial position / eligible service → disclosed action → confirmed outcome`
 
-`Phone → OTP → names → 6-digit PIN → Home → progressive verification → financial position / eligible service → disclosed action → confirmed outcome`
+Existing Web password-compatible sign-in is an access/compatibility surface, not the preferred new App registration journey. A second phone is optional. KYC and scoring sources remain attributable; unavailable information is not fabricated. Limits must not multiply across phones or wallets. PINs and OTPs are not requested in support conversations.
 
-The Web marketing site and Workspace sign-in are not the preferred new-customer registration path. Legacy password-compatible Web sign-in remains a compatibility/operational surface.
-
-Key rules:
-
-- a second phone is optional;
-- KYC and provider results remain attributable;
-- unavailable source data stays unavailable;
-- profile limits do not multiply across phones or wallets;
-- provider acknowledgement is not financial finality;
-- programme measurement and protected attributes do not become underwriting inputs;
-- app, web, WhatsApp, USSD and assisted channels use server-authoritative state;
-- high-impact actions require authenticated confirmation;
-- PINs and OTPs are never requested through support conversations.
+The API remains authoritative across App, Web, WhatsApp, USSD and assisted channels. High-impact commitments require authenticated confirmation. A provider acknowledgement is not financial finality.
 
 ## Repository layout
 
 | Path | Responsibility |
 | --- | --- |
 | `apps/api` | Laravel API, worker, scheduler, financial and compliance domain |
-| `apps/web` | Next.js marketing, customer, workspace and operational surfaces |
-| `apps/client` | Flutter Android/iOS app |
-| `packages/contracts` | shared contract/schema conventions |
-| `docs` | current product, operational, training and release documentation |
-| `infrastructure/railway` | deployment boundaries and release controls |
-| `distribution/google-play` | Android store listing/release evidence |
+| `apps/web` | Next.js marketing, customer, Workspace and operational surfaces |
+| `apps/client` | Flutter Android/iOS App |
+| `packages/contracts` | Shared API/schema conventions |
+| `docs` | Product, comparison, manuals, operations and evidence |
+| `infrastructure/railway` | Existing service boundaries and release controls |
+| `distribution/google-play` | Controlled Android store/release material |
 
 ## Current documentation
 
-Start with:
+| Need | Reference |
+| --- | --- |
+| Navigate documents | [Documentation hub](docs/README.md) |
+| Understand achievements and gaps | [Concept and plan comparison](docs/product/CONCEPT_AND_PLAN_COMPARISON.md), [implementation status](docs/product/CANONICAL_IMPLEMENTATION_STATUS.md) |
+| Understand the intended platform | [Product Blueprint](docs/product/OPFIN_PRODUCT_BLUEPRINT.md) |
+| Follow approved visual direction | [Brand System v3 release candidate](brand/v3/OPFIN_BRAND_SYSTEM_V3.md) |
+| Set up development | [Developer start](docs/DEVELOPER_START_HERE.md) |
+| Find APIs | [Quick reference](apps/api/docs/api/API_QUICK_REFERENCE.md), [current endpoints](apps/api/docs/api/current-endpoints.md), [new capability contracts](apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) |
+| Use and train | [User](docs/manuals/OPFIN_USER_MANUAL.md), [training](docs/manuals/OPFIN_TRAINING_MANUAL.md), [current capability supplement](docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) |
+| Operate and accept | [Operational manual](docs/manuals/OPFIN_OPERATIONAL_MANUAL.md), [UAT](docs/manuals/OPFIN_UAT_MANUAL.md), [delivery evidence](docs/operations/DELIVERY_EVIDENCE_2026-09-24.md) |
+| Govern programmes and partners | [Programme framework](docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md), [partner reporting standard](docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md) |
 
-- [Current state](docs/CURRENT_STATE.md)
-- [Brand System v3 release candidate](brand/v3/OPFIN_BRAND_SYSTEM_V3.md)
-- [Documentation hub](docs/README.md)
-- [Product blueprint](docs/product/OPFIN_PRODUCT_BLUEPRINT.md)
-- [Canonical implementation status](docs/product/CANONICAL_IMPLEMENTATION_STATUS.md)
-- [Inclusive-finance programme framework](docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md)
-- [Partner financial/compliance reporting standard](docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md)
-- [Developer start](docs/DEVELOPER_START_HERE.md)
-- [User manual](docs/manuals/OPFIN_USER_MANUAL.md)
-- [Training manual](docs/manuals/OPFIN_TRAINING_MANUAL.md)
-- [Operational manual](docs/manuals/OPFIN_OPERATIONAL_MANUAL.md)
-- [UAT manual](docs/manuals/OPFIN_UAT_MANUAL.md)
-- [API quick reference](apps/api/docs/api/API_QUICK_REFERENCE.md)
-- [Current API endpoints](apps/api/docs/api/current-endpoints.md)
+## Essentials and provider boundaries
 
-## Website and deployment
+Essentials adds purpose-bound financing for verified electricity, water, connectivity, household energy and rent. The named participating third party supplies credit; OpFin orchestrates the customer journey and servicing. Cito is the required route for gnuGrid services under this capability, and CPay is the preferred settlement/reconciliation route.
 
-The Web service setup endpoint is `https://opfin-web-production.up.railway.app`; the API setup endpoint is `https://opfin-production.up.railway.app`.
+Partner platforms such as Stolets require customer-controlled permissions and exact Financial Space authority. Current review findings on accounting, permissions, deletion, concurrency and pending exposure remain acceptance blockers. See the [Essentials specification](docs/product/OPFIN_ESSENTIALS.md) together with the [current evidence](docs/operations/DELIVERY_EVIDENCE_2026-09-24.md); do not describe external credentials as the only remaining work.
 
-At the reviewed 23 September 2026 `main` head, Railway commit statuses report successful API, Web, worker and scheduler deployments. No GitHub Actions workflow run is attached to that exact head, so do not describe that commit as fully release-certified merely because deployment succeeded.
+## Verification and production
 
-See [deployment documentation](infrastructure/railway/README.md) for the service topology and [current state](docs/CURRENT_STATE.md) for evidence boundaries.
-
-## Local verification
-
-Run the affected project gates or aggregate suite:
-
-`make api-test`, `make web-test`, `make client-test` or `make test`.
-
-Useful discovery commands:
+Run affected project gates using `make api-test`, `make web-test`, `make client-test` or `make test`. Use `make docs-check` and `make publication-check` for their documented scope, not as a substitute for semantic, legal or production acceptance.
 
 ```bash
-python3 scripts/search-docs.py "programme"
-python3 scripts/search-docs.py "credit reporting" --api
-python3 scripts/search-api.py "programme"
-python3 scripts/search-api.py "umra"
+python3 scripts/search-docs.py "treasury"
+python3 scripts/search-docs.py "Essentials" --api
+python3 scripts/search-api.py "essentials"
+python3 scripts/search-api.py "statement"
 ```
 
-A build or deployment is not proof that provider credentials, legal approvals, store publication, physical-device accessibility or full release-gate evidence exist.
+GitHub Actions remains disabled under the owner's instruction. Equivalent candidate-specific validation must be retained. Do not disable tests/audits, re-enable Actions or provision additional infrastructure to manufacture release evidence.
 
-Read `SECURITY.md`, `AGENTS.md` and the relevant current documentation before changing authentication, KYC, credit, provider routing, money movement or customer-facing financial state.
+The existing Web/API setup addresses are `https://opfin-web-production.up.railway.app` and `https://opfin-production.up.railway.app`. They are not proof of custom-domain cutover or health. The [24 September evidence](docs/operations/DELIVERY_EVIDENCE_2026-09-24.md) records failed latest API/Web builds and the earlier successful API version. A merge or successful worker deployment is not full production parity.
 
-## OpFin Essentials
-
-OpFin Essentials adds purpose-bound financing for verified electricity, water, connectivity, household energy and rent without changing OpFin's wider financial-operating-platform identity. OpFin orchestrates and services the journey; an approved third-party provider is the lender and is named in every offer.
-
-Cito is the mandatory route for gnuGrid services, CPay is the preferred settlement/reconciliation route, and approved platforms such as Stolets can originate Essentials journeys only under customer-controlled Financial Space permissions.
-
-See `docs/product/OPFIN_ESSENTIALS.md`.
+Read [security](SECURITY.md), [engineering rules](AGENTS.md), [deployment guidance](infrastructure/railway/README.md) and the relevant current contracts before changing authentication, providers, credit, money movement or customer financial state. Historical records retain their original dates; approved requirements are not silently rewritten to match defects.
