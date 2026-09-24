@@ -23,10 +23,16 @@ class ProtectionService
         private readonly ServiceEconomicsService $economics,
     ) {}
 
-    public function activeProducts(string $countryCode): mixed
+    public function activeProducts(string $countryCode, string $audienceScope = 'personal'): mixed
     {
+        $audienceScope = strtolower($audienceScope);
+        if (! in_array($audienceScope, ['personal', 'group'], true)) {
+            throw new InvalidArgumentException('Unsupported protection audience scope.');
+        }
+
         return ProtectionProduct::query()
             ->where('country_code', strtoupper($countryCode))
+            ->whereIn('audience_scope', [$audienceScope, 'both'])
             ->where('status', ProtectionProduct::STATUS_ACTIVE)
             ->whereNotNull('approved_by')
             ->whereNotNull('approved_at')
@@ -52,6 +58,7 @@ class ProtectionService
             'country_code' => $product->country_code,
             'currency' => $product->currency,
             'product_type' => $product->product_type,
+            'audience_scope' => $product->audience_scope,
             'premium_amount_minor' => $product->premium_amount_minor,
             'premium_frequency' => $product->premium_frequency,
             'coverage_limit_minor' => $product->coverage_limit_minor,
@@ -69,6 +76,7 @@ class ProtectionService
         return ProtectionPolicy::query()
             ->with(['product', 'premiumPayments', 'claims'])
             ->where('user_id', $user->id)
+            ->where('coverage_scope', 'personal')
             ->latest()
             ->get();
     }
