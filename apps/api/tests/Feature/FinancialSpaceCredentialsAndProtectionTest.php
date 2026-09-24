@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ProtectionProduct;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -65,6 +66,38 @@ class FinancialSpaceCredentialsAndProtectionTest extends TestCase
             'verification_status' => 'verified',
             'verified_by_user_id' => $operator->id,
         ]);
+    }
+
+    public function test_soft_deleted_membership_cannot_read_or_mutate_group_credentials_or_protection(): void
+    {
+        $member = User::factory()->create();
+        Sanctum::actingAs($member);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'savings_group',
+            'name' => 'Former Membership Group',
+        ])->assertCreated()->json('data.space.id');
+
+        $this->postJson("/api/financial-spaces/{$spaceId}/credentials", [
+            'credential_type' => 'government_group_code',
+            'issuer_code' => 'TEST-AUTH',
+            'issuer_name' => 'Test Authority',
+            'credential_value' => 'GROUP-REMOVE-001',
+        ])->assertCreated();
+
+        DB::table('financial_space_memberships')
+            ->where('financial_space_id', $spaceId)
+            ->where('user_id', $member->id)
+            ->update(['deleted_at' => now()]);
+
+        $this->getJson("/api/financial-spaces/{$spaceId}/credentials")->assertForbidden();
+        $this->postJson("/api/financial-spaces/{$spaceId}/credentials", [
+            'credential_type' => 'registration_number',
+            'issuer_code' => 'TEST-AUTH',
+            'issuer_name' => 'Test Authority',
+            'credential_value' => 'DENIED-001',
+        ])->assertForbidden();
+        $this->getJson("/api/financial-spaces/{$spaceId}/protection/products")->assertForbidden();
     }
 
     public function test_group_protection_catalogue_only_returns_group_capable_products_to_members(): void
