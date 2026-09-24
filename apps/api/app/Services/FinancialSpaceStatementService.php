@@ -57,6 +57,12 @@ class FinancialSpaceStatementService
                 'currency' => ['Transaction currency must match the treasury account currency.'],
             ]);
         }
+        if ($account->balance_as_of
+            && CarbonImmutable::parse($data['transaction_date'])->lessThan(CarbonImmutable::parse($account->balance_as_of))) {
+            throw ValidationException::withMessages([
+                'transaction_date' => ['Transaction date cannot be before this account opening-balance baseline.'],
+            ]);
+        }
 
         $sourceType = $data['source_type'] ?? 'manual';
         $sourceReference = $data['source_reference'] ?? null;
@@ -161,6 +167,16 @@ class FinancialSpaceStatementService
 
         if ($rows === []) {
             throw new InvalidArgumentException('The statement did not contain any importable transactions.');
+        }
+
+        $importDates = collect($rows)
+            ->pluck('transaction_date')
+            ->map(fn ($date) => CarbonImmutable::parse($date));
+        if ($account->balance_as_of
+            && $importDates->min()?->lessThan(CarbonImmutable::parse($account->balance_as_of))) {
+            throw ValidationException::withMessages([
+                'statement_file' => ['This statement begins before the treasury account opening-balance baseline and cannot be reconciled safely.'],
+            ]);
         }
 
         return DB::transaction(function () use (
@@ -646,6 +662,7 @@ class FinancialSpaceStatementService
         if ($toDate->lessThan($fromDate)) {
             throw ValidationException::withMessages(['to' => ['Statement end date must not be before the start date.']]);
         }
+        $this->assertStatementBaseline($account, $fromDate);
 
         $transactions = FinancialSpaceTransaction::query()
             ->where('treasury_account_id', $account->id)
@@ -794,6 +811,9 @@ class FinancialSpaceStatementService
             throw ValidationException::withMessages([
                 'treasury' => ['Create at least one treasury account before issuing a consolidated statement.'],
             ]);
+        }
+        foreach ($accounts as $account) {
+            $this->assertStatementBaseline($account, $fromDate);
         }
 
         $sections = [];
@@ -944,6 +964,7 @@ class FinancialSpaceStatementService
             'currencies' => $currencies,
             'totals_by_currency' => $totalsByCurrency,
             'position_by_currency' => $positionByCurrency,
+            'position_snapshot_as_of' => now()->toIso8601String(),
             'sections' => $sections,
             'transaction_count' => $transactionCount,
             'reconciliation_status' => $transactionCount === 0
@@ -1307,6 +1328,29 @@ class FinancialSpaceStatementService
             ->whereNotIn('reconciliation_status', ['matched', 'resolved'])
             ->get();
 
+        foreach ($unresolvedRows as $row) {
+            $ranked = $this->rankedCandidateTransactions($row);
+            $top = $ranked->first();
+            $suggestions = $ranked
+                ->take(3)
+                ->map(fn (array $candidate) => $this->candidatePresentation($candidate))
+                ->values()
+                ->all();
+            $topScore = (int) ($top['score'] ?? 0);
+
+            $row->update([
+                'exception_type' => $top && $topScore >= 70
+                    ? 'suggested_match'
+                    : ($ranked->count() > 1 ? 'ambiguous_match' : 'missing_opfin_transaction'),
+                'match_confidence_percent' => $top && $topScore >= 70 ? $topScore : null,
+                'suggested_matches' => $suggestions ?: null,
+            ]);
+        }
+        $unresolvedRows = FinancialSpaceStatementRow::query()
+            ->where('statement_import_id', $import->id)
+            ->whereNotIn('reconciliation_status', ['matched', 'resolved'])
+            ->get();
+
         $suggestedTransactionIds = $unresolvedRows
             ->flatMap(fn (FinancialSpaceStatementRow $row) => collect($row->suggested_matches ?? [])
                 ->pluck('transaction_id'))
@@ -1658,6 +1702,20 @@ class FinancialSpaceStatementService
         $factor = 10 ** max(0, min(4, $exponent));
 
         return (int) round($amount * $factor);
+    }
+
+    private function assertStatementBaseline(
+        FinancialSpaceTreasuryAccount $account,
+        CarbonImmutable $fromDate,
+    ): void {
+        if ($account->balance_as_of
+            && $fromDate->lessThan(CarbonImmutable::parse($account->balance_as_of))) {
+            throw ValidationException::withMessages([
+                'from' => [
+                    'Statement start date cannot be before the opening-balance baseline for '.$account->account_name.'.',
+                ],
+            ]);
+        }
     }
 
     private function csvSafe(mixed $value): string
