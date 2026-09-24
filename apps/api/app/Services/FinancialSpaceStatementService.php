@@ -692,22 +692,6 @@ class FinancialSpaceStatementService
             .'-'.$fromDate->format('Ymd').'-'.$toDate->format('Ymd')
             .'-'.strtoupper(substr(str_replace('-', '', (string) Str::uuid()), 0, 6));
 
-        $canonical = [
-            'statement_number' => $statementNumber,
-            'financial_space_id' => $space->id,
-            'treasury_account_id' => $account->id,
-            'period_start' => $fromDate->toDateString(),
-            'period_end' => $toDate->toDateString(),
-            'opening_balance_minor' => $opening,
-            'closing_balance_minor' => $balance,
-            'total_debits_minor' => $totalDebits,
-            'total_credits_minor' => $totalCredits,
-            'transaction_count' => count($rows),
-            'reconciliation_status' => $reconciliationStatus,
-            'rows' => $rows,
-        ];
-        $contentHash = hash('sha256', json_encode($canonical, JSON_THROW_ON_ERROR));
-
         $statementPayload = [
             'statement_number' => $statementNumber,
             'space' => [
@@ -735,6 +719,10 @@ class FinancialSpaceStatementService
             'reconciliation_status' => $reconciliationStatus,
             'rows' => $rows,
         ];
+        $contentHash = hash(
+            'sha256',
+            json_encode($statementPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)
+        );
 
         $statement = FinancialSpaceGeneratedStatement::query()->create([
             'public_id' => (string) Str::uuid(),
@@ -962,7 +950,10 @@ class FinancialSpaceStatementService
                 ? 'no_activity'
                 : ($allReconciled ? 'reconciled' : 'partially_reconciled'),
         ];
-        $contentHash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
+        $contentHash = hash(
+            'sha256',
+            json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)
+        );
 
         $statement = FinancialSpaceGeneratedStatement::query()->create([
             'public_id' => (string) Str::uuid(),
