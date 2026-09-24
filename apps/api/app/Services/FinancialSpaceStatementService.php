@@ -26,6 +26,14 @@ class FinancialSpaceStatementService
         $this->assertTreasurySpace($space);
         $this->assertAdministrator($space, $actor);
 
+        $openingBalanceMinor = (int) ($data['opening_balance_minor'] ?? 0);
+        $openingBalanceAsOf = $data['balance_as_of'] ?? null;
+        if ($openingBalanceMinor !== 0 && ! $openingBalanceAsOf) {
+            throw ValidationException::withMessages([
+                'balance_as_of' => ['A non-zero opening balance requires the date that balance was valid.'],
+            ]);
+        }
+
         return FinancialSpaceTreasuryAccount::query()->create([
             'public_id' => (string) Str::uuid(),
             'financial_space_id' => $space->id,
@@ -34,9 +42,10 @@ class FinancialSpaceStatementService
             'institution_name' => $data['institution_name'] ?? null,
             'account_reference_masked' => $this->maskedReference($data['account_reference'] ?? null),
             'currency' => strtoupper($data['currency'] ?? $space->currency),
-            'opening_balance_minor' => (int) ($data['opening_balance_minor'] ?? 0),
-            'current_balance_minor' => (int) ($data['opening_balance_minor'] ?? 0),
-            'balance_as_of' => $data['balance_as_of'] ?? null,
+            'opening_balance_minor' => $openingBalanceMinor,
+            'current_balance_minor' => $openingBalanceMinor,
+            'balance_as_of' => $openingBalanceAsOf,
+            'current_balance_as_of' => $openingBalanceAsOf,
             'status' => 'active',
             'metadata' => $data['metadata'] ?? null,
         ]);
@@ -71,16 +80,45 @@ class FinancialSpaceStatementService
         }
 
         return DB::transaction(function () use ($space, $account, $actor, $data, $sourceType, $sourceReference) {
+            $lockedAccount = FinancialSpaceTreasuryAccount::query()
+                ->whereKey($account->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $this->assertAccount($space, $lockedAccount);
+
+            $existing = FinancialSpaceTransaction::query()
+                ->where('financial_space_id', $space->id)
+                ->where('source_type', $sourceType)
+                ->where('source_reference', $sourceReference)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                $sameInstruction = (int) $existing->treasury_account_id === (int) $lockedAccount->id
+                    && $existing->direction === $data['direction']
+                    && (int) $existing->amount_minor === (int) $data['amount_minor']
+                    && strtoupper((string) $existing->currency) === strtoupper((string) $lockedAccount->currency)
+                    && $existing->transaction_date?->toDateString() === CarbonImmutable::parse($data['transaction_date'])->toDateString();
+
+                if (! $sameInstruction) {
+                    throw new InvalidArgumentException(
+                        'Treasury source reference was already used for a different canonical cashbook instruction.'
+                    );
+                }
+
+                return $existing->fresh();
+            }
+
             $transaction = FinancialSpaceTransaction::query()->create([
                 'public_id' => (string) Str::uuid(),
                 'financial_space_id' => $space->id,
-                'treasury_account_id' => $account->id,
+                'treasury_account_id' => $lockedAccount->id,
                 'created_by_user_id' => $actor->id,
                 'transaction_reference' => $data['transaction_reference'] ?? null,
                 'transaction_type' => $data['transaction_type'] ?? 'other',
                 'direction' => $data['direction'],
                 'amount_minor' => (int) $data['amount_minor'],
-                'currency' => $account->currency,
+                'currency' => $lockedAccount->currency,
                 'description' => trim($data['description']),
                 'counterparty_name' => $data['counterparty_name'] ?? null,
                 'transaction_date' => $data['transaction_date'],
@@ -91,14 +129,16 @@ class FinancialSpaceStatementService
                 'metadata' => $data['metadata'] ?? null,
             ]);
 
-            $this->refreshAccountBalance($account);
+            $this->refreshAccountBalance($lockedAccount);
 
             $this->auditLogger->record('financial_space.treasury.transaction_recorded', $actor, $transaction, [
                 'financial_space_id' => $space->id,
-                'treasury_account_id' => $account->id,
+                'treasury_account_id' => $lockedAccount->id,
                 'direction' => $transaction->direction,
                 'amount_minor' => $transaction->amount_minor,
                 'currency' => $transaction->currency,
+                'source_type' => $sourceType,
+                'source_reference' => $sourceReference,
             ]);
 
             return $transaction->fresh();
@@ -1574,7 +1614,7 @@ class FinancialSpaceStatementService
     {
         $account->update([
             'current_balance_minor' => $this->bookBalanceAsOf($account, CarbonImmutable::today()->addYears(100)),
-            'balance_as_of' => now()->toDateString(),
+            'current_balance_as_of' => now()->toDateString(),
         ]);
     }
 
