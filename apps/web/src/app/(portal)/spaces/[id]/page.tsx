@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import Image from "next/image";
 import { Screen, StateNotice } from "@/components/Screen";
 import { financialSpacesApi, locationContextsApi } from "@/lib/api/client";
