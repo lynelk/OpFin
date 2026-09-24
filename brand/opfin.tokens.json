@@ -28,12 +28,12 @@
   },
   "logo": {
     "source": "brand/v3/assets/opfin-symbol-master.svg",
-    "sourceGitBlob": "37b7720925aa688229640b5d1cbc5506cd773ce2",
+    "sourceGitBlob": "208f5dabdd408a7be47b0d3f4e80da326cdcdec4",
     "rule": "The v3 vector master is the canonical monogram source. Preserve its geometry and clear space; derive platform exports from this source."
   },
   "appIcon": {
     "source": "brand/v3/assets/opfin-app-icon-master.svg",
-    "sourceGitBlob": "c0b1ebeda551e86462db4a55b2311a91d6cd91de",
+    "sourceGitBlob": "1091757f9e04ecc1ca47a053e9a03dc827b10436",
     "rule": "Use the Indigo field with the approved Apricot and Warm Ivory monogram treatment. Do not add wordmark text inside the app icon."
   },
   "visualLanguage": {
