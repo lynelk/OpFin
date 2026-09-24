@@ -24,7 +24,9 @@ Validation/business failures return `success: false` with safe error details.
 | --- | --- | --- |
 | GET | `/api/health` | Combined application health |
 | GET | `/api/health/live` | Liveness |
-| GET | `/api/health/ready` | Readiness, including runtime dependencies/heartbeats |
+| GET | `/api/health/ready` | Runtime readiness, including database/worker/scheduler state; this is not financial activation evidence |
+| GET | `/api/health/financial-ready` | Fail-closed financial/UAT readiness: money integrations, identity/CRB/reporting routes, funding provenance, regulated disclosures, tax determination and integrity evidence |
+| GET | `/api/health/integrations` | Non-secret provider configuration readiness |
 
 ## 2. Account authentication
 
@@ -168,6 +170,8 @@ Offer acceptance:
 
 A successful acceptance records a separate versioned `credit_information_reporting` consent and may return `disbursement_pending`; it must not be presented as provider-confirmed money until finality is received.
 
+The server revalidates product and term status at application, offer creation and acceptance. An inactive/paused/retired product or term cannot be used by supplying a known ID. The payout wallet is resolved and verified before an offer can reserve funding or enter `disbursement_pending`. In production, governed credit requires an approved funding-pool assignment and complete regulated-provider/complaints disclosure configuration.
+
 ## 7. Repayment
 
 | Method | Endpoint | Purpose |
@@ -216,8 +220,21 @@ USSD supports status/limit/borrow/repay/loan/profile-help menus but hands image/
 
 Existing admin KYC review, CRB ingestion, credit decision approval, offer generation, payment refresh and reconciliation endpoints remain role-gated. Manual approval is a controlled fallback when automatic profile decisioning cannot safely approve.
 
-Demo routes remain disabled unless explicitly enabled in configuration/testing.
+Reconciliation controls:
 
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/admin/reconciliation-runs` | Create provider/date reconciliation run |
+| POST | `/api/admin/reconciliation-runs/{run}/provider-records` | Ingest provider statement evidence and classify exact matches/exceptions |
+| POST | `/api/admin/reconciliation-runs/{run}/complete` | Complete run; unresolved system/provider records become exceptions |
+| PATCH | `/api/admin/reconciliation-items/{item}` | Support annotation of an exception only; cannot force `matched` or `written_off` |
+| POST | `/api/admin/reconciliation-items/{item}/write-off-request` | Operations/admin requests time-bounded write-off with reason and evidence hash |
+| POST | `/api/admin/financial-controls/overrides/{override}/approve` | Independent checker approval; requester cannot self-approve |
+| POST | `/api/admin/reconciliation-items/{item}/write-off` | Apply an approved write-off; underlying provider-statement state remains exception |
+
+Only ingested provider evidence can make a money movement statement `matched`. A write-off is an exception disposition, not a synthetic provider match.
+
+Demo routes remain disabled unless explicitly enabled in configuration/testing.
 
 ## 11. UMRA digital-lending controls
 
