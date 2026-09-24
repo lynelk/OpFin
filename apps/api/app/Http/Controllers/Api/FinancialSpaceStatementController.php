@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
+use App\Models\FinancialSpaceGeneratedStatement;
 use App\Models\FinancialSpaceStatementImport;
 use App\Models\FinancialSpaceTreasuryAccount;
 use App\Services\FinancialSpaceStatementService;
@@ -181,6 +182,21 @@ class FinancialSpaceStatementController extends Controller
         }
     }
 
+    public function statements(FinancialSpace $space, Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'account_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        return ApiResponse::success('Generated statements loaded.', [
+            'statements' => $this->statements->generatedStatements(
+                $space,
+                $request->user(),
+                isset($validated['account_id']) ? (int) $validated['account_id'] : null,
+            ),
+        ]);
+    }
+
     public function generate(
         FinancialSpace $space,
         FinancialSpaceTreasuryAccount $account,
@@ -199,8 +215,10 @@ class FinancialSpaceStatementController extends Controller
             $validated['to'],
         );
 
-        return ApiResponse::success('Bank-style statement generated.', [
-            'statement' => $data['statement'],
+        $statement = $data['statement'];
+
+        return ApiResponse::success('Bank-style statement issued.', [
+            'statement' => $statement,
             'account' => $data['account'],
             'space' => [
                 'id' => $space->id,
@@ -212,40 +230,46 @@ class FinancialSpaceStatementController extends Controller
             'downloads' => [
                 'html' => route('financial-spaces.statements.html', [
                     'space' => $space->id,
-                    'account' => $account->id,
-                    'from' => $validated['from'],
-                    'to' => $validated['to'],
+                    'statement' => $statement->id,
                 ], false),
                 'csv' => route('financial-spaces.statements.csv', [
                     'space' => $space->id,
-                    'account' => $account->id,
-                    'from' => $validated['from'],
-                    'to' => $validated['to'],
+                    'statement' => $statement->id,
                 ], false),
             ],
+        ], 201);
+    }
+
+    public function show(
+        FinancialSpace $space,
+        FinancialSpaceGeneratedStatement $statement,
+        Request $request
+    ): JsonResponse {
+        $data = $this->statements->statementData($space, $statement, $request->user());
+
+        return ApiResponse::success('Generated statement loaded.', [
+            'statement' => $data['statement'],
+            'account' => $data['account'],
+            'space' => [
+                'id' => $space->id,
+                'public_id' => $space->public_id,
+                'name' => $space->name,
+                'type' => $space->type,
+            ],
+            'rows' => $data['rows'],
         ]);
     }
 
     public function html(
         FinancialSpace $space,
-        FinancialSpaceTreasuryAccount $account,
+        FinancialSpaceGeneratedStatement $statement,
         Request $request
     ) {
-        $validated = $request->validate([
-            'from' => ['required', 'date'],
-            'to' => ['required', 'date'],
-        ]);
-        $data = $this->statements->generateStatement(
-            $space,
-            $account,
-            $request->user(),
-            $validated['from'],
-            $validated['to'],
-        );
+        $data = $this->statements->statementData($space, $statement, $request->user());
 
         return response($this->statements->renderBankStyleHtml($data), 200, [
             'Content-Type' => 'text/html; charset=UTF-8',
-            'Content-Disposition' => 'inline; filename="'.$data['statement']->statement_number.'.html"',
+            'Content-Disposition' => 'inline; filename="'.$statement->statement_number.'.html"',
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);
@@ -253,26 +277,17 @@ class FinancialSpaceStatementController extends Controller
 
     public function csv(
         FinancialSpace $space,
-        FinancialSpaceTreasuryAccount $account,
+        FinancialSpaceGeneratedStatement $statement,
         Request $request
     ) {
-        $validated = $request->validate([
-            'from' => ['required', 'date'],
-            'to' => ['required', 'date'],
-        ]);
-        $data = $this->statements->generateStatement(
-            $space,
-            $account,
-            $request->user(),
-            $validated['from'],
-            $validated['to'],
-        );
+        $data = $this->statements->statementData($space, $statement, $request->user());
 
         return response($this->statements->renderCsv($data), 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$data['statement']->statement_number.'.csv"',
+            'Content-Disposition' => 'attachment; filename="'.$statement->statement_number.'.csv"',
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }
+
 }
