@@ -778,6 +778,240 @@ class FinancialSpaceStatementService
         ];
     }
 
+    public function generateConsolidatedStatement(
+        FinancialSpace $space,
+        User $actor,
+        string $from,
+        string $to,
+    ): array {
+        $this->assertTreasurySpace($space);
+        $this->assertAdministrator($space, $actor);
+
+        $fromDate = CarbonImmutable::parse($from)->startOfDay();
+        $toDate = CarbonImmutable::parse($to)->startOfDay();
+        if ($toDate->lessThan($fromDate)) {
+            throw ValidationException::withMessages([
+                'to' => ['Statement end date must not be before the start date.'],
+            ]);
+        }
+
+        $accounts = FinancialSpaceTreasuryAccount::query()
+            ->where('financial_space_id', $space->id)
+            ->where('status', 'active')
+            ->orderBy('currency')
+            ->orderBy('account_name')
+            ->get();
+
+        if ($accounts->isEmpty()) {
+            throw ValidationException::withMessages([
+                'treasury' => ['Create at least one treasury account before issuing a consolidated statement.'],
+            ]);
+        }
+
+        $sections = [];
+        $totalsByCurrency = [];
+        $transactionCount = 0;
+        $allReconciled = true;
+
+        foreach ($accounts as $account) {
+            $transactions = FinancialSpaceTransaction::query()
+                ->where('treasury_account_id', $account->id)
+                ->whereBetween('transaction_date', [
+                    $fromDate->toDateString(),
+                    $toDate->toDateString(),
+                ])
+                ->orderBy('transaction_date')
+                ->orderBy('value_date')
+                ->orderBy('id')
+                ->get();
+
+            $opening = $this->bookBalanceBefore($account, $fromDate);
+            $balance = $opening;
+            $debits = 0;
+            $credits = 0;
+            $rows = [];
+
+            foreach ($transactions as $transaction) {
+                if ($transaction->direction === 'credit') {
+                    $balance += $transaction->amount_minor;
+                    $credits += $transaction->amount_minor;
+                } else {
+                    $balance -= $transaction->amount_minor;
+                    $debits += $transaction->amount_minor;
+                }
+
+                if (! in_array($transaction->reconciliation_status, ['matched', 'accepted_exception'], true)) {
+                    $allReconciled = false;
+                }
+
+                $rows[] = [
+                    'account_id' => $account->id,
+                    'account_name' => $account->account_name,
+                    'currency' => $account->currency,
+                    'date' => $transaction->transaction_date->toDateString(),
+                    'value_date' => $transaction->value_date?->toDateString(),
+                    'description' => $transaction->description,
+                    'reference' => $transaction->transaction_reference,
+                    'debit_minor' => $transaction->direction === 'debit' ? $transaction->amount_minor : null,
+                    'credit_minor' => $transaction->direction === 'credit' ? $transaction->amount_minor : null,
+                    'balance_minor' => $balance,
+                    'reconciliation_status' => $transaction->reconciliation_status,
+                ];
+            }
+
+            $transactionCount += count($rows);
+            $currency = $account->currency;
+            $totalsByCurrency[$currency] ??= [
+                'opening_balance_minor' => 0,
+                'closing_balance_minor' => 0,
+                'total_debits_minor' => 0,
+                'total_credits_minor' => 0,
+                'transaction_count' => 0,
+            ];
+            $totalsByCurrency[$currency]['opening_balance_minor'] += $opening;
+            $totalsByCurrency[$currency]['closing_balance_minor'] += $balance;
+            $totalsByCurrency[$currency]['total_debits_minor'] += $debits;
+            $totalsByCurrency[$currency]['total_credits_minor'] += $credits;
+            $totalsByCurrency[$currency]['transaction_count'] += count($rows);
+
+            $sections[] = [
+                'account' => [
+                    'id' => $account->id,
+                    'public_id' => $account->public_id,
+                    'account_name' => $account->account_name,
+                    'account_type' => $account->account_type,
+                    'institution_name' => $account->institution_name,
+                    'account_reference_masked' => $account->account_reference_masked,
+                    'currency' => $currency,
+                ],
+                'opening_balance_minor' => $opening,
+                'closing_balance_minor' => $balance,
+                'total_debits_minor' => $debits,
+                'total_credits_minor' => $credits,
+                'transaction_count' => count($rows),
+                'rows' => $rows,
+            ];
+        }
+
+        $positionByCurrency = [];
+        $assets = DB::table('financial_assets')
+            ->where('financial_space_id', $space->id)
+            ->where('status', 'active')
+            ->whereNull('deleted_at')
+            ->get();
+        foreach ($assets as $asset) {
+            $currency = strtoupper((string) $asset->currency);
+            $positionByCurrency[$currency] ??= [
+                'recorded_assets_minor' => 0,
+                'amount_owed_minor' => 0,
+                'amount_receivable_minor' => 0,
+            ];
+            $positionByCurrency[$currency]['recorded_assets_minor'] += (int) $asset->value_minor;
+        }
+
+        $obligations = DB::table('financial_obligations')
+            ->where('financial_space_id', $space->id)
+            ->where('status', 'open')
+            ->whereNull('deleted_at')
+            ->get();
+        foreach ($obligations as $obligation) {
+            $currency = strtoupper((string) $obligation->currency);
+            $positionByCurrency[$currency] ??= [
+                'recorded_assets_minor' => 0,
+                'amount_owed_minor' => 0,
+                'amount_receivable_minor' => 0,
+            ];
+            if ($obligation->direction === 'i_owe') {
+                $positionByCurrency[$currency]['amount_owed_minor'] += (int) $obligation->outstanding_amount_minor;
+            } else {
+                $positionByCurrency[$currency]['amount_receivable_minor'] += (int) $obligation->outstanding_amount_minor;
+            }
+        }
+
+        $currencies = array_values(array_unique([
+            ...array_keys($totalsByCurrency),
+            ...array_keys($positionByCurrency),
+        ]));
+        sort($currencies);
+
+        $singleCurrency = count($currencies) === 1 ? $currencies[0] : null;
+        $headline = $singleCurrency ? ($totalsByCurrency[$singleCurrency] ?? null) : null;
+        $statementNumber = 'OFC-'.strtoupper(substr(str_replace('-', '', $space->public_id), 0, 8))
+            .'-'.$fromDate->format('Ymd').'-'.$toDate->format('Ymd')
+            .'-'.strtoupper(substr(str_replace('-', '', (string) Str::uuid()), 0, 6));
+
+        $payload = [
+            'statement_number' => $statementNumber,
+            'statement_scope' => 'consolidated',
+            'space' => [
+                'id' => $space->id,
+                'public_id' => $space->public_id,
+                'name' => $space->name,
+                'type' => $space->type,
+                'country' => $space->country,
+                'currency' => $space->currency,
+            ],
+            'period_start' => $fromDate->toDateString(),
+            'period_end' => $toDate->toDateString(),
+            'currencies' => $currencies,
+            'totals_by_currency' => $totalsByCurrency,
+            'position_by_currency' => $positionByCurrency,
+            'sections' => $sections,
+            'transaction_count' => $transactionCount,
+            'reconciliation_status' => $transactionCount === 0
+                ? 'no_activity'
+                : ($allReconciled ? 'reconciled' : 'partially_reconciled'),
+        ];
+        $contentHash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
+
+        $statement = FinancialSpaceGeneratedStatement::query()->create([
+            'public_id' => (string) Str::uuid(),
+            'statement_number' => $statementNumber,
+            'financial_space_id' => $space->id,
+            'treasury_account_id' => null,
+            'generated_by_user_id' => $actor->id,
+            'statement_scope' => 'consolidated',
+            'period_start' => $fromDate->toDateString(),
+            'period_end' => $toDate->toDateString(),
+            'opening_balance_minor' => $headline['opening_balance_minor'] ?? null,
+            'closing_balance_minor' => $headline['closing_balance_minor'] ?? null,
+            'total_debits_minor' => $headline['total_debits_minor'] ?? 0,
+            'total_credits_minor' => $headline['total_credits_minor'] ?? 0,
+            'transaction_count' => $transactionCount,
+            'reconciliation_status' => $payload['reconciliation_status'],
+            'content_hash' => $contentHash,
+            'statement_payload' => $payload,
+            'generated_at' => now(),
+            'summary' => [
+                'space_name' => $space->name,
+                'statement_scope' => 'consolidated',
+                'currencies' => $currencies,
+                'multi_currency' => count($currencies) > 1,
+                'totals_by_currency' => $totalsByCurrency,
+                'position_by_currency' => $positionByCurrency,
+            ],
+        ]);
+
+        $this->auditLogger->record('financial_space.consolidated_statement.generated', $actor, $statement, [
+            'financial_space_id' => $space->id,
+            'period_start' => $fromDate->toDateString(),
+            'period_end' => $toDate->toDateString(),
+            'account_count' => $accounts->count(),
+            'transaction_count' => $transactionCount,
+            'currencies' => $currencies,
+        ]);
+
+        return [
+            'statement' => $statement->fresh(),
+            'space' => $space,
+            'account' => null,
+            'rows' => collect($sections)->flatMap(fn (array $section) => $section['rows'])->values()->all(),
+            'sections' => $sections,
+            'totals_by_currency' => $totalsByCurrency,
+            'position_by_currency' => $positionByCurrency,
+        ];
+    }
+
     public function statementData(
         FinancialSpace $space,
         FinancialSpaceGeneratedStatement $statement,
@@ -796,6 +1030,22 @@ class FinancialSpaceStatementService
                 'name' => $space->name,
                 'type' => $space->type,
             ];
+
+        if ($statement->statement_scope === 'consolidated') {
+            return [
+                'statement' => $statement,
+                'space' => (object) $spaceSnapshot,
+                'account' => null,
+                'rows' => collect($payload['sections'] ?? [])
+                    ->flatMap(fn ($section) => is_array($section['rows'] ?? null) ? $section['rows'] : [])
+                    ->values()
+                    ->all(),
+                'sections' => is_array($payload['sections'] ?? null) ? $payload['sections'] : [],
+                'totals_by_currency' => is_array($payload['totals_by_currency'] ?? null) ? $payload['totals_by_currency'] : [],
+                'position_by_currency' => is_array($payload['position_by_currency'] ?? null) ? $payload['position_by_currency'] : [],
+            ];
+        }
+
         $accountCurrent = FinancialSpaceTreasuryAccount::query()->withTrashed()->findOrFail($statement->treasury_account_id);
         $accountSnapshot = is_array($payload['account'] ?? null)
             ? $payload['account']
@@ -814,6 +1064,9 @@ class FinancialSpaceStatementService
             'space' => (object) $spaceSnapshot,
             'account' => (object) $accountSnapshot,
             'rows' => is_array($payload['rows'] ?? null) ? $payload['rows'] : [],
+            'sections' => [],
+            'totals_by_currency' => [],
+            'position_by_currency' => [],
         ];
     }
 
