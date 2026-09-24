@@ -65,6 +65,7 @@ return [
         'private_key' => env('CITO_PRIVATE_KEY', env('CPAY_PRIVATE_KEY')),
         'environment' => env('CITO_ENVIRONMENT', env('CPAY_ENVIRONMENT', 'sandbox')),
         'timeout_seconds' => (int) env('CITO_TIMEOUT_SECONDS', 15),
+        'financial_data_certified' => (bool) env('CITO_FINANCIAL_DATA_CERTIFIED', false),
     ],
 
     'crb' => [
