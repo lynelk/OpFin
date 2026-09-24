@@ -192,6 +192,18 @@ export const financialSpaceStatementsApi = {
       { method: "POST" }
     ),
 
+  matchRow: (
+    spaceId: number,
+    rowId: number,
+    transactionId: number,
+    token?: string
+  ) =>
+    jsonRequest<{ row: Record<string, unknown> }>(
+      "/financial-spaces/" + spaceId + "/statement-rows/" + rowId + "/match",
+      token,
+      { method: "POST", bodyJson: { transaction_id: transactionId } }
+    ),
+
   statements: (spaceId: number, accountId?: number, token?: string) =>
     jsonRequest<{ statements: GeneratedStatement[] }>(
       "/financial-spaces/" +
