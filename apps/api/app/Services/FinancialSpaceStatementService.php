@@ -192,7 +192,7 @@ class FinancialSpaceStatementService
                 'column_mapping' => $mapping,
                 'summary' => [
                     'currency' => $account->currency,
-                    'minor_unit_exponent' => 0,
+                    'minor_unit_exponent' => $minorUnitExponent,
                     'source' => 'uploaded_statement',
                 ],
             ]);
