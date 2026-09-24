@@ -113,15 +113,19 @@ Registered routes establish exact addresses; handlers/tests establish behaviour;
 authenticated instruction
 → ownership/authorisation
 → policy and consent validation
-→ idempotent provider request
-→ verified finality or explicit pending/error
+→ persist canonical financial/money intent
+→ commit local transaction
+→ idempotent provider request using the same canonical reference
+→ verified finality, explicit failure or preserved ambiguous state
 → locked domain state
 → immutable accounting where applicable
 → receipts/reporting after commit
 → reconciliation
 ```
 
-Ambiguous Cito/provider failure must not silently fire a direct fallback. Reconcile first, then switch route explicitly under policy.
+Ambiguous Cito/provider failure must not silently fire a direct fallback or blindly replay a money instruction. The durable local intent remains the anchor for provider lookup/reconciliation. Reconcile first, then switch/retry explicitly under policy.
+
+For financial changes, also read [Financial Core Architecture](architecture/FINANCIAL_CORE_ARCHITECTURE.md). Before financial UAT or live money movement run `php artisan opfin:financial-readiness`; ordinary `/health/ready` is deliberately not a substitute.
 
 ## Release evidence
 
