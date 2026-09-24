@@ -37,6 +37,19 @@ Language: English (United Kingdom)
 - Hide provider-gated or regulator-gated products from primary launch navigation until genuinely activated. Architecture may remain ready behind feature/capability gates.
 - Account deletion remains available in-app and preserves only legally required records.
 
+## Financial core invariants
+
+- Keep the financial core a modular monolith unless an extraction has an explicit outbox/inbox, idempotency and reconciliation design. Distributed transactions are not an agility feature.
+- Controllers do request-shape validation and response translation. Pricing, product availability, wallet ownership, funding, settlement, accounting and reconciliation rules belong in authoritative services.
+- Persist the canonical money intent before any external provider side effect. Never wrap an external payment HTTP call inside the database transaction that creates the only local record of that instruction.
+- An ambiguous provider submission remains an explicit reconciliation exception and must not be blindly retried.
+- Production credit must revalidate active product/term status, verified payout target, approved funding provenance and regulated disclosures at the authoritative mutation boundary.
+- Only provider evidence may set statement reconciliation to `matched`. Support annotations cannot force a match.
+- Reconciliation write-off is maker-checker and leaves the provider-statement state as an exception.
+- `/api/health/ready` is runtime health. `/api/health/financial-ready` and `php artisan opfin:financial-readiness` are the financial activation/UAT gates.
+- Missing provider, regulatory, funding or tax facts fail closed; do not invent or silently default them into an approved state.
+- Every change to these invariants requires regression coverage and independent financial-control review.
+
 ## Inclusive-design rules
 
 - Sophisticated scoring and compliance logic belongs behind the interface. Each customer screen should normally ask for one clear action.
