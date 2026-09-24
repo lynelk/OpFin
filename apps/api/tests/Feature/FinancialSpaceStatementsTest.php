@@ -113,6 +113,12 @@ class FinancialSpaceStatementsTest extends TestCase
         $statementHash = (string) $statement->json('data.statement.content_hash');
         $this->assertStringStartsWith('OFS-', $statementNumber);
 
+        DB::table('financial_spaces')->where('id', $spaceId)->update(['name' => 'Renamed Club']);
+        DB::table('financial_space_treasury_accounts')->where('id', $accountId)->update([
+            'account_name' => 'Renamed Account',
+            'institution_name' => 'Renamed Bank',
+        ]);
+
         $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
             'transaction_reference' => 'LATE-001',
             'transaction_type' => 'late_correction',
@@ -135,6 +141,8 @@ class FinancialSpaceStatementsTest extends TestCase
         $html->assertSee('OpFin', false)
             ->assertSee('Financial Space Statement', false)
             ->assertSee('Horizon Investment Club', false)
+            ->assertDontSee('Renamed Club', false)
+            ->assertDontSee('Renamed Bank', false)
             ->assertSee('Opening balance', false)
             ->assertSee('Closing balance', false)
             ->assertSee('not a statement issued by Example Bank', false);
@@ -218,18 +226,28 @@ class FinancialSpaceStatementsTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        Sanctum::actingAs($owner);
+        $issued = $this->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statements",
+            ['from' => '2026-09-01', 'to' => '2026-09-30']
+        )->assertCreated();
+        $statementId = (int) $issued->json('data.statement.id');
+
         Sanctum::actingAs($member);
 
         $this->getJson("/api/financial-spaces/{$spaceId}/treasury/accounts")
             ->assertOk()
             ->assertJsonCount(1, 'data.accounts');
 
+        $this->getJson("/api/financial-spaces/{$spaceId}/statements/{$statementId}")
+            ->assertOk()
+            ->assertJsonPath('data.statement.opening_balance_minor', 300000)
+            ->assertJsonPath('data.statement.closing_balance_minor', 300000);
+
         $this->postJson(
             "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statements",
             ['from' => '2026-09-01', 'to' => '2026-09-30']
-        )->assertCreated()
-            ->assertJsonPath('data.statement.opening_balance_minor', 300000)
-            ->assertJsonPath('data.statement.closing_balance_minor', 300000);
+        )->assertForbidden();
 
         $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
             'account_name' => 'Forbidden Account',
@@ -243,6 +261,79 @@ class FinancialSpaceStatementsTest extends TestCase
             'description' => 'Should fail',
             'transaction_date' => '2026-09-05',
         ])->assertForbidden();
+    }
+
+    public function test_authorised_finance_role_can_manually_match_exception_without_forcing_amount_mismatch(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($owner);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'investment_club',
+            'name' => 'Reconcile Club',
+        ])->assertCreated()->json('data.space.id');
+
+        $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'Club Bank',
+            'account_type' => 'bank',
+            'currency' => 'UGX',
+        ])->assertCreated()->json('data.account.id');
+
+        $transactionId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'transaction_reference' => 'BOOK-900',
+            'direction' => 'credit',
+            'amount_minor' => 90000,
+            'description' => 'Contribution recorded earlier',
+            'transaction_date' => '2026-09-01',
+        ])->assertCreated()->json('data.transaction.id');
+
+        $csv = "Date,Description,Reference,Debit,Credit\n2026-09-20,Contribution,BANK-XYZ,,90000\n";
+        $import = $this->post(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statement-imports",
+            [
+                'statement_file' => UploadedFile::fake()->createWithContent('late.csv', $csv),
+                'mapping' => json_encode([
+                    'date' => 'Date',
+                    'description' => 'Description',
+                    'reference' => 'Reference',
+                    'debit' => 'Debit',
+                    'credit' => 'Credit',
+                ]),
+            ],
+            ['Accept' => 'application/json']
+        )->assertCreated();
+
+        $importId = (int) $import->json('data.import.id');
+        $rowId = (int) $import->json('data.import.rows.0.id');
+
+        $this->postJson("/api/financial-spaces/{$spaceId}/statement-imports/{$importId}/reconcile")
+            ->assertOk()
+            ->assertJsonPath('data.import.status', 'exceptions');
+
+        $this->postJson("/api/financial-spaces/{$spaceId}/statement-rows/{$rowId}/match", [
+            'transaction_id' => $transactionId,
+        ])->assertOk()
+            ->assertJsonPath('data.row.reconciliation_status', 'matched')
+            ->assertJsonPath('data.row.match_method', 'manual');
+
+        $this->assertDatabaseHas('financial_space_statement_imports', [
+            'id' => $importId,
+            'status' => 'reconciled',
+            'matched_count' => 1,
+            'exception_count' => 0,
+        ]);
+
+        $wrongTransactionId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions", [
+            'transaction_reference' => 'WRONG-1',
+            'direction' => 'debit',
+            'amount_minor' => 1000,
+            'description' => 'Wrong match candidate',
+            'transaction_date' => '2026-09-20',
+        ])->assertCreated()->json('data.transaction.id');
+
+        $this->postJson("/api/financial-spaces/{$spaceId}/statement-rows/{$rowId}/match", [
+            'transaction_id' => $wrongTransactionId,
+        ])->assertUnprocessable();
     }
 
     public function test_personal_space_cannot_be_turned_into_investment_club_treasury(): void
