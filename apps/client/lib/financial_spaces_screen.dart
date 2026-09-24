@@ -16,6 +16,7 @@ class _FinancialSpacesScreenState extends State<FinancialSpacesScreen>{
       title:const Text('Add a financial space'),content:Column(mainAxisSize:MainAxisSize.min,children:[
         DropdownButtonFormField<String>(initialValue:type,decoration:const InputDecoration(labelText:'What are you setting up?'),items:const[
           DropdownMenuItem(value:'household',child:Text('Household')),DropdownMenuItem(value:'savings_group',child:Text('Savings group')),
+          DropdownMenuItem(value:'investment_club',child:Text('Investment club')),
           DropdownMenuItem(value:'business',child:Text('Business')),DropdownMenuItem(value:'sacco',child:Text('SACCO')),
           DropdownMenuItem(value:'investment_fund',child:Text('Investment / fund organisation')),DropdownMenuItem(value:'partner',child:Text('Financial partner')),
         ],onChanged:(v)=>setLocal(()=>type=v??type)),TextField(controller:name,decoration:const InputDecoration(labelText:'Name')),
@@ -32,8 +33,8 @@ class _FinancialSpacesScreenState extends State<FinancialSpacesScreen>{
       ...spaces.map((x)=>Card(child:ListTile(leading:Icon(_icon(x['type']?.toString())),title:Text(x['name']?.toString()??'Financial space'),subtitle:Text('${_label(x['type']?.toString())} · ${x['role']??'member'}'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>FinancialSpaceDetailScreen(space:x)))))),
     ]));
   }));
-  IconData _icon(String? t)=>t=='savings_group'?Icons.groups_outlined:t=='business'?Icons.storefront_outlined:t=='sacco'?Icons.account_balance_outlined:t=='household'?Icons.home_outlined:Icons.account_balance_wallet_outlined;
-  String _label(String? t)=>{'personal':'My money','savings_group':'Savings group','business':'Business','sacco':'SACCO','household':'Household','investment_fund':'Investment / fund','partner':'Partner'}[t]??'Organisation';
+  IconData _icon(String? t)=>t=='savings_group'?Icons.groups_outlined:t=='investment_club'?Icons.trending_up_outlined:t=='business'?Icons.storefront_outlined:t=='sacco'?Icons.account_balance_outlined:t=='household'?Icons.home_outlined:Icons.account_balance_wallet_outlined;
+  String _label(String? t)=>{'personal':'My money','savings_group':'Savings group','investment_club':'Investment club','business':'Business','sacco':'SACCO','household':'Household','investment_fund':'Investment / fund','partner':'Partner'}[t]??'Organisation';
 }
 
 class FinancialSpaceDetailScreen extends StatefulWidget{
@@ -46,6 +47,7 @@ class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>
   @override void initState(){super.initState();_life=FinancialSpacesApi.financialLife(id);}
   Future<void> reload()async{setState(()=>_life=FinancialSpacesApi.financialLife(id));await _life;}
   String ugx(dynamic v)=>'UGX ${money.format((v as num?)?.toInt()??0)}';
+  bool get groupLike=>['savings_group','investment_club','sacco'].contains(widget.space['type']?.toString());
   Future<void> quick(String kind)async{
     final name=TextEditingController(),amount=TextEditingController();
     final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(kind=='asset'?'Add what you own':kind=='owe'?'Add what you owe':'Add money owed to you'),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:name,decoration:const InputDecoration(labelText:'Name or person')),TextField(controller:amount,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Amount (UGX)'))]),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Save'))]));
@@ -56,10 +58,12 @@ class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>
     Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Financial position'),Text(ugx(d['net_worth_minor']),style:const TextStyle(fontSize:30,fontWeight:FontWeight.w800)),const SizedBox(height:8),Text('Safe to spend ${ugx(d['safe_to_spend_minor'])}')] ))),
     Row(children:[Expanded(child:_tile('I own',ugx(d['assets_minor']),()=>quick('asset'))),const SizedBox(width:8),Expanded(child:_tile('I owe',ugx(d['debt_minor']),()=>quick('owe')))]),
     _tile('Owed to me',ugx(d['receivables_minor']),()=>quick('receivable')),
-    if(widget.space['type']=='savings_group')Card(child:ListTile(leading:const Icon(Icons.group_add_outlined),title:const Text('Members & invitations'),subtitle:const Text('Manage the group from the app.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupMembersScreen(spaceId:id))))),
+    if(groupLike)Card(child:ListTile(leading:const Icon(Icons.group_add_outlined),title:const Text('Members & invitations'),subtitle:const Text('Manage membership and roles from the same OpFin identity.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupMembersScreen(spaceId:id))))),
+    if(groupLike)Card(child:ListTile(leading:const Icon(Icons.verified_outlined),title:const Text('Registration & verification'),subtitle:const Text('Attach government or authority identifiers without changing the OpFin group identity.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupCredentialsScreen(space:widget.space))))),
+    if(groupLike)Card(child:ListTile(leading:const Icon(Icons.health_and_safety_outlined),title:const Text('Group protection'),subtitle:const Text('See approved group-capable insurance products. Enrolment remains controlled.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupProtectionCatalogueScreen(space:widget.space))))),
   ]));}));
   Widget _tile(String t,String v,VoidCallback tap)=>Card(child:ListTile(title:Text(t),subtitle:Text(v),trailing:const Icon(Icons.add_circle_outline),onTap:tap));
-  String _label(String? t)=>t=='savings_group'?'Group money':t=='business'?'Business money':t=='personal'?'My money':'Financial space';
+  String _label(String? t)=>t=='savings_group'?'Group money':t=='investment_club'?'Investment club':t=='sacco'?'SACCO':t=='business'?'Business money':t=='personal'?'My money':'Financial space';
 }
 class GroupMembersScreen extends StatefulWidget{final int spaceId;const GroupMembersScreen({super.key,required this.spaceId});@override State<GroupMembersScreen> createState()=>_GroupMembersScreenState();}
 class _GroupMembersScreenState extends State<GroupMembersScreen>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=FinancialSpacesApi.members(widget.spaceId);}Future<void> invite()async{final p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Invite member'),content:TextField(controller:p,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Phone number')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Invite'))]));if(ok==true&&p.text.isNotEmpty){ await FinancialSpacesApi.invite(widget.spaceId,p.text,'member'); if(mounted){ ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Invitation created.'))); } }}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Group members')),floatingActionButton:FloatingActionButton.extended(onPressed:invite,icon:const Icon(Icons.person_add),label:const Text('Invite')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());return ListView(padding:const EdgeInsets.all(20),children:(s.data??[]).map((m)=>ListTile(leading:const Icon(Icons.person_outline),title:Text('Member ${m['user_id']}'),subtitle:Text('${m['role']} · ${m['status']}'))).toList());}));}
