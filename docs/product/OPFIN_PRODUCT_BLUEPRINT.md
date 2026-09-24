@@ -115,6 +115,20 @@ Protection is a native financial-life capability. Personal protection may be dis
 
 Savings Groups, Investment Clubs and SACCOs may review products explicitly approved for group audiences from their Space. Group policy enrolment, member consent, premium collection, coverage allocation and claims handling remain fail-closed until the applicable partner, regulatory, custody, consent and operating controls are separately activated. Merely exposing a group product catalogue is not activation.
 
+## Location context
+
+Location is an optional supporting context, not a primary navigation module and not a continuous tracking service.
+
+The App may request foreground location for an explicit financial task. Personal service discovery is approximate by design. Precise coordinates are reserved for location-dependent assets, insured risks or claim incidents. Manual location remains available when device/Google location is unavailable.
+
+Google Maps Platform is used behind the OpFin API for place search, place details, reverse geocoding, Static Map previews and optional routes. Server API keys never enter Flutter/Web builds.
+
+Saving Groups, Investment Clubs and SACCOs can record operating areas and meeting places without exposing member home locations. Physical financial assets and location-dependent insurance risks can carry their own location context.
+
+Partner service networks are represented as partner-owned service points. Operations geographic reporting is aggregate-only with cohort suppression; partner users see only their own recorded service network. Individual customer pins are not exposed in partner analytics.
+
+All Location Context records are non-credit by default. Location cannot become an underwriting input merely because it exists in OpFin. See docs/architecture/LOCATION_CONTEXT.md.
+
 ## Mobile completeness contract
 
 An Individual must be able to use the App for onboarding/verification, money tracking, budgets, goals, debt, receivables, assets/liabilities, net worth, savings, investments, insurance, payments, borrowing, financial-health insights, statements/documents and Space switching, subject to actual activated provider services.
