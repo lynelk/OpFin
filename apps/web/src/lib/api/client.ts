@@ -42,6 +42,8 @@ import type {
   LoanApplication,
   LoginResponse,
   LoanProduct,
+  LocationContext,
+  LocationInsightRow,
   ProductTerm,
   Profile,
   ReconciliationItem,
@@ -491,3 +493,56 @@ export const opfinApi = {
 function envelopeAsync<T>(data: T, message: string): Promise<ApiEnvelope<T>> {
   return Promise.resolve(envelope(data, message));
 }
+
+
+export const locationContextsApi = {
+  status: (token?: string) =>
+    request<{
+      google_maps_configured: boolean;
+      static_maps_enabled: boolean;
+      routes_enabled: boolean;
+      background_tracking: false;
+      default_precision: string;
+    }>("/location/status", { token }),
+
+  list: (subjectType: string, subjectId: number, token?: string) =>
+    request<{ locations: LocationContext[] }>(
+      "/location-contexts?subject_type=" +
+        encodeURIComponent(subjectType) +
+        "&subject_id=" +
+        encodeURIComponent(String(subjectId)),
+      { token }
+    ),
+
+  insights: (token?: string) =>
+    request<{
+      minimum_cohort: number;
+      individual_locations_exposed: false;
+      rows: LocationInsightRow[];
+    }>("/admin/location-insights", { token }),
+
+  staticMapDataUrl: async (
+    contextId: number,
+    token?: string,
+    zoom = 14
+  ): Promise<string | null> => {
+    if (!API_BASE_URL || USE_MOCKS) return null;
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/location/static-map/${contextId}?zoom=${zoom}`,
+        {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          cache: "no-store"
+        }
+      );
+      if (!response.ok) return null;
+      const type = response.headers.get("content-type") ?? "image/png";
+      const buffer = Buffer.from(await response.arrayBuffer());
+      return `data:${type};base64,${buffer.toString("base64")}`;
+    } catch {
+      return null;
+    }
+  }
+};
