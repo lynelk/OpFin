@@ -13,6 +13,8 @@ class FundingPoolService
 
     private const BLOCKED_STATUSES = [
         'draft',
+        'awaiting_compliance_review',
+        'rejected',
         'paused',
         'closed',
         'cancelled',
@@ -27,11 +29,7 @@ class FundingPoolService
         }
 
         if (! $fundingPoolId) {
-            if ((bool) config('opfin.credit.require_funding_pool_assignment', false)) {
-                throw new InvalidArgumentException('A funding pool must be assigned before this credit offer can be generated.');
-            }
-
-            return;
+            throw new InvalidArgumentException('An approved third-party lender funding pool must be assigned before this credit offer can be generated.');
         }
 
         $pool = DB::table('capital_mandates')->where('id', $fundingPoolId)->first();
@@ -41,11 +39,7 @@ class FundingPoolService
     public function reserve(CreditOffer $offer): CreditOffer
     {
         if (! $offer->funding_pool_id) {
-            if ((bool) config('opfin.credit.require_funding_pool_assignment', false)) {
-                throw new InvalidArgumentException('A funding pool must be assigned before disbursement can be initiated.');
-            }
-
-            return $offer;
+            throw new InvalidArgumentException('An approved third-party lender funding pool must be assigned before disbursement can be initiated.');
         }
 
         return DB::transaction(function () use ($offer) {
@@ -217,6 +211,25 @@ class FundingPoolService
         }
         if (! $pool->approved_by || ! $pool->approved_at) {
             throw new InvalidArgumentException('The selected funding pool has not completed approval.');
+        }
+        if (! $pool->partner_id) {
+            throw new InvalidArgumentException('The selected funding pool is not linked to an approved third-party lender.');
+        }
+        $partner = DB::table('partners')->where('id', $pool->partner_id)->first();
+        if (! $partner || strtolower((string) $partner->status) !== 'active') {
+            throw new InvalidArgumentException('The selected funding pool lender is not active.');
+        }
+        if (strcasecmp((string) $partner->code, 'OPFIN') === 0 || strcasecmp((string) $partner->name, 'OpFin') === 0) {
+            throw new InvalidArgumentException('OpFin cannot be the primary lender for production credit.');
+        }
+        if (! in_array(strtolower((string) $partner->partner_type), ['lender', 'bank', 'mfi', 'sacco', 'credit_provider', 'financial_institution'], true)) {
+            throw new InvalidArgumentException('The selected funding pool partner is not configured as a lending institution.');
+        }
+        $evidence = json_decode((string) ($partner->regulatory_evidence ?? '{}'), true);
+        if (! is_array($evidence)
+            || trim((string) ($evidence['licence_number'] ?? '')) === ''
+            || trim((string) ($evidence['licence_authority'] ?? '')) === '') {
+            throw new InvalidArgumentException('The selected lender is missing required regulatory licence evidence.');
         }
         if (in_array(strtolower((string) $pool->status), self::BLOCKED_STATUSES, true)) {
             throw new InvalidArgumentException('The selected funding pool is not available for new credit.');

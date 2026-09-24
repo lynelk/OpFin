@@ -133,6 +133,16 @@ export default async function DashboardPage() {
           </div>
         </section>
 
+        <section className="panel">
+          <div className="case-card-head">
+            <div>
+              <h2>Keep essentials running</h2>
+              <p className="muted">Electricity, water, internet, rent and other verified essentials can be financed through participating third-party lenders when eligible.</p>
+            </div>
+            <Link href="/essentials">Open Essentials</Link>
+          </div>
+        </section>
+
         <div className="grid grid-2">
           <section className="panel">
             <div className="case-card-head">

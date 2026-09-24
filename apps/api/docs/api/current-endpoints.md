@@ -572,3 +572,36 @@ A programme-partner with an active explicit programme grant may use:
 `GET /api/partner/inclusive-finance/programmes/{programme}/exports/{format}`
 
 The export remains programme-scoped, aggregate-only and privacy-suppressed.
+
+## OpFin Essentials
+
+Customer routes:
+- `GET /api/essentials`
+- `GET /api/essentials/catalogue`
+- `POST /api/essentials/accounts`
+- `POST /api/essentials/accounts/{account}/verify`
+- `POST /api/essentials/eligibility`
+- `GET/POST /api/essentials/quotes`
+- `POST /api/essentials/quotes/{quote}/authorise-partner`
+- `POST /api/essentials/quotes/{quote}/accept`
+- `GET /api/essentials/advances`
+- `POST /api/essentials/advances/{advance}/repay`
+- `GET/POST/DELETE /api/essentials/partner-authorisations...`
+
+Embedded-platform routes:
+- `POST /api/partner/essentials/customers/{customer}/eligibility`
+- `POST /api/partner/essentials/customers/{customer}/accounts`
+- `POST /api/partner/essentials/customers/{customer}/quotes`
+- `GET /api/partner/essentials/customers/{customer}/status`
+- `POST /api/partner/essentials/quotes/{quote}/complete`
+
+Operations routes:
+- `GET /api/admin/essentials/portfolio`
+- `GET /api/admin/essentials/work-queue`
+- `POST/PATCH /api/admin/essentials/billers...`
+- `POST /api/admin/essentials/accounts/{account}/verify`
+- `POST /api/admin/essentials/lenders`
+- `POST /api/admin/essentials/advances/{advance}/reconcile`
+- `POST /api/admin/essentials/repayments/{repayment}/reconcile`
+
+These endpoints are lender-neutral and fail closed when the required certified provider route is not configured.

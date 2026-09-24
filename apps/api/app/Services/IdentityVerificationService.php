@@ -31,6 +31,14 @@ class IdentityVerificationService
         }
 
         if ($route === 'direct' || $this->directFallbackAllowed()) {
+            $directProvider = strtolower(trim((string) config('services.identity_verification.provider')));
+            if (str_contains($directProvider, 'gnugrid')) {
+                return $this->markPending($case, [
+                    'GNUGRID_REQUIRES_CITO',
+                    'DIRECT_GNUGRID_IDENTITY_ROUTE_BLOCKED',
+                ], provider: 'cito_required');
+            }
+
             return $this->verifyDirect($case);
         }
 

@@ -20,6 +20,7 @@ OpFin is a personal financial operating platform with embedded financial service
 8. **Advice is independent of commercial incentives.** Need, eligibility and suitability precede product ranking and revenue calculation.
 9. **Capability-based monetisation.** Essential financial management remains accessible; subscriptions buy additional depth, automation, scale or convenience.
 10. **Independent operation with preferred gateways.** OpFin owns customer/product state, financial intent, experience, intelligence, ledger, servicing and reconciliation. Cito is the preferred third-party integration gateway and CPay is the preferred payment route, but neither is a mandatory runtime dependency. Certified direct-provider adapters remain controlled fallbacks.
+11. **Partner-funded credit by default.** At initial launch OpFin is not the primary balance-sheet lender. Every live credit offer requires an approved third-party lender/funding partner. Any future direct-lending model requires explicit legal, regulatory, accounting and product activation rather than a configuration bypass.
 11. **Evidence over appearance.** Implemented source, deployed source, activated provider service and release certification are separate states and must be described separately.
 
 ## Canonical layers
@@ -70,7 +71,7 @@ OpFin is not economically dependent on lending. Monetisation is multi-sided and 
 
 - **Customers:** optional premium financial-management automation, advanced analytics/planning and convenience services; essential Individual and Savings Group management remains accessible.
 - **Employers and organisations:** per-organisation and/or per-active-member subscriptions, financial-wellness programme administration, payroll/benefit integrations and approved servicing fees.
-- **Credit:** interest margin and disclosed fees only where the applicable licence/product policy permits them.
+- **Credit:** partner-funded origination, servicing, administration and disclosed revenue-share economics where lawful and contractually agreed. OpFin does not assume primary-lender interest income at initial launch.
 - **Savings, investments and protection:** partner-paid distribution, administration, referral or AUM-linked economics where lawful and contractually agreed; customer assets remain partner/custody controlled.
 - **Payments and remittance:** orchestration/transaction/FX economics only where OpFin or the executing regulated partner is authorised and the commercial agreement permits it.
 - **Partner marketplace:** product distribution, servicing and revenue share with approved partners.
@@ -206,3 +207,11 @@ Therefore the current source may be described as deployed, but the exact head mu
 Implementation proceeds by vertical journey slices and reuses working components. Existing identity, consent, credit, savings/protection, financial-wellbeing, ledger/reconciliation, governed provider adapters, community-finance and channel foundations are adapted rather than rewritten without evidence.
 
 Every slice is done only when implementation, permissions, failure states, tests, documentation and applicable production acceptance evidence agree.
+
+## OpFin Essentials
+
+Essentials is an embedded financial-service capability inside the wider OpFin financial operating platform. It provides purpose-bound financing for verified electricity, water, connectivity, household energy and rent while preserving the existing Financial Spaces, Financial Compass, savings, investment, insurance, employer and ordinary responsible-credit journeys.
+
+OpFin is not the initial primary lender. Approved third-party lenders provide credit through governed capital mandates or Cito-managed lender routes, every offer identifies the lender, and lender approvals do not stack above the customer's overall responsible-credit headroom. CPay is the preferred settlement/repayment route, all gnuGrid services consumed by OpFin route through Cito, and Stolets/other approved platforms integrate only through customer-controlled Financial Space permissions.
+
+The detailed contract is `product/OPFIN_ESSENTIALS.md`.

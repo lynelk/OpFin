@@ -103,3 +103,11 @@ python3 scripts/search-api.py "umra"
 A build or deployment is not proof that provider credentials, legal approvals, store publication, physical-device accessibility or full release-gate evidence exist.
 
 Read `SECURITY.md`, `AGENTS.md` and the relevant current documentation before changing authentication, KYC, credit, provider routing, money movement or customer-facing financial state.
+
+## OpFin Essentials
+
+OpFin Essentials adds purpose-bound financing for verified electricity, water, connectivity, household energy and rent without changing OpFin's wider financial-operating-platform identity. OpFin orchestrates and services the journey; an approved third-party provider is the lender and is named in every offer.
+
+Cito is the mandatory route for gnuGrid services, CPay is the preferred settlement/reconciliation route, and approved platforms such as Stolets can originate Essentials journeys only under customer-controlled Financial Space permissions.
+
+See `docs/product/OPFIN_ESSENTIALS.md`.

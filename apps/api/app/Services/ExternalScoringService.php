@@ -98,6 +98,20 @@ class ExternalScoringService
 
     private function refreshDirectCrb(User $user, float $weight): CreditScoreComponent
     {
+        $provider = strtolower(trim((string) config('services.crb.provider')));
+        if ($provider === '' || str_contains($provider, 'gnugrid')) {
+            return $this->write(
+                $user,
+                'crb',
+                $weight,
+                null,
+                CreditScoreComponent::STATUS_UNAVAILABLE,
+                null,
+                $provider === '' ? ['DIRECT_CRB_PROVIDER_ID_REQUIRED'] : ['GNUGRID_REQUIRES_CITO'],
+                ['required_route' => $provider === '' ? 'explicit_non_gnugrid_provider' : 'CITO_MANAGED'],
+            );
+        }
+
         $baseUrl = trim((string) config('services.crb.base_url'));
         $clientId = trim((string) config('services.crb.account'));
         $clientSecret = trim((string) config('services.crb.password'));

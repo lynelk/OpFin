@@ -211,6 +211,18 @@ class LongRangeGovernanceService
         if ($data['status'] === 'approved' && empty((array) json_decode($record->investment_policy ?? '[]', true))) {
             throw ValidationException::withMessages(['investment_policy' => ['An investment policy is required before approval.']]);
         }
+        if ($data['status'] === 'approved') {
+            $partner = DB::table('partners')->where('id', $record->partner_id)->first();
+            $evidence = $partner ? json_decode((string) ($partner->regulatory_evidence ?? '{}'), true) : [];
+            if (! $partner
+                || strtolower((string) $partner->status) !== 'active'
+                || in_array(strtoupper((string) $partner->code), ['OPFIN'], true)
+                || ! in_array(strtolower((string) $partner->partner_type), ['lender', 'bank', 'mfi', 'sacco', 'credit_provider', 'financial_institution'], true)
+                || trim((string) ($evidence['licence_number'] ?? '')) === ''
+                || trim((string) ($evidence['licence_authority'] ?? '')) === '') {
+                throw ValidationException::withMessages(['partner_id' => ['Capital mandates used for credit require an active licensed third-party lender.']]);
+            }
+        }
         DB::table('capital_mandates')->where('id', $id)->update([
             'status' => $data['status'],
             'approved_by' => $actor->id,

@@ -89,3 +89,9 @@ Do not sign off with unresolved Critical/High defects in identity, permissions, 
 Record medium/low exceptions with owner, rationale and accepted disposition.
 
 A deployment-success status is not sufficient release evidence when the required exact-head CI/security/deployment gates have not also run.
+
+## UAT: OpFin Essentials
+
+Acceptance must cover provider/rental-account verification, non-stacking lender headroom, rejection of OpFin as primary lender, Android/store term controls, immutable disclosure hashes, fail-closed provider configuration, lender-capital reservation/deployment/release, Financial Space obligations, normalised repayment schedules, repayment reconciliation, embedded-platform customer scopes, and blocking direct gnuGrid CRB/identity routes.
+
+Capture request/response evidence, audit events and reconciliation references for each financial state transition.

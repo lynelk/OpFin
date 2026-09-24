@@ -61,7 +61,7 @@ class ProductionCreditOfferController extends Controller
             'access_fee_minor' => 'nullable|integer|min:0',
             'disbursement_fee_minor' => 'nullable|integer|min:0',
             'fee_treatment' => ['nullable', Rule::in(['financed', 'deducted'])],
-            'funding_pool_id' => 'nullable|integer|exists:capital_mandates,id',
+            'funding_pool_id' => 'required|integer|exists:capital_mandates,id',
             'expires_in_minutes' => 'nullable|integer|min:5|max:10080',
         ]);
 

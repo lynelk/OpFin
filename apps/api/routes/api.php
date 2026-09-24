@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\AdminEssentialsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CapabilityController;
 use App\Http\Controllers\Api\CpayWebhookController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Api\CustomerPhoneController;
 use App\Http\Controllers\Api\CustomerSupportController;
 use App\Http\Controllers\Api\CustomerWalletController;
 use App\Http\Controllers\Api\EarlySettlementController;
+use App\Http\Controllers\Api\EssentialsController;
 use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\FinancialSpaceController;
@@ -24,8 +26,11 @@ use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
 use App\Http\Controllers\Api\LocationContextController;
+use App\Http\Controllers\Api\LongRangeGovernanceController;
+use App\Http\Controllers\Api\LongRangePlatformController;
 use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\OrganisationJourneyController;
+use App\Http\Controllers\Api\PartnerEssentialsController;
 use App\Http\Controllers\Api\PartnerReportingController;
 use App\Http\Controllers\Api\PlatformCommerceController;
 use App\Http\Controllers\Api\ProgrammeCompletionController;
@@ -129,6 +134,21 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/credit/profile/refresh', [CustomerCreditProfileController::class, 'refresh']);
     Route::get('/credit/options', [CustomerCreditProfileController::class, 'options']);
     Route::patch('/accessibility-preferences', [CustomerCreditProfileController::class, 'accessibility']);
+
+    Route::get('/essentials', [EssentialsController::class, 'summary']);
+    Route::get('/essentials/catalogue', [EssentialsController::class, 'catalogue']);
+    Route::get('/essentials/partner-authorisations', [EssentialsController::class, 'partnerAuthorisations']);
+    Route::post('/essentials/partner-authorisations', [EssentialsController::class, 'authorisePartnerPlatform']);
+    Route::delete('/essentials/partner-authorisations/{authorisation}', [EssentialsController::class, 'revokePartnerPlatform']);
+    Route::post('/essentials/accounts', [EssentialsController::class, 'storeAccount']);
+    Route::post('/essentials/accounts/{account}/verify', [EssentialsController::class, 'verifyAccount']);
+    Route::post('/essentials/eligibility', [EssentialsController::class, 'eligibility']);
+    Route::get('/essentials/quotes', [EssentialsController::class, 'quotes']);
+    Route::post('/essentials/quotes', [EssentialsController::class, 'createQuote']);
+    Route::post('/essentials/quotes/{quote}/authorise-partner', [EssentialsController::class, 'authorisePartner']);
+    Route::post('/essentials/quotes/{quote}/accept', [EssentialsController::class, 'accept']);
+    Route::get('/essentials/advances', [EssentialsController::class, 'advances']);
+    Route::post('/essentials/advances/{advance}/repay', [EssentialsController::class, 'repay']);
 
     Route::get('/inclusive-finance/profile', [InclusiveFinanceController::class, 'profile']);
     Route::patch('/inclusive-finance/profile', [InclusiveFinanceController::class, 'updateProfile']);
@@ -261,6 +281,8 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/workflow-runs/{run}/transition', [V5P0PlatformController::class, 'transitionWorkflow']);
 
     Route::post('/admin/credit-decisions/{decision}/approve', [ProductionCreditController::class, 'approve']);
+    Route::post('/admin/capital-mandates', [LongRangePlatformController::class, 'capital']);
+    Route::post('/admin/capital-mandates/{id}/review', [LongRangeGovernanceController::class, 'capital']);
 
     Route::get('/admin/inclusive-finance/programmes', [InclusiveFinanceController::class, 'adminProgrammes']);
     Route::get('/admin/inclusive-finance/impact', [InclusiveFinanceController::class, 'adminImpact']);
@@ -344,6 +366,25 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/protection-premiums/{payment}/confirm', [SaveProtectionOperationsController::class, 'confirmPremium']);
     Route::post('/admin/protection-policies/{policy}/issue', [SaveProtectionOperationsController::class, 'issuePolicy']);
     Route::patch('/admin/protection-claims/{claim}', [SaveProtectionOperationsController::class, 'updateClaim']);
+});
+
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:partner_api,platform_admin,operations'])->group(function () {
+    Route::post('/partner/essentials/customers/{customer}/eligibility', [PartnerEssentialsController::class, 'eligibility']);
+    Route::post('/partner/essentials/customers/{customer}/accounts', [PartnerEssentialsController::class, 'storeAccount']);
+    Route::post('/partner/essentials/customers/{customer}/quotes', [PartnerEssentialsController::class, 'createQuote']);
+    Route::get('/partner/essentials/customers/{customer}/status', [PartnerEssentialsController::class, 'status']);
+    Route::post('/partner/essentials/quotes/{quote}/complete', [PartnerEssentialsController::class, 'complete']);
+});
+
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::get('/admin/essentials/portfolio', [AdminEssentialsController::class, 'portfolio']);
+    Route::get('/admin/essentials/work-queue', [AdminEssentialsController::class, 'workQueue']);
+    Route::post('/admin/essentials/billers', [AdminEssentialsController::class, 'storeBiller']);
+    Route::patch('/admin/essentials/billers/{biller}', [AdminEssentialsController::class, 'updateBiller']);
+    Route::post('/admin/essentials/accounts/{account}/verify', [AdminEssentialsController::class, 'verifyAccount']);
+    Route::post('/admin/essentials/lenders', [AdminEssentialsController::class, 'storeLender']);
+    Route::post('/admin/essentials/advances/{advance}/reconcile', [AdminEssentialsController::class, 'reconcile']);
+    Route::post('/admin/essentials/repayments/{repayment}/reconcile', [AdminEssentialsController::class, 'reconcileRepayment']);
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:programme_partner'])->group(function () {

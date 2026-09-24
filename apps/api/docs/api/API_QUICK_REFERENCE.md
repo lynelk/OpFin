@@ -160,3 +160,13 @@ UMRA-specific controls remain under `/api/admin/umra/...` and are documented in 
 ## Client rule
 
 Use `api/frontend-backend-contract.md` for client behaviour, error/finality handling and presentation rules. Do not infer client behaviour from route names alone.
+
+## Essentials
+
+Essentials provides purpose-bound finance through approved third-party lenders.
+
+Customer flow: `GET /api/essentials/catalogue` → `POST /api/essentials/accounts` → account verification → `POST /api/essentials/eligibility` → `POST /api/essentials/quotes` → disclosed acceptance at `POST /api/essentials/quotes/{quote}/accept` → repayment at `POST /api/essentials/advances/{advance}/repay`.
+
+Customer platform permissions use `GET/POST/DELETE /api/essentials/partner-authorisations...`. Embedded providers use `/api/partner/essentials/...`; operations use `/api/admin/essentials/...`.
+
+Invariants: OpFin is not the primary lender; lender limits do not stack above the customer's overall responsible-credit headroom; financed funds go to the verified provider/beneficiary rather than the customer; all gnuGrid services route through Cito; configured settlement/repayment routes use CPay.

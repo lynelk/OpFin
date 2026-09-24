@@ -22,6 +22,8 @@ class CapabilityRegistryTest extends TestCase
             ->assertJsonPath('data.country_policy.currency', 'UGX')
             ->assertJsonPath('data.capabilities.home.status', 'AVAILABLE')
             ->assertJsonPath('data.capabilities.borrow.status', 'AVAILABLE')
+            ->assertJsonPath('data.capabilities.essentials.status', 'AVAILABLE')
+            ->assertJsonPath('data.capabilities.essentials.owner', 'opfin')
             ->assertJsonPath('data.capabilities.ussd.status', 'AVAILABLE')
             ->assertJsonPath('data.capabilities.p2p_participatory_finance.status', 'DORMANT_READY')
             ->assertJsonPath('data.capabilities.community_growth_circles.public_name', 'Community Growth Circles')
@@ -43,6 +45,7 @@ class CapabilityRegistryTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.capabilities.whatsapp.external_gate', 'meta_whatsapp_production_credentials')
             ->assertJsonPath('data.capabilities.investments.external_gate', 'licensed_investment_provider_custody_and_settlement')
+            ->assertJsonPath('data.capabilities.essentials.external_gate', 'third_party_lender_biller_cpay_cito_and_beneficiary_activation')
             ->assertJsonPath('data.capabilities.p2p_participatory_finance.external_gate', 'community_growth_circle_governance_custody_regulatory_signoff')
             ->assertJsonPath('data.capabilities.sacco.public_name', 'Member Cooperative Core')
             ->assertJsonPath('data.capabilities.employer.public_name', 'Workplace Support Finance');

@@ -103,7 +103,7 @@ class CustomerCreditProfileService
                     'coverage_percent' => $coverage,
                     'credit_limit_minor' => 0,
                     'available_to_borrow_minor' => 0,
-                    'current_exposure_minor' => $this->totalOutstanding($user),
+                    'current_exposure_minor' => $this->totalCreditExposure($user),
                     'amount_due_minor' => $this->amountDue($user),
                     'total_outstanding_minor' => $this->totalOutstanding($user),
                     'next_due_date' => $this->nextDueDate($user),
@@ -140,11 +140,12 @@ class CustomerCreditProfileService
         $coverageFactor = min(1.0, $coverage / 100);
         $limit = $adverse || $coverage < $minimumCoverage ? 0 : (int) floor($baseLimit * $coverageFactor);
         $outstanding = $this->totalOutstanding($user);
+        $currentExposure = $this->totalCreditExposure($user);
         $hasActiveLoan = Loan::withoutGlobalScopes()
             ->where('user_id', $user->id)
             ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])
             ->exists();
-        $available = $hasActiveLoan ? 0 : max(0, $limit - $outstanding);
+        $available = $hasActiveLoan ? 0 : max(0, $limit - $currentExposure);
 
         $secondaryVerified = CustomerPhoneNumber::query()
             ->where('user_id', $user->id)
@@ -178,7 +179,7 @@ class CustomerCreditProfileService
                 'band' => $band,
                 'coverage_percent' => $coverage,
                 'credit_limit_minor' => $limit,
-                'current_exposure_minor' => $outstanding,
+                'current_exposure_minor' => $currentExposure,
                 'available_to_borrow_minor' => $available,
                 'amount_due_minor' => $this->amountDue($user),
                 'total_outstanding_minor' => $outstanding,
@@ -256,6 +257,7 @@ class CustomerCreditProfileService
         }
 
         $outstanding = $this->totalOutstanding($user);
+        $currentExposure = $this->totalCreditExposure($user);
 
         return CreditProfile::updateOrCreate(
             ['user_id' => $user->id],
@@ -263,7 +265,7 @@ class CustomerCreditProfileService
                 'status' => CreditProfile::STATUS_PENDING,
                 'coverage_percent' => 0,
                 'credit_limit_minor' => 0,
-                'current_exposure_minor' => $outstanding,
+                'current_exposure_minor' => $currentExposure,
                 'available_to_borrow_minor' => 0,
                 'amount_due_minor' => $this->amountDue($user),
                 'total_outstanding_minor' => $outstanding,
@@ -357,6 +359,19 @@ class CustomerCreditProfileService
         return ['Not eligible', 0];
     }
 
+    private function totalCreditExposure(User $user): int
+    {
+        $outstanding = $this->totalOutstanding($user);
+        $pendingEssentials = Schema::hasTable('essentials_advances')
+            ? (int) DB::table('essentials_advances')
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['funding_reserved', 'fulfilment_pending'])
+                ->sum('principal_outstanding_minor')
+            : 0;
+
+        return $outstanding + $pendingEssentials;
+    }
+
     private function totalOutstanding(User $user): int
     {
         $production = 0;
@@ -379,7 +394,16 @@ class CustomerCreditProfileService
                 ->sum('schedule.total_outstanding'));
         }
 
-        return $production + $legacy;
+        $essentials = Schema::hasTable('essentials_repayment_schedule_items')
+            ? (int) DB::table('essentials_repayment_schedule_items as schedule')
+                ->join('essentials_advances as advance', 'advance.id', '=', 'schedule.advance_id')
+                ->where('advance.user_id', $user->id)
+                ->whereIn('advance.status', ['active', 'overdue'])
+                ->where('schedule.total_outstanding_minor', '>', 0)
+                ->sum('schedule.total_outstanding_minor')
+            : 0;
+
+        return $production + $legacy + $essentials;
     }
 
     private function amountDue(User $user): int
@@ -405,7 +429,17 @@ class CustomerCreditProfileService
                 ->sum('schedule.total_outstanding'))
             : 0;
 
-        return $production + $legacy;
+        $essentials = Schema::hasTable('essentials_repayment_schedule_items')
+            ? (int) DB::table('essentials_repayment_schedule_items as schedule')
+                ->join('essentials_advances as advance', 'advance.id', '=', 'schedule.advance_id')
+                ->where('advance.user_id', $user->id)
+                ->whereIn('advance.status', ['active', 'overdue'])
+                ->where('schedule.due_date', '<=', $today)
+                ->where('schedule.total_outstanding_minor', '>', 0)
+                ->sum('schedule.total_outstanding_minor')
+            : 0;
+
+        return $production + $legacy + $essentials;
     }
 
     private function nextDueDate(User $user): ?string
@@ -434,6 +468,20 @@ class CustomerCreditProfileService
                 ->whereNull('loans.deleted_at')
                 ->where('schedule.due_date', '>=', $today)
                 ->where('schedule.total_outstanding', '>', 0)
+                ->orderBy('schedule.due_date')
+                ->value('schedule.due_date');
+            if ($date) {
+                $dates[] = (string) $date;
+            }
+        }
+
+        if (Schema::hasTable('essentials_repayment_schedule_items')) {
+            $date = DB::table('essentials_repayment_schedule_items as schedule')
+                ->join('essentials_advances as advance', 'advance.id', '=', 'schedule.advance_id')
+                ->where('advance.user_id', $user->id)
+                ->whereIn('advance.status', ['active', 'overdue'])
+                ->where('schedule.due_date', '>=', $today)
+                ->where('schedule.total_outstanding_minor', '>', 0)
                 ->orderBy('schedule.due_date')
                 ->value('schedule.due_date');
             if ($date) {
