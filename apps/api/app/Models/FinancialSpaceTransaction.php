@@ -26,7 +26,36 @@ class FinancialSpaceTransaction extends Model
 
     protected static function booted(): void
     {
-        static::deleting(fn () => throw new \LogicException('Treasury transactions are append-only. Post a correction instead of deleting.'));
+        static::updating(function (FinancialSpaceTransaction $transaction) {
+            $economicFields = [
+                'financial_space_id',
+                'treasury_account_id',
+                'created_by_user_id',
+                'transaction_reference',
+                'transaction_type',
+                'direction',
+                'amount_minor',
+                'currency',
+                'description',
+                'counterparty_name',
+                'transaction_date',
+                'value_date',
+                'source_type',
+                'source_reference',
+            ];
+
+            foreach ($economicFields as $field) {
+                if ($transaction->isDirty($field)) {
+                    throw new \LogicException(
+                        'Treasury transaction economics are append-only. Post a correction instead of editing the original entry.'
+                    );
+                }
+            }
+        });
+
+        static::deleting(fn () => throw new \LogicException(
+            'Treasury transactions are append-only. Post a correction instead of deleting.'
+        ));
     }
 
     public function account() { return $this->belongsTo(FinancialSpaceTreasuryAccount::class, 'treasury_account_id'); }
