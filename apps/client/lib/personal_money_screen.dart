@@ -134,6 +134,50 @@ class _PersonalMoneyScreenState extends State<PersonalMoneyScreen> {
     }
   }
 
+  Future<void> _updateBalance(Map<String, dynamic> account) async {
+    final currency = account['currency']?.toString() ?? 'UGX';
+    final balance = TextEditingController(text: _n(account['balance_minor']).toString());
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(account['display_name']?.toString() ?? 'Update balance'),
+        content: TextField(
+          controller: balance,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: 'Current balance (' + currency + ')'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+
+    final amount = int.tryParse(balance.text.replaceAll(',', '').trim()) ?? -1;
+    if (ok != true || amount < 0) return;
+
+    try {
+      await FinancialWellbeingApi.updateAccount(
+        _n(account['id']),
+        balanceMinor: amount,
+        currency: currency,
+      );
+      if (!mounted) return;
+      await _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
   Future<void> _addDebt(Map<String, dynamic> personal, String currency) async {
     final person = TextEditingController();
     final amount = TextEditingController();
@@ -420,6 +464,7 @@ class _PersonalMoneyScreenState extends State<PersonalMoneyScreen> {
                               account['currency']?.toString() ?? currency,
                             ),
                           ),
+                          onTap: () => _updateBalance(account),
                         ),
                       ),
                     ),
@@ -451,8 +496,17 @@ class _PersonalMoneyScreenState extends State<PersonalMoneyScreen> {
                           trailing: TextButton(
                             onPressed: personal == null
                                 ? null
-                                : () => _settleDebt(personal, debt, currency),
-                            child: Text(_amount(debt['outstanding_amount_minor'], currency)),
+                                : () => _settleDebt(
+                                      personal,
+                                      debt,
+                                      debt['currency']?.toString() ?? currency,
+                                    ),
+                            child: Text(
+                              _amount(
+                                debt['outstanding_amount_minor'],
+                                debt['currency']?.toString() ?? currency,
+                              ),
+                            ),
                           ),
                         ),
                       ),
