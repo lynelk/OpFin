@@ -188,3 +188,97 @@ export async function matchTreasuryStatementRowAction(formData: FormData) {
     status: "row-matched"
   });
 }
+
+
+export async function resolveReconciliationTodoAction(formData: FormData) {
+  const token = await getAccessToken();
+  const spaceId = integer(formData, "space_id");
+  const accountId = integer(formData, "account_id");
+  const importId = integer(formData, "import_id");
+  const type = value(formData, "todo_type");
+  const reason = value(formData, "reason");
+
+  try {
+    if (type === "statement_row") {
+      await financialSpaceStatementsApi.resolveRow(
+        spaceId,
+        integer(formData, "row_id"),
+        {
+          action: value(formData, "action") as
+            | "match_transaction"
+            | "create_book_entry"
+            | "mark_external_only"
+            | "mark_duplicate",
+          transaction_id: integer(formData, "transaction_id") || undefined,
+          reason: reason || undefined
+        },
+        token
+      );
+    } else if (type === "book_transaction") {
+      await financialSpaceStatementsApi.acceptBookOnly(
+        spaceId,
+        importId,
+        integer(formData, "transaction_id"),
+        reason,
+        token
+      );
+    } else if (type === "balance_variance") {
+      await financialSpaceStatementsApi.acceptBalanceVariance(
+        spaceId,
+        importId,
+        reason,
+        token
+      );
+    }
+  } catch (error) {
+    fail(spaceId, error, "Unable to resolve reconciliation to-do.");
+  }
+
+  destination(spaceId, {
+    account: String(accountId),
+    import: String(importId),
+    status: "todo-resolved"
+  });
+}
+
+export async function confirmTreasuryReconciliationAction(formData: FormData) {
+  const token = await getAccessToken();
+  const spaceId = integer(formData, "space_id");
+  const accountId = integer(formData, "account_id");
+  const importId = integer(formData, "import_id");
+  try {
+    await financialSpaceStatementsApi.confirmReconciliation(
+      spaceId,
+      importId,
+      value(formData, "note") || undefined,
+      token
+    );
+  } catch (error) {
+    fail(spaceId, error, "Unable to confirm reconciliation.");
+  }
+
+  destination(spaceId, {
+    account: String(accountId),
+    import: String(importId),
+    status: "reconciliation-confirmed"
+  });
+}
+
+export async function generateConsolidatedStatementAction(formData: FormData) {
+  const token = await getAccessToken();
+  const spaceId = integer(formData, "space_id");
+  try {
+    const result = await financialSpaceStatementsApi.generateConsolidated(
+      spaceId,
+      value(formData, "from"),
+      value(formData, "to"),
+      token
+    );
+    destination(spaceId, {
+      statement: String(result.statement.id),
+      status: "consolidated-statement-generated"
+    });
+  } catch (error) {
+    fail(spaceId, error, "Unable to generate consolidated statement.");
+  }
+}
