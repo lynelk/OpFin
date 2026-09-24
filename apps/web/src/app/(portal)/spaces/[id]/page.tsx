@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Buffer } from "node:buffer";
 import Image from "next/image";
 import { Screen, StateNotice } from "@/components/Screen";
@@ -103,6 +104,25 @@ export default async function SpacePage({
             <div className="stat">{formatUgx(life.data.upcoming_30d_minor)}</div>
           </section>
         </div>
+
+        {["savings_group", "investment_club", "sacco", "business", "investment_fund"].includes(space.type) ? (
+          <section className="panel">
+            <div className="case-card-head">
+              <div>
+                <p className="eyebrow">Treasury control</p>
+                <h2>Treasury & statements</h2>
+              </div>
+              <span className="badge">{space.role}</span>
+            </div>
+            <p className="muted">
+              Manage club accounts, internal cashbook entries, imported external statements,
+              reconciliation exceptions and immutable bank-style OpFin statements.
+            </p>
+            <Link className="button" href={"/spaces/" + spaceId + "/treasury"}>
+              Open Treasury & statements
+            </Link>
+          </section>
+        ) : null}
 
         <section className="panel">
           <div className="case-card-head">

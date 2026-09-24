@@ -324,6 +324,40 @@ Personal service discovery is forced to approximate precision. Device coordinate
 
 Google-dependent functions fail closed when Google Maps Platform is not configured; manual location remains available.
 
+## 16D. Financial Space treasury, statement import and reconciliation
+
+Available to eligible group/organisation Financial Spaces. Personal Spaces are excluded.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/financial-spaces/{space}/treasury/accounts` | List authorised treasury accounts |
+| POST | `/api/financial-spaces/{space}/treasury/accounts` | Create a bank/mobile-money/cash/custodian/broker/investment-wallet account; finance role required |
+| GET | `/api/financial-spaces/{space}/treasury/accounts/{account}/transactions` | List internal cashbook transactions |
+| POST | `/api/financial-spaces/{space}/treasury/accounts/{account}/transactions` | Record an append-only cashbook transaction; finance role required |
+| GET | `/api/financial-spaces/{space}/treasury/accounts/{account}/statement-imports` | Recent external statement imports |
+| POST | `/api/financial-spaces/{space}/treasury/accounts/{account}/statement-imports` | Upload/map CSV statement evidence; finance role required |
+| GET | `/api/financial-spaces/{space}/statement-imports/{import}` | Inspect imported rows, matches and exceptions |
+| POST | `/api/financial-spaces/{space}/statement-imports/{import}/reconcile` | Run confidence-scored auto-reconciliation and return only unresolved to-dos |
+| POST | `/api/financial-spaces/{space}/statement-rows/{row}/resolve` | Apply a suggested match, create a missing cashbook entry, or record an accepted external exception |
+| POST | `/api/financial-spaces/{space}/statement-imports/{import}/book-transactions/{transaction}/accept` | Accept a documented book-only transaction |
+| POST | `/api/financial-spaces/{space}/statement-imports/{import}/balance-variance` | Accept/document a closing-balance variance |
+| POST | `/api/financial-spaces/{space}/statement-imports/{import}/confirm` | Confirm only after all review to-dos are cleared |
+| POST | `/api/financial-spaces/{space}/statement-rows/{row}/match` | Backwards-compatible direct manual match endpoint |
+| GET | `/api/financial-spaces/{space}/statements` | List immutable issued statements |
+| POST | `/api/financial-spaces/{space}/treasury/accounts/{account}/statements` | Issue an immutable bank-style account statement; finance role required |
+| POST | `/api/financial-spaces/{space}/statements/consolidated` | Issue one professional all-activity statement across all treasury accounts and recorded Financial Space position |
+| GET | `/api/financial-spaces/{space}/statements/{statement}` | Read frozen statement snapshot |
+| GET | `/api/financial-spaces/{space}/statements/{statement}/html` | Print-ready bank-style HTML |
+| GET | `/api/financial-spaces/{space}/statements/{statement}/csv` | CSV statement export |
+
+CSV import maps date, description and either debit/credit or amount+direction. Value date, reference and running balance are optional. Duplicate files are deduplicated by source hash per account.
+
+Reconciliation never silently overwrites the OpFin cashbook. OpFin scores plausible candidates using hard amount/currency/direction/account constraints plus reference, date proximity and description similarity. Only high-confidence candidates auto-match. Lower-confidence candidates become suggested user to-dos.
+
+User resolutions may create a missing book entry or explicitly accept external-only, duplicate, book-only or balance-variance exceptions with reasons. Confirmation remains a separate authorised action after the to-do list is empty.
+
+Issued statements preserve a frozen Financial Space/account presentation snapshot and transaction payload. They cannot be edited/deleted; corrections require a new statement. Consolidated statements include all treasury accounts and a recorded asset/obligation snapshot, with multi-currency totals kept separate.
+
 ## 17. Financial Spaces and multi-entity membership
 
 Authenticated routes:
