@@ -222,7 +222,7 @@ class FinancialHardeningRegressionTest extends TestCase
         $intent = MobileMoneyTransaction::query()->where('idempotency_key', 'durable-money-intent-001')->firstOrFail();
         $this->assertSame(MobileMoneyTransaction::STATUS_FAILED, $intent->status);
         $this->assertSame(MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED, $intent->accounting_status);
-        $this->assertSame('rejected_before_provider_finality', $intent->metadata['provider_submission_state'] ?? null);
+        $this->assertSame('rejected_before_provider_finality', $intent->provider_submission_state);
         $this->assertSame('OPF-DURABLE-001', $intent->internal_reference);
     }
 
