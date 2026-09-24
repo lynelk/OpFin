@@ -23,6 +23,7 @@ class FinancialSpaceStatementService
 
     public function createAccount(FinancialSpace $space, User $actor, array $data): FinancialSpaceTreasuryAccount
     {
+        $this->assertTreasurySpace($space);
         $this->assertAdministrator($space, $actor);
 
         return FinancialSpaceTreasuryAccount::query()->create([
@@ -47,6 +48,7 @@ class FinancialSpaceStatementService
         User $actor,
         array $data
     ): FinancialSpaceTransaction {
+        $this->assertTreasurySpace($space);
         $this->assertAdministrator($space, $actor);
         $this->assertAccount($space, $account);
 
@@ -335,6 +337,7 @@ class FinancialSpaceStatementService
         string $from,
         string $to,
     ): array {
+        $this->assertTreasurySpace($space);
         $this->assertMember($space, $actor);
         $this->assertAccount($space, $account);
 
@@ -405,12 +408,14 @@ class FinancialSpaceStatementService
         ];
         $contentHash = hash('sha256', json_encode($canonical, JSON_THROW_ON_ERROR));
 
-        $statement = FinancialSpaceGeneratedStatement::query()->updateOrCreate(
-            [
-                'statement_number' => $statementNumber,
-            ],
-            [
-                'public_id' => (string) Str::uuid(),
+        $statement = FinancialSpaceGeneratedStatement::query()->firstOrNew([
+            'statement_number' => $statementNumber,
+        ]);
+        if (! $statement->exists) {
+            $statement->public_id = (string) Str::uuid();
+        }
+        $statement->fill([
+                'financial_space_id' => $space->id,
                 'financial_space_id' => $space->id,
                 'treasury_account_id' => $account->id,
                 'generated_by_user_id' => $actor->id,
@@ -431,8 +436,8 @@ class FinancialSpaceStatementService
                     'account_reference_masked' => $account->account_reference_masked,
                     'currency' => $account->currency,
                 ],
-            ],
-        );
+        ]);
+        $statement->save();
 
         return [
             'statement' => $statement->fresh(),
@@ -777,6 +782,15 @@ class FinancialSpaceStatementService
         }
 
         return str_repeat('•', max(4, strlen($reference) - 4)).substr($reference, -4);
+    }
+
+    private function assertTreasurySpace(FinancialSpace $space): void
+    {
+        abort_unless(
+            in_array($space->type, ['savings_group', 'investment_club', 'sacco', 'business', 'investment_fund'], true),
+            422,
+            'Treasury statements are available for group and organisation Financial Spaces.'
+        );
     }
 
     private function assertAccount(FinancialSpace $space, FinancialSpaceTreasuryAccount $account): void
