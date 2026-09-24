@@ -1,79 +1,54 @@
 # OpFin web application
 
-Status: Controlled external developer/product reference  
-Updated: 24 September 2026  
+Status: Current developer and product reference  
+Reviewed: 24 September 2026  
 Language: English (United Kingdom)
 
-The Next.js application provides the public marketing site, customer Web access, institutional Workspaces and authorised operational/admin surfaces. It consumes `apps/api`; it does not own authoritative credit calculations, balances, financial finality, ledger state, provider routing or regulatory truth.
+The Next.js application provides marketing, customer Web, institutional Workspaces and role-gated operations. It consumes `apps/api`; it does not own authoritative credit calculations, balances, provider finality, accounting or regulatory state.
 
-## Website role
+## Product and access model
 
-The homepage communicates the broad OpFin proposition:
+The site describes individuals, savings groups, employers/businesses, SACCOs, partners, responsible credit and inclusive-finance programmes. Keep implemented capabilities distinct from activated services and illustrative previews distinct from real production evidence.
 
-- individuals;
-- savings groups;
-- businesses/employers;
-- SACCOs and partners;
-- responsible credit;
-- inclusive-finance programmes and partner reporting.
+New App registration is phone → OTP → names → six-digit PIN. Web sign-in is PIN-first for existing/authorised users and deletion verification while retaining legacy-password compatibility. Do not force a six-digit constraint on a migrated password account merely to match the label.
 
-Public copy must distinguish implemented capability from activated provider service. Illustrative product cards are not production screenshots. Programme outcomes are not causal claims. Web sign-in is not the preferred new-customer onboarding route.
+One sign-in surface routes authorised users to Personal & Financial Spaces, Employer Workspace (`employer_admin`), Programme Partner Workspace (`programme_partner`) or OpFin Operations (`platform_admin`, `operations`, `support`). `/admin-login` remains a compatibility redirect, not an independent identity system.
 
-Canonical new-customer onboarding remains phone → OTP → names → six-digit PIN in the mobile experience. Web sign-in is PIN-first for existing/authorised users and account-deletion verification, while retaining the existing legacy-password fallback during migration. The interface labels the credential field clearly without forcing six-digit validation on legacy Web accounts.
+Operations navigation groups Overview & automation, Finance & risk, Customer service, Governance & assurance and Programmes & growth. Explicit module role allow-lists apply; support must not inherit every admin route. Programme check-ins remain part of the personal experience, while programme operations and commercial reporting remain authorised modules.
 
-### Portal access model
+## Current capabilities and limitations
 
-Web uses one sign-in surface and routes the authenticated person to the correct authorised workspace:
+Financial management, credit, programmes, impact, partner access, commercial performance, governance and compliance consume the same server-authoritative domain. Treasury adds detailed CSV import/reconciliation and statement workflows on Web; App statement access does not demonstrate complete mobile administration.
 
-- **Personal & Financial Spaces** for customer money, household/group and authorised organisation/SACCO contexts;
-- **Employer Workspace** for `employer_admin` access;
-- **Programme Partner Workspace** for `programme_partner` aggregate programme reporting; and
-- **OpFin Operations** for `platform_admin`, `operations` and `support`, with modules filtered by role.
+Essentials adds named-lender bill/rent orchestration and connected-platform permissions. Its current internal accounting, authorisation, deletion, concurrency and reservation findings remain acceptance blockers. A Web surface is not approval to activate financing. See the [current capability contracts](../api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) and [delivery evidence](../../docs/operations/DELIVERY_EVIDENCE_2026-09-24.md).
 
-The legacy `/admin-login` URL is a compatibility redirect to the unified sign-in screen. Programme check-ins remain inside the Personal experience. Support, inclusion/programmes, impact, programme delivery and commercial performance are modules inside role-gated Operations rather than separate authentication portals.\n\nWithin OpFin Operations, navigation is grouped into **Overview & automation**, **Finance & risk**, **Customer service**, **Governance & assurance** and **Programmes & growth**. Each operational module carries an explicit role allow-list; `support` is limited to its assigned overview, ledger, support and audit surfaces rather than inheriting every `/admin` route.
+Optional Location Context uses lightweight authenticated server-fetched maps where configured. Operations geography suppresses small rows and excludes individual customer locations. Programme partners see their own permitted service network. Provider keys stay server-side; no background customer tracking is implied.
 
-## Customer and Workspace experience
+## Server authority and privacy
 
-Server-authoritative Financial Space context is shared across clients. Web enhances analysis and institutional operations; it must not become a hidden prerequisite for essential Individual or Savings Group journeys.
+Use integer minor-unit amounts and API-supplied disclosures. Do not reproduce pricing, allocation, headroom or eligibility formulae in TypeScript. Pending funding, fulfilment, reversal or repayment is not final movement. Keep programme/protected attributes outside underwriting and commercial incentives downstream of customer need/suitability.
 
-Current web surfaces include financial management, credit/customer state, programme delivery, inclusive-finance/impact operations, partner access, commercial performance, governance/compliance and operational administration.
+Production mock/demo shortcuts remain disabled. Provider credentials and database secrets never belong in browser-visible settings. Maintain secure cookies, nonce/CSP controls, role routing and safe internal redirects.
 
-Provider-gated savings, investment, protection and other regulated products must not be presented as live solely because source code exists.
+## Local setup
 
-## Authority rules
-
-- monetary values remain integer minor units;
-- do not reproduce backend pricing, interest, fee, repayment-allocation or credit-limit formulas in TypeScript;
-- display offer disclosures as returned by the API;
-- pending provider requests are not completed financial events;
-- programme measurement/protected attributes remain outside underwriting;
-- commercial economics remain downstream of customer need/eligibility/suitability;
-- production must not use mock API behaviour or demo shortcuts;
-- provider secrets never belong in browser-visible configuration.
-
-## Setup
+From `apps/web`:
 
 ```bash
 npm ci --legacy-peer-deps
-cp .env.example .env.local
+test -f .env.local || cp .env.example .env.local
 npm run dev
 ```
 
-Typical local values:
+Use `NEXT_PUBLIC_OPFIN_API_URL=http://localhost:8000/api`, `NEXT_PUBLIC_USE_MOCK_API=false` and `OPFIN_ENABLE_DEMO_SHORTCUTS=false` for the local API. Browser origins and CORS must match. A public build variable is not a place for a secret.
 
-```env
-NEXT_PUBLIC_OPFIN_API_URL=http://localhost:8000/api
-NEXT_PUBLIC_USE_MOCK_API=false
-OPFIN_ENABLE_DEMO_SHORTCUTS=false
-```
+## Login build correction
 
-## Production topology
+The reviewed production build failed after compilation because the conditional login-error query object inferred an optional `context: undefined`, incompatible with `Record<string, string>`.
 
-The current Railway Web setup address is `https://opfin-web-production.up.railway.app`, consuming `https://opfin-production.up.railway.app/api`.
+The accompanying correction adds an explicit `Record<string, string>` annotation to that existing object. It changes no runtime values, credential handling, cookie flags, role checks or redirect targets. An isolated TypeScript 5.8.3 strict check reproduced TS2345 before the annotation and passed afterwards. This is targeted evidence, not a claim that the repository's full dependency-specific Web build has passed. Record the actual production build result separately.
 
-Generated Railway domains are operational setup endpoints, not proof of custom-domain cutover. At the reviewed 23 September `main` head, Railway commit statuses report successful web/API/worker/scheduler deployments, while no GitHub Actions workflow run exists for that exact head. Do not collapse those two evidence states.
-
-## Quality gates
+## Quality and deployment
 
 ```bash
 npm run audit
@@ -83,27 +58,8 @@ npm run test
 npm run build
 ```
 
-A release also needs the repository release/security/deployment gates and any required provider/physical-device acceptance.
+GitHub Actions remains disabled at the owner's direction; equivalent candidate-specific build/security/operations evidence is still required. Do not disable type checking to resolve a build error.
 
-## Documentation
+Existing setup addresses are `https://opfin-web-production.up.railway.app` and `https://opfin-production.up.railway.app/api`. They do not prove custom-domain cutover or health. The [dated release evidence](../../docs/operations/DELIVERY_EVIDENCE_2026-09-24.md) records the previous failed API/Web attempts; verify running-version parity and supported API contracts before declaring production aligned.
 
-Start with:
-
-- `../../docs/CURRENT_STATE.md`
-- `../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`
-- `../../docs/manuals/OPFIN_USER_MANUAL.md`
-- `../../docs/manuals/OPFIN_OPERATIONAL_MANUAL.md`
-- `../api/docs/api/API_QUICK_REFERENCE.md`
-
-When a Web workflow or public claim changes, update the relevant current documentation in the same PR.
-
-
-## Location context
-
-The Web Workspace displays authorised Financial Space location context with lightweight server-fetched Static Map previews when Google Maps is activated.
-
-Operations has an aggregate **Location insights** view for Financial Space and partner-service-point coverage. Rows below five are suppressed and individual customer locations are excluded.
-
-Programme partner users have a **Service network** view limited to service points associated with their own institution's partner records.
-
-The Web app does not receive the Google server API key and does not perform background/customer location tracking.
+Read [current state](../../docs/CURRENT_STATE.md), the [Blueprint](../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md), [manuals](../../docs/manuals/OPFIN_USER_MANUAL.md), [operations](../../docs/manuals/OPFIN_OPERATIONAL_MANUAL.md) and [API index](../api/docs/README.md). Update affected current docs in the same PR as a Web workflow or public-claim change.

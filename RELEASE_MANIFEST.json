@@ -1,9 +1,9 @@
 {
   "repository": "lynelk/OpFin",
-  "status": "production_source_deployed_not_fully_release_certified",
-  "updated_at": "2026-09-23",
+  "status": "documentation_reviewed_runtime_acceptance_blocked",
+  "updated_at": "2026-09-24",
   "canonical_branch": "main",
-  "reviewed_main_sha": "1a580e490ccb4cd5cc55f06ea9d09fad6619fd7e",
+  "reviewed_main_sha": "35abeeef57ff8b4a29d6bd5ba2d6575fa9e54c7f",
   "paths": {
     "api": "apps/api",
     "web": "apps/web",
@@ -11,43 +11,66 @@
   },
   "current_documentation": {
     "current_state": "docs/CURRENT_STATE.md",
+    "concept_plan_comparison": "docs/product/CONCEPT_AND_PLAN_COMPARISON.md",
     "product_blueprint": "docs/product/OPFIN_PRODUCT_BLUEPRINT.md",
     "implementation_status": "docs/product/CANONICAL_IMPLEMENTATION_STATUS.md",
+    "implementation_backlog": "docs/product/IMPLEMENTATION_BACKLOG.md",
     "documentation_hub": "docs/README.md",
     "developer_start": "docs/DEVELOPER_START_HERE.md",
     "user_manual": "docs/manuals/OPFIN_USER_MANUAL.md",
     "training_manual": "docs/manuals/OPFIN_TRAINING_MANUAL.md",
     "operational_manual": "docs/manuals/OPFIN_OPERATIONAL_MANUAL.md",
     "uat_manual": "docs/manuals/OPFIN_UAT_MANUAL.md",
-    "api_quick_reference": "apps/api/docs/api/API_QUICK_REFERENCE.md"
+    "capability_supplement": "docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md",
+    "api_quick_reference": "apps/api/docs/api/API_QUICK_REFERENCE.md",
+    "current_capability_contracts": "apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md",
+    "delivery_evidence": "docs/operations/DELIVERY_EVIDENCE_2026-09-24.md"
   },
   "deployment_evidence": {
-    "api_status": "success",
-    "web_status": "success",
+    "scope": "Observed deployment attempts for reviewed_main_sha; not a live status endpoint",
+    "api_status": "failed",
+    "web_status": "failed",
     "worker_status": "success",
     "scheduler_status": "success",
-    "exact_head_github_actions_run": false,
+    "api_tests_total": 263,
+    "api_tests_passed": 257,
+    "api_tests_failed": 6,
+    "api_assertions": 1763,
+    "latest_successful_api_sha_observed": "aa19a53481b2094530616340b8f54aaaabfc6172",
     "release_gate_certified_for_exact_head": false
   },
+  "validation_policy": {
+    "github_actions": "disabled_by_owner_instruction",
+    "equivalent_candidate_evidence_required": true,
+    "existing_build_tests_and_audits_must_remain_enabled": true,
+    "new_infrastructure_authorised_by_this_review": false
+  },
   "required_release_validation": [
-    "OpFin Monorepo CI",
-    "OpFin security monitoring",
-    "Deployment contract",
-    "Documentation drift check"
+    "Applicable API, Web and Flutter checks for the exact candidate",
+    "Security and dependency validation",
+    "Deployment contract, migrations, running-source parity and health",
+    "Expected accounting, provider reconciliation and independent financial review where required",
+    "Documentation consistency and publication checks within their documented scope"
+  ],
+  "internal_acceptance_blockers": [
+    "Historical treasury opening-baseline regression failures",
+    "Foundation role-catalogue assertion does not include partner_api",
+    "Web login-error parameter typing failure at the reviewed baseline; targeted annotation correction requires full build confirmation",
+    "Essentials unresolved accounting, exact-Space authorisation, concurrency, account-deletion, capital-mandate and pending-exposure findings"
   ],
   "external_activation_gates": [
-    "applicable legal entity/licence evidence",
-    "provider contracts, credentials and production certification",
-    "Cito/gnuGrid/CPay activation where required",
-    "identity/biometric evidence-provider certification",
-    "private persistent KYC storage",
-    "programme/data-processing agreements",
-    "reviewed translations for live programmes",
-    "USSD and WhatsApp production provisioning where launched",
-    "physical-device accessibility and assisted-KYC UAT",
-    "store declarations, signing and publication",
-    "backup/restore, monitoring, reconciliation and incident-response evidence"
+    "Applicable legal entity and licensed provider evidence",
+    "Provider agreements, genuine credentials and production certification",
+    "Cito-mediated gnuGrid and approved CPay/lender/biller capability activation",
+    "Identity and biometric evidence-provider certification",
+    "Private persistent KYC storage",
+    "Programme and data-processing agreements",
+    "Reviewed translations for actual programme instruments",
+    "USSD and WhatsApp provisioning where launched",
+    "Physical-device accessibility and assisted-verification acceptance",
+    "Store declarations, signing and publication",
+    "Backup/restore, monitoring, reconciliation and incident-response evidence"
   ],
   "production_cutover": false,
-  "notes": "Railway source deployment statuses are successful for the reviewed main head, but no GitHub Actions run is attached to that exact SHA. Do not represent the exact head as fully release-certified until required gates and external activation evidence pass."
+  "notes": "This is a dated source-review snapshot. Read the delivery evidence and actual deployment records for subsequent candidates. Documentation publication, source merge, service deployment and financial activation are separate states. Do not bypass existing checks or treat all remaining work as external activation."
 }

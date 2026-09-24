@@ -1,90 +1,53 @@
 # OpFin current state
 
-Updated: 23 September 2026  
-Canonical branch: `main`  
-Reviewed source commit: `1a580e490ccb4cd5cc55f06ea9d09fad6619fd7e`
+Status: Current product and delivery evidence index  
+Reviewed: 24 September 2026  
+Language: English (United Kingdom)  
+Implementation baseline: `35abeeef57ff8b4a29d6bd5ba2d6575fa9e54c7f`
 
-## What OpFin is now
+## Assessment
 
-OpFin is a financial operating platform with embedded financial services. Lending remains important, but it is no longer the product boundary. The platform supports one identity across Personal, Household, Savings Group and authorised organisation Financial Spaces, with mobile-complete individual and group journeys and deeper Web Workspaces for institutional use.
+OpFin remains a financial operating platform with embedded financial services, not a lending-only application. Current source contains identity and consent, Financial Spaces, financial-life services, responsible credit, provider-gated savings/protection/investment foundations, inclusive-finance programmes, commercial reporting, investment-club treasury/statements and Essentials third-party lender orchestration.
 
-Current implemented product areas include:
+Implementation is not the same as accepted customer delivery. The latest observed API and Web deployment attempts failed build checks. Essentials was merged with explicitly unresolved financial-control review findings. Neither a documentation publication label nor the presence of a route certifies that a feature is safe for financial activation.
 
-- identity, consent, KYC and permissions;
-- Financial Spaces, memberships and roles;
-- everyday money, budgets, goals, assets, liabilities, receivables and financial-health guidance;
-- responsible credit, formal offers, verified-wallet disbursement, repayment, receipts and credit-information controls;
-- savings, investment and protection foundations behind provider/capability gates;
-- employer-linked financial wellbeing;
-- inclusive-finance programmes, programme instruments, follow-ups, localisation, partner identities and privacy-suppressed MEL exports;
-- programme-to-commercial graduation analytics, commercial funnel/unit-economics reporting and governed cost/revenue evidence;
-- partner/provider routing through Cito where configured, with governed direct-provider fallback;
-- CPay-preferred money movement;
-- programme/provider evidence boundaries that keep programme measurement and protected attributes outside underwriting.
+Read the [concept and plan comparison](product/CONCEPT_AND_PLAN_COMPARISON.md) for the original requirements, achievements, changed scope and remaining acceptance. Read the [dated delivery evidence](operations/DELIVERY_EVIDENCE_2026-09-24.md) for test counts, deployment identifiers and review findings.
 
-Stolets remains a separate SME automation, digitisation and commerce product. OpFin may consume explicitly consented and governed external evidence from Stolets, but does not absorb POS, inventory, purchasing or merchant operations.
+## Achievements and boundaries
 
-## Customer channels
+| Area | What the current source provides | Boundary that remains important |
+| --- | --- | --- |
+| Canonical platform | Laravel API, Next.js Web and Flutter client in one repository; separate API, worker and scheduler responsibilities | A common repository does not prove identical running versions or complete cross-channel acceptance |
+| Identity and Financial Spaces | Phone/OTP/names/PIN onboarding; consent; memberships, roles and personal/household/group/organisation contexts | A membership must not expose private Personal Space data; exact-Space partner authorisation remains a current Essentials review finding |
+| Financial wellbeing and credit | Financial-life records, budgeting/goals foundations, composite credit profile, affordability, offers, repayment and established ledger/reconciliation services | Financial health and programme measurement are not credit scores; the established loan path's accounting assurance must not be assumed for a new financial path |
+| Inclusive-finance programmes | Instruments, follow-ups, reviewed localisation, assisted capture, dedicated programme-partner access and privacy-suppressed exports | Real programme agreements, reviewed questionnaires/translations and field acceptance remain separate from source implementation |
+| Commercial evidence | Acquisition attribution, cost/revenue and service-economics reporting; programme-to-commercial analytics | Unknown amounts remain unknown; customer capital is not revenue; a dashboard does not establish profitability |
+| Investment clubs and treasury | Treasury accounts and cashbook, mapped CSV statement imports, reconciliation review/confirmation, frozen statements and currency-separated reporting | This is not complete member-capital, unitisation/NAV, distribution or investment-performance accounting. Historical-date/baseline regression failures currently block API build acceptance |
+| OpFin Essentials | Named third-party lender quotes, purpose-bound bill/rent settlement, Cito lending and CPay clients, partner permissions and servicing surfaces | Internal accounting, deletion, authorisation, concurrency and reservation findings remain unresolved. Do not describe Essentials as financially launch-certified |
+| Channels and accessibility | App/Web and assisted-channel mechanisms, accessibility preferences and explicit English fallback | The club CSV import/reconciliation workflow is deeper on Web. Full mobile completeness, physical-device accessibility and every supported channel require acceptance evidence |
 
-The canonical new-customer mobile journey remains:
+## Customer and provider rules
 
-`Phone → OTP → names → 6-digit PIN → Home → progressive verification → financial position / eligible service → disclosed action → confirmed outcome`
+New App customers follow phone verification, OTP, names and a six-digit PIN, then progressive verification appropriate to the selected activity. Existing Web password-compatible access does not redefine this onboarding contract.
 
-The marketing website is an information and Web Workspace entry point. Its sign-in screen is not the canonical new-customer registration journey. Do not document the web password-compatible sign-in route as the preferred onboarding route for new mobile customers.
+OpFin owns its product/customer state and financial evidence. Cito is the preferred third-party gateway, CPay the preferred payment route, and explicitly certified direct-provider adapters remain governed exceptions. The current Essentials direction requires gnuGrid access through Cito; a general fallback policy does not authorise direct gnuGrid integration.
 
-App, Web, verified WhatsApp, USSD and authorised assisted capture use server-authoritative backend state. Capability, provider, product and regulatory activation gates remain explicit.
+Essentials financing belongs to the named participating lender. A successful lender or provider request must not be presented as settled money, an issued utility token or confirmed repayment before its authoritative final state. Pending lender funding and reversal states must continue reserving exposure until safely resolved.
 
-## Website position
+Stolets remains a separate SME operating product. Shared infrastructure and consented integration do not make POS, inventory or merchant operations part of OpFin.
 
-The current website communicates OpFin as a connected financial operating platform for individuals, savings groups, businesses/employers, SACCOs and partners. Public claims must distinguish:
+## Deployment snapshot
 
-- implemented capability from activated provider service;
-- illustrative product previews from production screenshots;
-- eligibility guidance from guarantees;
-- programme outcomes from causal-impact claims;
-- source deployment from release certification.
+For baseline `35abeeef57ff8b4a29d6bd5ba2d6575fa9e54c7f`, the observed production API build failed with six tests failing and 257 passing. The Web build compiled but failed TypeScript checking. Worker and scheduler deployment records reported success. This is not a fully aligned production release.
 
-The Web service public setup address is `https://opfin-web-production.up.railway.app`. The API setup address is `https://opfin-production.up.railway.app`. These generated Railway addresses are operational endpoints, not a claim that a custom public domain has been cut over.
+The latest successful API deployment returned by the reviewed production query belonged to earlier commit `aa19a53481b2094530616340b8f54aaaabfc6172`. A successful historical deployment record is not a new live-health check. No new infrastructure or provider activation is implied by this documentation update.
 
-## Deployment evidence
+GitHub Actions remains disabled under the owner's instruction. Retain equivalent candidate-specific local/build, security and operational evidence; do not re-enable Actions or call missing evidence a pass. Production updates must preserve the existing test, audit, migration, health and reconciliation gates.
 
-At reviewed `main` commit `1a580e490ccb4cd5cc55f06ea9d09fad6619fd7e`, GitHub commit statuses report successful Railway deployments for:
+## Publication and maintenance
 
-- OpFin API;
-- opfin-web;
-- opfin-worker;
-- opfin-scheduler.
+The [user](manuals/OPFIN_USER_MANUAL.md), [training](manuals/OPFIN_TRAINING_MANUAL.md), [operational](manuals/OPFIN_OPERATIONAL_MANUAL.md) and [UAT](manuals/OPFIN_UAT_MANUAL.md) manuals must be read with the [current capability supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md). API consumers should use the [new-capability contract](../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) with the existing endpoint and client references.
 
-No GitHub Actions workflow run is associated with that exact head commit. Therefore:
+Original concept requirements, later approved decisions, observed implementation and acceptance evidence are different authorities. A code defect does not authorise silently rewriting the original requirement. Historical audit, migration and release records retain their original dates; this review does not retrospectively certify them.
 
-- source deployment evidence exists;
-- the full repository CI/release gate must **not** be described as passed for that exact head;
-- production/provider activation still depends on genuine credentials, agreements, certification, licences, store release and physical-device acceptance where applicable.
-
-## Documentation hierarchy
-
-For current operational use, apply this order:
-
-1. source code, migrations, registered routes and automated tests;
-2. `docs/product/OPFIN_PRODUCT_BLUEPRINT.md` and current domain models;
-3. this current-state record and `docs/product/CANONICAL_IMPLEMENTATION_STATUS.md`;
-4. current API references under `apps/api/docs/`;
-5. current manuals under `docs/manuals/`;
-6. specialist lending, regulatory, release and deployment guides;
-7. dated audit, demo, migration and historical evidence.
-
-Historical files are preserved as evidence. They should not be silently rewritten to look current.
-
-## External activation gates
-
-The repository cannot manufacture:
-
-- provider credentials or contracts;
-- regulatory approvals/licences;
-- Cito/gnuGrid/CPay production certification where still pending;
-- reviewed translations that have not actually been supplied;
-- physical-device accessibility certification;
-- app-store review/publication evidence;
-- partner programme agreements or lawful data-processing authority.
-
-Where these are absent, documentation must say `pending`, `unverified` or `not activated`, rather than filling the gap with optimism wearing a tie.
+Remaining work includes internal defects, missing acceptance evidence and external activation. Provider credentials, legal approvals, programmes, translations, app-store publication and device certification are external gates only where the underlying implementation already satisfies its own controls.

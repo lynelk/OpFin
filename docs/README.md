@@ -1,101 +1,62 @@
 # OpFin documentation hub
 
-Status: Publication-ready documentation index  
-Updated: 24 September 2026  
+Status: Current documentation and evidence index  
+Reviewed: 24 September 2026  
 Language: English (United Kingdom)
 
-This is the navigation point for current OpFin documentation. Publication class, audience and evidence boundaries are controlled by [PUBLICATION_STANDARD.md](PUBLICATION_STANDARD.md) and [PUBLICATION_REGISTER.md](PUBLICATION_REGISTER.md).
+Start with [current state](CURRENT_STATE.md), the [concept and plan comparison](product/CONCEPT_AND_PLAN_COMPARISON.md), and the [dated delivery evidence](operations/DELIVERY_EVIDENCE_2026-09-24.md). They separate what has been implemented, what was actually tested, unresolved internal defects and external activation.
 
-## Start by role
+## Find the right document
 
-| Audience | Start here | Then read |
+| Audience or task | Current reference | Supporting material |
 | --- | --- | --- |
-| Leadership / product | [Current state](CURRENT_STATE.md) | [Product blueprint](product/OPFIN_PRODUCT_BLUEPRINT.md), [implementation status](product/CANONICAL_IMPLEMENTATION_STATUS.md) |
-| Customer / support | [User manual](manuals/OPFIN_USER_MANUAL.md) | [Training manual](manuals/OPFIN_TRAINING_MANUAL.md), [launch journey](LAUNCH_CUSTOMER_JOURNEY.md) |
-| Operations / compliance | [Operational manual](manuals/OPFIN_OPERATIONAL_MANUAL.md) | [UAT manual](manuals/OPFIN_UAT_MANUAL.md), [UMRA controls](UMRA_DIGITAL_LENDING_CONTROLS.md) |
-| Developer | [Developer start](DEVELOPER_START_HERE.md) | [API docs](../apps/api/docs/README.md), [Location Context](architecture/LOCATION_CONTEXT.md), `AGENTS.md`, `SECURITY.md` |
-| API integrator | [API quick reference](../apps/api/docs/api/API_QUICK_REFERENCE.md) | [Current endpoints](../apps/api/docs/api/current-endpoints.md) |
-| Programme / MEL partner | [Inclusive-finance framework](product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md) | [Partner reporting standard](product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md) |
-| Release owner | [Current state](CURRENT_STATE.md) | [Publication register](PUBLICATION_REGISTER.md), [Railway topology](../infrastructure/railway/README.md), store/release documentation |
+| Leadership and product | [Concept and plan comparison](product/CONCEPT_AND_PLAN_COMPARISON.md) | [Blueprint](product/OPFIN_PRODUCT_BLUEPRINT.md), [implementation status](product/CANONICAL_IMPLEMENTATION_STATUS.md), [backlog](product/IMPLEMENTATION_BACKLOG.md) |
+| Customer and support | [User manual](manuals/OPFIN_USER_MANUAL.md) | [Current capability supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md), [specialist borrower journey](LAUNCH_CUSTOMER_JOURNEY.md) |
+| Trainers | [Training manual](manuals/OPFIN_TRAINING_MANUAL.md) | [Training foundation](TRAINING_AND_USER_GUIDE_FOUNDATION.md), [treasury and Essentials exercises](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) |
+| Operations and acceptance | [Operational manual](manuals/OPFIN_OPERATIONAL_MANUAL.md) | [UAT manual](manuals/OPFIN_UAT_MANUAL.md), [delivery evidence](operations/DELIVERY_EVIDENCE_2026-09-24.md) |
+| Developers | [Developer start](DEVELOPER_START_HERE.md) | [API index](../apps/api/docs/README.md), [Location Context](architecture/LOCATION_CONTEXT.md), [engineering](../AGENTS.md), [security](../SECURITY.md) |
+| API integrators | [API quick reference](../apps/api/docs/api/API_QUICK_REFERENCE.md) | [Current endpoints](../apps/api/docs/api/current-endpoints.md), [new capability contracts](../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) |
+| Club/treasury administrators | [Treasury specification](product/INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md) | [Task and acceptance supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) |
+| Essentials partners | [Essentials specification](product/OPFIN_ESSENTIALS.md) | [Current control findings](operations/DELIVERY_EVIDENCE_2026-09-24.md), [field-level API guide](../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) |
+| Programme/MEL partners | [Inclusive-finance framework](product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md) | [Partner reporting standard](product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md) |
+| Publication and release owners | [Publication standard](PUBLICATION_STANDARD.md) | [Register](PUBLICATION_REGISTER.md), [deployment guidance](../infrastructure/railway/README.md), [UMRA controls](UMRA_DIGITAL_LENDING_CONTROLS.md) |
 
-## Publication control
+## What changed in the current review
 
-Use the publication register before sharing a repository document externally.
+The achievement comparison retains the original concept's four delivery phases and distinguishes later Financial Space, programme, club-treasury and Essentials decisions. It does not assign a misleading completion percentage or infer business success from a reporting endpoint.
 
-- **Public** documents may be shared externally once any stated legal/compliance gates are complete.
-- **Controlled external** documents are suitable for a defined professional audience.
-- **Controlled internal** documents are polished operating/engineering artefacts, not unrestricted public copy.
-- **Historical evidence** remains dated evidence and must not be presented as current policy.
+The manuals now distinguish treasury records from full investment-club accounting, identify the current Web import/reconciliation boundary, and qualify Essentials instructions while accounting, authorisation, deletion, concurrency and reservation findings remain unresolved. The new API contract records actual input/response differences, including Essentials repayment's body idempotency key and non-final 201 response.
 
-Run:
+Optional Location Context, programme privacy and independent Stolets boundaries remain part of the whole-product story. No new brand, provider activation or original-concept rewrite is implied by this update.
 
-```bash
-make publication-check
-```
-
-The check rejects unresolved editorial markers in the current Public and Controlled external set. Release worksheets with deliberately unresolved factual inputs are not disguised as finished public copy.
-
-## Current product baseline
-
-OpFin is a financial operating platform, not a lending-only application. Current implemented domains include Financial Spaces, everyday financial management, responsible credit, financial health, provider-gated savings/investment/protection, optional Location Context, employer capabilities, inclusive-finance programmes, partner/MEL reporting, programme follow-ups/localisation, governed provider evidence, and commercial/service-economics reporting.
-
-Cito is the preferred external-integration gateway where configured. CPay is the preferred production money-movement route. Neither statement means every underlying provider is automatically active.
-
-Stolets remains a separate SME operating product. Any OpFin use of Stolets evidence requires a specific consented and governed interface.
-
-## Website documentation boundary
-
-The public Web homepage describes the broad platform proposition. It is not the source of truth for provider activation, credit policy, regulatory status, exact API behaviour, app-store publication or release certification.
-
-The homepage's Web sign-in is a Workspace/customer compatibility route. The canonical new-customer onboarding journey remains phone → OTP → names → six-digit PIN in the mobile experience.
-
-## API documentation
-
-Canonical API documentation lives under `../apps/api/docs/`.
-
-Use the registered Laravel route table for exact registered routes:
-
-```bash
-cd apps/api
-php artisan route:list
-php artisan route:list --json
-```
-
-Use prose contracts for purpose, validation, permissions, failure semantics and safe operation. A registered route alone is not a complete API contract.
-
-## Search
+## Discover APIs and documents
 
 From repository root:
 
 ```bash
-python3 scripts/search-docs.py "programme"
-python3 scripts/search-docs.py "commercial performance"
-python3 scripts/search-docs.py "credit reporting" --api
-python3 scripts/search-api.py "programme"
-python3 scripts/search-api.py "receipts"
+python3 scripts/search-docs.py "treasury"
+python3 scripts/search-docs.py "Essentials" --api
+python3 scripts/search-docs.py "concept"
+python3 scripts/search-api.py "essentials"
+python3 scripts/search-api.py "statement"
+make docs-check
+make publication-check
 ```
 
-## Current versus historical
+With local API dependencies installed, `cd apps/api && php artisan route:list --json` shows registered routes. Registration is not a complete request/response schema, permission certificate or production-availability claim. HTML/CSV exports and framework errors must not be assumed to share a single JSON response envelope.
 
-Apply this hierarchy:
+## Publication and history
 
-1. source code, migrations, registered routes and automated tests;
-2. Product Blueprint/domain models;
-3. [Current state](CURRENT_STATE.md) and canonical implementation status;
-4. current API documentation;
-5. current manuals;
-6. specialist regulatory/release/deployment guides;
-7. dated audit/demo/migration/checkpoint evidence.
+Publication classes identify intended audiences, not technical access controls. A file in a public repository is publicly accessible even when labelled controlled internal. Do not place secrets, real customer identity evidence or confidential financial records in any documentation.
 
-Historical evidence should retain its original date and context.
+Placeholder checks have a limited editorial scope; they do not establish complete semantic, legal, device or API acceptance. Use the actual review evidence and distinguish implemented, deployed, activated and accepted.
 
-## Documentation quality rule
+Original approved requirements, later decisions, observed code and release evidence are separate. Code proves behaviour, not that the behaviour fulfils the original requirement. Preserve original source terminology in comparisons and record deviations explicitly.
 
-Every material system/API/customer-workflow change must update the relevant current documentation in the same change. Unknown provider, commercial or release facts remain unknown. Missing values are not zero; unavailable evidence is not success; deployed source is not automatically release-certified.
+Dated audit, demo, migration and release files remain historical. They are not silently restamped as currently verified. Specialist lending documentation is not the whole-product architecture.
 
-The manual set and website copy were reconciled against `main` on 23 September 2026. See [current state](CURRENT_STATE.md) for the reviewed evidence boundary.
+## Continuing maintenance
 
-## OpFin Essentials
+Each material system/API change must update the relevant current contracts, manual task and UAT record in the same change. The current-state and comparison records must identify the source and acceptance evidence, not simply the latest merge date.
 
-- `product/OPFIN_ESSENTIALS.md` — controlled product, utility/rent, third-party-lender orchestration, embedded-platform and operating contract.
-- Essentials extends OpFin; it does not redefine OpFin as a lending-only application or make OpFin the primary lender.
+GitHub Actions remains disabled by the owner's instruction. Retain equivalent candidate-specific verification and do not re-enable it or provision additional infrastructure merely to produce checks. The latest observed API/Web failures must not be reported as a green production release.
