@@ -7,6 +7,7 @@ use App\Models\Otp;
 use App\Models\User;
 use App\Services\CustomerCreditProfileService;
 use App\Services\CommercialInsightsService;
+use App\Services\PersonalFinancialSpaceService;
 use App\Services\SmsService;
 use App\Support\ApiResponse;
 use Carbon\Carbon;
@@ -24,6 +25,7 @@ class AuthController extends Controller
         protected SmsService $smsService,
         private readonly CustomerCreditProfileService $profiles,
         private readonly CommercialInsightsService $commercialInsights,
+        private readonly PersonalFinancialSpaceService $personalSpaces,
     ) {}
 
     public function showDeleteForm()
@@ -167,6 +169,7 @@ class AuthController extends Controller
                 report($exception);
             }
 
+            $this->personalSpaces->ensure($user);
             $this->profiles->ensurePrimaryPhone($user);
             $this->profiles->refresh($user, false);
             $token = $this->createAccessToken($user);
@@ -217,6 +220,7 @@ class AuthController extends Controller
         }
 
         RateLimiter::clear($key);
+        $this->personalSpaces->ensure($user);
         $this->profiles->ensurePrimaryPhone($user);
         $token = $this->createAccessToken($user);
 
