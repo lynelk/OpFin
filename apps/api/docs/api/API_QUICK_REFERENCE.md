@@ -15,6 +15,16 @@ python3 scripts/search-api.py "financial-spaces"
 python3 scripts/search-api.py "umra"
 ```
 
+## Operational readiness
+
+| Task | Method / endpoint |
+| --- | --- |
+| Runtime readiness | `GET /api/health/ready` |
+| Financial/UAT readiness | `GET /api/health/financial-ready` |
+| Provider configuration readiness | `GET /api/health/integrations` |
+
+Runtime readiness means the application can serve requests. Financial readiness additionally requires provider routes, funding provenance, regulated disclosures, explicit tax/EFRIS determination and balanced financial-integrity evidence.
+
 ## Identity and account
 
 | Task | Method / endpoint |
@@ -103,7 +113,7 @@ Location is foreground/manual and purpose-bound. Personal service discovery is a
 | Receipts | `GET /api/receipts` |
 | Receipt detail | `GET /api/receipts/{receipt}` |
 
-A displayed limit is not guaranteed approval. Offer acceptance is bound to disclosures and required consent. Pending payout/collection is not financial finality.
+A displayed limit is not guaranteed approval. Offer acceptance is bound to disclosures and required consent. Pending payout/collection is not financial finality. Active product/term status is rechecked server-side, verified payout-wallet ownership is resolved before offer mutation, and production credit requires approved funding provenance.
 
 ## Inclusive finance and programmes
 
