@@ -197,7 +197,7 @@ class _HomePageState extends State<_HomePage>{
           child:Padding(
             padding:const EdgeInsets.all(20),
             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              const Text('FINANCIAL COMPASS',
+              const Text('Financial Compass',
                 style:TextStyle(
                   color:OpFinColors.indigo,
                   fontSize:12,

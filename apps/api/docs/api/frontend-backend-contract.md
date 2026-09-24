@@ -311,7 +311,8 @@ Clients treat location as task-specific context rather than a persistent trackin
 - baseline OpFin use must not require location;
 - App location requests are foreground-only;
 - personal service discovery requests approximate location;
-- precise location is used only where a physical asset, insured risk or claim incident genuinely requires it;
+- Android device capture is approximate only, even for a physical asset, insured risk or claim incident; the client persists the returned approximate precision without upgrading it;
+- an exact asset/risk place may instead be selected through place search or described manually; iOS precise foreground capture remains purpose-bound;
 - clients always send a purpose and matching consent purpose;
 - a client cannot promote verification state; device coordinates remain user-reported provenance unless a server-side place/partner/field verification path confirms them;
 - server responses expose credit_decision_eligible=false;

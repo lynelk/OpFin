@@ -1,10 +1,12 @@
 # Secure Android release automation setup
 
 Status: Controlled internal Android release procedure  
-Updated: 23 September 2026  
+Updated: 24 September 2026
 Language: English (United Kingdom)
 
 ## Current release method: local build, Actions disabled
+
+For the current Windows candidate `1.0.1+19`, use `apps/client/tool/build_release.ps1` with the reviewed full source commit and follow [the 24 September release record](../../docs/releases/2026-09-24-android-update.md). The helper keeps signing credentials local and verifies the signed bundle, package, version, permissions and optional hardware before preparing delivery files. It does not upload or publish. The production and certificate observations below are historical; recheck them in Play rather than using them as current values.
 
 The owner instructed on 20 September 2026 that **GitHub Actions remain disabled**. Do not enable Actions, dispatch workflows or create a release tag to trigger a build. The workflow below is retained for reference; its presence is not authorisation to run it.
 

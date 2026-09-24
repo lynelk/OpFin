@@ -39,7 +39,7 @@ The App supports server-authoritative Space context and financial-life features 
 
 Location is optional and task-driven.
 
-The App uses native Android/iOS foreground location rather than embedding a full Google Maps SDK. Approximate location is the default for service discovery. Fine/precise permission is requested only for a location-dependent asset, insured risk or claim task.
+The App uses native Android/iOS foreground location rather than embedding a full Google Maps SDK. Android device location is always approximate, including asset, insured-risk and claim tasks: Google Play financial-services policy prohibits precise device-location permission. An exact place/address can be selected through place search or entered manually. iOS may request precise foreground location for a location-dependent task.
 
 Customers can also search for a place through the server-side Google Maps adapter or enter a place manually. Small Static Map previews are loaded through the authenticated OpFin API so the Google server API key is never embedded in the client.
 
@@ -52,7 +52,7 @@ Current App entry points include:
 - insured-risk location; and
 - claim incident location.
 
-Android requests ACCESS_COARSE_LOCATION first and ACCESS_FINE_LOCATION only for precise tasks. iOS requests When In Use access. Background location is not configured.
+Android requests only ACCESS_COARSE_LOCATION and labels the result as approximate. Both the Flutter bridge and native Android implementation enforce this restriction. iOS requests When In Use access. Background location is not configured. Location hardware is optional for installation, and refusing location does not prevent baseline account use.
 
 ## Identity verification
 
@@ -89,6 +89,10 @@ The Android build currently requires compile SDK 37, targets SDK 36 and retains 
 Camera features must remain optional for installation so devices without a rear camera are not filtered merely because the App requests camera permission.
 
 The existing Play application ID is `org.rotaryo.opfin`. The Kotlin namespace remains `co.opfin.app`. Distribution builds must use the registered upload key.
+
+The next candidate is `1.0.1+19`. See `../../docs/releases/2026-09-24-android-update.md` for the source, validation and publication status. Build 18 is the earlier compatibility test and does not contain the subsequent product/brand changes. Home uses the canonical **Financial Compass** heading.
+
+On the authorised Windows signing workstation, use `tool/build_release.ps1` with the reviewed full source commit. It runs Flutter analysis/tests, checks the Android permission contract, builds with local signing and records the AAB checksum and source. GitHub Actions remains disabled.
 
 ## Development
 

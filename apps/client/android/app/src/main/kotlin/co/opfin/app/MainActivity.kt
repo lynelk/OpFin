@@ -19,7 +19,6 @@ class MainActivity : FlutterActivity() {
     private val locationChannel = "co.opfin/location"
     private val locationRequestCode = 7401
     private var pendingLocationResult: MethodChannel.Result? = null
-    private var pendingPrecise = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -32,8 +31,8 @@ class MainActivity : FlutterActivity() {
                             result.error("location_busy", "A location request is already in progress.", null)
                             return@setMethodCallHandler
                         }
-                        val precision = call.argument<String>("precision") ?: "approximate"
-                        requestCurrentLocation(result, precision == "precise")
+                        // Android distribution permits approximate device location only.
+                        requestCurrentLocation(result)
                     }
                     "openMaps" -> {
                         val url = call.argument<String>("url")
@@ -48,32 +47,19 @@ class MainActivity : FlutterActivity() {
             }
     }
 
-    private fun requestCurrentLocation(result: MethodChannel.Result, precise: Boolean) {
+    private fun requestCurrentLocation(result: MethodChannel.Result) {
         val coarseGranted = ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        val fineGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (!coarseGranted || (precise && !fineGranted)) {
+        if (!coarseGranted) {
             pendingLocationResult = result
-            pendingPrecise = precise
-            val permissions = if (precise) {
-                arrayOf(
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                )
-            } else {
-                arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION)
-            }
+            val permissions = arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION)
             ActivityCompat.requestPermissions(this, permissions, locationRequestCode)
             return
         }
 
-        deliverLocation(result, precise)
+        deliverLocation(result)
     }
 
     override fun onRequestPermissionsResult(
@@ -91,35 +77,20 @@ class MainActivity : FlutterActivity() {
             this,
             Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        val fineGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (!coarseGranted || (pendingPrecise && !fineGranted)) {
+        if (!coarseGranted) {
             result.error("location_permission_denied", "Location permission was not granted.", null)
             return
         }
 
-        deliverLocation(result, pendingPrecise)
+        deliverLocation(result)
     }
 
     @Suppress("MissingPermission")
-    private fun deliverLocation(result: MethodChannel.Result, precise: Boolean) {
+    private fun deliverLocation(result: MethodChannel.Result) {
         val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val fineGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
         val allowedProviders = buildList {
-            if (precise && fineGranted && manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                add(LocationManager.GPS_PROVIDER)
-            }
             if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 add(LocationManager.NETWORK_PROVIDER)
-            }
-            if (!precise && fineGranted && manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                add(LocationManager.GPS_PROVIDER)
             }
         }
 
@@ -133,7 +104,7 @@ class MainActivity : FlutterActivity() {
             .maxByOrNull { it.time }
 
         if (best != null && System.currentTimeMillis() - best.time <= 10 * 60 * 1000) {
-            result.success(locationPayload(best, precise))
+            result.success(locationPayload(best))
             return
         }
 
@@ -141,7 +112,7 @@ class MainActivity : FlutterActivity() {
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
                 manager.removeUpdates(this)
-                result.success(locationPayload(location, precise))
+                result.success(locationPayload(location))
             }
         }
 
@@ -152,17 +123,14 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun locationPayload(location: Location, requestedPrecise: Boolean): Map<String, Any> {
+    private fun locationPayload(location: Location): Map<String, Any> {
         return mapOf(
             "latitude" to location.latitude,
             "longitude" to location.longitude,
             "accuracy_metres" to location.accuracy.toInt().coerceAtLeast(0),
             "captured_at" to location.time,
-            "requested_precision" to if (requestedPrecise) "precise" else "approximate",
-            "actual_precision" to if (
-                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED
-            ) "precise" else "approximate"
+            "requested_precision" to "approximate",
+            "actual_precision" to "approximate"
         )
     }
 
