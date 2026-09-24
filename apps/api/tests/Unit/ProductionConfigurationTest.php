@@ -98,6 +98,40 @@ class ProductionConfigurationTest extends TestCase
         ]);
     }
 
+    public function test_blocks_legacy_manual_application_status_mutation_in_production(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Legacy manual loan-application status mutation must remain disabled in production.');
+
+        ProductionConfiguration::assertSafe(true, [
+            'app_debug' => false,
+            'mobile_money_provider' => 'cpay',
+            'mobile_money_provider_certified' => true,
+            'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'legacy_manual_application_status_enabled' => true,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => true,
+        ]);
+    }
+
+    public function test_blocks_legacy_manual_transaction_approval_in_production(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Legacy manual transaction approval must remain disabled in production.');
+
+        ProductionConfiguration::assertSafe(true, [
+            'app_debug' => false,
+            'mobile_money_provider' => 'cpay',
+            'mobile_money_provider_certified' => true,
+            'enable_demo_routes' => false,
+            'legacy_origination_enabled' => false,
+            'legacy_manual_transaction_approval_enabled' => true,
+            'require_funding_pool_assignment' => true,
+            'require_regulated_credit_disclosure' => true,
+        ]);
+    }
+
     public function test_blocks_production_credit_without_funding_provenance_requirement(): void
     {
         $this->expectException(RuntimeException::class);
