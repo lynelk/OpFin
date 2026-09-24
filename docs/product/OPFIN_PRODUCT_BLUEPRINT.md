@@ -129,6 +129,30 @@ Partner service networks are represented as partner-owned service points. Operat
 
 All Location Context records are non-credit by default. Location cannot become an underwriting input merely because it exists in OpFin. See docs/architecture/LOCATION_CONTEXT.md.
 
+## Investment Club treasury and statements
+
+Investment Clubs use the same Financial Space identity/membership architecture as Saving Groups, but mature club administration requires stronger treasury controls.
+
+OpFin therefore supports:
+
+- multiple club treasury accounts;
+- an internal append-only cashbook;
+- CSV import of bank/mobile-money/custodian/broker statements;
+- idempotent source-file hashing;
+- automated statement reconciliation;
+- reconciliation exceptions and authorised manual matching;
+- closing-balance variance checks;
+- immutable issued statements; and
+- bank-style HTML plus CSV statement output.
+
+Issued statements freeze club/account presentation details, period, transactions, running balances, totals, reconciliation status and an integrity hash. A later correction requires a new statement rather than rewriting an old one.
+
+Bank-style means professional statement structure, not impersonation of an underlying financial institution. OpFin statements are clearly labelled as OpFin Financial Space statements; imported bank/custodian statements remain external reconciliation evidence.
+
+Administration/import/reconciliation is a Web Workspace responsibility. Members can view issued statements in the App; authorised officers may issue them.
+
+See product/INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md for the canonical contract.
+
 ## Mobile completeness contract
 
 An Individual must be able to use the App for onboarding/verification, money tracking, budgets, goals, debt, receivables, assets/liabilities, net worth, savings, investments, insurance, payments, borrowing, financial-health insights, statements/documents and Space switching, subject to actual activated provider services.
