@@ -1,5 +1,5 @@
 .setup-progress {
-  background: #dbe7e4;
+  background: var(--opfin-line);
   border-radius: 999px;
   height: 10px;
   margin-top: 20px;
@@ -7,7 +7,7 @@
 }
 
 .setup-progress span {
-  background: var(--accent);
+  background: var(--opfin-indigo);
   display: block;
   height: 100%;
   transition: width .25s ease;
@@ -24,10 +24,10 @@
 
 .goal-choice {
   align-items: flex-start;
-  background: #fff;
-  border: 1px solid var(--border);
+  background: var(--opfin-white);
+  border: 1px solid var(--opfin-line);
   border-radius: 14px;
-  color: var(--text);
+  color: var(--opfin-ink);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -40,17 +40,17 @@
 
 .goal-choice:hover,
 .goal-choice:focus-visible {
-  border-color: var(--accent);
-  outline: 3px solid rgba(15, 118, 110, .12);
+  border-color: var(--opfin-indigo);
+  outline: 3px solid rgb(53 59 120 / 12%);
 }
 
 .goal-choice.selected {
-  background: #ecfdf8;
-  border-color: var(--accent);
+  background: var(--opfin-periwinkle);
+  border-color: var(--opfin-indigo);
 }
 
 .goal-choice span { font-weight: 800; }
-.goal-choice small { color: var(--muted); line-height: 1.4; }
+.goal-choice small { color: var(--opfin-muted); line-height: 1.4; }
 
 .autopilot-rule-grid,
 .experience-card-grid {
@@ -60,7 +60,7 @@
 }
 
 .experience-card {
-  border: 1px solid var(--border);
+  border: 1px solid var(--opfin-line);
   border-radius: 14px;
   padding: 18px;
 }
@@ -75,13 +75,13 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.experience-form-row .button { min-height: 42px; }
+.experience-form-row .button { min-height: 48px; }
 
 .experience-disclosure {
-  background: #f8fafc;
-  border: 1px solid var(--border);
+  background: var(--opfin-ivory);
+  border: 1px solid var(--opfin-line);
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
   margin: 12px 0;
   padding: 12px;

@@ -1,9 +1,17 @@
 {
   "name": "OpFin",
-  "version": "2.1-implementation",
+  "version": "3.0.0-rc.1",
+  "status": "release-candidate",
   "tagline": "Your next step, clearer.",
-  "decision": "15 September 2026: retain and refine the existing OpFin monogram; adopt Indigo, Apricot and Warm Ivory. Do not substitute the Open Path or Pipiya marks.",
-  "typography": { "family": "Inter", "fallback": "Arial", "bodySize": 16, "labelSize": 14, "minimumTouchTarget": 48 },
+  "customerProposition": "Understand your money. Make better next moves.",
+  "decision": "24 September 2026: retain the OpFin monogram and Indigo, Apricot and Warm Ivory direction; establish the Progress Path, Financial Compass and Next Step as the v3 product visual language.",
+  "typography": {
+    "family": "Inter",
+    "fallback": "Arial",
+    "bodySize": 16,
+    "labelSize": 14,
+    "minimumTouchTarget": 48
+  },
   "colours": {
     "indigo": "#353B78",
     "indigoStrong": "#29305F",
@@ -19,9 +27,19 @@
     "danger": "#AA2636"
   },
   "logo": {
-    "source": "apps/client/assets/logo.png",
-    "sourceGitBlob": "5b440fbc74804b68a8d0ab12803a3185999157da",
-    "rule": "Derive resized and recoloured assets from the existing monogram, preserving its silhouette. No invented replacement mark. Interface app-name text is not represented as the supplied vector wordmark."
+    "source": "brand/v3/assets/opfin-symbol-master.svg",
+    "sourceGitBlob": "208f5dabdd408a7be47b0d3f4e80da326cdcdec4",
+    "rule": "The v3 vector master is the canonical monogram source. Preserve its geometry and clear space; derive platform exports from this source."
+  },
+  "appIcon": {
+    "source": "brand/v3/assets/opfin-app-icon-master.svg",
+    "sourceGitBlob": "1091757f9e04ecc1ca47a053e9a03dc827b10436",
+    "rule": "Use the Indigo field with the approved Apricot and Warm Ivory monogram treatment. Do not add wordmark text inside the app icon."
+  },
+  "visualLanguage": {
+    "progressPath": "brand/v3/assets/opfin-progress-path.svg",
+    "financialCompass": "Separate recorded facts, estimates and unavailable information; present financial position with provenance and readable next actions.",
+    "nextStep": "One recommended action with a clear reason and one primary action."
   },
   "fontSource": {
     "repository": "rsms/inter",
