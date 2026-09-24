@@ -88,7 +88,13 @@ When Cito is primary, an ambiguous timeout/failure must not silently invoke a di
 
 Provider acknowledgement is not finality. Preserve pending states until authoritative success/failure is known.
 
+Every money instruction first creates a durable local intent. The external provider call occurs only after that intent is committed. If provider submission becomes ambiguous, preserve the canonical reference and reconcile/lookup before any retry. Do not create a fresh payment merely because the original request timed out.
+
 Use idempotency for retryable economic actions. Reconcile provider evidence to OpFin state and ledger records. Never create balancing entries merely to make a report look tidy.
+
+Only provider-statement evidence may set an item to `matched`. Support may annotate an exception but cannot force a match or write-off. A write-off requires: operations/admin request with reason and evidence hash → approval by a different authorised checker → controlled application. The underlying money movement remains a statement/reconciliation exception; write-off does not fabricate provider evidence.
+
+Before financial UAT or live financial activation run `php artisan opfin:financial-readiness` and retain the JSON evidence. Ordinary API liveness/readiness is not financial sign-off.
 
 ## Commercial performance
 
@@ -127,6 +133,8 @@ Assistive technology and assisted-KYC certification requires physical-device evi
 A release requires applicable migrations, API/client checks, Space isolation, financial integrity/idempotency, provider retry/recovery, accessibility/mobile-completeness, reconciliation and documentation alignment.
 
 Railway deployment success and GitHub CI success are separate evidence. Both should be recorded where applicable.
+
+Financial-control changes must also have the repository's independent financial-control approval. Do not merge or release them under a manual success assumption merely because the application deploys.
 
 ## External activation
 
