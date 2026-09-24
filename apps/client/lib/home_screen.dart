@@ -180,6 +180,39 @@ class _HomePageState extends State<_HomePage>{
             ])),
         ),
         const SizedBox(height:14),
+        Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(
+          crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('FINANCIAL COMPASS',
+              style:TextStyle(color:OpFinColors.indigo,fontSize:12,fontWeight:FontWeight.w800,letterSpacing:1.1)),
+            const SizedBox(height:6),
+            const Text('Your position at a glance',
+              style:TextStyle(fontSize:20,fontWeight:FontWeight.w800)),
+            const SizedBox(height:6),
+            const Text('Recorded information stays separate from estimates and unavailable data.',
+              style:TextStyle(color:OpFinColors.muted,height:1.4)),
+            const SizedBox(height:16),
+            Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                const Text('Outstanding',style:TextStyle(color:OpFinColors.muted)),
+                const SizedBox(height:4),
+                Text(_ugx(profile['total_outstanding_minor']),
+                  style:const TextStyle(fontWeight:FontWeight.w800)),
+              ])),
+              const SizedBox(width:16),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                const Text('Credit headroom',style:TextStyle(color:OpFinColors.muted)),
+                const SizedBox(height:4),
+                Text(pending?'Not available':_ugx(available),
+                  style:const TextStyle(fontWeight:FontWeight.w800)),
+              ])),
+            ]),
+            const SizedBox(height:8),
+            TextButton.icon(
+              onPressed:()=>_open(const ConnectedFinancialLifeScreen()),
+              icon:const Icon(Icons.explore_outlined),
+              label:const Text('Open my financial picture')),
+          ]))),
+        const SizedBox(height:4),
         Card(child:ListTile(
           leading:const Icon(Icons.account_balance_wallet_outlined),
           title:const Text('My money & spaces',style:TextStyle(fontWeight:FontWeight.w700)),
