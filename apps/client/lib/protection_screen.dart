@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opfin/services/protection_api.dart';
@@ -12,6 +14,8 @@ class ProtectionScreen extends StatefulWidget {
 class _ProtectionScreenState extends State<ProtectionScreen> {
   late Future<Map<String, dynamic>> _state;
   final NumberFormat _money = NumberFormat('#,##0', 'en_US');
+  final Set<int> _premiumInFlight = <int>{};
+  final Map<int, String> _premiumIdempotencyKeys = <int, String>{};
 
   @override
   void initState() {
@@ -48,51 +52,86 @@ class _ProtectionScreenState extends State<ProtectionScreen> {
     final insurer = product['insurer_name']?.toString() ?? 'the disclosed insurer';
     final benefits = (product['benefits'] as List? ?? const []).map((e) => e.toString()).toList();
     final exclusions = (product['exclusions'] as List? ?? const []).map((e) => e.toString()).toList();
+    final disclosure = (product['disclosure_payload'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final termsUrl = product['terms_url']?.toString() ?? '';
+    var reviewed = false;
+
     final accepted = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(product['name']?.toString() ?? 'Protection product'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Insurer: ' + insurer),
-              const SizedBox(height: 8),
-              Text(
-                'Premium: ' +
-                    _amount(product['premium_amount_minor'], product['currency']?.toString() ?? 'UGX') +
-                    ' · ' +
-                    (product['premium_frequency']?.toString() ?? ''),
-              ),
-              if (benefits.isNotEmpty) ...[
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setLocal) => AlertDialog(
+          title: Text(product['name']?.toString() ?? 'Protection product'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Insurer: ' + insurer),
+                const SizedBox(height: 8),
+                Text(
+                  'Premium: ' +
+                      _amount(product['premium_amount_minor'], product['currency']?.toString() ?? 'UGX') +
+                      ' · ' +
+                      (product['premium_frequency']?.toString() ?? ''),
+                ),
+                if (benefits.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Text('Benefits', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ...benefits.map((item) => Text('• ' + item)),
+                ],
                 const SizedBox(height: 12),
-                const Text('Benefits', style: TextStyle(fontWeight: FontWeight.w700)),
-                ...benefits.map((item) => Text('• ' + item)),
-              ],
-              if (exclusions.isNotEmpty) ...[
+                const Text('Exclusions', style: TextStyle(fontWeight: FontWeight.w700)),
+                if (exclusions.isEmpty)
+                  const Text('No exclusions are listed in this catalogue response. Review the controlled terms below.')
+                else
+                  ...exclusions.map((item) => Text('• ' + item)),
+                if (disclosure.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Text('Controlled disclosure', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ...disclosure.entries.map((entry) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      entry.key.replaceAll('_', ' ') +
+                          ': ' +
+                          (entry.value is String
+                              ? entry.value.toString()
+                              : jsonEncode(entry.value)),
+                    ),
+                  )),
+                ],
+                if (termsUrl.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Text('Controlled terms', style: TextStyle(fontWeight: FontWeight.w700)),
+                  SelectableText(termsUrl),
+                ],
                 const SizedBox(height: 12),
-                const Text('Key exclusions', style: TextStyle(fontWeight: FontWeight.w700)),
-                ...exclusions.map((item) => Text('• ' + item)),
+                Text(
+                  insurer +
+                      ' issues and manages the cover and claim decisions. Paying through OpFin does not by itself activate cover.',
+                ),
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: reviewed,
+                  onChanged: (value) => setLocal(() => reviewed = value == true),
+                  title: const Text('I have reviewed the disclosure and controlled terms shown above.'),
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
               ],
-              const SizedBox(height: 12),
-              Text(
-                insurer +
-                    ' issues and manages the cover and claim decisions. Paying through OpFin does not by itself activate cover.',
-              ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: reviewed ? () => Navigator.pop(dialogContext, true) : null,
+              child: const Text('Accept & continue'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Not now'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Accept & continue'),
-          ),
-        ],
       ),
     );
 
@@ -120,14 +159,21 @@ class _ProtectionScreenState extends State<ProtectionScreen> {
 
   Future<void> _payPremium(Map<String, dynamic> policy) async {
     final policyId = _minor(policy['id']);
+    if (_premiumInFlight.contains(policyId)) return;
+
+    final key = _premiumIdempotencyKeys.putIfAbsent(
+      policyId,
+      () => 'opfin-mobile-premium-' +
+          policyId.toString() +
+          '-' +
+          DateTime.now().microsecondsSinceEpoch.toString(),
+    );
+
+    setState(() => _premiumInFlight.add(policyId));
+    var acceptedByServer = false;
     try {
-      await ProtectionApi.payPremium(
-        policyId,
-        'opfin-mobile-premium-' +
-            policyId.toString() +
-            '-' +
-            DateTime.now().microsecondsSinceEpoch.toString(),
-      );
+      await ProtectionApi.payPremium(policyId, key);
+      acceptedByServer = true;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -142,7 +188,39 @@ class _ProtectionScreenState extends State<ProtectionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.toString())),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _premiumInFlight.remove(policyId));
+      }
+      if (acceptedByServer) {
+        _premiumIdempotencyKeys.remove(policyId);
+      }
     }
+  }
+
+  bool _hasPendingPremium(Map<String, dynamic> policy) {
+    final payments = (policy['premium_payments'] as List? ?? const [])
+        .whereType<Map>();
+    return payments.any((payment) {
+      final status = payment['status']?.toString();
+      return status == 'collection_pending' ||
+          status == 'collected_pending_partner';
+    });
+  }
+
+  bool _premiumDue(Map<String, dynamic> policy) {
+    final status = policy['status']?.toString() ?? '';
+    if (status == 'premium_due' || status == 'lapsed') return true;
+    if (status != 'active') return false;
+
+    final raw = policy['next_premium_due_date']?.toString();
+    if (raw == null || raw.isEmpty) return false;
+    final due = DateTime.tryParse(raw);
+    if (due == null) return false;
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final dueDate = DateTime(due.year, due.month, due.day);
+    return !dueDate.isAfter(todayDate);
   }
 
   Future<void> _submitClaim(Map<String, dynamic> policy) async {
@@ -393,7 +471,10 @@ class _ProtectionScreenState extends State<ProtectionScreen> {
         .toList();
     final status = policy['status']?.toString() ?? '';
     final active = status == 'active';
-    final canPay = status == 'premium_due' || status == 'lapsed';
+    final policyId = _minor(policy['id']);
+    final pendingPremium = _hasPendingPremium(policy);
+    final paying = _premiumInFlight.contains(policyId);
+    final canPay = _premiumDue(policy) && !pendingPremium;
 
     return Card(
       child: Padding(
@@ -430,11 +511,15 @@ class _ProtectionScreenState extends State<ProtectionScreen> {
             if (policy['next_premium_due_date'] != null)
               Text('Next premium: ' + policy['next_premium_due_date'].toString()),
             const SizedBox(height: 12),
-            if (canPay)
+            if (canPay || paying)
               FilledButton.icon(
-                onPressed: () => _payPremium(policy),
+                onPressed: canPay && !paying ? () => _payPremium(policy) : null,
                 icon: const Icon(Icons.payments_outlined),
-                label: const Text('Pay premium'),
+                label: Text(paying ? 'Starting payment…' : 'Pay premium'),
+              ),
+            if (pendingPremium)
+              const Text(
+                'A premium payment is already being confirmed. Another collection cannot be started yet.',
               ),
             if (active)
               OutlinedButton.icon(
