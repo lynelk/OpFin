@@ -67,6 +67,28 @@ export type TreasuryTransaction = {
   reconciliation_status: string;
 };
 
+export type ReconciliationTodo = {
+  type: "statement_row" | "book_transaction" | "balance_variance";
+  row_id?: number;
+  transaction_id?: number;
+  exception_type?: string | null;
+  date?: string | null;
+  description?: string | null;
+  amount_minor?: number;
+  direction?: string;
+  suggested_matches?: Array<{
+    transaction_id: number;
+    reference?: string | null;
+    date?: string | null;
+    description: string;
+    amount_minor: number;
+    direction: string;
+    confidence_percent: number;
+    match_method: string;
+  }>;
+  allowed_actions: string[];
+};
+
 export type StatementImport = {
   id: number;
   public_id: string;
@@ -77,6 +99,9 @@ export type StatementImport = {
   matched_count: number;
   exception_count: number;
   status: string;
+  confirmation_status: string;
+  confirmed_at?: string | null;
+  review_todos?: ReconciliationTodo[] | null;
   summary?: Record<string, unknown> | null;
 };
 
@@ -192,6 +217,69 @@ export const financialSpaceStatementsApi = {
       { method: "POST" }
     ),
 
+  resolveRow: (
+    spaceId: number,
+    rowId: number,
+    payload: {
+      action: "match_transaction" | "create_book_entry" | "mark_external_only" | "mark_duplicate";
+      transaction_id?: number;
+      reason?: string;
+    },
+    token?: string
+  ) =>
+    jsonRequest<{ row: Record<string, unknown> }>(
+      "/financial-spaces/" + spaceId + "/statement-rows/" + rowId + "/resolve",
+      token,
+      { method: "POST", bodyJson: payload }
+    ),
+
+  acceptBookOnly: (
+    spaceId: number,
+    importId: number,
+    transactionId: number,
+    reason: string,
+    token?: string
+  ) =>
+    jsonRequest<{ transaction: TreasuryTransaction }>(
+      "/financial-spaces/" +
+        spaceId +
+        "/statement-imports/" +
+        importId +
+        "/book-transactions/" +
+        transactionId +
+        "/accept",
+      token,
+      { method: "POST", bodyJson: { reason } }
+    ),
+
+  acceptBalanceVariance: (
+    spaceId: number,
+    importId: number,
+    reason: string,
+    token?: string
+  ) =>
+    jsonRequest<{ import: StatementImport }>(
+      "/financial-spaces/" +
+        spaceId +
+        "/statement-imports/" +
+        importId +
+        "/balance-variance",
+      token,
+      { method: "POST", bodyJson: { reason } }
+    ),
+
+  confirmReconciliation: (
+    spaceId: number,
+    importId: number,
+    note?: string,
+    token?: string
+  ) =>
+    jsonRequest<{ import: StatementImport }>(
+      "/financial-spaces/" + spaceId + "/statement-imports/" + importId + "/confirm",
+      token,
+      { method: "POST", bodyJson: { note } }
+    ),
+
   matchRow: (
     spaceId: number,
     rowId: number,
@@ -211,6 +299,27 @@ export const financialSpaceStatementsApi = {
         "/statements" +
         (accountId ? "?account_id=" + accountId : ""),
       token
+    ),
+
+  generateConsolidated: (
+    spaceId: number,
+    from: string,
+    to: string,
+    token?: string
+  ) =>
+    jsonRequest<{
+      statement: GeneratedStatement;
+      sections: Array<Record<string, unknown>>;
+      totals_by_currency: Record<string, Record<string, number>>;
+      position_by_currency: Record<string, Record<string, number>>;
+      downloads: { html: string; csv: string };
+    }>(
+      "/financial-spaces/" + spaceId + "/statements/consolidated",
+      token,
+      {
+        method: "POST",
+        bodyJson: { from, to }
+      }
     ),
 
   generate: (
