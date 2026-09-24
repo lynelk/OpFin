@@ -111,34 +111,6 @@ class LocationContextApi {
         .toList();
   }
 
-  static Future<Map<String, dynamic>> placeDetails(String placeId) async {
-    final response = await http.post(
-      Uri.parse('$apiUrl/location/places/details'),
-      headers: await _headers(),
-      body: jsonEncode({'place_id': placeId}),
-    );
-    final data = _decode(response, 'Unable to load this place.');
-    return (data['place'] as Map?)?.cast<String, dynamic>() ??
-        <String, dynamic>{};
-  }
-
-  static Future<Map<String, dynamic>> reverseGeocode(
-    double latitude,
-    double longitude,
-  ) async {
-    final response = await http.post(
-      Uri.parse('$apiUrl/location/reverse-geocode'),
-      headers: await _headers(),
-      body: jsonEncode({
-        'latitude': latitude,
-        'longitude': longitude,
-      }),
-    );
-    final data = _decode(response, 'Unable to resolve this location.');
-    return (data['place'] as Map?)?.cast<String, dynamic>() ??
-        <String, dynamic>{};
-  }
-
   static Future<List<Map<String, dynamic>>> nearbyServices(
     double latitude,
     double longitude, {
