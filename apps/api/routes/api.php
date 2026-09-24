@@ -76,8 +76,6 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/location-contexts', [LocationContextController::class, 'store']);
     Route::delete('/location-contexts/{context}', [LocationContextController::class, 'destroy']);
     Route::post('/location/places/autocomplete', [LocationContextController::class, 'autocomplete']);
-    Route::post('/location/places/details', [LocationContextController::class, 'place']);
-    Route::post('/location/reverse-geocode', [LocationContextController::class, 'reverse']);
     Route::get('/location/static-map/{context}', [LocationContextController::class, 'staticMap']);
     Route::post('/location/route', [LocationContextController::class, 'route']);
     Route::get('/location/nearby-services', [LocationContextController::class, 'nearbyServices']);
