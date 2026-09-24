@@ -80,6 +80,16 @@ class GroupCredentialsScreen extends StatefulWidget {
 class _GroupCredentialsScreenState extends State<GroupCredentialsScreen> {
   late Future<List<Map<String, dynamic>>> _credentials;
   int get spaceId => (widget.space['id'] as num).toInt();
+  bool get canAdmin => const {
+        'owner',
+        'administrator',
+        'admin',
+        'chairperson',
+        'treasurer',
+        'secretary',
+        'director',
+        'manager',
+      }.contains(widget.space['role']?.toString());
 
   @override
   void initState() {
@@ -180,11 +190,13 @@ class _GroupCredentialsScreenState extends State<GroupCredentialsScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Registration & verification')),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _add,
-          icon: const Icon(Icons.add),
-          label: const Text('Add identifier'),
-        ),
+        floatingActionButton: canAdmin
+            ? FloatingActionButton.extended(
+                onPressed: _add,
+                icon: const Icon(Icons.add),
+                label: const Text('Add identifier'),
+              )
+            : null,
         body: FutureBuilder<List<Map<String, dynamic>>>(
           future: _credentials,
           builder: (context, snapshot) {
