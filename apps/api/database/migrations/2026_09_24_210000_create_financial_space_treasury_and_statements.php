@@ -79,8 +79,12 @@ return new class extends Migration
             $table->unsignedInteger('matched_count')->default(0);
             $table->unsignedInteger('exception_count')->default(0);
             $table->string('status')->default('parsed')->index();
+            $table->string('confirmation_status')->default('not_ready')->index();
+            $table->foreignId('confirmed_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('confirmed_at')->nullable();
             $table->json('column_mapping')->nullable();
             $table->json('summary')->nullable();
+            $table->json('review_todos')->nullable();
             $table->timestamps();
 
             $table->unique(
@@ -108,6 +112,10 @@ return new class extends Migration
             $table->string('exception_type')->nullable()->index();
             $table->string('match_method')->nullable();
             $table->unsignedTinyInteger('match_confidence_percent')->nullable();
+            $table->json('suggested_matches')->nullable();
+            $table->string('user_resolution')->nullable();
+            $table->foreignId('resolved_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('resolved_at')->nullable();
             $table->text('notes')->nullable();
             $table->json('raw_payload')->nullable();
             $table->timestamps();
@@ -122,12 +130,13 @@ return new class extends Migration
             $table->uuid('public_id')->unique();
             $table->string('statement_number')->unique();
             $table->foreignId('financial_space_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('treasury_account_id')->constrained('financial_space_treasury_accounts')->cascadeOnDelete();
+            $table->foreignId('treasury_account_id')->nullable()->constrained('financial_space_treasury_accounts')->nullOnDelete();
             $table->foreignId('generated_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('statement_scope')->default('account')->index();
             $table->date('period_start');
             $table->date('period_end');
-            $table->bigInteger('opening_balance_minor');
-            $table->bigInteger('closing_balance_minor');
+            $table->bigInteger('opening_balance_minor')->nullable();
+            $table->bigInteger('closing_balance_minor')->nullable();
             $table->unsignedBigInteger('total_debits_minor')->default(0);
             $table->unsignedBigInteger('total_credits_minor')->default(0);
             $table->unsignedInteger('transaction_count')->default(0);
