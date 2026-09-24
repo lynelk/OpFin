@@ -1661,17 +1661,34 @@ class FinancialSpaceStatementService
         $amountRaw = $get('amount');
         $directionRaw = strtolower((string) $get('direction'));
 
-        if ($debitRaw !== null && $this->numericAmount($debitRaw) > 0) {
+        $debitMinor = $debitRaw !== null && trim($debitRaw) !== ''
+            ? $this->toMinor($debitRaw, $minorUnitExponent)
+            : 0;
+        $creditMinor = $creditRaw !== null && trim($creditRaw) !== ''
+            ? $this->toMinor($creditRaw, $minorUnitExponent)
+            : 0;
+
+        if ($debitMinor > 0 && $creditMinor > 0) {
+            throw new InvalidArgumentException(
+                "Statement row {$lineNumber} cannot contain both a non-zero debit and credit amount."
+            );
+        }
+
+        if ($debitMinor > 0) {
             $direction = 'debit';
-            $amount = $this->toMinor($debitRaw, $minorUnitExponent);
-        } elseif ($creditRaw !== null && $this->numericAmount($creditRaw) > 0) {
+            $amount = $debitMinor;
+        } elseif ($creditMinor > 0) {
             $direction = 'credit';
-            $amount = $this->toMinor($creditRaw, $minorUnitExponent);
-        } elseif ($amountRaw !== null && in_array($directionRaw, ['debit', 'credit'], true)) {
+            $amount = $creditMinor;
+        } elseif ($amountRaw !== null && trim($amountRaw) !== '' && in_array($directionRaw, ['debit', 'credit'], true)) {
             $direction = $directionRaw;
             $amount = $this->toMinor($amountRaw, $minorUnitExponent);
         } else {
             throw new InvalidArgumentException("Statement row {$lineNumber} requires debit/credit columns or amount plus direction.");
+        }
+
+        if ($amount <= 0) {
+            throw new InvalidArgumentException("Statement row {$lineNumber} requires a positive transaction amount.");
         }
 
         return [
@@ -1721,27 +1738,62 @@ class FinancialSpaceStatementService
         return collect($row)->every(fn ($value) => trim((string) $value) === '');
     }
 
-    private function numericAmount(string $value): float
-    {
-        $clean = preg_replace('/[^0-9.\-]/', '', str_replace(',', '', $value));
-
-        return is_numeric($clean) ? (float) $clean : 0.0;
-    }
-
     private function toMinor(string $value, int $exponent): int
     {
-        $amount = abs($this->numericAmount($value));
-        $factor = 10 ** max(0, min(4, $exponent));
-
-        return (int) round($amount * $factor);
+        return abs($this->parseMinorUnits($value, $exponent));
     }
 
     private function signedMinor(string $value, int $exponent): int
     {
-        $amount = $this->numericAmount($value);
-        $factor = 10 ** max(0, min(4, $exponent));
+        return $this->parseMinorUnits($value, $exponent);
+    }
 
-        return (int) round($amount * $factor);
+    private function parseMinorUnits(string $value, int $exponent): int
+    {
+        $exponent = max(0, min(4, $exponent));
+        $raw = trim(str_replace([',', ' '], '', $value));
+        if ($raw === '') {
+            return 0;
+        }
+
+        $parenthesisedNegative = str_starts_with($raw, '(') && str_ends_with($raw, ')');
+        if ($parenthesisedNegative) {
+            $raw = substr($raw, 1, -1);
+        }
+
+        $clean = preg_replace('/[^0-9.\-]/', '', $raw) ?? '';
+        if (! preg_match('/^-?\d+(?:\.\d+)?$/', $clean)) {
+            throw new InvalidArgumentException("Invalid monetary amount: {$value}");
+        }
+
+        $negative = $parenthesisedNegative || str_starts_with($clean, '-');
+        $unsigned = ltrim($clean, '-');
+        [$whole, $fraction] = array_pad(explode('.', $unsigned, 2), 2, '');
+
+        if (strlen($fraction) > $exponent) {
+            $discarded = substr($fraction, $exponent);
+            if (trim($discarded, '0') !== '') {
+                throw new InvalidArgumentException(
+                    "Monetary amount {$value} has more precision than the configured minor-unit exponent {$exponent}."
+                );
+            }
+            $fraction = substr($fraction, 0, $exponent);
+        }
+
+        $fraction = str_pad($fraction, $exponent, '0');
+        $digits = ltrim($whole.$fraction, '0');
+        $digits = $digits === '' ? '0' : $digits;
+
+        if (strlen($digits) > 16) {
+            throw new InvalidArgumentException('Monetary amount exceeds the supported treasury range.');
+        }
+
+        $minor = (int) $digits;
+        if ($minor > 9000000000000000) {
+            throw new InvalidArgumentException('Monetary amount exceeds the supported treasury range.');
+        }
+
+        return $negative ? -$minor : $minor;
     }
 
     private function assertStatementBaseline(
