@@ -133,6 +133,7 @@ return new class extends Migration
             $table->unsignedInteger('transaction_count')->default(0);
             $table->string('reconciliation_status')->default('unreconciled')->index();
             $table->string('content_hash', 64);
+            $table->json('statement_payload');
             $table->timestamp('generated_at');
             $table->json('summary')->nullable();
             $table->timestamps();
