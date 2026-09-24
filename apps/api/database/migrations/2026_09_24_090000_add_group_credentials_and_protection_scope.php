@@ -30,9 +30,9 @@ return new class extends Migration
                 ['financial_space_id', 'credential_type', 'issuer_code'],
                 'financial_space_credential_identity_unique'
             );
-            $table->index(
-                ['issuer_code', 'credential_type', 'credential_value'],
-                'financial_space_credential_lookup_idx'
+            $table->unique(
+                ['jurisdiction_country', 'issuer_code', 'credential_type', 'credential_value'],
+                'financial_space_credential_external_unique'
             );
         });
 
