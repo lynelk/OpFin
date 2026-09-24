@@ -18,6 +18,16 @@ class _FinancialSpaceStatementsScreenState
   int? _accountId;
 
   int get spaceId => (widget.space['id'] as num).toInt();
+  bool get canManage => const {
+        'owner',
+        'administrator',
+        'admin',
+        'chairperson',
+        'treasurer',
+        'secretary',
+        'director',
+        'manager',
+      }.contains(widget.space['role']?.toString());
 
   @override
   void initState() {
@@ -257,11 +267,21 @@ class _FinancialSpaceStatementsScreenState
                       ),
                     ),
                   ),
-                  FilledButton.icon(
-                    onPressed: _issueStatement,
-                    icon: const Icon(Icons.description_outlined),
-                    label: const Text('Issue statement'),
-                  ),
+                  if (canManage)
+                    FilledButton.icon(
+                      onPressed: _issueStatement,
+                      icon: const Icon(Icons.description_outlined),
+                      label: const Text('Issue statement'),
+                    )
+                  else
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(14),
+                        child: Text(
+                          'Statements are issued by authorised club officers. Members can view every issued statement here.',
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 20),
                   const Text(
                     'Issued statements',
