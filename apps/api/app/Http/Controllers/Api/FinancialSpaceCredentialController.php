@@ -83,7 +83,7 @@ class FinancialSpaceCredentialController extends Controller
     {
         $validated = $request->validate([
             'verification_status' => ['required', Rule::in(['verified', 'rejected', 'expired'])],
-            'verification_reference' => ['nullable', 'string', 'max:255'],
+            'verification_reference' => ['nullable', 'required_if:verification_status,verified', 'string', 'max:255'],
             'verification_evidence_hash' => ['nullable', 'string', 'size:64', 'regex:/^[a-fA-F0-9]{64}$/'],
         ]);
 
