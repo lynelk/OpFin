@@ -136,3 +136,28 @@ export async function reconcileTreasuryStatementAction(formData: FormData) {
     status: "reconciled"
   });
 }
+
+
+export async function generateTreasuryStatementAction(formData: FormData) {
+  const token = await getAccessToken();
+  const spaceId = integer(formData, "space_id");
+  const accountId = integer(formData, "account_id");
+  const from = value(formData, "from");
+  const to = value(formData, "to");
+  try {
+    const result = await financialSpaceStatementsApi.generate(
+      spaceId,
+      accountId,
+      from,
+      to,
+      token
+    );
+    destination(spaceId, {
+      account: String(accountId),
+      statement: String(result.statement.id),
+      status: "statement-generated"
+    });
+  } catch (error) {
+    fail(spaceId, error, "Unable to generate statement.");
+  }
+}
