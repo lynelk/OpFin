@@ -34,6 +34,25 @@ Individuals and Savings Groups should be able to complete normal everyday journe
 
 The App supports server-authoritative Space context and financial-life features such as money/accounts, budgets, goals, assets, liabilities/receivables, net position and supported financial-health guidance. Savings Groups, Investment Clubs and SACCOs can attach external government/regulator identifiers to their existing Space record as those schemes become applicable. Group protection catalogues are visible only for approved group-capable products; group enrolment and premium collection remain fail-closed until separately activated.
 
+## Lightweight location context
+
+Location is optional and task-driven.
+
+The App uses native Android/iOS foreground location rather than embedding a full Google Maps SDK. Approximate location is the default for service discovery. Fine/precise permission is requested only for a location-dependent asset, insured risk or claim task.
+
+Customers can also search for a place through the server-side Google Maps adapter or enter a place manually. Small Static Map previews are loaded through the authenticated OpFin API so the Google server API key is never embedded in the client.
+
+Current App entry points include:
+
+- participating services near me;
+- Saving Group / Investment Club / SACCO operating area;
+- group meeting place;
+- physical asset/project location;
+- insured-risk location; and
+- claim incident location.
+
+Android requests ACCESS_COARSE_LOCATION first and ACCESS_FINE_LOCATION only for precise tasks. iOS requests When In Use access. Background location is not configured.
+
 ## Identity verification
 
 Where a selected service requires identity evidence, the App follows the configured KYC contract, including NIN and required document/selfie evidence.
