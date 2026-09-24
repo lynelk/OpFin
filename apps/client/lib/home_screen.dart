@@ -3,9 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/credit_offers_screen.dart';
 import 'package:opfin/financial_spaces_screen.dart';
-import 'package:opfin/connected_financial_life_screen.dart';
 import 'package:opfin/financial_hubs.dart';
 import 'package:opfin/protection_screen.dart';
+import 'package:opfin/personal_money_screen.dart';
 import 'package:opfin/kyc_setup_screen.dart';
 import 'package:opfin/inclusive_finance_screen.dart';
 import 'package:opfin/loan_application_screen.dart';
@@ -96,7 +96,7 @@ class _HomePageState extends State<_HomePage>{
       await _openSavings();
       return;
     }
-    await _open(const ConnectedFinancialLifeScreen());
+    await _open(const PersonalMoneyScreen());
   }
 
   @override Widget build(BuildContext context)=>RefreshIndicator(
@@ -193,7 +193,7 @@ class _HomePageState extends State<_HomePage>{
           title:const Text('Plan my money',style:TextStyle(fontWeight:FontWeight.w700)),
           subtitle:Text('This month: '+_ugx(income)+' in · '+_ugx(expenses)+' out. Plan cash flow, debts and upcoming obligations.'),
           trailing:const Icon(Icons.chevron_right),
-          onTap:()=>_open(const ConnectedFinancialLifeScreen()))),
+          onTap:()=>_open(const PersonalMoneyScreen()))),
 
         Card(child:ListTile(
           leading:const Icon(Icons.savings_outlined),
