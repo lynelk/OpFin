@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:opfin/constants.dart';
 import 'package:opfin/otp_screen.dart';
+import 'package:opfin/widgets/auth_scaffold.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -64,53 +65,76 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Reset PIN')),
-    body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          const Text('Create a new PIN',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          const Text('We will confirm your phone before changing your PIN.'),
-          const SizedBox(height: 24),
-          Form(key: _formKey, child: Column(children: [
-            TextFormField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Phone number'),
-              validator: (value) {
-                final v=value?.trim().replaceAll(' ','')??'';
-                return RegExp(r'^(0\d{9}|256\d{9}|\+256\d{9})$').hasMatch(v)
-                  ? null : 'Enter a valid phone number';
-              }),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _pin,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              maxLength: 6,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(labelText: 'New 6-digit PIN'),
-              validator: (v)=>RegExp(r'^\d{6}$').hasMatch(v??'')?null:'Enter 6 digits'),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _confirm,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              maxLength: 6,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(labelText: 'Confirm new PIN'),
-              validator: (v)=>v==_pin.text?null:'PINs do not match'),
-            const SizedBox(height: 24),
-            SizedBox(width: double.infinity,height:52,child:FilledButton(
-              onPressed:_loading?null:_send,
-              child:_loading?const CircularProgressIndicator(strokeWidth:2)
-                :const Text('Send verification code'))),
-          ])),
-        ],
-      ),
-    ),
-  );
+  Widget build(BuildContext context) => OpFinAuthScaffold(
+        eyebrow: 'Account security',
+        title: 'Create a new PIN',
+        description:
+            'We will confirm your phone number before changing your 6-digit PIN.',
+        showBackButton: true,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                autofillHints: const [AutofillHints.telephoneNumber],
+                decoration: const InputDecoration(
+                  labelText: 'Phone number',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+                validator: (value) {
+                  final v = value?.trim().replaceAll(' ', '') ?? '';
+                  return RegExp(r'^(0\d{9}|256\d{9}|\+256\d{9})$')
+                          .hasMatch(v)
+                      ? null
+                      : 'Enter a valid phone number';
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _pin,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  labelText: 'New 6-digit PIN',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                validator: (v) =>
+                    RegExp(r'^\d{6}$').hasMatch(v ?? '') ? null : 'Enter 6 digits',
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _confirm,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  labelText: 'Confirm new PIN',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                validator: (v) => v == _pin.text ? null : 'PINs do not match',
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                height: 52,
+                child: FilledButton(
+                  onPressed: _loading ? null : _send,
+                  child: _loading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Send verification code'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 }
