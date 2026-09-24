@@ -53,6 +53,23 @@ class LocationContextService
         private readonly GoogleMapsLocationService $google,
     ) {}
 
+    public function assertWritable(
+        User $actor,
+        string $subjectType,
+        int $subjectId,
+        string $purpose,
+        string $consentPurpose,
+    ): void {
+        $this->authorise($actor, $subjectType, $subjectId, true);
+        $this->validatePurpose($subjectType, $purpose);
+
+        if ($consentPurpose !== $purpose) {
+            throw ValidationException::withMessages([
+                'consent_purpose' => ['Location consent must match the financial task that is using the location.'],
+            ]);
+        }
+    }
+
     public function listFor(User $actor, string $subjectType, int $subjectId): array
     {
         $this->authorise($actor, $subjectType, $subjectId, false);
