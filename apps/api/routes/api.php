@@ -53,6 +53,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/health', [HealthController::class, 'show']);
 Route::get('/health/live', [HealthController::class, 'live']);
 Route::get('/health/ready', [HealthController::class, 'ready']);
+Route::get('/health/financial-ready', [HealthController::class, 'financialReady']);
+Route::get('/health/integrations', [HealthController::class, 'integrations']);
 Route::middleware('throttle:auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
