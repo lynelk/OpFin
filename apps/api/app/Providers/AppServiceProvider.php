@@ -31,6 +31,9 @@ class AppServiceProvider extends ServiceProvider
             'mobile_money_provider' => $moneyProvider,
             'mobile_money_provider_certified' => (bool) config("services.mobile_money.providers.{$moneyProvider}.production_certified", false),
             'enable_demo_routes' => config('services.opfin.enable_demo_routes'),
+            'legacy_origination_enabled' => config('opfin.credit.legacy_origination_enabled'),
+            'require_funding_pool_assignment' => config('opfin.credit.require_funding_pool_assignment'),
+            'require_regulated_credit_disclosure' => config('opfin.regulatory.require_credit_disclosure'),
         ]);
 
         Paginator::useBootstrap();
