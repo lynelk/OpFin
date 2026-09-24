@@ -107,14 +107,18 @@ class MainActivity : FlutterActivity() {
     @Suppress("MissingPermission")
     private fun deliverLocation(result: MethodChannel.Result, precise: Boolean) {
         val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val fineGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
         val allowedProviders = buildList {
-            if (precise && manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            if (precise && fineGranted && manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 add(LocationManager.GPS_PROVIDER)
             }
             if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 add(LocationManager.NETWORK_PROVIDER)
             }
-            if (!precise && manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            if (!precise && fineGranted && manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 add(LocationManager.GPS_PROVIDER)
             }
         }
