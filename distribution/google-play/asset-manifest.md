@@ -13,6 +13,8 @@ The v3 feature graphic uses the Progress Path as a supporting device and places 
 
 Regenerate using the repository brand-asset process where required and retain provenance/checksums.
 
+**Release-candidate gate:** the currently committed PNG exports must be regenerated from the v3 vector/token sources and their new checksums recorded before Play submission. The redesigned SVG source and build rule are not, by themselves, evidence that the binary submitted to Play carries the v3 artwork.
+
 ## Production screenshot plan
 
 Capture screenshots from the **exact signed release candidate** with authorised test data. Do not reconstruct or generate a screen and label it as production.
