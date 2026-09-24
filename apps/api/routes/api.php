@@ -97,9 +97,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/financial-spaces/{space}/treasury/accounts/{account}/statement-imports', [FinancialSpaceStatementController::class, 'importStatement']);
     Route::get('/financial-spaces/{space}/statement-imports/{import}', [FinancialSpaceStatementController::class, 'importDetail']);
     Route::post('/financial-spaces/{space}/statement-imports/{import}/reconcile', [FinancialSpaceStatementController::class, 'reconcile']);
-    Route::get('/financial-spaces/{space}/treasury/accounts/{account}/statements/generate', [FinancialSpaceStatementController::class, 'generate']);
-    Route::get('/financial-spaces/{space}/treasury/accounts/{account}/statements/html', [FinancialSpaceStatementController::class, 'html'])->name('financial-spaces.statements.html');
-    Route::get('/financial-spaces/{space}/treasury/accounts/{account}/statements/csv', [FinancialSpaceStatementController::class, 'csv'])->name('financial-spaces.statements.csv');
+    Route::get('/financial-spaces/{space}/statements', [FinancialSpaceStatementController::class, 'statements']);
+    Route::post('/financial-spaces/{space}/treasury/accounts/{account}/statements', [FinancialSpaceStatementController::class, 'generate']);
+    Route::get('/financial-spaces/{space}/statements/{statement}', [FinancialSpaceStatementController::class, 'show']);
+    Route::get('/financial-spaces/{space}/statements/{statement}/html', [FinancialSpaceStatementController::class, 'html'])->name('financial-spaces.statements.html');
+    Route::get('/financial-spaces/{space}/statements/{statement}/csv', [FinancialSpaceStatementController::class, 'csv'])->name('financial-spaces.statements.csv');
     Route::get('/financial-spaces/{space}/financial-life', [FinancialLifeController::class, 'summary']);
     Route::get('/financial-spaces/{space}/obligations', [FinancialLifeController::class, 'obligations']);
     Route::post('/financial-spaces/{space}/obligations', [FinancialLifeController::class, 'storeObligation']);
