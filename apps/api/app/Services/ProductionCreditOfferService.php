@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\CreditDecision;
 use App\Models\CreditOffer;
 use App\Models\CreditRepaymentScheduleItem;
-use App\Models\CustomerWallet;
 use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\MobileMoneyTransaction;
@@ -27,10 +26,13 @@ class ProductionCreditOfferService
         private readonly CreditReferenceReportingService $creditReporting,
         private readonly TransactionReceiptService $receipts,
         private readonly FundingPoolService $fundingPools,
+        private readonly CreditProductAvailabilityService $productAvailability,
+        private readonly VerifiedWalletService $wallets,
     ) {}
 
     public function createOffer(LoanApplication $application, User $actor, array $pricing): CreditOffer
     {
+        $this->productAvailability->assertApplicationAvailable($application);
         $application->loadMissing(['loanProductTerm', 'creditDecision']);
         $decision = $application->creditDecision;
         if (! $decision || $decision->status !== CreditDecision::STATUS_APPROVED) {
@@ -220,6 +222,11 @@ class ProductionCreditOfferService
 
     public function acceptOffer(CreditOffer $offer, User $user, array $acceptanceMetadata = []): array
     {
+        $walletId = isset($acceptanceMetadata['wallet_id']) ? (int) $acceptanceMetadata['wallet_id'] : null;
+        $disbursementTarget = $this->wallets->forDisbursement($user, $walletId);
+        $wallet = $disbursementTarget['wallet'];
+        $disbursementPhone = $disbursementTarget['phone'];
+
         $offer = DB::transaction(function () use ($offer, $user, $acceptanceMetadata) {
             $locked = CreditOffer::query()->lockForUpdate()->findOrFail($offer->id);
             if ($locked->user_id !== $user->id) {
@@ -231,6 +238,7 @@ class ProductionCreditOfferService
             if ($locked->status !== CreditOffer::STATUS_OFFERED) {
                 throw new InvalidArgumentException('This offer is no longer available for acceptance.');
             }
+            $this->productAvailability->assertApplicationAvailable(LoanApplication::query()->findOrFail($locked->loan_application_id));
             if ($locked->expires_at->isPast()) {
                 $locked->update(['status' => CreditOffer::STATUS_EXPIRED]);
                 throw new InvalidArgumentException('This offer has expired.');
@@ -246,22 +254,6 @@ class ProductionCreditOfferService
             return $locked->fresh();
         });
 
-        $walletId = isset($acceptanceMetadata['wallet_id']) ? (int) $acceptanceMetadata['wallet_id'] : null;
-        $walletQuery = CustomerWallet::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'active')
-            ->whereNotNull('verified_at');
-
-        $wallet = $walletId
-            ? (clone $walletQuery)->whereKey($walletId)->first()
-            : (clone $walletQuery)->where('is_default_disbursement', true)->first();
-
-        if ($walletId && ! $wallet) {
-            throw new InvalidArgumentException('Choose a verified wallet that belongs to your OpFin profile.');
-        }
-
-        $wallet ??= (clone $walletQuery)->orderByDesc('is_default_disbursement')->first();
-        $disbursementPhone = $wallet?->msisdn ?? $user->phone;
 
         $existing = MobileMoneyTransaction::query()->where('credit_offer_id', $offer->id)
             ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)->latest()->first();
