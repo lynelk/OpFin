@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\InclusiveImpactController;
 use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
+use App\Http\Controllers\Api\LocationContextController;
 use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\OrganisationJourneyController;
 use App\Http\Controllers\Api\PartnerReportingController;
@@ -70,6 +71,16 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::delete('/account', [AccountController::class, 'destroy']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
     Route::get('/capabilities', [CapabilityController::class, 'index']);
+    Route::get('/location/status', [LocationContextController::class, 'status']);
+    Route::get('/location-contexts', [LocationContextController::class, 'index']);
+    Route::post('/location-contexts', [LocationContextController::class, 'store']);
+    Route::delete('/location-contexts/{context}', [LocationContextController::class, 'destroy']);
+    Route::post('/location/places/autocomplete', [LocationContextController::class, 'autocomplete']);
+    Route::post('/location/places/details', [LocationContextController::class, 'place']);
+    Route::post('/location/reverse-geocode', [LocationContextController::class, 'reverse']);
+    Route::get('/location/static-map/{context}', [LocationContextController::class, 'staticMap']);
+    Route::post('/location/route', [LocationContextController::class, 'route']);
+    Route::get('/location/nearby-services', [LocationContextController::class, 'nearbyServices']);
     Route::get('/financial-spaces', [FinancialSpaceController::class, 'index']);
     Route::post('/financial-spaces', [FinancialSpaceController::class, 'store']);
     Route::post('/financial-spaces/invitations/accept', [FinancialSpaceController::class, 'acceptInvitation']);
@@ -218,6 +229,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::get('/admin/location-insights', [LocationContextController::class, 'insights']);
     Route::patch('/admin/financial-space-credentials/{credential}/verification', [FinancialSpaceCredentialController::class, 'verify']);
     Route::post('/admin/hardship/{case}/approve', [V5P0PlatformController::class, 'approveHardship']);
     Route::post('/admin/product-factory/products', [V5P0PlatformController::class, 'createProduct']);
