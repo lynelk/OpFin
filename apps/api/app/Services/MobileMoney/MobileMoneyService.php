@@ -122,21 +122,50 @@ class MobileMoneyService
             throw new InvalidArgumentException('Mobile money currency must be a three-letter currency code.');
         }
 
-        return DB::transaction(function () use ($direction, $attributes, $providerName, $idempotencyKey, $amountMinor, $phone, $currency) {
-            $existing = MobileMoneyTransaction::where('idempotency_key', $idempotencyKey)->lockForUpdate()->first();
-            if ($existing) {
-                $this->assertIdempotentReplay($existing, $direction, $providerName, $attributes, $amountMinor, $phone, $currency);
-                $this->audit("mobile_money.{$direction}.duplicate", $existing, ['idempotency_key' => $idempotencyKey]);
-                $this->syncEconomics($existing);
+        [$transaction, $created] = DB::transaction(function () use (
+            $direction,
+            $attributes,
+            $providerName,
+            $idempotencyKey,
+            $amountMinor,
+            $phone,
+            $currency,
+        ) {
+            $existing = MobileMoneyTransaction::where('idempotency_key', $idempotencyKey)
+                ->lockForUpdate()
+                ->first();
 
-                return $existing;
+            if ($existing) {
+                $this->assertIdempotentReplay(
+                    $existing,
+                    $direction,
+                    $providerName,
+                    $attributes,
+                    $amountMinor,
+                    $phone,
+                    $currency,
+                );
+                $this->audit("mobile_money.{$direction}.duplicate", $existing, [
+                    'idempotency_key' => $idempotencyKey,
+                ]);
+
+                return [$existing, false];
             }
 
             $metadata = Arr::except($attributes, [
                 'transaction_id', 'credit_offer_id', 'loan_id', 'user_id', 'institution_id', 'provider', 'direction',
                 'amount_minor', 'currency', 'phone', 'idempotency_key', 'internal_reference',
             ]);
-            $metadata['instruction_fingerprint'] = $this->instructionFingerprint($direction, $providerName, $attributes, $amountMinor, $phone, $currency);
+            $metadata['instruction_fingerprint'] = $this->instructionFingerprint(
+                $direction,
+                $providerName,
+                $attributes,
+                $amountMinor,
+                $phone,
+                $currency,
+            );
+            $metadata['provider_submission_state'] = 'intent_persisted';
+            $metadata['provider_submission_intent_at'] = now()->toISOString();
 
             $transaction = MobileMoneyTransaction::create([
                 'transaction_id' => Arr::get($attributes, 'transaction_id'),
@@ -156,17 +185,76 @@ class MobileMoneyService
                 'metadata' => $metadata,
             ]);
 
-            $this->audit("mobile_money.{$direction}.requested", $transaction, ['idempotency_key' => $idempotencyKey]);
-            $provider = $this->providers->provider($providerName);
-            $response = $direction === MobileMoneyTransaction::DIRECTION_DISBURSEMENT
-                ? $provider->disburse($transaction)
-                : $provider->collect($transaction);
-            $this->applyProviderResponse($transaction, $response);
-            $this->audit("mobile_money.{$direction}.provider_response", $transaction, ['response' => $response->raw]);
-            $this->syncEconomics($transaction->fresh());
+            $this->audit("mobile_money.{$direction}.intent_persisted", $transaction, [
+                'idempotency_key' => $idempotencyKey,
+                'internal_reference' => $transaction->internal_reference,
+            ]);
+
+            return [$transaction, true];
+        });
+
+        if (! $created) {
+            $this->syncEconomics($transaction);
 
             return $transaction->fresh();
-        });
+        }
+
+        $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+        $metadata['provider_submission_state'] = 'submission_started';
+        $metadata['provider_submission_started_at'] = now()->toISOString();
+        $transaction->update(['metadata' => $metadata]);
+
+        try {
+            $provider = $this->providers->provider($providerName);
+            $response = $direction === MobileMoneyTransaction::DIRECTION_DISBURSEMENT
+                ? $provider->disburse($transaction->fresh())
+                : $provider->collect($transaction->fresh());
+
+            $this->applyProviderResponse($transaction, $response);
+            $this->audit("mobile_money.{$direction}.provider_response", $transaction, [
+                'response' => $response->raw,
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            $transaction->refresh();
+            $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+            $metadata['provider_submission_state'] = 'rejected_before_provider_finality';
+            $metadata['provider_submission_failed_at'] = now()->toISOString();
+
+            $transaction->update([
+                'status' => MobileMoneyTransaction::STATUS_FAILED,
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
+                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+                'failure_reason' => $exception->getMessage(),
+                'metadata' => $metadata,
+            ]);
+            $this->audit("mobile_money.{$direction}.submission_rejected", $transaction, [
+                'reason' => $exception->getMessage(),
+            ]);
+            $this->syncEconomics($transaction->fresh());
+
+            throw $exception;
+        } catch (\Throwable $exception) {
+            $transaction->refresh();
+            $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+            $metadata['provider_submission_state'] = 'ambiguous';
+            $metadata['provider_submission_ambiguous_at'] = now()->toISOString();
+
+            $transaction->update([
+                'failure_reason' => 'Provider submission outcome is ambiguous. Preserve this intent and reconcile by canonical reference before any retry.',
+                'metadata' => $metadata,
+            ]);
+            $this->audit("mobile_money.{$direction}.submission_ambiguous", $transaction, [
+                'exception_class' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+            $this->syncEconomics($transaction->fresh());
+
+            throw $exception;
+        }
+
+        $this->syncEconomics($transaction->fresh());
+
+        return $transaction->fresh();
     }
 
     private function assertIdempotentReplay(
