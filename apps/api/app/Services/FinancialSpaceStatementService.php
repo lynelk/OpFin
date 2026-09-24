@@ -328,6 +328,16 @@ class FinancialSpaceStatementService
         abort_unless($transaction->financial_space_id === $space->id, 404);
         abort_unless($row->treasury_account_id === $transaction->treasury_account_id, 422);
 
+        if ($row->reconciliation_status === 'matched') {
+            if ((int) $row->matched_transaction_id === (int) $transaction->id) {
+                return $row->fresh('matchedTransaction');
+            }
+
+            throw ValidationException::withMessages([
+                'transaction_id' => ['This statement row is already reconciled to a different transaction.'],
+            ]);
+        }
+
         if ($row->currency !== $transaction->currency
             || $row->direction !== $transaction->direction
             || (int) $row->amount_minor !== (int) $transaction->amount_minor) {
@@ -645,14 +655,14 @@ class FinancialSpaceStatementService
         fputcsv($stream, ['Date', 'Value Date', 'Description', 'Reference', 'Debit', 'Credit', 'Balance', 'Reconciliation']);
         foreach ($data['rows'] as $row) {
             fputcsv($stream, [
-                $row['date'],
-                $row['value_date'],
-                $row['description'],
-                $row['reference'],
+                $this->csvSafe($row['date']),
+                $this->csvSafe($row['value_date']),
+                $this->csvSafe($row['description']),
+                $this->csvSafe($row['reference']),
                 $row['debit_minor'],
                 $row['credit_minor'],
                 $row['balance_minor'],
-                $row['reconciliation_status'],
+                $this->csvSafe($row['reconciliation_status']),
             ]);
         }
         rewind($stream);
@@ -944,6 +954,16 @@ class FinancialSpaceStatementService
         $factor = 10 ** max(0, min(4, $exponent));
 
         return (int) round($amount * $factor);
+    }
+
+    private function csvSafe(mixed $value): string
+    {
+        $text = (string) ($value ?? '');
+        if ($text !== '' && preg_match('/^[=+\-@]/', $text) === 1) {
+            return "'".$text;
+        }
+
+        return $text;
     }
 
     private function maskedReference(?string $reference): ?string
