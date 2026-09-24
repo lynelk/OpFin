@@ -97,9 +97,14 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/financial-spaces/{space}/treasury/accounts/{account}/statement-imports', [FinancialSpaceStatementController::class, 'importStatement']);
     Route::get('/financial-spaces/{space}/statement-imports/{import}', [FinancialSpaceStatementController::class, 'importDetail']);
     Route::post('/financial-spaces/{space}/statement-imports/{import}/reconcile', [FinancialSpaceStatementController::class, 'reconcile']);
+    Route::post('/financial-spaces/{space}/statement-imports/{import}/confirm', [FinancialSpaceStatementController::class, 'confirm']);
+    Route::post('/financial-spaces/{space}/statement-imports/{import}/balance-variance', [FinancialSpaceStatementController::class, 'resolveBalanceVariance']);
+    Route::post('/financial-spaces/{space}/statement-imports/{import}/book-transactions/{transaction}/accept', [FinancialSpaceStatementController::class, 'resolveBookTransaction']);
+    Route::post('/financial-spaces/{space}/statement-rows/{row}/resolve', [FinancialSpaceStatementController::class, 'resolveRow']);
     Route::post('/financial-spaces/{space}/statement-rows/{row}/match', [FinancialSpaceStatementController::class, 'matchRow']);
     Route::get('/financial-spaces/{space}/statements', [FinancialSpaceStatementController::class, 'statements']);
     Route::post('/financial-spaces/{space}/treasury/accounts/{account}/statements', [FinancialSpaceStatementController::class, 'generate']);
+    Route::post('/financial-spaces/{space}/statements/consolidated', [FinancialSpaceStatementController::class, 'generateConsolidated']);
     Route::get('/financial-spaces/{space}/statements/{statement}', [FinancialSpaceStatementController::class, 'show']);
     Route::get('/financial-spaces/{space}/statements/{statement}/html', [FinancialSpaceStatementController::class, 'html'])->name('financial-spaces.statements.html');
     Route::get('/financial-spaces/{space}/statements/{statement}/csv', [FinancialSpaceStatementController::class, 'csv'])->name('financial-spaces.statements.csv');
