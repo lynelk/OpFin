@@ -525,30 +525,5 @@ export const locationContextsApi = {
     request<{
       service_points: Array<LocationContext & { partner_name?: string | null }>;
       individual_customer_locations_exposed: false;
-    }>("/partner/location-network", { token }),
-
-  staticMapDataUrl: async (
-    contextId: number,
-    token?: string,
-    zoom = 14
-  ): Promise<string | null> => {
-    if (!API_BASE_URL || USE_MOCKS) return null;
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/location/static-map/${contextId}?zoom=${zoom}`,
-        {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          },
-          cache: "no-store"
-        }
-      );
-      if (!response.ok) return null;
-      const type = response.headers.get("content-type") ?? "image/png";
-      const buffer = Buffer.from(await response.arrayBuffer());
-      return `data:${type};base64,${buffer.toString("base64")}`;
-    } catch {
-      return null;
-    }
-  }
+    }>("/partner/location-network", { token })
 };
