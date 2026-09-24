@@ -312,8 +312,6 @@ Authenticated routes:
 | POST | /api/location-contexts | Create/update one purpose-bound location with source, precision and matching consent purpose |
 | DELETE | /api/location-contexts/{context} | Remove an optional location context when authorised |
 | POST | /api/location/places/autocomplete | Server-side Google Places autocomplete; server API key is never exposed |
-| POST | /api/location/places/details | Resolve a selected Google Place ID into canonical place/address/coordinates |
-| POST | /api/location/reverse-geocode | Resolve an explicitly supplied foreground coordinate into place context |
 | GET | /api/location/static-map/{context} | Authenticated lightweight Static Map image for an authorised stored context |
 | POST | /api/location/route | Optional explicit route calculation between two authorised stored contexts |
 | GET | /api/location/nearby-services | One-shot nearby partner-service search; query location is not stored |
@@ -322,7 +320,7 @@ Authenticated routes:
 
 Location subjects are user, financial_space, financial_asset, protection_policy, protection_claim and partner_service_point. Purpose is validated against subject type.
 
-Personal service discovery is forced to approximate precision. Customers cannot self-mark a location verified. Every Location Context is credit_decision_eligible=false.
+Personal service discovery is forced to approximate precision. Device coordinates remain user-reported provenance at the API boundary; only server-resolved Google places or authorised partner/field workflows gain stronger verification state. Every Location Context is credit_decision_eligible=false.
 
 Google-dependent functions fail closed when Google Maps Platform is not configured; manual location remains available.
 
