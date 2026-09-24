@@ -62,3 +62,21 @@ Do not change this status to CLEARED because:
 - an app-store listing exists.
 
 Brand System v3.0 can be frozen only when the legal owner has an evidence-backed decision on use/filing in the launch and intended expansion markets.
+
+
+## Official reference points
+
+- Uganda URSB IP Online: https://iponline.ursb.go.ug/
+- WIPO Global Brand Database: https://www.wipo.int/en/web/global-brand-database
+- WIPO Madrid availability guidance: https://www.wipo.int/en/web/madrid-system/check-availability
+
+WIPO expressly recommends searching national/regional registers in addition to its global database, and its Global Brand Database terms restrict automated querying. The final search record must therefore be produced through the official interfaces and/or qualified trademark counsel rather than inferred from ordinary search-engine indexing.
+
+## Preliminary third-party-use evidence
+
+Public Razorpay material has referred to **Opfin** as payroll/HR/payroll-processing software, including RazorpayX Payroll material. Treat this as a conflict-screening input, not as a legal conclusion. Counsel should assess territory, classes, status, similarity, acquired rights and likelihood of confusion before filing or expansion.
+
+Reference points:
+- https://payroll.razorpay.com/signup
+- https://razorpay.com/blog/how-to-get-started-razorpayx-current-accounts/
+
