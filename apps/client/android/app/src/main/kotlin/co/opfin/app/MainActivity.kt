@@ -8,7 +8,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.net.Uri
-import android.os.Bundle
 import android.os.Looper
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -127,7 +126,7 @@ class MainActivity : FlutterActivity() {
 
         val best = allowedProviders
             .mapNotNull { provider -> manager.getLastKnownLocation(provider) }
-            .maxByOrNull(Location::getTime)
+            .maxByOrNull { it.time }
 
         if (best != null && System.currentTimeMillis() - best.time <= 10 * 60 * 1000) {
             result.success(locationPayload(best, precise))
@@ -140,11 +139,6 @@ class MainActivity : FlutterActivity() {
                 manager.removeUpdates(this)
                 result.success(locationPayload(location, precise))
             }
-
-            override fun onProviderDisabled(provider: String) {}
-            override fun onProviderEnabled(provider: String) {}
-            @Deprecated("Deprecated in Android")
-            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
         }
 
         try {
