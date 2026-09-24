@@ -191,16 +191,43 @@ class MobileMoneyService
             return [$transaction, true];
         });
 
-        if (! $created) {
+        if (! $created && $transaction->provider_submission_state !== 'intent_persisted') {
             $this->syncEconomics($transaction);
 
             return $transaction->fresh();
         }
 
-        $transaction->update([
-            'provider_submission_state' => 'submission_started',
-            'provider_submission_started_at' => now(),
-        ]);
+        return $this->submitPersistedIntent($transaction);
+    }
+
+    private function submitPersistedIntent(MobileMoneyTransaction $transaction): MobileMoneyTransaction
+    {
+        [$claimed, $transaction] = DB::transaction(function () use ($transaction) {
+            $locked = MobileMoneyTransaction::query()
+                ->whereKey($transaction->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->provider_submission_state !== 'intent_persisted') {
+                return [false, $locked];
+            }
+
+            $locked->update([
+                'provider_submission_state' => 'submission_started',
+                'provider_submission_started_at' => now(),
+            ]);
+
+            return [true, $locked->fresh()];
+        });
+
+        if (! $claimed) {
+            $this->syncEconomics($transaction);
+
+            return $transaction->fresh();
+        }
+
+        $direction = (string) $transaction->direction;
+        $providerName = strtolower((string) $transaction->provider);
 
         try {
             $provider = $this->providers->provider($providerName);
