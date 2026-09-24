@@ -402,6 +402,13 @@ class FinancialWellbeingService
     private function scope(Builder $query, User $user): Builder
     {
         $query->where('user_id', $user->id);
+        $spaceId = $this->personalSpaceId($user);
+        if ($spaceId !== null) {
+            $query->where(function (Builder $spaceQuery) use ($spaceId) {
+                $spaceQuery->where('financial_space_id', $spaceId)
+                    ->orWhereNull('financial_space_id');
+            });
+        }
 
         return $user->institution_id === null ? $query->whereNull('institution_id') : $query->where('institution_id', $user->institution_id);
     }
