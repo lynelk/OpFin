@@ -213,6 +213,35 @@ class LocationContextService
             ->all();
     }
 
+    public function partnerNetwork(User $actor): array
+    {
+        if ($actor->institution_id === null) {
+            return [];
+        }
+
+        $partners = DB::table('partners')
+            ->where('institution_id', $actor->institution_id)
+            ->whereNull('deleted_at')
+            ->pluck('name', 'id');
+
+        if ($partners->isEmpty()) {
+            return [];
+        }
+
+        return LocationContext::query()
+            ->where('subject_type', 'partner_service_point')
+            ->where('purpose', 'partner_service_point')
+            ->whereIn('subject_id', $partners->keys()->map(fn ($id) => (int) $id)->all())
+            ->orderBy('place_name')
+            ->get()
+            ->map(fn (LocationContext $context) => [
+                ...$this->present($context),
+                'partner_name' => $partners->get($context->subject_id),
+            ])
+            ->values()
+            ->all();
+    }
+
     public function aggregateInsights(int $minimumCohort = 5): array
     {
         $minimumCohort = max(5, $minimumCohort);
