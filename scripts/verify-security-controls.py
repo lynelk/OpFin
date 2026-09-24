@@ -67,6 +67,12 @@ symbol_component = (ROOT / 'apps/web/src/components/OpFinSymbol.tsx').read_text(
 require('/brand/opfin-symbol.svg' in symbol_component, 'Web must use the v3 vector monogram')
 require('/brand/opfin-symbol-reverse.svg' in symbol_component, 'Web reverse mark must use the v3 vector monogram')
 
+web_dashboard = (ROOT / 'apps/web/src/app/(portal)/dashboard/page.tsx').read_text()
+mobile_home = (ROOT / 'apps/client/lib/home_screen.dart').read_text()
+for label, text in (('Web dashboard', web_dashboard), ('mobile Home', mobile_home)):
+    require('Financial Compass' in text, f'{label} must retain the Financial Compass pattern')
+    require('Next Step' in text or 'NEXT STEP' in text or 'Recommended next step' in text, f'{label} must retain the Next Step pattern')
+
 assets = json.loads((ROOT / 'brand/asset-manifest.json').read_text())
 for path, expected in assets['files'].items():
     target = (ROOT / path).resolve()
