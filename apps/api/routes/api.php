@@ -329,6 +329,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:programme_partner'])->group(function () {
+    Route::get('/partner/location-network', [LocationContextController::class, 'partnerNetwork']);
     Route::get('/partner/inclusive-finance/programmes', [InclusiveImpactController::class, 'partnerProgrammes']);
     Route::get('/partner/inclusive-finance/programmes/{programme}/impact', [InclusiveImpactController::class, 'partnerImpact']);
     Route::get('/partner/inclusive-finance/programmes/{programme}/exports/{format}', [ProgrammeCompletionController::class, 'partnerExport']);
