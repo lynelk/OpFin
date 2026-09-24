@@ -204,7 +204,7 @@ class FinancialSpaceStatementsTest extends TestCase
         $this->assertDatabaseCount('financial_space_statement_rows', 1);
     }
 
-    public function test_member_can_read_and_generate_statement_but_cannot_administer_treasury(): void
+    public function test_member_can_read_issued_statement_but_cannot_administer_or_issue_treasury_records(): void
     {
         $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
         Sanctum::actingAs($owner);
@@ -315,7 +315,7 @@ class FinancialSpaceStatementsTest extends TestCase
 
         $this->postJson("/api/financial-spaces/{$spaceId}/statement-imports/{$importId}/reconcile")
             ->assertOk()
-            ->assertJsonPath('data.import.status', 'exceptions');
+            ->assertJsonPath('data.import.status', 'review_required');
 
         $this->postJson("/api/financial-spaces/{$spaceId}/statement-rows/{$rowId}/match", [
             'transaction_id' => $transactionId,
@@ -475,7 +475,7 @@ class FinancialSpaceStatementsTest extends TestCase
             'direction' => 'credit',
             'amount_minor' => 20000,
             'description' => 'Pending deposit not yet on bank statement',
-            'transaction_date' => '2026-09-02',
+            'transaction_date' => '2026-09-03',
         ])->assertCreated()->json('data.transaction.id');
 
         $csv = "Date,Description,Reference,Debit,Credit,Balance\n2026-09-03,External only fee,EXT-1,1000,,99000\n";
