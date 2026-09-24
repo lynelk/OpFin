@@ -10,7 +10,7 @@ Uganda is the intended initial distribution market. Verify the current Play Cons
 
 ## Contents
 
-- `listing.md` — v3 public store copy, with final contact/URL gates clearly identified;
+- `listing.md` — v3 public store copy, with final contact/URL gates clearly identified;\n- `PUBLIC_LISTING_AUDIT.md` — observed public listing mismatch and replacement evidence gate;
 - `financial-features.md` — controlled declaration worksheet;
 - `data-safety.md` — Data Safety verification worksheet;
 - `reviewer-notes.md` — confidential release worksheet without committed credentials;
