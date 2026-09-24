@@ -15,11 +15,12 @@ class FinancialReadinessService
         $integrationReport = $this->integrations->report();
         $integrations = $integrationReport['integrations'];
 
-        $citoReady = $this->allConfigured([
-            'base_url' => config('services.cito.base_url'),
-            'merchant_number' => config('services.cito.merchant_number'),
-            'private_key' => config('services.cito.private_key'),
-        ]);
+        $citoReady = (bool) config('services.cito.financial_data_certified', false)
+            && $this->allConfigured([
+                'base_url' => config('services.cito.base_url'),
+                'merchant_number' => config('services.cito.merchant_number'),
+                'private_key' => config('services.cito.private_key'),
+            ]);
         $directIdentityReady = $this->allConfigured([
             'url' => config('services.identity_verification.url'),
             'token' => config('services.identity_verification.token'),
@@ -51,6 +52,7 @@ class FinancialReadinessService
                 'status' => $citoReady || $directIdentityReady ? 'ready' : 'blocked',
                 'routes' => [
                     'cito' => $citoReady,
+                    'cito_financial_data_certified' => (bool) config('services.cito.financial_data_certified', false),
                     'direct_identity_provider' => $directIdentityReady,
                 ],
             ],
@@ -58,6 +60,7 @@ class FinancialReadinessService
                 'status' => $citoReady || $directCrbReady ? 'ready' : 'blocked',
                 'routes' => [
                     'cito' => $citoReady,
+                    'cito_financial_data_certified' => (bool) config('services.cito.financial_data_certified', false),
                     'direct_crb' => $directCrbReady,
                 ],
             ],
