@@ -30,6 +30,21 @@ class FinancialSpaceStatementImport extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::updating(function (FinancialSpaceStatementImport $import) {
+            if ($import->getOriginal('confirmed_at') !== null) {
+                throw new \LogicException(
+                    'Confirmed statement reconciliation evidence is immutable. Import a correction statement instead.'
+                );
+            }
+        });
+
+        static::deleting(fn () => throw new \LogicException(
+            'Statement imports are retained as reconciliation evidence and cannot be deleted.'
+        ));
+    }
+
     public function rows() { return $this->hasMany(FinancialSpaceStatementRow::class, 'statement_import_id'); }
     public function account() { return $this->belongsTo(FinancialSpaceTreasuryAccount::class, 'treasury_account_id'); }
 }
