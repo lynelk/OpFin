@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -29,7 +30,7 @@ class LocationContextTest extends TestCase
             'subject_id' => $user->id,
             'purpose' => 'personal_service_discovery',
             'source' => 'device',
-            'precision_level' => 'approximate',
+            'precision_level' => 'precise',
             'latitude' => 0.347596,
             'longitude' => 32.582520,
             'accuracy_metres' => 48,
@@ -37,7 +38,9 @@ class LocationContextTest extends TestCase
         ])->assertCreated()
             ->assertJsonPath('data.location.latitude', 0.348)
             ->assertJsonPath('data.location.longitude', 32.583)
-            ->assertJsonPath('data.location.precision_level', 'approximate');
+            ->assertJsonPath('data.location.precision_level', 'approximate')
+            ->assertJsonPath('data.location.credit_decision_eligible', false)
+            ->assertJsonPath('data.location.verification_status', 'device_confirmed');
 
         $contextId = (int) $response->json('data.location.id');
 
@@ -50,6 +53,65 @@ class LocationContextTest extends TestCase
         $this->deleteJson('/api/location-contexts/'.$contextId)
             ->assertOk()
             ->assertJsonPath('data.deleted', true);
+    }
+
+    public function test_location_purpose_and_consent_must_match_subject_and_task(): void
+    {
+        $user = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/location-contexts', [
+            'subject_type' => 'user',
+            'subject_id' => $user->id,
+            'purpose' => 'insured_risk_location',
+            'source' => 'manual',
+            'precision_level' => 'locality',
+            'place_name' => 'Wrong purpose',
+            'country_code' => 'UG',
+            'consent_purpose' => 'insured_risk_location',
+        ])->assertUnprocessable();
+
+        $this->postJson('/api/location-contexts', [
+            'subject_type' => 'user',
+            'subject_id' => $user->id,
+            'purpose' => 'personal_service_discovery',
+            'source' => 'manual',
+            'precision_level' => 'approximate',
+            'place_name' => 'Kampala',
+            'country_code' => 'UG',
+            'consent_purpose' => 'partner_aggregate_insights',
+        ])->assertUnprocessable();
+    }
+
+    public function test_account_deletion_purges_optional_personal_location(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_CUSTOMER,
+            'password' => Hash::make('DeleteMe!123'),
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/location-contexts', [
+            'subject_type' => 'user',
+            'subject_id' => $user->id,
+            'purpose' => 'personal_service_discovery',
+            'source' => 'manual',
+            'precision_level' => 'approximate',
+            'place_name' => 'Kampala',
+            'country_code' => 'UG',
+            'consent_purpose' => 'personal_service_discovery',
+        ])->assertCreated();
+
+        $this->deleteJson('/api/account', [
+            'password' => 'DeleteMe!123',
+            'confirmation' => 'DELETE',
+        ])->assertOk()
+            ->assertJsonPath('data.deletion_status', 'completed');
+
+        $this->assertDatabaseMissing('location_contexts', [
+            'subject_type' => 'user',
+            'subject_id' => $user->id,
+        ]);
     }
 
     public function test_google_place_resolution_and_static_map_keep_key_server_side(): void
