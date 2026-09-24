@@ -314,7 +314,7 @@ class LocationContextService
     private function verificationStatus(User $actor, string $source): string
     {
         return match ($source) {
-            'device' => 'device_confirmed',
+            'device' => 'user_declared',
             'google_place' => 'place_confirmed',
             'partner' => $actor->hasAnyRole([User::ROLE_PLATFORM_ADMIN, User::ROLE_OPERATIONS])
                 ? 'partner_confirmed'
