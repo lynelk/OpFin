@@ -59,8 +59,6 @@ Membership, role, entitlement and financial-product eligibility are separate gat
 | Save purpose-bound location | `POST /api/location-contexts` |
 | Remove optional location | `DELETE /api/location-contexts/{context}` |
 | Search Google places | `POST /api/location/places/autocomplete` |
-| Resolve Google Place ID | `POST /api/location/places/details` |
-| Reverse geocode explicit coordinates | `POST /api/location/reverse-geocode` |
 | Authenticated static map | `GET /api/location/static-map/{context}` |
 | Explicit route calculation | `POST /api/location/route` |
 | Nearby partner services | `GET /api/location/nearby-services` |
