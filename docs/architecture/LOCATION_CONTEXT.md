@@ -96,8 +96,8 @@ Google Maps Platform credentials remain server-side.
 Supported adapter functions:
 
 - Places Autocomplete (New) for user-selected place search;
-- Place Details for canonical name/address/coordinates;
-- reverse geocoding for an explicitly requested foreground device location;
+- Place Details for canonical name/address/coordinates as part of a purpose-bound save workflow;
+- reverse geocoding for an explicitly requested foreground device location as part of that same save workflow;
 - Static Maps for lightweight embedded preview;
 - Routes for explicit distance/direction tasks where enabled;
 - standard Maps URLs for opening directions/search in the user's map application.
