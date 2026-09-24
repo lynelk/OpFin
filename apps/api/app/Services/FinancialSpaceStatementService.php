@@ -239,58 +239,76 @@ class FinancialSpaceStatementService
         $this->assertTreasurySpace($space);
         $this->assertAdministrator($space, $actor);
         abort_unless($import->financial_space_id === $space->id, 404);
+        abort_if($import->confirmation_status === 'confirmed', 409, 'A confirmed reconciliation cannot be re-run.');
 
         return DB::transaction(function () use ($space, $import, $actor) {
-            $matched = 0;
-            $exceptions = 0;
+            foreach (
+                $import->rows()
+                    ->whereNotIn('reconciliation_status', ['matched', 'resolved'])
+                    ->orderBy('transaction_date')
+                    ->orderBy('id')
+                    ->get() as $row
+            ) {
+                $ranked = $this->rankedCandidateTransactions($row);
+                $top = $ranked->first();
+                $second = $ranked->skip(1)->first();
+                $topScore = (int) ($top['score'] ?? 0);
+                $secondScore = (int) ($second['score'] ?? 0);
+                $margin = $topScore - $secondScore;
 
-            foreach ($import->rows()->where('reconciliation_status', '!=', 'matched')->orderBy('transaction_date')->orderBy('id')->get() as $row) {
-                $candidates = $this->candidateTransactions($row);
-
-                if ($candidates->count() === 1) {
-                    $transaction = $candidates->first();
-                    $method = $row->statement_reference
-                        && $transaction->transaction_reference
-                        && $this->sameReference($row->statement_reference, $transaction->transaction_reference)
-                        ? 'exact_reference'
-                        : 'unique_amount_date_direction';
-
+                if ($top && $topScore >= 95 && ($ranked->count() === 1 || $margin >= 10)) {
+                    $transaction = $top['transaction'];
                     $row->update([
                         'matched_transaction_id' => $transaction->id,
                         'reconciliation_status' => 'matched',
                         'exception_type' => null,
-                        'match_method' => $method,
-                        'match_confidence_percent' => $method === 'exact_reference' ? 100 : 90,
-                        'notes' => 'Matched to one OpFin treasury transaction.',
+                        'match_method' => $top['method'],
+                        'match_confidence_percent' => $topScore,
+                        'suggested_matches' => null,
+                        'user_resolution' => null,
+                        'resolved_by_user_id' => null,
+                        'resolved_at' => null,
+                        'notes' => 'Automatically matched by OpFin using high-confidence reconciliation evidence.',
                     ]);
                     $transaction->update([
                         'reconciliation_status' => 'matched',
                         'reconciled_at' => now(),
                     ]);
-                    $matched++;
+
                     continue;
                 }
 
-                if ($candidates->count() > 1) {
+                $suggestions = $ranked
+                    ->take(3)
+                    ->map(fn (array $candidate) => $this->candidatePresentation($candidate))
+                    ->values()
+                    ->all();
+
+                if ($top && $topScore >= 70) {
                     $row->update([
-                        'reconciliation_status' => 'exception',
-                        'exception_type' => 'ambiguous_match',
+                        'matched_transaction_id' => null,
+                        'reconciliation_status' => 'review_required',
+                        'exception_type' => 'suggested_match',
                         'match_method' => null,
-                        'match_confidence_percent' => null,
-                        'notes' => 'More than one OpFin transaction could match this statement row.',
+                        'match_confidence_percent' => $topScore,
+                        'suggested_matches' => $suggestions,
+                        'notes' => 'OpFin found a plausible match but requires user confirmation.',
                     ]);
-                    $exceptions++;
+
                     continue;
                 }
 
                 $row->update([
-                    'reconciliation_status' => 'exception',
-                    'exception_type' => 'missing_opfin_transaction',
+                    'matched_transaction_id' => null,
+                    'reconciliation_status' => 'review_required',
+                    'exception_type' => $ranked->count() > 1 ? 'ambiguous_match' : 'missing_opfin_transaction',
                     'match_method' => null,
                     'match_confidence_percent' => null,
-                    'notes' => 'No matching OpFin treasury transaction was found.',
+                    'suggested_matches' => $suggestions ?: null,
+                    'notes' => $ranked->count() > 1
+                        ? 'Several low-confidence OpFin transactions may relate to this statement row.'
+                        : 'No sufficiently plausible OpFin cashbook transaction was found.',
                 ]);
-                $exceptions++;
             }
 
             $this->refreshImportState($import);
@@ -305,15 +323,243 @@ class FinancialSpaceStatementService
                 $import->update(['summary' => $summary]);
             }
 
+            $this->refreshImportState($import);
+
             $this->auditLogger->record('financial_space.statement_import.reconciled', $actor, $import, [
                 'financial_space_id' => $space->id,
                 'matched_count' => $import->fresh()->matched_count,
                 'exception_count' => $import->fresh()->exception_count,
-                'unmatched_opfin_transaction_count' => ($import->fresh()->summary ?? [])['unmatched_opfin_transaction_count'] ?? 0,
+                'review_todo_count' => count($import->fresh()->review_todos ?? []),
             ]);
 
-            return $import->fresh(['rows', 'account']);
+            return $import->fresh(['rows.matchedTransaction', 'account']);
         });
+    }
+
+    public function resolveStatementRow(
+        FinancialSpace $space,
+        FinancialSpaceStatementRow $row,
+        User $actor,
+        string $action,
+        ?int $transactionId = null,
+        ?string $reason = null,
+    ): FinancialSpaceStatementRow {
+        $this->assertTreasurySpace($space);
+        $this->assertAdministrator($space, $actor);
+        abort_unless($row->financial_space_id === $space->id, 404);
+
+        if ($action === 'match_transaction') {
+            if (! $transactionId) {
+                throw ValidationException::withMessages([
+                    'transaction_id' => ['Choose the OpFin transaction to match.'],
+                ]);
+            }
+
+            $transaction = FinancialSpaceTransaction::query()->findOrFail($transactionId);
+
+            return $this->matchStatementRow($space, $row, $transaction, $actor);
+        }
+
+        if ($row->reconciliation_status === 'matched') {
+            throw ValidationException::withMessages([
+                'action' => ['This row is already reconciled.'],
+            ]);
+        }
+
+        if ($action === 'create_book_entry') {
+            return DB::transaction(function () use ($space, $row, $actor, $reason) {
+                $account = FinancialSpaceTreasuryAccount::query()->findOrFail($row->treasury_account_id);
+                $transaction = $this->recordTransaction($space, $account, $actor, [
+                    'transaction_reference' => $row->statement_reference,
+                    'transaction_type' => 'statement_import_adjustment',
+                    'direction' => $row->direction,
+                    'amount_minor' => (int) $row->amount_minor,
+                    'currency' => $row->currency,
+                    'description' => $row->description,
+                    'counterparty_name' => null,
+                    'transaction_date' => $row->transaction_date->toDateString(),
+                    'value_date' => $row->value_date?->toDateString(),
+                    'source_type' => 'statement_user_request',
+                    'source_reference' => 'statement-row:'.$row->id,
+                    'metadata' => [
+                        'statement_import_id' => $row->statement_import_id,
+                        'requested_reason' => $reason,
+                    ],
+                ]);
+
+                return $this->matchStatementRow($space, $row, $transaction, $actor);
+            });
+        }
+
+        if (! in_array($action, ['mark_external_only', 'mark_duplicate'], true)) {
+            throw ValidationException::withMessages([
+                'action' => ['Unsupported reconciliation action.'],
+            ]);
+        }
+        if (trim((string) $reason) === '') {
+            throw ValidationException::withMessages([
+                'reason' => ['Explain why this exception is being accepted.'],
+            ]);
+        }
+
+        $row->update([
+            'matched_transaction_id' => null,
+            'reconciliation_status' => 'resolved',
+            'exception_type' => $action === 'mark_duplicate' ? 'accepted_duplicate' : 'accepted_external_only',
+            'match_method' => 'user_resolution',
+            'match_confidence_percent' => null,
+            'user_resolution' => $action,
+            'resolved_by_user_id' => $actor->id,
+            'resolved_at' => now(),
+            'notes' => trim((string) $reason),
+        ]);
+
+        $import = FinancialSpaceStatementImport::query()->findOrFail($row->statement_import_id);
+        $this->refreshImportState($import);
+
+        $this->auditLogger->record('financial_space.statement_row.resolved', $actor, $row, [
+            'financial_space_id' => $space->id,
+            'statement_import_id' => $import->id,
+            'action' => $action,
+            'reason' => trim((string) $reason),
+        ]);
+
+        return $row->fresh('matchedTransaction');
+    }
+
+    public function resolveBookTransaction(
+        FinancialSpace $space,
+        FinancialSpaceStatementImport $import,
+        FinancialSpaceTransaction $transaction,
+        User $actor,
+        string $reason,
+    ): FinancialSpaceTransaction {
+        $this->assertTreasurySpace($space);
+        $this->assertAdministrator($space, $actor);
+        abort_unless($import->financial_space_id === $space->id, 404);
+        abort_unless($transaction->financial_space_id === $space->id, 404);
+        abort_unless($transaction->treasury_account_id === $import->treasury_account_id, 422);
+        abort_unless(
+            $transaction->transaction_date->between(
+                CarbonImmutable::parse($import->period_start),
+                CarbonImmutable::parse($import->period_end)
+            ),
+            422
+        );
+        if (trim($reason) === '') {
+            throw ValidationException::withMessages([
+                'reason' => ['Explain why this book transaction is being accepted without an external statement match.'],
+            ]);
+        }
+
+        $metadata = $transaction->metadata ?? [];
+        $metadata['reconciliation_exception'] = [
+            'statement_import_id' => $import->id,
+            'resolution' => 'accepted_book_only',
+            'reason' => trim($reason),
+            'resolved_by_user_id' => $actor->id,
+            'resolved_at' => now()->toIso8601String(),
+        ];
+        $transaction->update([
+            'reconciliation_status' => 'accepted_exception',
+            'reconciled_at' => now(),
+            'metadata' => $metadata,
+        ]);
+
+        $this->refreshImportState($import);
+
+        $this->auditLogger->record('financial_space.book_transaction.accepted_exception', $actor, $transaction, [
+            'financial_space_id' => $space->id,
+            'statement_import_id' => $import->id,
+            'reason' => trim($reason),
+        ]);
+
+        return $transaction->fresh();
+    }
+
+    public function resolveBalanceVariance(
+        FinancialSpace $space,
+        FinancialSpaceStatementImport $import,
+        User $actor,
+        string $reason,
+    ): FinancialSpaceStatementImport {
+        $this->assertTreasurySpace($space);
+        $this->assertAdministrator($space, $actor);
+        abort_unless($import->financial_space_id === $space->id, 404);
+        if (trim($reason) === '') {
+            throw ValidationException::withMessages([
+                'reason' => ['Explain why the closing-balance variance is being accepted.'],
+            ]);
+        }
+
+        $summary = $import->summary ?? [];
+        $variance = (int) ($summary['closing_balance_variance_minor'] ?? 0);
+        if ($variance === 0) {
+            return $import->fresh();
+        }
+        $summary['accepted_closing_balance_variance'] = [
+            'amount_minor' => $variance,
+            'reason' => trim($reason),
+            'resolved_by_user_id' => $actor->id,
+            'resolved_at' => now()->toIso8601String(),
+        ];
+        $import->update(['summary' => $summary]);
+        $this->refreshImportState($import);
+
+        return $import->fresh(['rows', 'account']);
+    }
+
+    public function confirmReconciliation(
+        FinancialSpace $space,
+        FinancialSpaceStatementImport $import,
+        User $actor,
+        ?string $note = null,
+    ): FinancialSpaceStatementImport {
+        $this->assertTreasurySpace($space);
+        $this->assertAdministrator($space, $actor);
+        abort_unless($import->financial_space_id === $space->id, 404);
+        abort_if($import->confirmed_at !== null, 409, 'This reconciliation has already been confirmed.');
+
+        $this->refreshImportState($import);
+        $fresh = $import->fresh();
+        $todos = $fresh->review_todos ?? [];
+        if ($todos !== []) {
+            throw ValidationException::withMessages([
+                'reconciliation' => ['Complete or explicitly resolve the remaining reconciliation to-dos before confirmation.'],
+            ]);
+        }
+
+        $acceptedExceptions = FinancialSpaceStatementRow::query()
+            ->where('statement_import_id', $import->id)
+            ->where('reconciliation_status', 'resolved')
+            ->count()
+            + FinancialSpaceTransaction::query()
+                ->where('treasury_account_id', $import->treasury_account_id)
+                ->whereBetween('transaction_date', [$import->period_start, $import->period_end])
+                ->where('reconciliation_status', 'accepted_exception')
+                ->count();
+
+        $summary = $fresh->summary ?? [];
+        if (! empty($summary['accepted_closing_balance_variance'])) {
+            $acceptedExceptions++;
+        }
+        $summary['confirmation_note'] = $note;
+
+        $import->update([
+            'status' => 'reconciled',
+            'confirmation_status' => $acceptedExceptions > 0 ? 'confirmed_with_exceptions' : 'confirmed',
+            'confirmed_by_user_id' => $actor->id,
+            'confirmed_at' => now(),
+            'summary' => $summary,
+        ]);
+
+        $this->auditLogger->record('financial_space.statement_import.confirmed', $actor, $import, [
+            'financial_space_id' => $space->id,
+            'accepted_exception_count' => $acceptedExceptions,
+            'confirmation_status' => $import->fresh()->confirmation_status,
+        ]);
+
+        return $import->fresh(['rows.matchedTransaction', 'account']);
     }
 
     public function matchStatementRow(
@@ -724,61 +970,181 @@ class FinancialSpaceStatementService
             ->where('statement_import_id', $import->id)
             ->where('reconciliation_status', 'matched')
             ->count();
-        $statementExceptions = FinancialSpaceStatementRow::query()
+        $resolvedRows = FinancialSpaceStatementRow::query()
             ->where('statement_import_id', $import->id)
-            ->where('reconciliation_status', 'exception')
+            ->where('reconciliation_status', 'resolved')
             ->count();
-        $unmatchedBook = FinancialSpaceTransaction::query()
+        $unresolvedRows = FinancialSpaceStatementRow::query()
+            ->where('statement_import_id', $import->id)
+            ->whereNotIn('reconciliation_status', ['matched', 'resolved'])
+            ->get();
+
+        $unmatchedBookTransactions = FinancialSpaceTransaction::query()
             ->where('treasury_account_id', $import->treasury_account_id)
             ->whereBetween('transaction_date', [$import->period_start, $import->period_end])
             ->where('reconciliation_status', 'unreconciled')
-            ->count();
+            ->orderBy('transaction_date')
+            ->orderBy('id')
+            ->get();
+
+        $todos = [];
+        foreach ($unresolvedRows as $row) {
+            $todos[] = [
+                'type' => 'statement_row',
+                'row_id' => $row->id,
+                'exception_type' => $row->exception_type,
+                'date' => $row->transaction_date?->toDateString(),
+                'description' => $row->description,
+                'amount_minor' => $row->amount_minor,
+                'direction' => $row->direction,
+                'suggested_matches' => $row->suggested_matches ?? [],
+                'allowed_actions' => [
+                    'match_transaction',
+                    'create_book_entry',
+                    'mark_external_only',
+                    'mark_duplicate',
+                ],
+            ];
+        }
+
+        foreach ($unmatchedBookTransactions as $transaction) {
+            $todos[] = [
+                'type' => 'book_transaction',
+                'transaction_id' => $transaction->id,
+                'date' => $transaction->transaction_date?->toDateString(),
+                'description' => $transaction->description,
+                'amount_minor' => $transaction->amount_minor,
+                'direction' => $transaction->direction,
+                'allowed_actions' => ['accept_book_only'],
+            ];
+        }
 
         $summary = $import->summary ?? [];
+        $variance = (int) ($summary['closing_balance_variance_minor'] ?? 0);
+        if ($variance !== 0 && empty($summary['accepted_closing_balance_variance'])) {
+            $todos[] = [
+                'type' => 'balance_variance',
+                'amount_minor' => $variance,
+                'allowed_actions' => ['accept_balance_variance'],
+            ];
+        }
+
         $summary['statement_matched_count'] = $matchedTotal;
-        $summary['statement_exception_count'] = $statementExceptions;
-        $summary['unmatched_opfin_transaction_count'] = $unmatchedBook;
+        $summary['accepted_statement_exception_count'] = $resolvedRows;
+        $summary['unresolved_statement_row_count'] = $unresolvedRows->count();
+        $summary['unmatched_opfin_transaction_count'] = $unmatchedBookTransactions->count();
         $summary['reconciled_at'] = now()->toIso8601String();
 
         $import->update([
             'matched_count' => $matchedTotal,
-            'exception_count' => $statementExceptions + $unmatchedBook,
-            'status' => ($statementExceptions + $unmatchedBook) === 0 ? 'reconciled' : 'exceptions',
+            'exception_count' => $unresolvedRows->count() + $unmatchedBookTransactions->count(),
+            'status' => $todos === [] ? 'ready_for_confirmation' : 'review_required',
+            'confirmation_status' => $todos === [] ? 'ready' : 'not_ready',
             'summary' => $summary,
+            'review_todos' => $todos,
         ]);
     }
 
-    private function candidateTransactions(FinancialSpaceStatementRow $row): Collection
+    private function rankedCandidateTransactions(FinancialSpaceStatementRow $row): Collection
     {
-        $query = FinancialSpaceTransaction::query()
+        $date = CarbonImmutable::parse($row->transaction_date);
+        $candidates = FinancialSpaceTransaction::query()
             ->where('treasury_account_id', $row->treasury_account_id)
             ->where('currency', $row->currency)
             ->where('direction', $row->direction)
             ->where('amount_minor', $row->amount_minor)
-            ->where('reconciliation_status', 'unreconciled');
-
-        if ($row->statement_reference) {
-            $byReference = (clone $query)
-                ->whereNotNull('transaction_reference')
-                ->get()
-                ->filter(fn ($transaction) => $this->sameReference(
-                    $row->statement_reference,
-                    $transaction->transaction_reference
-                ))
-                ->values();
-            if ($byReference->isNotEmpty()) {
-                return $byReference;
-            }
-        }
-
-        $date = CarbonImmutable::parse($row->transaction_date);
-
-        return $query
+            ->where('reconciliation_status', 'unreconciled')
             ->whereBetween('transaction_date', [
-                $date->subDays(3)->toDateString(),
-                $date->addDays(3)->toDateString(),
+                $date->subDays(7)->toDateString(),
+                $date->addDays(7)->toDateString(),
             ])
             ->get();
+
+        return $candidates
+            ->map(function (FinancialSpaceTransaction $transaction) use ($row, $date) {
+                $score = 60;
+                $method = 'amount_direction_window';
+
+                if ($row->statement_reference
+                    && $transaction->transaction_reference
+                    && $this->sameReference($row->statement_reference, $transaction->transaction_reference)) {
+                    $score += 35;
+                    $method = 'exact_reference';
+                }
+
+                $days = abs($date->diffInDays(CarbonImmutable::parse($transaction->transaction_date)));
+                $score += match (true) {
+                    $days === 0 => 20,
+                    $days <= 1 => 15,
+                    $days <= 3 => 10,
+                    default => 5,
+                };
+
+                $descriptionSimilarity = $this->descriptionSimilarity(
+                    $row->description,
+                    $transaction->description
+                );
+                $score += (int) round($descriptionSimilarity * 15);
+                $score = min(100, $score);
+
+                if ($method !== 'exact_reference' && $score >= 90) {
+                    $method = 'amount_date_description';
+                }
+
+                return [
+                    'transaction' => $transaction,
+                    'score' => $score,
+                    'method' => $method,
+                ];
+            })
+            ->sortByDesc('score')
+            ->values();
+    }
+
+    private function candidatePresentation(array $candidate): array
+    {
+        /** @var FinancialSpaceTransaction $transaction */
+        $transaction = $candidate['transaction'];
+
+        return [
+            'transaction_id' => $transaction->id,
+            'reference' => $transaction->transaction_reference,
+            'date' => $transaction->transaction_date?->toDateString(),
+            'description' => $transaction->description,
+            'amount_minor' => $transaction->amount_minor,
+            'direction' => $transaction->direction,
+            'confidence_percent' => (int) $candidate['score'],
+            'match_method' => $candidate['method'],
+        ];
+    }
+
+    private function descriptionSimilarity(string $left, string $right): float
+    {
+        $tokens = function (string $value): array {
+            $normalised = strtolower(preg_replace('/[^a-z0-9 ]+/i', ' ', $value) ?? '');
+            return array_values(array_unique(array_filter(
+                preg_split('/\s+/', $normalised) ?: [],
+                fn ($token) => strlen($token) >= 3
+            )));
+        };
+
+        $leftTokens = $tokens($left);
+        $rightTokens = $tokens($right);
+        if ($leftTokens === [] || $rightTokens === []) {
+            return 0.0;
+        }
+
+        $intersection = count(array_intersect($leftTokens, $rightTokens));
+        $union = count(array_unique([...$leftTokens, ...$rightTokens]));
+
+        return $union > 0 ? $intersection / $union : 0.0;
+    }
+
+    private function candidateTransactions(FinancialSpaceStatementRow $row): Collection
+    {
+        return $this->rankedCandidateTransactions($row)
+            ->map(fn (array $candidate) => $candidate['transaction'])
+            ->values();
     }
 
     private function sameReference(string $left, string $right): bool
