@@ -69,12 +69,18 @@ class _LocationContextScreenState extends State<LocationContextScreen> {
       final device = await PlatformLocationService.currentLocation(
         precision: precision,
       );
+      final actualPrecision =
+          device['actual_precision']?.toString() ?? precision;
+      final storagePrecision =
+          precision == 'precise' && actualPrecision == 'approximate'
+              ? 'approximate'
+              : precision;
       await LocationContextApi.save(
         subjectType: widget.subjectType,
         subjectId: widget.subjectId,
         purpose: widget.purpose,
         source: 'device',
-        precisionLevel: precision,
+        precisionLevel: storagePrecision,
         consentPurpose: widget.purpose,
         latitude: (device['latitude'] as num).toDouble(),
         longitude: (device['longitude'] as num).toDouble(),
