@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\RecordWorkerHeartbeat;
+use App\Services\FinancialReadinessService;
 use App\Services\ProductionIntegrationReadinessService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +18,10 @@ class HealthController extends Controller
 {
     private const HEARTBEAT_FRESH_MINUTES = 12;
 
-    public function __construct(private readonly ProductionIntegrationReadinessService $integrations) {}
+    public function __construct(
+        private readonly ProductionIntegrationReadinessService $integrations,
+        private readonly FinancialReadinessService $financialReadiness,
+    ) {}
 
     public function live(): JsonResponse
     {
@@ -57,6 +61,15 @@ class HealthController extends Controller
             ],
             'integration_readiness' => $this->integrations->report()['required_integrations_ready'] ? 'ready' : 'blocked',
         ]);
+    }
+
+    public function financialReady(): JsonResponse
+    {
+        $report = $this->financialReadiness->report();
+
+        return $report['financial_operations_ready']
+            ? ApiResponse::success('Financial operations are ready.', $report)
+            : ApiResponse::error('Financial operations are blocked.', 503, $report);
     }
 
     public function integrations(): JsonResponse
