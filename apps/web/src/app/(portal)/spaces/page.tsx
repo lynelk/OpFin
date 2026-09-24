@@ -3,7 +3,7 @@ import { Screen, StateNotice } from "@/components/Screen";
 import { financialSpacesApi } from "@/lib/api/client";
 import { getAccessToken } from "@/lib/auth/session";
 
-const labels:Record<string,string>={personal:"My money",household:"Household",savings_group:"Savings group",business:"Business",sacco:"SACCO",investment_fund:"Investment / fund",partner:"Financial partner"};
+const labels:Record<string,string>={personal:"My money",household:"Household",savings_group:"Savings group",investment_club:"Investment club",business:"Business",sacco:"SACCO",investment_fund:"Investment / fund",partner:"Financial partner"};
 
 export default async function SpacesPage(){
  const token=await getAccessToken();
