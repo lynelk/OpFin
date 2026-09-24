@@ -239,7 +239,7 @@ class FinancialSpaceStatementService
         $this->assertTreasurySpace($space);
         $this->assertAdministrator($space, $actor);
         abort_unless($import->financial_space_id === $space->id, 404);
-        abort_if($import->confirmation_status === 'confirmed', 409, 'A confirmed reconciliation cannot be re-run.');
+        abort_if(in_array($import->confirmation_status, ['confirmed', 'confirmed_with_exceptions'], true), 409, 'A confirmed reconciliation cannot be re-run.');
 
         return DB::transaction(function () use ($space, $import, $actor) {
             foreach (
@@ -1092,9 +1092,98 @@ class FinancialSpaceStatementService
         $space = $data['space'];
         $account = $data['account'];
         $rows = $data['rows'];
+        $sections = $data['sections'] ?? [];
+        $totalsByCurrency = $data['totals_by_currency'] ?? [];
+        $positionByCurrency = $data['position_by_currency'] ?? [];
 
         $money = fn (int $amount) => number_format($amount, 0, '.', ',');
         $esc = fn ($value) => htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+
+        $styles = '<style>'
+            .'@page{size:A4;margin:15mm}body{font-family:Arial,Helvetica,sans-serif;color:#172033;font-size:11px;margin:0}'
+            .'.brand{font-size:28px;font-weight:800;letter-spacing:-1px}.sub{color:#5d6678}.top{display:flex;justify-content:space-between;border-bottom:3px solid #172033;padding-bottom:14px;margin-bottom:18px}'
+            .'.right{text-align:right}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}.box{border:1px solid #d8dde7;border-radius:8px;padding:11px}'
+            .'.label{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280}.value{font-size:14px;font-weight:700;margin-top:3px}'
+            .'h2{font-size:15px;margin:24px 0 8px}h3{font-size:13px;margin:18px 0 6px}'
+            .'table{width:100%;border-collapse:collapse;margin-bottom:12px}th{background:#f3f5f8;text-align:left;padding:7px;border-bottom:1px solid #cfd5df;font-size:9px;text-transform:uppercase}'
+            .'td{padding:7px;border-bottom:1px solid #e6e9ef;vertical-align:top}.num{text-align:right;white-space:nowrap}.muted{color:#7a8394;font-size:9px}'
+            .'.summary{margin:10px 0 18px auto;width:330px}.summary td{border:0;padding:3px 0}.summary td:last-child{text-align:right;font-weight:700}'
+            .'.currency{font-weight:700}.footer{margin-top:24px;padding-top:10px;border-top:1px solid #d8dde7;color:#6b7280;font-size:8.5px;line-height:1.5}'
+            .'.empty{text-align:center;color:#6b7280;padding:24px}.page-break{page-break-before:always}'
+            .'@media print{.no-print{display:none}}'
+            .'</style>';
+
+        $header = '<div class="top"><div><div class="brand">OpFin</div><div class="sub">'
+            .($statement->statement_scope === 'consolidated' ? 'Consolidated Financial Space Statement' : 'Financial Space Statement')
+            .'</div></div><div class="right"><div class="label">Statement number</div><div class="value">'.$esc($statement->statement_number).'</div>'
+            .'<div class="sub">Generated '.$esc($statement->generated_at->format('d M Y H:i')).'</div></div></div>';
+
+        $identity = '<div class="grid"><div class="box"><div class="label">Financial Space</div><div class="value">'.$esc($space->name).'</div>'
+            .'<div class="sub">'.$esc(ucwords(str_replace('_', ' ', $space->type))).'</div></div>'
+            .'<div class="box"><div class="label">Statement period</div><div class="value">'.$esc($statement->period_start->format('d M Y')).' – '.$esc($statement->period_end->format('d M Y')).'</div>'
+            .'<div class="sub">'.($statement->statement_scope === 'consolidated' ? 'All treasury accounts and recorded position activity' : $esc($account->currency)).'</div></div>'
+            .'<div class="box"><div class="label">Reconciliation</div><div class="value">'.$esc(ucwords(str_replace('_', ' ', $statement->reconciliation_status))).'</div>'
+            .'<div class="sub">Transactions '.$esc($statement->transaction_count).'</div></div>'
+            .'<div class="box"><div class="label">Integrity</div><div class="value">'.$esc(substr($statement->content_hash, 0, 16)).'…</div>'
+            .'<div class="sub">Immutable issued snapshot</div></div></div>';
+
+        if ($statement->statement_scope === 'consolidated') {
+            $currencySummary = '<h2>Summary by currency</h2><table><thead><tr><th>Currency</th><th class="num">Opening</th><th class="num">Debits</th><th class="num">Credits</th><th class="num">Closing</th><th class="num">Transactions</th></tr></thead><tbody>';
+            foreach ($totalsByCurrency as $currency => $totals) {
+                $currencySummary .= '<tr><td class="currency">'.$esc($currency).'</td>'
+                    .'<td class="num">'.$money((int) ($totals['opening_balance_minor'] ?? 0)).'</td>'
+                    .'<td class="num">'.$money((int) ($totals['total_debits_minor'] ?? 0)).'</td>'
+                    .'<td class="num">'.$money((int) ($totals['total_credits_minor'] ?? 0)).'</td>'
+                    .'<td class="num">'.$money((int) ($totals['closing_balance_minor'] ?? 0)).'</td>'
+                    .'<td class="num">'.$esc($totals['transaction_count'] ?? 0).'</td></tr>';
+            }
+            $currencySummary .= '</tbody></table>';
+
+            $position = '<h2>Recorded financial position</h2><table><thead><tr><th>Currency</th><th class="num">Recorded assets</th><th class="num">Amount owed</th><th class="num">Amount receivable</th></tr></thead><tbody>';
+            if ($positionByCurrency === []) {
+                $position .= '<tr><td colspan="4" class="empty">No additional asset or obligation position is recorded.</td></tr>';
+            } else {
+                foreach ($positionByCurrency as $currency => $values) {
+                    $position .= '<tr><td class="currency">'.$esc($currency).'</td>'
+                        .'<td class="num">'.$money((int) ($values['recorded_assets_minor'] ?? 0)).'</td>'
+                        .'<td class="num">'.$money((int) ($values['amount_owed_minor'] ?? 0)).'</td>'
+                        .'<td class="num">'.$money((int) ($values['amount_receivable_minor'] ?? 0)).'</td></tr>';
+                }
+            }
+            $position .= '</tbody></table>';
+
+            $accountSections = '';
+            foreach ($sections as $index => $section) {
+                $sectionAccount = $section['account'] ?? [];
+                $sectionRows = $section['rows'] ?? [];
+                $body = '';
+                foreach ($sectionRows as $row) {
+                    $body .= '<tr>'
+                        .'<td>'.$esc(CarbonImmutable::parse($row['date'])->format('d M Y')).'</td>'
+                        .'<td>'.($row['value_date'] ? $esc(CarbonImmutable::parse($row['value_date'])->format('d M Y')) : '').'</td>'
+                        .'<td><strong>'.$esc($row['description']).'</strong><br><span class="muted">'.$esc($row['reference']).'</span></td>'
+                        .'<td class="num">'.($row['debit_minor'] !== null ? $money((int) $row['debit_minor']) : '').'</td>'
+                        .'<td class="num">'.($row['credit_minor'] !== null ? $money((int) $row['credit_minor']) : '').'</td>'
+                        .'<td class="num">'.$money((int) $row['balance_minor']).'</td></tr>';
+                }
+                if ($body === '') {
+                    $body = '<tr><td colspan="6" class="empty">No transactions in this account for the statement period.</td></tr>';
+                }
+                $accountSections .= '<h2>'.($index > 0 ? '' : '').$esc($sectionAccount['account_name'] ?? 'Treasury account').' · '.$esc($sectionAccount['currency'] ?? '').'</h2>'
+                    .'<div class="sub">'.$esc($sectionAccount['institution_name'] ?? '').' '.$esc($sectionAccount['account_reference_masked'] ?? '').'</div>'
+                    .'<table><thead><tr><th>Date</th><th>Value date</th><th>Transaction details</th><th class="num">Debit</th><th class="num">Credit</th><th class="num">Balance</th></tr></thead><tbody>'.$body.'</tbody></table>'
+                    .'<table class="summary"><tr><td>Opening balance</td><td>'.$money((int) ($section['opening_balance_minor'] ?? 0)).'</td></tr>'
+                    .'<tr><td>Total debits</td><td>'.$money((int) ($section['total_debits_minor'] ?? 0)).'</td></tr>'
+                    .'<tr><td>Total credits</td><td>'.$money((int) ($section['total_credits_minor'] ?? 0)).'</td></tr>'
+                    .'<tr><td>Closing balance</td><td>'.$money((int) ($section['closing_balance_minor'] ?? 0)).'</td></tr></table>';
+            }
+
+            return '<!doctype html><html><head><meta charset="utf-8"><title>'.$esc($statement->statement_number).'</title>'.$styles.'</head><body>'
+                .$header.$identity.$currencySummary.$position.$accountSections
+                .'<div class="footer">This is a system-generated OpFin consolidated Financial Space statement. It combines all recorded OpFin treasury-account activity for the selected period and a snapshot of recorded Financial Space assets/obligations. '
+                .'Currencies are reported separately; OpFin does not invent FX conversions. It is not a bank, broker or custodian-issued statement. Imported external statements remain separate reconciliation evidence. '
+                .'Statement integrity reference: '.$esc($statement->content_hash).'.</div></body></html>';
+        }
 
         $body = '';
         foreach ($rows as $row) {
@@ -1102,58 +1191,42 @@ class FinancialSpaceStatementService
                 .'<td>'.$esc(CarbonImmutable::parse($row['date'])->format('d M Y')).'</td>'
                 .'<td>'.($row['value_date'] ? $esc(CarbonImmutable::parse($row['value_date'])->format('d M Y')) : '').'</td>'
                 .'<td><strong>'.$esc($row['description']).'</strong><br><span class="muted">'.$esc($row['reference']).'</span></td>'
-                .'<td class="num">'.($row['debit_minor'] !== null ? $money($row['debit_minor']) : '').'</td>'
-                .'<td class="num">'.($row['credit_minor'] !== null ? $money($row['credit_minor']) : '').'</td>'
-                .'<td class="num">'.$money($row['balance_minor']).'</td>'
-                .'</tr>';
+                .'<td class="num">'.($row['debit_minor'] !== null ? $money((int) $row['debit_minor']) : '').'</td>'
+                .'<td class="num">'.($row['credit_minor'] !== null ? $money((int) $row['credit_minor']) : '').'</td>'
+                .'<td class="num">'.$money((int) $row['balance_minor']).'</td></tr>';
         }
 
         if ($body === '') {
             $body = '<tr><td colspan="6" class="empty">No transactions in this statement period.</td></tr>';
         }
 
-        return '<!doctype html><html><head><meta charset="utf-8"><title>'.$esc($statement->statement_number).'</title>'
-            .'<style>'
-            .'@page{size:A4;margin:16mm}body{font-family:Arial,Helvetica,sans-serif;color:#172033;font-size:12px;margin:0}'
-            .'.brand{font-size:26px;font-weight:800;letter-spacing:-1px}.sub{color:#5d6678}.top{display:flex;justify-content:space-between;border-bottom:3px solid #172033;padding-bottom:14px;margin-bottom:18px}'
-            .'.right{text-align:right}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}.box{border:1px solid #d8dde7;border-radius:8px;padding:12px}'
-            .'.label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280}.value{font-size:15px;font-weight:700;margin-top:3px}'
-            .'table{width:100%;border-collapse:collapse}th{background:#f3f5f8;text-align:left;padding:8px;border-bottom:1px solid #cfd5df;font-size:10px;text-transform:uppercase}'
-            .'td{padding:8px;border-bottom:1px solid #e6e9ef;vertical-align:top}.num{text-align:right;white-space:nowrap}.muted{color:#7a8394;font-size:10px}'
-            .'.summary{margin-top:18px;margin-left:auto;width:320px}.summary td{border:0;padding:4px 0}.summary td:last-child{text-align:right;font-weight:700}'
-            .'.footer{margin-top:28px;padding-top:12px;border-top:1px solid #d8dde7;color:#6b7280;font-size:9px;line-height:1.5}.empty{text-align:center;color:#6b7280;padding:30px}'
-            .'@media print{.no-print{display:none}}'
-            .'</style></head><body>'
-            .'<div class="top"><div><div class="brand">OpFin</div><div class="sub">Financial Space Statement</div></div>'
-            .'<div class="right"><div class="label">Statement number</div><div class="value">'.$esc($statement->statement_number).'</div>'
-            .'<div class="sub">Generated '.$esc($statement->generated_at->format('d M Y H:i')).'</div></div></div>'
-            .'<div class="grid"><div class="box"><div class="label">Account holder</div><div class="value">'.$esc($space->name).'</div>'
-            .'<div class="sub">'.$esc(ucwords(str_replace('_', ' ', $space->type))).'</div></div>'
+        return '<!doctype html><html><head><meta charset="utf-8"><title>'.$esc($statement->statement_number).'</title>'.$styles.'</head><body>'
+            .$header.$identity
             .'<div class="box"><div class="label">Account</div><div class="value">'.$esc($account->account_name).'</div>'
             .'<div class="sub">'.$esc($account->institution_name).' '.$esc($account->account_reference_masked).'</div></div>'
-            .'<div class="box"><div class="label">Statement period</div><div class="value">'.$esc($statement->period_start->format('d M Y')).' – '.$esc($statement->period_end->format('d M Y')).'</div>'
-            .'<div class="sub">'.$esc($account->currency).'</div></div>'
-            .'<div class="box"><div class="label">Reconciliation</div><div class="value">'.$esc(ucwords(str_replace('_', ' ', $statement->reconciliation_status))).'</div>'
-            .'<div class="sub">Content hash '.$esc(substr($statement->content_hash, 0, 16)).'…</div></div></div>'
-            .'<table><thead><tr><th>Date</th><th>Value date</th><th>Transaction details</th><th class="num">Debit</th><th class="num">Credit</th><th class="num">Balance</th></tr></thead>'
+            .'<h2>Account activity</h2><table><thead><tr><th>Date</th><th>Value date</th><th>Transaction details</th><th class="num">Debit</th><th class="num">Credit</th><th class="num">Balance</th></tr></thead>'
             .'<tbody>'.$body.'</tbody></table>'
-            .'<table class="summary"><tr><td>Opening balance</td><td>'.$money($statement->opening_balance_minor).'</td></tr>'
-            .'<tr><td>Total debits</td><td>'.$money($statement->total_debits_minor).'</td></tr>'
-            .'<tr><td>Total credits</td><td>'.$money($statement->total_credits_minor).'</td></tr>'
-            .'<tr><td>Closing balance</td><td>'.$money($statement->closing_balance_minor).'</td></tr></table>'
+            .'<table class="summary"><tr><td>Opening balance</td><td>'.$money((int) $statement->opening_balance_minor).'</td></tr>'
+            .'<tr><td>Total debits</td><td>'.$money((int) $statement->total_debits_minor).'</td></tr>'
+            .'<tr><td>Total credits</td><td>'.$money((int) $statement->total_credits_minor).'</td></tr>'
+            .'<tr><td>Closing balance</td><td>'.$money((int) $statement->closing_balance_minor).'</td></tr></table>'
             .'<div class="footer">This is a system-generated OpFin Financial Space statement designed in bank-style format for record keeping, member reporting and reconciliation. '
             .'It is not a statement issued by '.$esc($account->institution_name ?: 'an underlying bank, custodian or payment provider').'. '
             .'Imported external statements remain separate source evidence. Amounts are shown in '.$esc($account->currency).'. '
-            .'Statement integrity reference: '.$esc($statement->content_hash).'.</div>'
-            .'</body></html>';
+            .'Statement integrity reference: '.$esc($statement->content_hash).'.</div></body></html>';
     }
 
     public function renderCsv(array $data): string
     {
         $stream = fopen('php://temp', 'r+');
-        fputcsv($stream, ['Date', 'Value Date', 'Description', 'Reference', 'Debit', 'Credit', 'Balance', 'Reconciliation']);
+        $consolidated = $data['statement']->statement_scope === 'consolidated';
+
+        fputcsv($stream, $consolidated
+            ? ['Account', 'Currency', 'Date', 'Value Date', 'Description', 'Reference', 'Debit', 'Credit', 'Balance', 'Reconciliation']
+            : ['Date', 'Value Date', 'Description', 'Reference', 'Debit', 'Credit', 'Balance', 'Reconciliation']);
+
         foreach ($data['rows'] as $row) {
-            fputcsv($stream, [
+            $base = [
                 $this->csvSafe($row['date']),
                 $this->csvSafe($row['value_date']),
                 $this->csvSafe($row['description']),
@@ -1162,8 +1235,19 @@ class FinancialSpaceStatementService
                 $row['credit_minor'],
                 $row['balance_minor'],
                 $this->csvSafe($row['reconciliation_status']),
-            ]);
+            ];
+
+            if ($consolidated) {
+                fputcsv($stream, [
+                    $this->csvSafe($row['account_name'] ?? ''),
+                    $this->csvSafe($row['currency'] ?? ''),
+                    ...$base,
+                ]);
+            } else {
+                fputcsv($stream, $base);
+            }
         }
+
         rewind($stream);
         $csv = stream_get_contents($stream);
         fclose($stream);
