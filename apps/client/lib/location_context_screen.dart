@@ -12,6 +12,7 @@ class LocationContextScreen extends StatefulWidget {
     this.description,
     this.countryCode = 'UG',
     this.preciseRecommended = false,
+    this.readOnly = false,
   });
 
   final String subjectType;
@@ -21,6 +22,7 @@ class LocationContextScreen extends StatefulWidget {
   final String? description;
   final String countryCode;
   final bool preciseRecommended;
+  final bool readOnly;
 
   @override
   State<LocationContextScreen> createState() => _LocationContextScreenState();
@@ -287,7 +289,9 @@ class _LocationContextScreenState extends State<LocationContextScreen> {
                           _message(error.toString());
                         }
                       },
-                      onRemove: _saving ? null : () => _remove(location),
+                      onRemove: widget.readOnly || _saving
+                          ? null
+                          : () => _remove(location),
                     ),
                     const SizedBox(height: 12),
                   ] else
@@ -297,28 +301,39 @@ class _LocationContextScreenState extends State<LocationContextScreen> {
                         child: Text('No location has been added for this purpose yet.'),
                       ),
                     ),
-                  FilledButton.icon(
-                    onPressed: _saving ? null : () => _useDevice(status),
-                    icon: const Icon(Icons.my_location),
-                    label: Text(
-                      widget.preciseRecommended
-                          ? 'Use location for this asset / risk'
-                          : 'Use my approximate location',
+                  if (widget.readOnly)
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(14),
+                        child: Text(
+                          'You can view this location. A group administrator or authorised owner manages changes.',
+                        ),
+                      ),
+                    )
+                  else ...[
+                    FilledButton.icon(
+                      onPressed: _saving ? null : () => _useDevice(status),
+                      icon: const Icon(Icons.my_location),
+                      label: Text(
+                        widget.preciseRecommended
+                            ? 'Use location for this asset / risk'
+                            : 'Use my approximate location',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed:
-                        _saving ? null : () => _searchPlace(googleConfigured),
-                    icon: const Icon(Icons.search),
-                    label: const Text('Search for a place'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: _saving ? null : _manual,
-                    icon: const Icon(Icons.edit_location_alt_outlined),
-                    label: const Text('Enter location manually'),
-                  ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed:
+                          _saving ? null : () => _searchPlace(googleConfigured),
+                      icon: const Icon(Icons.search),
+                      label: const Text('Search for a place'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: _saving ? null : _manual,
+                      icon: const Icon(Icons.edit_location_alt_outlined),
+                      label: const Text('Enter location manually'),
+                    ),
+                  ],
                   if (!googleConfigured) ...[
                     const SizedBox(height: 12),
                     const Text(
