@@ -32,7 +32,9 @@ class FinancialWellbeingService
         $calendar = $this->calendar($user, $asOf, $horizon, $currency);
         $committedMinor = (int) collect($calendar)->where('direction', 'expense')->whereIn('certainty', ['confirmed', 'scheduled'])->sum('amount_minor');
         $safeToSpendMinor = $availableMinor === null ? null : max(0, $availableMinor - $committedMinor);
-        $debtMinor = $this->debtOutstandingMinor($user, $currency);
+        $creditDebtMinor = $this->creditDebtOutstandingMinor($user, $currency);
+        $recordedDebtMinor = $this->recordedPersonalDebtMinor($user, $currency);
+        $debtMinor = $creditDebtMinor + $recordedDebtMinor;
         $savingsMinor = $currency === 'UGX' ? $this->savingsBalanceMinor($user) : 0;
         $nextIncome = collect($calendar)->where('direction', 'income')->whereIn('certainty', ['confirmed', 'scheduled'])->sortBy('scheduled_for')->first();
         $cashFlow = $this->cashFlow($user, $monthStart, $monthEnd, $currency);
@@ -48,6 +50,8 @@ class FinancialWellbeingService
                 'committed_money_minor' => $committedMinor,
                 'safe_to_spend_minor' => $safeToSpendMinor,
                 'debt_obligations_minor' => $debtMinor,
+                'opfin_credit_debt_minor' => $creditDebtMinor,
+                'recorded_other_debt_minor' => $recordedDebtMinor,
                 'current_savings_minor' => $savingsMinor,
                 'upcoming_obligations_minor' => $committedMinor,
                 'next_income_event' => $nextIncome,
@@ -125,6 +129,43 @@ class FinancialWellbeingService
             }
         }
 
+        if (Schema::hasTable('financial_obligations')) {
+            $personalSpaceId = $this->personalSpaceId($user);
+            if ($personalSpaceId !== null) {
+                $obligations = DB::table('financial_obligations')
+                    ->where('financial_space_id', $personalSpaceId)
+                    ->where('direction', 'i_owe')
+                    ->where('status', 'open')
+                    ->whereNull('deleted_at')
+                    ->where('currency', $currency)
+                    ->whereNotNull('due_date')
+                    ->whereBetween('due_date', [$from->toDateString(), $to->toDateString()])
+                    ->orderBy('due_date')
+                    ->get();
+
+                foreach ($obligations as $obligation) {
+                    $events[] = [
+                        'id' => 'obligation-'.$obligation->id,
+                        'title' => $obligation->counterparty_name
+                            ? 'Debt payment: '.$obligation->counterparty_name
+                            : 'Debt payment',
+                        'event_type' => 'debt',
+                        'direction' => 'expense',
+                        'amount_minor' => (int) $obligation->outstanding_amount_minor,
+                        'currency' => $obligation->currency,
+                        'scheduled_for' => CarbonImmutable::parse($obligation->due_date)->startOfDay()->toIso8601String(),
+                        'certainty' => 'scheduled',
+                        'status' => 'upcoming',
+                        'category' => 'Loan Repayment',
+                        'source' => 'financial_obligation',
+                        'source_reference' => (string) $obligation->id,
+                        'recurrence' => null,
+                        'derived' => true,
+                    ];
+                }
+            }
+        }
+
         if ($currency === 'UGX' && Schema::hasTable('credit_repayment_schedule_items')) {
             $loanEvents = DB::table('credit_repayment_schedule_items as schedule')
                 ->join('loans', 'loans.id', '=', 'schedule.loan_id')->where('loans.user_id', $user->id)
@@ -172,7 +213,7 @@ class FinancialWellbeingService
         return 'Other';
     }
 
-    private function debtOutstandingMinor(User $user, string $currency): int
+    private function creditDebtOutstandingMinor(User $user, string $currency): int
     {
         if ($currency !== 'UGX') {
             return 0;
@@ -197,6 +238,45 @@ class FinancialWellbeingService
         }
 
         return $production + $legacy;
+    }
+
+    private function recordedPersonalDebtMinor(User $user, string $currency): int
+    {
+        if (! Schema::hasTable('financial_obligations')) {
+            return 0;
+        }
+
+        $spaceId = $this->personalSpaceId($user);
+        if ($spaceId === null) {
+            return 0;
+        }
+
+        return (int) DB::table('financial_obligations')
+            ->where('financial_space_id', $spaceId)
+            ->where('direction', 'i_owe')
+            ->where('status', 'open')
+            ->whereNull('deleted_at')
+            ->where('currency', strtoupper($currency))
+            ->sum('outstanding_amount_minor');
+    }
+
+    private function personalSpaceId(User $user): ?int
+    {
+        if (! Schema::hasTable('financial_spaces') || ! Schema::hasTable('financial_space_memberships')) {
+            return null;
+        }
+
+        $spaceId = DB::table('financial_spaces as spaces')
+            ->join('financial_space_memberships as memberships', 'memberships.financial_space_id', '=', 'spaces.id')
+            ->where('memberships.user_id', $user->id)
+            ->where('memberships.status', 'active')
+            ->whereNull('memberships.deleted_at')
+            ->where('spaces.type', 'personal')
+            ->where('spaces.status', 'active')
+            ->whereNull('spaces.deleted_at')
+            ->value('spaces.id');
+
+        return $spaceId === null ? null : (int) $spaceId;
     }
 
     private function savingsBalanceMinor(User $user): int
@@ -250,9 +330,15 @@ class FinancialWellbeingService
         if ($overBudget) {
             return ['code' => 'budget_overrun', 'title' => 'Review '.$overBudget['category'].' spending', 'text' => 'This category is above its monthly budget. Review recent entries before making new commitments.', 'href' => '/money', 'action' => 'Review budget'];
         }
-        $loanDue = collect($calendar)->first(fn (array $event) => $event['event_type'] === 'loan');
-        if ($loanDue) {
-            return ['code' => 'loan_due', 'title' => 'Prepare for your next loan payment', 'text' => 'A confirmed loan instalment is coming up. Keeping it funded protects your repayment record.', 'href' => '/loans/account', 'action' => 'View loan'];
+        $debtDue = collect($calendar)->first(fn (array $event) => in_array($event['event_type'], ['loan', 'debt'], true));
+        if ($debtDue) {
+            return [
+                'code' => $debtDue['event_type'] === 'loan' ? 'loan_due' : 'debt_due',
+                'title' => $debtDue['event_type'] === 'loan' ? 'Prepare for your next loan payment' : 'Prepare for an upcoming debt payment',
+                'text' => 'A recorded debt obligation is coming up. Keep it visible in your plan before making another commitment.',
+                'href' => $debtDue['event_type'] === 'loan' ? '/loans/account' : '/money',
+                'action' => 'Review payment',
+            ];
         }
         if ($goals !== []) {
             return ['code' => 'build_goal', 'title' => 'Keep building '.$goals[0]['name'], 'text' => 'Your recorded safe-to-spend is '.($safeToSpendMinor ?? 0).' minor units after upcoming commitments.', 'href' => '/save', 'action' => 'View goal'];
