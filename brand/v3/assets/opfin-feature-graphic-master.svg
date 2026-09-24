@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" role="img" aria-labelledby="title">
+  <title id="title">OpFin Play feature graphic</title>
+  <rect width="1024" height="500" fill="#FAF8F2"/>
+  <g transform="translate(40 26) scale(.12)" style="color:#353B78">
+    <path d="M96 74h184c82 0 148 66 148 148v64c0 82-66 148-148 148h-54v-52h54c53 0 96-43 96-96v-64c0-53-43-96-96-96H96V74Z" fill="currentColor"/>
+    <path d="M96 158h176c25 0 45 20 45 45s-20 45-45 45H96v-90Z" fill="currentColor"/>
+    <path d="M96 248h154c25 0 45 20 45 45s-20 45-45 45H148v96l-52-43V248Z" fill="currentColor"/>
+  </g>
+  <text x="110" y="104" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="600" letter-spacing="-1.4">OpFin</text>
+  <text x="72" y="300" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="500" letter-spacing="-2.6">Your next step,</text>
+  <text x="72" y="382" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="500" letter-spacing="-2.6">clearer.</text>
+  <path d="M74 414c42 0 78-7 110-22 25-12 50-18 76-18" fill="none" stroke="#F2B38D" stroke-width="7" stroke-linecap="round"/>
+  <path d="M760 520V260c0-99 80-180 180-180h46" fill="none" stroke="#E8EAF6" stroke-width="96" stroke-linecap="round"/>
+  <path d="M884 520V300c0-63 51-114 114-114h58" fill="none" stroke="#F2B38D" stroke-width="76" stroke-linecap="round"/>
+</svg>
