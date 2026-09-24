@@ -16,7 +16,11 @@ for key in ('indigo', 'apricot', 'ivory', 'periwinkle'):
 PY
 )
 indigo=${colours[0]}; apricot=${colours[1]}; ivory=${colours[2]}; periwinkle=${colours[3]}
+
 convert "$icon" -resize 512x512 -alpha on "PNG32:$output_dir/opfin-play-icon-512.png"
+
+# Keep the tagline unobstructed. The Apricot Progress Path sits beneath "clearer."
+# rather than crossing the glyphs, which previously read as an accidental strike-through.
 convert -size 1024x500 "xc:$ivory" \
   -fill none -stroke "$periwinkle" -strokewidth 96 \
   -draw "path 'M 1120,570 L 1120,258 Q 1120,92 954,92 L 926,92 Q 760,92 760,258 L 760,570'" \
@@ -25,9 +29,11 @@ convert -size 1024x500 "xc:$ivory" \
   \( "$symbol" -resize 60x66 \) -gravity northwest -geometry +72+56 -composite \
   -stroke none -fill "$indigo" -font "$font" -weight 700 -pointsize 44 \
   -annotate +154+110 'OpFin' \
-  -pointsize 68 -annotate +72+264 'Your next step,' -annotate +72+348 'clearer.' \
-  -stroke "$apricot" -strokewidth 6 -draw 'line 74,398 144,398' \
+  -weight 500 -pointsize 68 -annotate +72+264 'Your next step,' -annotate +72+348 'clearer.' \
+  -fill none -stroke "$apricot" -strokewidth 7 \
+  -draw "path 'M 74,438 C 112,438 145,434 176,424 C 205,415 232,412 260,412'" \
   -alpha off "PNG24:$output_dir/opfin-feature-graphic-1024x500.png"
+
 python3 - <<'PY'
 import hashlib, json
 from pathlib import Path
@@ -38,5 +44,6 @@ for name in ('opfin-play-icon-512.png', 'opfin-feature-graphic-1024x500.png'):
     manifest['files'][str(asset)] = hashlib.sha256(asset.read_bytes()).hexdigest()
 path.write_text(json.dumps(manifest, indent=2) + '\n')
 PY
+
 identify "$output_dir/opfin-play-icon-512.png" "$output_dir/opfin-feature-graphic-1024x500.png"
 python3 scripts/verify-security-controls.py
