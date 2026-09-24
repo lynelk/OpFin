@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:opfin/location_context_screen.dart';
 import 'package:opfin/services/financial_spaces_api.dart';
 
 class FinancialSpacesScreen extends StatefulWidget {
@@ -48,6 +49,7 @@ class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>
   Future<void> reload()async{setState(()=>_life=FinancialSpacesApi.financialLife(id));await _life;}
   String ugx(dynamic v)=>'UGX ${money.format((v as num?)?.toInt()??0)}';
   bool get groupLike=>['savings_group','investment_club','sacco'].contains(widget.space['type']?.toString());
+  bool get canManageSpace=>const {'owner','administrator','admin','chairperson','treasurer','secretary','director','manager'}.contains(widget.space['role']?.toString());
   Future<void> quick(String kind)async{
     final name=TextEditingController(),amount=TextEditingController();
     final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(kind=='asset'?'Add what you own':kind=='owe'?'Add what you owe':'Add money owed to you'),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:name,decoration:const InputDecoration(labelText:'Name or person')),TextField(controller:amount,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Amount (UGX)'))]),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Save'))]));
@@ -61,6 +63,9 @@ class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.group_add_outlined),title:const Text('Members & invitations'),subtitle:const Text('Manage membership and roles from the same OpFin identity.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupMembersScreen(spaceId:id))))),
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.verified_outlined),title:const Text('Registration & verification'),subtitle:const Text('Attach government or authority identifiers without changing the OpFin group identity.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupCredentialsScreen(space:widget.space))))),
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.health_and_safety_outlined),title:const Text('Group protection'),subtitle:const Text('See approved group-capable insurance products. Enrolment remains controlled.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupProtectionCatalogueScreen(space:widget.space))))),
+    if(groupLike)Card(child:ListTile(leading:const Icon(Icons.map_outlined),title:const Text('Operating area'),subtitle:const Text('Record the group or club operating area without exposing member home locations.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>LocationContextScreen(subjectType:'financial_space',subjectId:id,purpose:'group_operating_area',title:'Operating area',description:'Use a locality or district-level location for the group operating area.',countryCode:widget.space['country']?.toString()??'UG',readOnly:!canManageSpace))))),
+    if(groupLike)Card(child:ListTile(leading:const Icon(Icons.event_outlined),title:const Text('Meeting place'),subtitle:const Text('Add a location members can recognise and open for directions.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>LocationContextScreen(subjectType:'financial_space',subjectId:id,purpose:'group_meeting_place',title:'Meeting place',description:'This location is visible to authorised members of this Space.',countryCode:widget.space['country']?.toString()??'UG',readOnly:!canManageSpace))))),
+    Card(child:ListTile(leading:const Icon(Icons.location_city_outlined),title:const Text('Assets & project locations'),subtitle:const Text('Attach locations to property, farm, project or other recorded assets where useful.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>FinancialAssetLocationsScreen(space:widget.space))))),
   ]));}));
   Widget _tile(String t,String v,VoidCallback tap)=>Card(child:ListTile(title:Text(t),subtitle:Text(v),trailing:const Icon(Icons.add_circle_outline),onTap:tap));
   String _label(String? t)=>t=='savings_group'?'Group money':t=='investment_club'?'Investment club':t=='sacco'?'SACCO':t=='business'?'Business money':t=='personal'?'My money':'Financial space';
@@ -383,6 +388,125 @@ class _GroupProtectionCatalogueScreenState
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+}
+
+
+class FinancialAssetLocationsScreen extends StatefulWidget {
+  const FinancialAssetLocationsScreen({super.key, required this.space});
+  final Map<String, dynamic> space;
+
+  @override
+  State<FinancialAssetLocationsScreen> createState() =>
+      _FinancialAssetLocationsScreenState();
+}
+
+class _FinancialAssetLocationsScreenState
+    extends State<FinancialAssetLocationsScreen> {
+  late Future<List<Map<String, dynamic>>> _assets;
+
+  int get spaceId => (widget.space['id'] as num).toInt();
+  bool get canManageSpace => const {
+        'owner',
+        'administrator',
+        'admin',
+        'chairperson',
+        'treasurer',
+        'secretary',
+        'director',
+        'manager',
+      }.contains(widget.space['role']?.toString());
+
+  @override
+  void initState() {
+    super.initState();
+    _assets = FinancialSpacesApi.assets(spaceId);
+  }
+
+  Future<void> _reload() async {
+    setState(() => _assets = FinancialSpacesApi.assets(spaceId));
+    await _assets;
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Assets & project locations')),
+        body: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _assets,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(snapshot.error.toString()),
+                ),
+              );
+            }
+
+            final assets = snapshot.data ?? const <Map<String, dynamic>>[];
+            return RefreshIndicator(
+              onRefresh: _reload,
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  const Text(
+                    'Map only the assets where location adds real value.',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Property, farms, project sites and other physical investments can carry a precise risk or project location. Financial assets that do not need a location can remain unmapped.',
+                  ),
+                  const SizedBox(height: 16),
+                  if (assets.isEmpty)
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'No assets are recorded in this Financial Space yet.',
+                        ),
+                      ),
+                    )
+                  else
+                    ...assets.map(
+                      (asset) => Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.location_city_outlined),
+                          title: Text(asset['name']?.toString() ?? 'Asset'),
+                          subtitle: Text(
+                            (asset['asset_type']?.toString() ?? 'asset')
+                                .replaceAll('_', ' '),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LocationContextScreen(
+                                subjectType: 'financial_asset',
+                                subjectId: (asset['id'] as num).toInt(),
+                                purpose: 'investment_asset_location',
+                                title: asset['name']?.toString() ??
+                                    'Asset location',
+                                description:
+                                    'Use precise location only where the asset or investment genuinely depends on a physical site.',
+                                countryCode:
+                                    widget.space['country']?.toString() ?? 'UG',
+                                preciseRecommended: true,
+                                readOnly: !canManageSpace,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),

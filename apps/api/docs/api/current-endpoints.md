@@ -4,7 +4,7 @@ Status: Controlled external developer reference
 Updated: 24 September 2026  
 Language: English (United Kingdom)
 
-Updated against the registered canonical platform routes on **24 September 2026**. Routes remain subject to the middleware and role gates in source.
+Updated against the registered canonical platform routes on **24 September 2026**, including the Location Context capability. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:
 
@@ -300,6 +300,29 @@ Authenticated routes:
 | POST | `/api/protection/claims/{claim}/dispute` | Request reconsideration of an eligible declined claim |
 
 Protection product audience is explicit: `personal`, `group` or `both`. Personal catalogue endpoints do not return group-only products. Premium collection, partner settlement and insurer policy issuance remain separate states; clients must not call cover active before insurer issuance.
+
+## 16C. Location Context and lightweight Google Maps
+
+Authenticated routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | /api/location/status | Location capability state, Google activation state and explicit background_tracking=false |
+| GET | /api/location-contexts?subject_type=...&subject_id=... | List authorised purpose-bound locations for a person, Space, asset, policy, claim or partner service point |
+| POST | /api/location-contexts | Create/update one purpose-bound location with source, precision and matching consent purpose |
+| DELETE | /api/location-contexts/{context} | Remove an optional location context when authorised |
+| POST | /api/location/places/autocomplete | Server-side Google Places autocomplete; server API key is never exposed |
+| GET | /api/location/static-map/{context} | Authenticated lightweight Static Map image for an authorised stored context |
+| POST | /api/location/route | Optional explicit route calculation between two authorised stored contexts |
+| GET | /api/location/nearby-services | One-shot nearby partner-service search; query location is not stored |
+| GET | /api/admin/location-insights | Aggregate Financial Space/service-point geography for operations; minimum cohort 5 and no individual customer pins |
+| GET | /api/partner/location-network | Programme partner's own recorded service-point network; no customer pins |
+
+Location subjects are user, financial_space, financial_asset, protection_policy, protection_claim and partner_service_point. Purpose is validated against subject type.
+
+Personal service discovery is forced to approximate precision. Device coordinates remain user-reported provenance at the API boundary; only server-resolved Google places or authorised partner/field workflows gain stronger verification state. Every Location Context is credit_decision_eligible=false.
+
+Google-dependent functions fail closed when Google Maps Platform is not configured; manual location remains available.
 
 ## 17. Financial Spaces and multi-entity membership
 

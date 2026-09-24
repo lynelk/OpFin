@@ -1,7 +1,7 @@
 # OpFin API quick reference
 
 Status: Controlled external developer reference  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 This is a task-oriented entry point. For the complete registered surface, use `api/current-endpoints.md` plus `php artisan route:list --json`.
@@ -49,6 +49,23 @@ Cito is the preferred NIN/phone-ownership route where configured. Biometric/docu
 | Enable employer capability | `POST /api/financial-spaces/{space}/employer/enable` |
 
 Membership, role, entitlement and financial-product eligibility are separate gates.
+
+## Location Context
+
+| Task | Method / endpoint |
+| --- | --- |
+| Capability state | `GET /api/location/status` |
+| List subject locations | `GET /api/location-contexts?subject_type=...&subject_id=...` |
+| Save purpose-bound location | `POST /api/location-contexts` |
+| Remove optional location | `DELETE /api/location-contexts/{context}` |
+| Search Google places | `POST /api/location/places/autocomplete` |
+| Authenticated static map | `GET /api/location/static-map/{context}` |
+| Explicit route calculation | `POST /api/location/route` |
+| Nearby partner services | `GET /api/location/nearby-services` |
+| Operations aggregate geography | `GET /api/admin/location-insights` |
+| Partner-owned service network | `GET /api/partner/location-network` |
+
+Location is foreground/manual and purpose-bound. Personal service discovery is approximate; background tracking is not configured. All Location Context records are non-credit by default. Google credentials remain server-side and Google-dependent functions fail closed when the adapter is disabled.
 
 ## Responsible credit
 

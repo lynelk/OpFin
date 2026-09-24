@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:opfin/location_context_screen.dart';
 import 'package:opfin/services/protection_api.dart';
 
 class ProtectionScreen extends StatefulWidget {
@@ -475,6 +476,14 @@ class _ProtectionScreenState extends State<ProtectionScreen> {
     final pendingPremium = _hasPendingPremium(policy);
     final paying = _premiumInFlight.contains(policyId);
     final canPay = _premiumDue(policy) && !pendingPremium;
+    final productType = product['product_type']?.toString() ?? '';
+    final riskLocationRelevant = const {
+      'asset',
+      'device',
+      'agriculture',
+      'livestock',
+      'property',
+    }.contains(productType);
 
     return Card(
       child: Padding(
@@ -527,6 +536,26 @@ class _ProtectionScreenState extends State<ProtectionScreen> {
                 icon: const Icon(Icons.assignment_outlined),
                 label: const Text('Submit claim'),
               ),
+            if (riskLocationRelevant)
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => LocationContextScreen(
+                      subjectType: 'protection_policy',
+                      subjectId: policyId,
+                      purpose: 'insured_risk_location',
+                      title: 'Insured risk location',
+                      description:
+                          'Use a precise location only where the insured asset, farm, livestock operation or property depends on a physical site.',
+                      countryCode: product['country_code']?.toString() ?? 'UG',
+                      preciseRecommended: true,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.place_outlined),
+                label: const Text('Risk location'),
+              ),
             if (status == 'premium_pending' || status == 'pending_issuance')
               const Text(
                 'Payment or issuance is still being confirmed. OpFin will not show this cover as active early.',
@@ -535,24 +564,51 @@ class _ProtectionScreenState extends State<ProtectionScreen> {
               const Divider(height: 28),
               const Text('Claims', style: TextStyle(fontWeight: FontWeight.w700)),
               ...claims.map(
-                (claim) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    (claim['category']?.toString() ?? 'Claim') +
-                        ' · ' +
-                        _status(claim['status']),
-                  ),
-                  subtitle: Text(
-                    claim['decision_reason']?.toString() ??
-                        claim['incident_date']?.toString() ??
-                        '',
-                  ),
-                  trailing: claim['status'] == 'declined'
-                      ? TextButton(
-                          onPressed: () => _disputeClaim(claim),
-                          child: const Text('Reconsider'),
-                        )
-                      : null,
+                (claim) => Column(
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        (claim['category']?.toString() ?? 'Claim') +
+                            ' · ' +
+                            _status(claim['status']),
+                      ),
+                      subtitle: Text(
+                        claim['decision_reason']?.toString() ??
+                            claim['incident_date']?.toString() ??
+                            '',
+                      ),
+                      trailing: claim['status'] == 'declined'
+                          ? TextButton(
+                              onPressed: () => _disputeClaim(claim),
+                              child: const Text('Reconsider'),
+                            )
+                          : null,
+                    ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => LocationContextScreen(
+                              subjectType: 'protection_claim',
+                              subjectId: _minor(claim['id']),
+                              purpose: 'claim_incident_location',
+                              title: 'Claim incident location',
+                              description:
+                                  'Add an incident location only when it is relevant to the insurer review. This does not change who decides the claim.',
+                              countryCode:
+                                  product['country_code']?.toString() ?? 'UG',
+                              preciseRecommended: true,
+                            ),
+                          ),
+                        ),
+                        icon: const Icon(Icons.add_location_alt_outlined),
+                        label: const Text('Incident location'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

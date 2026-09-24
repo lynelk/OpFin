@@ -196,6 +196,18 @@ class AccountDeletionService
             }
         }
 
+        if (Schema::hasTable('location_contexts')) {
+            $query = DB::table('location_contexts')->where(function ($locations) use ($userId, $personalSpaceIds) {
+                $locations->where(function ($personal) use ($userId) {
+                    $personal->where('subject_type', 'user')->where('subject_id', $userId);
+                });
+                if ($personalSpaceIds !== []) {
+                    $locations->orWhereIn('financial_space_id', $personalSpaceIds);
+                }
+            });
+            $query->delete();
+        }
+
         if ($personalSpaceIds !== []) {
             foreach (['financial_obligations', 'financial_assets'] as $table) {
                 if (Schema::hasTable($table) && Schema::hasColumn($table, 'financial_space_id')) {

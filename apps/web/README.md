@@ -85,3 +85,14 @@ Start with:
 - `../api/docs/api/API_QUICK_REFERENCE.md`
 
 When a Web workflow or public claim changes, update the relevant current documentation in the same PR.
+
+
+## Location context
+
+The Web Workspace displays authorised Financial Space location context with lightweight server-fetched Static Map previews when Google Maps is activated.
+
+Operations has an aggregate **Location insights** view for Financial Space and partner-service-point coverage. Rows below five are suppressed and individual customer locations are excluded.
+
+Programme partner users have a **Service network** view limited to service points associated with their own institution's partner records.
+
+The Web app does not receive the Google server API key and does not perform background/customer location tracking.

@@ -375,3 +375,38 @@ export type LedgerTransaction = {
   metadata?: Record<string, unknown> | null;
   entries: LedgerEntry[];
 };
+
+
+export type LocationContext = {
+  id: number;
+  public_id: string;
+  subject_type: string;
+  subject_id: number;
+  purpose: string;
+  source: string;
+  precision_level: string;
+  place_name?: string | null;
+  formatted_address?: string | null;
+  google_place_id?: string | null;
+  plus_code?: string | null;
+  country_code?: string | null;
+  admin_area_1?: string | null;
+  admin_area_2?: string | null;
+  locality?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy_metres?: number | null;
+  consent_purpose: string;
+  verification_status: string;
+  captured_at?: string | null;
+  maps_url?: string | null;
+};
+
+export type LocationInsightRow = {
+  country_code?: string | null;
+  admin_area_1?: string | null;
+  admin_area_2?: string | null;
+  subject_type: string;
+  purpose: string;
+  count: number;
+};

@@ -302,3 +302,24 @@ The App Home is driven primarily by the financial-wellbeing/Financial Compass st
 Personal protection uses the existing approved-product and policy lifecycle. Clients may show only independently approved active products, must identify the disclosed insurer/underwriter, must capture the exact disclosure hash at enrolment, and must not label cover active before insurer issuance. Premium collection acknowledgement is not policy issuance.
 
 For a non-Personal Financial Space, `GET /api/financial-spaces/{space}/protection/products` returns only products approved for group use (or both personal and group audiences) to active members. This endpoint is catalogue/readiness only. Clients must not invent group enrolment, premium collection or member coverage allocation until dedicated server contracts and activation controls are published.
+
+
+## Location Context contract
+
+Clients treat location as task-specific context rather than a persistent tracking feed.
+
+- baseline OpFin use must not require location;
+- App location requests are foreground-only;
+- personal service discovery requests approximate location;
+- precise location is used only where a physical asset, insured risk or claim incident genuinely requires it;
+- clients always send a purpose and matching consent purpose;
+- a client cannot promote verification state; device coordinates remain user-reported provenance unless a server-side place/partner/field verification path confirms them;
+- server responses expose credit_decision_eligible=false;
+- Google provider credentials stay server-side;
+- manual place/address capture remains available when Google is disabled;
+- the nearby-service query does not persist the searcher's coordinates;
+- group operating/meeting locations never imply access to members' Personal Space locations;
+- operations aggregate geography suppresses cohorts below five and excludes individual user contexts;
+- partner users receive only service points associated with their own institution's partner records.
+
+Static maps are authenticated images and are supplemental visual context. Clients should use normal Google Maps URLs for navigation instead of embedding a full routing UI.
