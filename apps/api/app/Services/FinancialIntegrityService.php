@@ -130,12 +130,25 @@ class FinancialIntegrityService
                     MobileMoneyTransaction::STATUS_PROCESSING,
                     MobileMoneyTransaction::STATUS_PENDING,
                 ])
-                ->where('failure_reason', 'like', 'Provider submission outcome is ambiguous%')
+                ->where('provider_submission_state', 'ambiguous')
                 ->count();
             if ($ambiguousProviderSubmissions > 0) {
                 $findings[] = $this->alert($runId, 'high', 'ambiguous_provider_submission', null,
                     'Money-movement intents have an ambiguous provider submission outcome and must be reconciled by canonical reference before retry.', [
                         'count' => $ambiguousProviderSubmissions,
+                    ]);
+            }
+
+            $staleUnsubmittedIntents = MobileMoneyTransaction::query()
+                ->where('status', MobileMoneyTransaction::STATUS_PROCESSING)
+                ->whereIn('provider_submission_state', ['intent_persisted', 'submission_started'])
+                ->whereNull('provider_reference')
+                ->where('created_at', '<=', now()->subMinutes(2))
+                ->count();
+            if ($staleUnsubmittedIntents > 0) {
+                $findings[] = $this->alert($runId, 'high', 'stale_provider_submission_intent', null,
+                    'Durable money intents have no provider acknowledgement beyond the submission timeout and require provider lookup/reconciliation before retry.', [
+                        'count' => $staleUnsubmittedIntents,
                     ]);
             }
 
