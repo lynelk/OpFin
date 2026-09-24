@@ -87,7 +87,7 @@ Customer-facing guidance should explain:
 - partner geographic reports show aggregate coverage or the partner's own service network, not individual customer pins; and
 - location is not part of the OpFin credit score by default.
 
-When training staff, distinguish user-declared, device-confirmed, Google-place-confirmed, partner-confirmed and verified location provenance. Staff must not manually upgrade a customer location merely to make a record appear more trustworthy.
+When training staff, distinguish user-declared, device-reported, Google-place-confirmed, partner-confirmed and verified location provenance. Staff must not manually upgrade a customer location merely to make a record appear more trustworthy.
 
 ## Channels
 
