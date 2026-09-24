@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { OpfinApiError } from "@/lib/api/errors";
 import { opfinApi } from "@/lib/api/client";
 import { getAccessToken } from "@/lib/auth/session";
+import { canRoleOpenPath, homeForRole } from "@/lib/access";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8;
 const SESSION_COOKIE_OPTIONS = {
@@ -37,6 +38,7 @@ export async function loginAction(formData: FormData) {
   const phone = value(formData, "phone");
   const password = value(formData, "password");
   const requestedNext = value(formData, "next");
+  const context = value(formData, "context");
   let next = safeInternalPath(requestedNext || "/dashboard");
 
   try {
@@ -48,15 +50,17 @@ export async function loginAction(formData: FormData) {
     cookieStore.set("opfin_role", data.user.role, SESSION_COOKIE_OPTIONS);
     cookieStore.set("opfin_name", encodeURIComponent(data.user.name), SESSION_COOKIE_OPTIONS);
 
-    if (!requestedNext && data.user.role === "programme_partner") {
-      next = "/partner/impact";
+    const roleHome = homeForRole(data.user.role);
+    if (!requestedNext || !canRoleOpenPath(data.user.role, next)) {
+      next = roleHome;
     }
   } catch (error) {
+    const preserved = context ? { next, context } : { next };
     if (error instanceof OpfinApiError) {
-      redirectWith("/login", { error: error.kind, message: error.message, next });
+      redirectWith("/login", { error: error.kind, message: error.message, ...preserved });
     }
 
-    redirectWith("/login", { error: "server", message: "Login failed", next });
+    redirectWith("/login", { error: "server", message: "Login failed", ...preserved });
   }
 
   redirect(next);

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { UserRole } from "@/lib/types";
+import { canRoleOpenPath, homeForRole } from "@/lib/access";
 
 const allowedRoles: UserRole[] = ["customer", "platform_admin", "operations", "support", "employer_admin", "programme_partner"];
 const roleNames: Record<UserRole, string> = {
@@ -36,11 +37,8 @@ export function GET(request: NextRequest) {
   const role = request.nextUrl.searchParams.get("role") as UserRole | null;
   const safeRole = allowedRoles.includes(role ?? "customer") ? role ?? "customer" : "customer";
   const requestedNext = request.nextUrl.searchParams.get("next");
-  const next = requestedNext
-    ? safeInternalPath(requestedNext)
-    : safeRole === "programme_partner"
-      ? "/partner/impact"
-      : "/dashboard";
+  const candidate = requestedNext ? safeInternalPath(requestedNext) : homeForRole(safeRole);
+  const next = canRoleOpenPath(safeRole, candidate) ? candidate : homeForRole(safeRole);
   const response = NextResponse.redirect(new URL(next, request.url));
 
   response.cookies.set("opfin_access_token", `sandbox-${crypto.randomUUID()}`, SESSION_COOKIE_OPTIONS);

@@ -1,7 +1,7 @@
 # OpFin web application
 
 Status: Controlled external developer/product reference  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 The Next.js application provides the public marketing site, customer Web access, institutional Workspaces and authorised operational/admin surfaces. It consumes `apps/api`; it does not own authoritative credit calculations, balances, financial finality, ledger state, provider routing or regulatory truth.
@@ -19,7 +19,18 @@ The homepage communicates the broad OpFin proposition:
 
 Public copy must distinguish implemented capability from activated provider service. Illustrative product cards are not production screenshots. Programme outcomes are not causal claims. Web sign-in is not the preferred new-customer onboarding route.
 
-Canonical new-customer onboarding remains phone → OTP → names → six-digit PIN in the mobile experience. The current Web login retains password-compatible access for existing/authorised users and account-deletion verification.
+Canonical new-customer onboarding remains phone → OTP → names → six-digit PIN in the mobile experience. Web sign-in is PIN-first for existing/authorised users and account-deletion verification, while retaining the existing legacy-password fallback during migration. The interface labels the credential field clearly without forcing six-digit validation on legacy Web accounts.
+
+### Portal access model
+
+Web uses one sign-in surface and routes the authenticated person to the correct authorised workspace:
+
+- **Personal & Financial Spaces** for customer money, household/group and authorised organisation/SACCO contexts;
+- **Employer Workspace** for `employer_admin` access;
+- **Programme Partner Workspace** for `programme_partner` aggregate programme reporting; and
+- **OpFin Operations** for `platform_admin`, `operations` and `support`, with modules filtered by role.
+
+The legacy `/admin-login` URL is a compatibility redirect to the unified sign-in screen. Programme check-ins remain inside the Personal experience. Support, inclusion/programmes, impact, programme delivery and commercial performance are modules inside role-gated Operations rather than separate authentication portals.\n\nWithin OpFin Operations, navigation is grouped into **Overview & automation**, **Finance & risk**, **Customer service**, **Governance & assurance** and **Programmes & growth**. Each operational module carries an explicit role allow-list; `support` is limited to its assigned overview, ledger, support and audit surfaces rather than inheriting every `/admin` route.
 
 ## Customer and Workspace experience
 
