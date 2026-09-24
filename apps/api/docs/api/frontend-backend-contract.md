@@ -313,7 +313,7 @@ Clients treat location as task-specific context rather than a persistent trackin
 - personal service discovery requests approximate location;
 - precise location is used only where a physical asset, insured risk or claim incident genuinely requires it;
 - clients always send a purpose and matching consent purpose;
-- a client cannot promote verification state;
+- a client cannot promote verification state; device coordinates remain user-reported provenance unless a server-side place/partner/field verification path confirms them;
 - server responses expose credit_decision_eligible=false;
 - Google provider credentials stay server-side;
 - manual place/address capture remains available when Google is disabled;
