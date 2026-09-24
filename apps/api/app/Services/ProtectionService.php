@@ -23,10 +23,16 @@ class ProtectionService
         private readonly ServiceEconomicsService $economics,
     ) {}
 
-    public function activeProducts(string $countryCode): mixed
+    public function activeProducts(string $countryCode, string $audienceScope = 'personal'): mixed
     {
+        $audienceScope = strtolower($audienceScope);
+        if (! in_array($audienceScope, ['personal', 'group'], true)) {
+            throw new InvalidArgumentException('Unsupported protection audience scope.');
+        }
+
         return ProtectionProduct::query()
             ->where('country_code', strtoupper($countryCode))
+            ->whereIn('audience_scope', [$audienceScope, 'both'])
             ->where('status', ProtectionProduct::STATUS_ACTIVE)
             ->whereNotNull('approved_by')
             ->whereNotNull('approved_at')
@@ -52,6 +58,7 @@ class ProtectionService
             'country_code' => $product->country_code,
             'currency' => $product->currency,
             'product_type' => $product->product_type,
+            'audience_scope' => $product->audience_scope,
             'premium_amount_minor' => $product->premium_amount_minor,
             'premium_frequency' => $product->premium_frequency,
             'coverage_limit_minor' => $product->coverage_limit_minor,
@@ -69,6 +76,7 @@ class ProtectionService
         return ProtectionPolicy::query()
             ->with(['product', 'premiumPayments', 'claims'])
             ->where('user_id', $user->id)
+            ->where('coverage_scope', 'personal')
             ->latest()
             ->get();
     }
@@ -80,6 +88,9 @@ class ProtectionService
         array $acceptanceMetadata = [],
     ): ProtectionPolicy {
         $this->assertProductAvailable($product);
+        if (! in_array($product->audience_scope, ['personal', 'both'], true)) {
+            throw new InvalidArgumentException('This protection product is not available for personal enrolment.');
+        }
         if (! hash_equals($product->disclosureHash(), strtolower($disclosureHash))) {
             throw new InvalidArgumentException('Protection disclosure hash does not match the current product disclosure.');
         }
@@ -102,6 +113,8 @@ class ProtectionService
             'protection_product_id' => $product->id,
             'user_id' => $user->id,
             'institution_id' => $user->institution_id,
+            'financial_space_id' => null,
+            'coverage_scope' => 'personal',
             'policy_reference' => 'OPF-PRT-'.Str::upper(Str::random(16)),
             'status' => ProtectionPolicy::STATUS_PREMIUM_DUE,
             'premium_amount_minor' => $product->premium_amount_minor,
@@ -128,51 +141,73 @@ class ProtectionService
         string $clientIdempotencyKey,
     ): ProtectionPremiumPayment {
         $this->assertOwnedPolicy($policy, $user);
-        $policy->loadMissing('product');
-        $this->assertProductAvailable($policy->product, allowRetiredForExistingPolicy: true);
-
-        if (in_array($policy->status, [ProtectionPolicy::STATUS_CANCELLED, ProtectionPolicy::STATUS_EXPIRED], true)) {
-            throw new InvalidArgumentException('Premium collection is unavailable for this policy state.');
-        }
 
         $idempotencyKey = "protection:policy:{$policy->id}:premium:{$clientIdempotencyKey}";
-        $existing = ProtectionPremiumPayment::where('idempotency_key', $idempotencyKey)->first();
-        if ($existing) {
-            return $existing->load(['policy.product', 'mobileMoneyTransaction']);
-        }
 
-        $pendingExists = ProtectionPremiumPayment::query()
-            ->where('protection_policy_id', $policy->id)
-            ->whereIn('status', [
-                ProtectionPremiumPayment::STATUS_COLLECTION_PENDING,
-                ProtectionPremiumPayment::STATUS_COLLECTED_PENDING_PARTNER,
-            ])
-            ->exists();
-        if ($pendingExists) {
-            throw new InvalidArgumentException('This protection policy already has a premium payment in progress.');
-        }
+        $payment = DB::transaction(function () use ($policy, $user, $idempotencyKey) {
+            $lockedPolicy = ProtectionPolicy::query()
+                ->with('product')
+                ->lockForUpdate()
+                ->findOrFail($policy->id);
 
-        [$periodStart, $periodEnd] = $this->premiumPeriod($policy);
-        $payment = ProtectionPremiumPayment::create([
-            'protection_policy_id' => $policy->id,
-            'user_id' => $user->id,
-            'institution_id' => $user->institution_id,
-            'payment_reference' => 'OPF-PRM-'.Str::upper(Str::random(16)),
-            'idempotency_key' => $idempotencyKey,
-            'status' => ProtectionPremiumPayment::STATUS_COLLECTION_PENDING,
-            'amount_minor' => $policy->premium_amount_minor,
-            'currency' => $policy->product->currency,
-            'coverage_period_start' => $periodStart,
-            'coverage_period_end' => $periodEnd,
-            'requested_at' => now(),
-            'metadata' => [
-                'insurer_name' => $policy->product->insurer_name,
-                'underwriter_name' => $policy->product->underwriter_name,
-            ],
-        ]);
+            $this->assertOwnedPolicy($lockedPolicy, $user);
+            $this->assertProductAvailable($lockedPolicy->product, allowRetiredForExistingPolicy: true);
 
-        if ($policy->status !== ProtectionPolicy::STATUS_ACTIVE) {
-            $policy->update(['status' => ProtectionPolicy::STATUS_PREMIUM_PENDING]);
+            if ($lockedPolicy->coverage_scope !== 'personal'
+                || ! in_array($lockedPolicy->product->audience_scope, ['personal', 'both'], true)) {
+                throw new InvalidArgumentException('Personal premium collection is unavailable for this protection policy.');
+            }
+
+            if (in_array($lockedPolicy->status, [ProtectionPolicy::STATUS_CANCELLED, ProtectionPolicy::STATUS_EXPIRED], true)) {
+                throw new InvalidArgumentException('Premium collection is unavailable for this policy state.');
+            }
+
+            $existing = ProtectionPremiumPayment::query()
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+            if ($existing) {
+                return $existing->load(['policy.product', 'mobileMoneyTransaction']);
+            }
+
+            $pendingExists = ProtectionPremiumPayment::query()
+                ->where('protection_policy_id', $lockedPolicy->id)
+                ->whereIn('status', [
+                    ProtectionPremiumPayment::STATUS_COLLECTION_PENDING,
+                    ProtectionPremiumPayment::STATUS_COLLECTED_PENDING_PARTNER,
+                ])
+                ->exists();
+            if ($pendingExists) {
+                throw new InvalidArgumentException('This protection policy already has a premium payment in progress.');
+            }
+
+            [$periodStart, $periodEnd] = $this->premiumPeriod($lockedPolicy);
+            $created = ProtectionPremiumPayment::create([
+                'protection_policy_id' => $lockedPolicy->id,
+                'user_id' => $user->id,
+                'institution_id' => $user->institution_id,
+                'payment_reference' => 'OPF-PRM-'.Str::upper(Str::random(16)),
+                'idempotency_key' => $idempotencyKey,
+                'status' => ProtectionPremiumPayment::STATUS_COLLECTION_PENDING,
+                'amount_minor' => $lockedPolicy->premium_amount_minor,
+                'currency' => $lockedPolicy->product->currency,
+                'coverage_period_start' => $periodStart,
+                'coverage_period_end' => $periodEnd,
+                'requested_at' => now(),
+                'metadata' => [
+                    'insurer_name' => $lockedPolicy->product->insurer_name,
+                    'underwriter_name' => $lockedPolicy->product->underwriter_name,
+                ],
+            ]);
+
+            if ($lockedPolicy->status !== ProtectionPolicy::STATUS_ACTIVE) {
+                $lockedPolicy->update(['status' => ProtectionPolicy::STATUS_PREMIUM_PENDING]);
+            }
+
+            return $created->load(['policy.product', 'mobileMoneyTransaction']);
+        }, 3);
+
+        if ($payment->mobile_money_transaction_id) {
+            return $payment;
         }
 
         $this->recordPremiumEconomics($payment->fresh(['policy.product']), 'REQUESTED');
@@ -197,15 +232,15 @@ class ProtectionService
                 'status' => ProtectionPremiumPayment::STATUS_FAILED,
                 'metadata' => array_merge($payment->metadata ?? [], ['failure' => $exception->getMessage()]),
             ]);
-            if ($policy->status !== ProtectionPolicy::STATUS_ACTIVE) {
-                $policy->update(['status' => ProtectionPolicy::STATUS_PREMIUM_DUE]);
+            if ($payment->policy->status !== ProtectionPolicy::STATUS_ACTIVE) {
+                $payment->policy->update(['status' => ProtectionPolicy::STATUS_PREMIUM_DUE]);
             }
             $this->recordPremiumEconomics($payment->fresh(['policy.product']), 'ERROR');
             throw $exception;
         }
 
         $this->auditLogger->record('protection.premium.requested', $user, $payment, [
-            'protection_policy_id' => $policy->id,
+            'protection_policy_id' => $payment->protection_policy_id,
             'amount_minor' => $payment->amount_minor,
         ]);
 

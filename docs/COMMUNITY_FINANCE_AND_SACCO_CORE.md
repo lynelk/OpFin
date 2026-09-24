@@ -1,12 +1,12 @@
 # OpFin Community Finance and Member Cooperative Core
 
 Status: Controlled external product reference  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
-This document defines the member-friendly naming, product boundaries, dormant activation controls and implementation scope for OpFin's community finance foundation.
+This document defines the member-friendly naming, product boundaries, dormant activation controls and implementation scope for OpFin's community finance foundation. Savings Groups, Investment Clubs and SACCOs share the Financial Space identity/membership foundation; the person remains the primary OpFin customer and keeps a separate Personal Space.
 
-The foundation is intentionally built but not activated. It must not collect member shares, savings, investment funds, insurance premiums, asset deposits or employer deductions until the approved activation runbook, licensing/partner checks, custody model, disclosures, support readiness and reconciliation drills are complete.
+The money-moving community-finance foundation is intentionally built but not activated. It must not collect member shares, group savings, investment funds, group insurance premiums, asset deposits or employer deductions until the approved activation runbook, licensing/partner checks, custody model, member consent, disclosures, support readiness and reconciliation drills are complete. Read-only group administration, external registration credentials and an approved group-protection catalogue do not by themselves activate custody or collection.
 
 ## Member-friendly terms
 
@@ -48,6 +48,12 @@ Before activation, the following must be recorded and reviewed:
 7. Operations playbook and member support readiness.
 8. Production reconciliation and recovery drill.
 
+## Group identity, regularisation and Investment Clubs
+
+Each group keeps a stable OpFin Financial Space identity. Government, regulator, cooperative, tax or other authority-issued codes are attached as external credentials with issuer, jurisdiction and verification status. A group can therefore form informally, later register or receive a national group code, and keep the same members, history and financial records.
+
+An Investment Club is a first-class group Space built on the Savings Group membership/governance foundation. It is intended to progressively add capital accounts, ownership/unit rules, investment proposals, portfolio administration, income/distributions and stronger governance without creating another consumer identity or application. Those investment-money capabilities remain subject to the same custody, partner, regulatory and activation controls as other community finance.
+
 ## Built foundation
 
 The dormant schema supports:
@@ -63,6 +69,8 @@ The dormant schema supports:
 - Guarantor requests, consent references and release tracking.
 - Explainable Member Growth Score scorecards.
 - Protection and asset partner plans.
+- External group registration/authority credentials and verification state.
+- Approved group-audience protection catalogue, without group premium collection or policy activation.
 
 ## Member Growth Score
 

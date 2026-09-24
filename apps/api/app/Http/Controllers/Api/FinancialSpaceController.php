@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
+use App\Services\PersonalFinancialSpaceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,18 +13,25 @@ use Illuminate\Validation\Rule;
 
 class FinancialSpaceController extends Controller
 {
+    public function __construct(private readonly PersonalFinancialSpaceService $personalSpaces) {}
+
     public function index(Request $request): JsonResponse
     {
+        $this->personalSpaces->ensure($request->user());
         $spaces = DB::table('financial_space_memberships as m')
             ->join('financial_spaces as s', 's.id', '=', 'm.financial_space_id')
-            ->where('m.user_id', $request->user()->id)->where('m.status', 'active')->whereNull('s.deleted_at')
-            ->select('s.id','s.public_id','s.type','s.name','s.country','s.currency','s.status','m.role')->orderBy('s.id')->get();
+            ->where('m.user_id', $request->user()->id)->where('m.status', 'active')->whereNull('m.deleted_at')->whereNull('s.deleted_at')
+            ->select('s.id','s.public_id','s.type','s.name','s.country','s.currency','s.status','m.role')
+            ->orderByRaw("CASE WHEN s.type = 'personal' THEN 0 ELSE 1 END")
+            ->orderBy('s.name')
+            ->orderBy('s.id')
+            ->get();
         return response()->json(['data'=>['spaces'=>$spaces]]);
     }
 
     public function store(Request $request): JsonResponse
     {
-        $v=$request->validate(['type'=>['required',Rule::in(['household','savings_group','business','sacco','investment_fund','partner'])],'name'=>['required','string','max:160'],'country'=>['sometimes','string','size:2'],'currency'=>['sometimes','string','size:3']]);
+        $v=$request->validate(['type'=>['required',Rule::in(['household','savings_group','investment_club','business','sacco','investment_fund','partner'])],'name'=>['required','string','max:160'],'country'=>['sometimes','string','size:2'],'currency'=>['sometimes','string','size:3']]);
         return DB::transaction(function() use($request,$v){
             $id=DB::table('financial_spaces')->insertGetId(['public_id'=>(string)Str::uuid(),'type'=>$v['type'],'name'=>$v['name'],'country'=>strtoupper($v['country']??'UG'),'currency'=>strtoupper($v['currency']??'UGX'),'status'=>'active','created_at'=>now(),'updated_at'=>now()]);
             DB::table('financial_space_memberships')->insert(['financial_space_id'=>$id,'user_id'=>$request->user()->id,'role'=>'owner','status'=>'active','joined_at'=>now(),'approved_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);
@@ -67,6 +75,6 @@ class FinancialSpaceController extends Controller
         return response()->json(['data'=>['updated'=>true]]);
     }
 
-    private function assertMember(Request $r, FinancialSpace $s): void { abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$s->id)->where('user_id',$r->user()->id)->where('status','active')->exists(),403); }
-    private function assertAdministrator(Request $r, FinancialSpace $s): void { abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$s->id)->where('user_id',$r->user()->id)->where('status','active')->whereIn('role',['owner','administrator','chairperson','treasurer','director'])->exists(),403); }
+    private function assertMember(Request $r, FinancialSpace $s): void { abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$s->id)->where('user_id',$r->user()->id)->where('status','active')->whereNull('deleted_at')->exists(),403); }
+    private function assertAdministrator(Request $r, FinancialSpace $s): void { abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$s->id)->where('user_id',$r->user()->id)->where('status','active')->whereNull('deleted_at')->whereIn('role',['owner','administrator','chairperson','treasurer','director'])->exists(),403); }
 }

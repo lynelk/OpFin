@@ -61,6 +61,21 @@ Record tester, exact build/commit, environment, date, evidence and result for ev
 | UAT-51 | Website claims | Review marketing homepage against current docs | No guarantee of unavailable provider/service; illustrative preview disclosed |
 | UAT-52 | Deployment evidence | Compare commit statuses and workflow runs | Source-deployed vs CI-certified states recorded separately |
 
+| UAT-53 | Location optionality | Use Home/My Money/credit without location permission | Baseline OpFin remains fully usable |
+| UAT-54 | Approximate service discovery | Find nearby services and grant coarse/approximate location only | Search works; query coordinates are not stored |
+| UAT-55 | Precise purpose gate | Add asset/risk location | Precise permission requested only for that explicit task |
+| UAT-56 | Background tracking | Inspect Android/iOS permissions and background behaviour | No background location permission or continuous tracking |
+| UAT-57 | Manual fallback | Disable Google Maps/provider and add a location manually | Manual location succeeds; Google-dependent actions fail closed |
+| UAT-58 | Place search | Search/select a place with Google enabled | Place ID/address/coordinates returned through server API; key absent from client/API payload |
+| UAT-59 | Static map | Open authorised location preview | Small authenticated map renders; unauthorised user is denied |
+| UAT-60 | Space isolation | Member/admin/removed-member access to group locations | Member reads, approved admin writes, removed member is denied |
+| UAT-61 | Location purpose | Submit mismatched subject/purpose or consent purpose | Rejected; stored purpose/consent stay aligned |
+| UAT-62 | Credit boundary | Add/remove/change location context and refresh credit | Credit score/limit/pricing are unchanged by Location Context |
+| UAT-63 | Insurance location | Add insured-risk and claim incident locations | Location stored separately; insurer/underwriter remains claim decision authority |
+| UAT-64 | Partner network | Partner opens Service network | Only own institution's service points appear; no customer pins |
+| UAT-65 | Aggregate geography | Create cohorts below/above five | Below five suppressed; individual user contexts excluded |
+| UAT-66 | Account deletion | Delete account after adding personal location | Optional personal location is purged with other optional context |
+
 ## Impact and causality acceptance
 
 Programme dashboards and partner exports must state or imply only measured/observed change unless the evaluation design separately supports causal attribution.

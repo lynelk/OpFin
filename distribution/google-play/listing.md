@@ -1,7 +1,7 @@
 # Google Play store listing — English (Uganda)
 
-Status: Public copy pending final contact/URL verification  
-Updated: 23 September 2026  
+Status: Console-ready copy pending final release/contact/URL verification  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 ## App name
@@ -10,9 +10,11 @@ OpFin
 
 ## Short description
 
-Understand your money, manage credit and build financial resilience with OpFin.
+Your next step, clearer. Understand, plan and improve your financial position.
 
 ## Full description
+
+**Your next step, clearer.**
 
 OpFin helps you understand, manage, plan and improve your financial position from one secure financial platform.
 
@@ -71,3 +73,7 @@ Do not publish dummy values. Keep the final approved contact/URL values in the P
 ## Credit information
 
 Where applicable and with the required electronic consent, OpFin may report complete and accurate positive or negative credit information about a loan to an authorised credit-reference mechanism in support of responsible lending and credit reporting.
+
+## Replacement rule
+
+This copy supersedes older public positioning that presents OpFin primarily as peer-to-peer loans/investments or uses guarantees such as “instant approval”. The public listing must be updated only with the submitted release evidence and verified Play Console declarations.

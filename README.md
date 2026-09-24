@@ -63,6 +63,7 @@ Key rules:
 Start with:
 
 - [Current state](docs/CURRENT_STATE.md)
+- [Brand System v3 release candidate](brand/v3/OPFIN_BRAND_SYSTEM_V3.md)
 - [Documentation hub](docs/README.md)
 - [Product blueprint](docs/product/OPFIN_PRODUCT_BLUEPRINT.md)
 - [Canonical implementation status](docs/product/CANONICAL_IMPLEMENTATION_STATUS.md)

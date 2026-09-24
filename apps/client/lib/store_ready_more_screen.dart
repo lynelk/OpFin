@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opfin/account_delete_screen.dart';
 import 'package:opfin/accessibility_screen.dart';
 import 'package:opfin/faq_screen.dart';
+import 'package:opfin/location_context_screen.dart';
 import 'package:opfin/profile_screen.dart';
 import 'package:opfin/wallets_screen.dart';
 
@@ -19,6 +20,8 @@ class StoreReadyMoreMobileScreen extends StatelessWidget{
         ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WalletsScreen()))),
       _Tile(Icons.accessibility_new,'Accessibility','Larger text, simple wording and reduced movement.',
         ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const AccessibilityScreen()))),
+      _Tile(Icons.location_on_outlined,'Services near me','Use approximate location once to find participating service points.',
+        ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const NearbyServicesScreen()))),
       _Tile(Icons.help_outline,'Help & support','Get help without sharing your PIN or OTP.',
         ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const FaqsScreen()))),
       const SizedBox(height:18),

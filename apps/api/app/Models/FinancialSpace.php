@@ -27,4 +27,14 @@ class FinancialSpace extends Model
     {
         return $this->belongsTo(Institution::class);
     }
+
+    public function credentials()
+    {
+        return $this->hasMany(FinancialSpaceCredential::class);
+    }
+
+    public function protectionPolicies()
+    {
+        return $this->hasMany(ProtectionPolicy::class);
+    }
 }

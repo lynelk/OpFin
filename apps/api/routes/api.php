@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\EssentialsController;
 use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\FinancialSpaceController;
+use App\Http\Controllers\Api\FinancialSpaceCredentialController;
+use App\Http\Controllers\Api\FinancialSpaceStatementController;
 use App\Http\Controllers\Api\FinancialWellbeingController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\GuarantorController;
@@ -23,6 +25,7 @@ use App\Http\Controllers\Api\InclusiveImpactController;
 use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
+use App\Http\Controllers\Api\LocationContextController;
 use App\Http\Controllers\Api\LongRangeGovernanceController;
 use App\Http\Controllers\Api\LongRangePlatformController;
 use App\Http\Controllers\Api\NinValidationController;
@@ -74,12 +77,42 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::delete('/account', [AccountController::class, 'destroy']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
     Route::get('/capabilities', [CapabilityController::class, 'index']);
+    Route::get('/location/status', [LocationContextController::class, 'status']);
+    Route::get('/location-contexts', [LocationContextController::class, 'index']);
+    Route::post('/location-contexts', [LocationContextController::class, 'store']);
+    Route::delete('/location-contexts/{context}', [LocationContextController::class, 'destroy']);
+    Route::post('/location/places/autocomplete', [LocationContextController::class, 'autocomplete']);
+    Route::get('/location/static-map/{context}', [LocationContextController::class, 'staticMap']);
+    Route::post('/location/route', [LocationContextController::class, 'route']);
+    Route::get('/location/nearby-services', [LocationContextController::class, 'nearbyServices']);
     Route::get('/financial-spaces', [FinancialSpaceController::class, 'index']);
     Route::post('/financial-spaces', [FinancialSpaceController::class, 'store']);
     Route::post('/financial-spaces/invitations/accept', [FinancialSpaceController::class, 'acceptInvitation']);
     Route::get('/financial-spaces/{space}/members', [FinancialSpaceController::class, 'members']);
     Route::post('/financial-spaces/{space}/invitations', [FinancialSpaceController::class, 'invite']);
     Route::put('/financial-spaces/{space}/capabilities', [FinancialSpaceController::class, 'enableCapability']);
+    Route::get('/financial-spaces/{space}/credentials', [FinancialSpaceCredentialController::class, 'index']);
+    Route::post('/financial-spaces/{space}/credentials', [FinancialSpaceCredentialController::class, 'store']);
+    Route::get('/financial-spaces/{space}/protection/products', [ProtectionController::class, 'spaceProducts']);
+    Route::get('/financial-spaces/{space}/treasury/accounts', [FinancialSpaceStatementController::class, 'accounts']);
+    Route::post('/financial-spaces/{space}/treasury/accounts', [FinancialSpaceStatementController::class, 'createAccount']);
+    Route::get('/financial-spaces/{space}/treasury/accounts/{account}/transactions', [FinancialSpaceStatementController::class, 'transactions']);
+    Route::post('/financial-spaces/{space}/treasury/accounts/{account}/transactions', [FinancialSpaceStatementController::class, 'recordTransaction']);
+    Route::get('/financial-spaces/{space}/treasury/accounts/{account}/statement-imports', [FinancialSpaceStatementController::class, 'imports']);
+    Route::post('/financial-spaces/{space}/treasury/accounts/{account}/statement-imports', [FinancialSpaceStatementController::class, 'importStatement']);
+    Route::get('/financial-spaces/{space}/statement-imports/{import}', [FinancialSpaceStatementController::class, 'importDetail']);
+    Route::post('/financial-spaces/{space}/statement-imports/{import}/reconcile', [FinancialSpaceStatementController::class, 'reconcile']);
+    Route::post('/financial-spaces/{space}/statement-imports/{import}/confirm', [FinancialSpaceStatementController::class, 'confirm']);
+    Route::post('/financial-spaces/{space}/statement-imports/{import}/balance-variance', [FinancialSpaceStatementController::class, 'resolveBalanceVariance']);
+    Route::post('/financial-spaces/{space}/statement-imports/{import}/book-transactions/{transaction}/accept', [FinancialSpaceStatementController::class, 'resolveBookTransaction']);
+    Route::post('/financial-spaces/{space}/statement-rows/{row}/resolve', [FinancialSpaceStatementController::class, 'resolveRow']);
+    Route::post('/financial-spaces/{space}/statement-rows/{row}/match', [FinancialSpaceStatementController::class, 'matchRow']);
+    Route::get('/financial-spaces/{space}/statements', [FinancialSpaceStatementController::class, 'statements']);
+    Route::post('/financial-spaces/{space}/treasury/accounts/{account}/statements', [FinancialSpaceStatementController::class, 'generate']);
+    Route::post('/financial-spaces/{space}/statements/consolidated', [FinancialSpaceStatementController::class, 'generateConsolidated']);
+    Route::get('/financial-spaces/{space}/statements/{statement}', [FinancialSpaceStatementController::class, 'show']);
+    Route::get('/financial-spaces/{space}/statements/{statement}/html', [FinancialSpaceStatementController::class, 'html'])->name('financial-spaces.statements.html');
+    Route::get('/financial-spaces/{space}/statements/{statement}/csv', [FinancialSpaceStatementController::class, 'csv'])->name('financial-spaces.statements.csv');
     Route::get('/financial-spaces/{space}/financial-life', [FinancialLifeController::class, 'summary']);
     Route::get('/financial-spaces/{space}/obligations', [FinancialLifeController::class, 'obligations']);
     Route::post('/financial-spaces/{space}/obligations', [FinancialLifeController::class, 'storeObligation']);
@@ -234,6 +267,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::get('/admin/location-insights', [LocationContextController::class, 'insights']);
+    Route::patch('/admin/financial-space-credentials/{credential}/verification', [FinancialSpaceCredentialController::class, 'verify']);
     Route::post('/admin/hardship/{case}/approve', [V5P0PlatformController::class, 'approveHardship']);
     Route::post('/admin/product-factory/products', [V5P0PlatformController::class, 'createProduct']);
     Route::post('/admin/product-factory/products/{product}/transition', [V5P0PlatformController::class, 'transitionProduct']);
@@ -353,6 +388,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:programme_partner'])->group(function () {
+    Route::get('/partner/location-network', [LocationContextController::class, 'partnerNetwork']);
     Route::get('/partner/inclusive-finance/programmes', [InclusiveImpactController::class, 'partnerProgrammes']);
     Route::get('/partner/inclusive-finance/programmes/{programme}/impact', [InclusiveImpactController::class, 'partnerImpact']);
     Route::get('/partner/inclusive-finance/programmes/{programme}/exports/{format}', [ProgrammeCompletionController::class, 'partnerExport']);

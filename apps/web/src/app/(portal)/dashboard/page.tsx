@@ -57,7 +57,12 @@ export default async function DashboardPage() {
         <section className="panel">
           <div className="case-card-head"><div><h2>Your financial spaces</h2><p className="muted">Personal money, households, savings groups and organisations under one identity.</p></div><Link href="/spaces">Open spaces</Link></div>
         </section>
-        <section className="panel compass-next-action">
+        <section className="financial-compass" aria-labelledby="financial-compass-title">
+          <p className="eyebrow">Financial Compass</p>
+          <h2 className="financial-compass-title" id="financial-compass-title">See the position. Understand the next move.</h2>
+          <p className="muted">Recorded facts, estimates and unavailable information stay distinct so guidance never looks more certain than the underlying evidence.</p>
+        </section>
+        <section className="panel compass-next-action opfin-next-step">
           <p className="eyebrow">Recommended next step</p>
           <h2>{nextAction.title}</h2>
           <p className="muted">{nextAction.text}</p>

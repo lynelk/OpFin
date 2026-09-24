@@ -1,12 +1,12 @@
 # OpFin Product Blueprint
 
 Status: Canonical product contract  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 ## Product position
 
-OpFin is a financial operating platform with embedded financial services. It helps a person or organisation understand, manage, plan and improve its financial position. Lending is one capability, not the product boundary.
+OpFin is a personal financial operating platform with embedded financial services. It starts with the individual, particularly people who are underserved by conventional financial systems, and helps that person understand, manage, plan, protect and improve their financial life. Groups and organisations extend that personal financial life through governed Financial Spaces; they do not replace the individual as OpFin's centre of gravity. Lending is one capability, not the product boundary.
 
 ## Constitutional product principles
 
@@ -32,6 +32,7 @@ Person, identity evidence, verification state, authentication, consent and deleg
 - Personal
 - Household
 - Savings Group / community group
+- Investment Club
 - Business
 - SACCO / cooperative
 - Investment/Fund organisation
@@ -52,7 +53,7 @@ Credit, savings, investment, insurance, payments, pensions and other partner pro
 Financial health, safe-to-spend, forecasts, scenarios, alerts, explanations and recommendations. Calculation remains deterministic and auditable; AI explains and assists rather than inventing financial truth.
 
 ### Channels
-- App: complete everyday experience for Individuals and Savings Groups.
+- App: the primary individual experience and the complete everyday member experience for Individuals, Savings Groups and Investment Clubs. Personal is the default context; group and organisation Spaces are entered deliberately.
 - Web: public marketing, existing/authorised customer access, enhanced analysis and institutional productivity.
 - Workspace: institutional operations for Businesses/Employers, SACCOs and larger organisations.
 - Partner: programme/product/provider operations and governed reporting.
@@ -91,11 +92,77 @@ Observe → Understand → Plan → Act → Monitor → Adjust.
 
 The UI should prefer human concepts such as **Money I have**, **Money I owe**, **Owed to me**, **Coming up** and **My goals** over accounting terminology. Advanced detail remains available on demand.
 
+## Personal-first experience contract
+
+The signed-in customer lands in their Personal context. Home answers **How am I doing financially today, and what needs my attention?** before presenting products. The primary position may include available money, safe-to-spend, savings, debt, upcoming obligations, cash-flow context, protection state and one useful next action backed by recorded server-authoritative data.
+
+Financial products remain subordinate to the financial picture. Credit availability, insurance, savings and investments may be offered when relevant, eligible and activated, but a product is never allowed to become the definition of Home.
+
+A person may enter a Savings Group, Investment Club, SACCO, Household, Business or other authorised Space without creating another OpFin identity. Leaving that organisation never deletes or transfers the person's Personal Space or Financial Passport.
+
+One public OpFin App is the canonical consumer/member application. Administrative depth belongs in the role-aware OpFin Workspace on Web; partner systems integrate through governed APIs. USSD, WhatsApp/SMS and assisted journeys expose deliberately smaller task sets against the same authoritative platform state.
+
+**Progressive disclosure rule:** platform complexity may increase, but the customer sees only capabilities relevant to their current context, permissions, eligibility and financial maturity.
+
+## Group identity and regulatory credentials
+
+Every Financial Space keeps an immutable OpFin internal identity. Government, regulator, cooperative, tax or other authority-issued identifiers are external credentials attached to that Space and carry their own issuer, jurisdiction and verification status. A newly introduced national group code therefore results in registration/verification of a credential rather than migration to a new group record.
+
+External registration never grants automatic access to members' Personal Spaces and never substitutes for product-specific regulatory eligibility.
+
+## Protection and insurance scope
+
+Protection is a native financial-life capability. Personal protection may be discovered, enrolled, paid and serviced through the App only for independently approved products and activated regulated-provider arrangements. The disclosed insurer or underwriter remains responsible for underwriting, policy issuance and claim decisions.
+
+Savings Groups, Investment Clubs and SACCOs may review products explicitly approved for group audiences from their Space. Group policy enrolment, member consent, premium collection, coverage allocation and claims handling remain fail-closed until the applicable partner, regulatory, custody, consent and operating controls are separately activated. Merely exposing a group product catalogue is not activation.
+
+## Location context
+
+Location is an optional supporting context, not a primary navigation module and not a continuous tracking service.
+
+The App may request foreground location for an explicit financial task. Personal service discovery is approximate by design. Precise coordinates are reserved for location-dependent assets, insured risks or claim incidents. Manual location remains available when device/Google location is unavailable.
+
+Google Maps Platform is used behind the OpFin API for place search, place details, reverse geocoding, Static Map previews and optional routes. Server API keys never enter Flutter/Web builds.
+
+Saving Groups, Investment Clubs and SACCOs can record operating areas and meeting places without exposing member home locations. Physical financial assets and location-dependent insurance risks can carry their own location context.
+
+Partner service networks are represented as partner-owned service points. Operations geographic reporting is aggregate-only with cohort suppression; partner users see only their own recorded service network. Individual customer pins are not exposed in partner analytics.
+
+All Location Context records are non-credit by default. Location cannot become an underwriting input merely because it exists in OpFin. See docs/architecture/LOCATION_CONTEXT.md.
+
+## Investment Club treasury and statements
+
+Investment Clubs use the same Financial Space identity/membership architecture as Saving Groups, but mature club administration requires stronger treasury controls.
+
+OpFin therefore supports:
+
+- multiple club treasury accounts;
+- an internal append-only cashbook;
+- CSV import of bank/mobile-money/custodian/broker statements;
+- idempotent source-file hashing;
+- deterministic confidence-scored statement reconciliation;
+- automatic high-confidence matching;
+- a minimal human to-do queue for uncertain items;
+- user-applied reconciliation requests such as suggested-match acceptance, missing-entry creation and documented accepted exceptions;
+- explicit reconciliation confirmation after to-dos are cleared;
+- closing-balance variance checks;
+- immutable account statements;
+- immutable consolidated all-activity Financial Space statements; and
+- professional bank-style HTML plus CSV output.
+
+Issued statements freeze club/account presentation details, period, transactions, running balances, totals, reconciliation status and an integrity hash. A later correction requires a new statement rather than rewriting an old one.
+
+Bank-style means professional statement structure, not impersonation of an underlying financial institution. OpFin statements are clearly labelled as OpFin Financial Space statements; imported bank/custodian statements remain external reconciliation evidence.
+
+Administration/import/reconciliation is a Web Workspace responsibility. Members can view issued statements in the App; authorised officers may issue account and consolidated statements. Consolidated statements cover all treasury accounts plus recorded Financial Space assets/obligations, with totals separated by currency rather than invented FX conversions.
+
+See product/INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md for the canonical contract.
+
 ## Mobile completeness contract
 
 An Individual must be able to use the App for onboarding/verification, money tracking, budgets, goals, debt, receivables, assets/liabilities, net worth, savings, investments, insurance, payments, borrowing, financial-health insights, statements/documents and Space switching, subject to actual activated provider services.
 
-A Savings Group must additionally be able to create/join a group, invite/manage members, assign officials/roles, manage contributions/savings, member loans/repayments, expenses/fees, approvals, meetings/voting where enabled, goals, investments/protection, statements and audit history.
+A Savings Group must additionally be able to create/join a group, invite/manage members, assign officials/roles, attach applicable external registration credentials, manage contributions/savings, member loans/repayments, expenses/fees, approvals, meetings/voting where enabled, goals, investments/protection, statements and audit history. An Investment Club reuses this group foundation and progressively adds capital accounts, ownership/unit rules, investment governance, portfolio administration and distributions rather than creating a parallel identity system.
 
 No computer or paid subscription may be required for essential Individual or Savings Group financial management.
 

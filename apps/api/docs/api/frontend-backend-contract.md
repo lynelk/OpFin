@@ -1,7 +1,7 @@
 # Frontend–backend contract
 
 Status: Controlled external developer reference  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 This document defines what mobile/web/WhatsApp/USSD clients may assume about the current OpFin API.
@@ -150,15 +150,17 @@ Financial-life summaries, asset lists/creation, obligation lists/creation and se
 
 ## 11. Identity, Financial Spaces and progressive onboarding
 
-A person registers once. Clients must not create separate identities for group membership, employment, SACCO membership or investment activity. Use Financial Spaces and memberships/roles to represent those contexts. The Personal Space is private by default.
+A person registers once. Clients must not create separate identities for group membership, employment, SACCO membership, Savings Group participation or Investment Club activity. Use Financial Spaces and memberships/roles to represent those contexts. The Personal Space is private by default and remains the default consumer context after sign-in.
 
-The current Space contract includes listing/creating Spaces, accepting invitations, membership/invitation management, Space capabilities, financial-life summaries, assets/obligations, institutional workspace state and progressive organisation onboarding. Employer is enabled on a Business Space rather than represented as a second legal entity.
+The current Space contract includes listing/creating Spaces, accepting invitations, membership/invitation management, external Space credentials, Space capabilities, financial-life summaries, assets/obligations, institutional workspace state and progressive organisation onboarding. `investment_club` is a first-class group Space type built on the same membership boundary as Savings Groups. Employer is enabled on a Business Space rather than represented as a second legal entity.
+
+A government, regulator, cooperative, tax or other authority identifier is attached through the Space credential contract. Clients must never replace the immutable OpFin Space identity with an external identifier. A declared credential remains unverified until the authorised verification workflow records its status and evidence.
 
 Permission, entitlement and eligibility are distinct server-side gates. A visible UI capability does not imply that a regulated product is eligible or activated. Commercial terms/revenue must not feed backwards into financial-health advice.
 
 ## 12. Channel contract
 
-Individuals and Savings Groups must be able to complete normal journeys in the Flutter App. Web consumes the same server-authoritative Space state and adds analysis/productivity/institutional workspace depth. USSD/WhatsApp/assisted channels must not invent separate financial truth.
+Individuals and Savings Groups must be able to complete normal journeys in the Flutter App, and Investment Club members use the same App/identity rather than a separate consumer application. Personal is the default context; entering a group or organisation is an explicit Space switch. Web consumes the same server-authoritative Space state and adds analysis/productivity/institutional workspace depth. USSD/WhatsApp/assisted channels must not invent separate financial truth.
 
 
 ## 13. Inclusive-finance and programme-delivery contract
@@ -291,3 +293,33 @@ Invitation tokens are hashed for matching and encrypted only to support authoris
 ### Provider adapters
 
 Adapter configuration contains no external credentials. `credentials_configured` is only an explicit evidence flag that configuration exists in its proper service-scoped location. Programme measurement adapters additionally require subject programme-measurement consent and active enrolment. All ingested signals remain non-risk-eligible.
+
+
+## Personal-first Home and protection contract
+
+The App Home is driven primarily by the financial-wellbeing/Financial Compass state, not by credit availability. It may show recorded available money, safe-to-spend, savings, debt, upcoming obligations, cash-flow context and the server-supplied next best action. Credit remains a secondary capability and continues to use the authoritative credit-profile contract.
+
+Personal protection uses the existing approved-product and policy lifecycle. Clients may show only independently approved active products, must identify the disclosed insurer/underwriter, must capture the exact disclosure hash at enrolment, and must not label cover active before insurer issuance. Premium collection acknowledgement is not policy issuance.
+
+For a non-Personal Financial Space, `GET /api/financial-spaces/{space}/protection/products` returns only products approved for group use (or both personal and group audiences) to active members. This endpoint is catalogue/readiness only. Clients must not invent group enrolment, premium collection or member coverage allocation until dedicated server contracts and activation controls are published.
+
+
+## Location Context contract
+
+Clients treat location as task-specific context rather than a persistent tracking feed.
+
+- baseline OpFin use must not require location;
+- App location requests are foreground-only;
+- personal service discovery requests approximate location;
+- precise location is used only where a physical asset, insured risk or claim incident genuinely requires it;
+- clients always send a purpose and matching consent purpose;
+- a client cannot promote verification state; device coordinates remain user-reported provenance unless a server-side place/partner/field verification path confirms them;
+- server responses expose credit_decision_eligible=false;
+- Google provider credentials stay server-side;
+- manual place/address capture remains available when Google is disabled;
+- the nearby-service query does not persist the searcher's coordinates;
+- group operating/meeting locations never imply access to members' Personal Space locations;
+- operations aggregate geography suppresses cohorts below five and excludes individual user contexts;
+- partner users receive only service points associated with their own institution's partner records.
+
+Static maps are authenticated images and are supplemental visual context. Clients should use normal Google Maps URLs for navigation instead of embedding a full routing UI.

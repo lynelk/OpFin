@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -70,6 +72,74 @@ class FinancialWellbeingTest extends TestCase
             ->assertJsonPath('data.budgets.0.category', 'Food')
             ->assertJsonPath('data.budgets.0.actual_minor', 25000)
             ->assertJsonPath('data.budgets.0.remaining_minor', 75000);
+    }
+
+    public function test_personal_space_debt_is_included_in_compass_and_upcoming_commitments(): void
+    {
+        $user = $this->customer();
+        Sanctum::actingAs($user);
+
+        $spaceId = DB::table('financial_spaces')->insertGetId([
+            'public_id' => (string) Str::uuid(),
+            'type' => 'personal',
+            'name' => 'My Money',
+            'country' => 'UG',
+            'currency' => 'UGX',
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('financial_space_memberships')->insert([
+            'financial_space_id' => $spaceId,
+            'user_id' => $user->id,
+            'role' => 'owner',
+            'status' => 'active',
+            'joined_at' => now(),
+            'approved_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->postJson('/api/financial-accounts', [
+            'display_name' => 'Current money',
+            'account_type' => 'mobile_money',
+            'balance_minor' => 500000,
+            'currency' => 'UGX',
+        ])->assertCreated();
+
+        $obligation = $this->postJson('/api/financial-spaces/'.$spaceId.'/obligations', [
+            'kind' => 'personal_debt',
+            'direction' => 'i_owe',
+            'counterparty_name' => 'School fees balance',
+            'amount_minor' => 150000,
+            'currency' => 'UGX',
+            'due_date' => now()->addDays(5)->toDateString(),
+        ])->assertCreated();
+        $obligationId = (int) $obligation->json('data.id');
+
+        $this->getJson('/api/financial-compass')
+            ->assertOk()
+            ->assertJsonPath('data.position.recorded_other_debt_minor', 150000)
+            ->assertJsonPath('data.position.debt_obligations_minor', 150000)
+            ->assertJsonPath('data.position.committed_money_minor', 150000)
+            ->assertJsonPath('data.position.safe_to_spend_minor', 350000)
+            ->assertJsonPath('data.calendar.0.event_type', 'debt')
+            ->assertJsonPath('data.next_best_action.code', 'debt_due');
+
+        $this->postJson('/api/financial-spaces/'.$spaceId.'/obligations/'.$obligationId.'/settlements', [
+            'amount_minor' => 200000,
+        ])->assertStatus(422);
+
+        $this->postJson('/api/financial-spaces/'.$spaceId.'/obligations/'.$obligationId.'/settlements', [
+            'amount_minor' => 50000,
+        ])->assertOk()
+            ->assertJsonPath('data.outstanding_amount_minor', 100000);
+
+        $this->getJson('/api/financial-compass')
+            ->assertOk()
+            ->assertJsonPath('data.position.recorded_other_debt_minor', 100000)
+            ->assertJsonPath('data.position.committed_money_minor', 100000)
+            ->assertJsonPath('data.position.safe_to_spend_minor', 400000);
     }
 
     public function test_user_can_override_automatic_category_and_recurring_events_are_projected(): void

@@ -1,7 +1,7 @@
 # OpFin security
 
 Status: Controlled internal security standard  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 Security is maintained through layered controls, verified changes and timely response. A successful scan is not a certification that a system is free of vulnerabilities. Do not describe this repository or a release as permanently secure.
@@ -40,6 +40,18 @@ KYC requires NIN, National ID front/back and a customer photo holding the ID. Au
 - Provider unavailability or inconclusive checks stays pending/manual-review; never fabricate a successful identity result.
 - The mobile app uses camera access for KYC and must not add broad photo-library/storage permissions merely for convenience.
 - Assisted/PWD verification may change how evidence is captured, but not the required assurance. Helpers must not handle PINs or OTPs.
+
+## Location privacy and Maps credentials
+
+- Location is optional supporting context. OpFin does not request background location permission or continuously track customers.
+- Personal service discovery uses approximate coordinates and one-shot nearby queries are not persisted by the discovery endpoint.
+- Precise coordinates are limited to explicit location-dependent tasks such as physical assets, insured risks or claim incidents.
+- Every stored Location Context is purpose-bound, provenance-labelled and non-credit by default.
+- Saving Group, Investment Club and SACCO locations do not grant access to member Personal Space locations.
+- Partner and operations location reporting must not expose individual customer pins. Aggregate views enforce cohort suppression.
+- Google Maps Platform server credentials remain backend-only. Do not place server API keys in Flutter, Web bundles, documentation examples, logs or client analytics.
+- Google-dependent functions fail closed when credentials or feature gates are absent; manual location entry remains available.
+- Optional personal Location Context is deleted with other optional customer context when account deletion completes, unless a separately regulated retained record has its own lawful retention basis.
 
 ## Credit profile and external data
 

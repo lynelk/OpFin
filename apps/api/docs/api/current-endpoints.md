@@ -1,10 +1,10 @@
 # Current API endpoints
 
 Status: Controlled external developer reference  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
-Updated against the registered canonical platform routes on **23 September 2026**. Routes remain subject to the middleware and role gates in source.
+Updated against the registered canonical platform routes on **24 September 2026**, including the Location Context capability. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:
 
@@ -257,6 +257,107 @@ Admin/operations:
 Offer acceptance now additionally records explicit electronic consent for complete positive/negative credit-information reporting.
 
 
+## 16A. Personal financial wellbeing
+
+Authenticated routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/financial-compass` | Personal financial position: recorded available money, safe-to-spend, savings, total known debt, upcoming commitments, cash flow and next best action |
+| GET/POST | `/api/financial-accounts` | List or record the person's current cash, mobile-money, bank or other balances |
+| PATCH/DELETE | `/api/financial-accounts/{account}` | Update or deactivate a recorded balance source |
+| GET/POST | `/api/budgets` | List or create personal budgets |
+| PATCH/DELETE | `/api/budgets/{budget}` | Update or deactivate a budget |
+| GET | `/api/cash-flow` | Personal cash-flow summary and recorded/imported entries |
+| POST | `/api/cash-flow/entries` | Record an income or expense entry |
+| PATCH | `/api/cash-flow/entries/{entry}` | Correct a personal cash-flow entry, including category override |
+| GET | `/api/financial-calendar` | Upcoming financial events, including server-derived OpFin loan schedules and Personal-Space debt due dates |
+| POST | `/api/financial-calendar/events` | Add a scheduled/recurring personal financial event |
+| PATCH/DELETE | `/api/financial-calendar/events/{event}` | Update or remove a manual calendar event |
+
+The Financial Compass does not invent unavailable external balances. Total known debt includes server-derived OpFin credit exposure plus open `i_owe` obligations explicitly recorded in the person's canonical Personal Space. A Personal-Space obligation with a due date is included in upcoming commitments and therefore reduces safe-to-spend for the relevant period.
+
+## 16B. Personal savings and protection
+
+Authenticated routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/savings/products` | List approved active partner-held savings products for the requested country |
+| GET/POST | `/api/savings/goals` | List or create personal savings goals |
+| GET | `/api/savings/goals/{goal}` | Goal detail, confirmed position and movements |
+| PATCH | `/api/savings/goals/{goal}/schedule` | Configure the savings schedule subject to current collection controls |
+| POST | `/api/savings/goals/{goal}/pause` | Pause a goal |
+| POST | `/api/savings/goals/{goal}/resume` | Resume a goal |
+| POST | `/api/savings/goals/{goal}/contributions` | Initiate a savings contribution; position changes only after partner confirmation |
+| POST | `/api/savings/goals/{goal}/withdrawals` | Request a withdrawal; partner release and provider finality remain separate |
+| GET | `/api/protection/products` | List independently approved personal protection products |
+| GET | `/api/protection/policies` | List the signed-in person's protection policies |
+| GET | `/api/protection/policies/{policy}` | Policy, premium and claims detail |
+| POST | `/api/protection/products/{product}/enroll` | Record disclosure-bound enrolment; this does not itself issue cover |
+| POST | `/api/protection/policies/{policy}/premiums` | Initiate premium collection |
+| POST | `/api/protection/policies/{policy}/claims` | Submit a claim for insurer/underwriter decision |
+| POST | `/api/protection/claims/{claim}/dispute` | Request reconsideration of an eligible declined claim |
+
+Protection product audience is explicit: `personal`, `group` or `both`. Personal catalogue endpoints do not return group-only products. Premium collection, partner settlement and insurer policy issuance remain separate states; clients must not call cover active before insurer issuance.
+
+## 16C. Location Context and lightweight Google Maps
+
+Authenticated routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | /api/location/status | Location capability state, Google activation state and explicit background_tracking=false |
+| GET | /api/location-contexts?subject_type=...&subject_id=... | List authorised purpose-bound locations for a person, Space, asset, policy, claim or partner service point |
+| POST | /api/location-contexts | Create/update one purpose-bound location with source, precision and matching consent purpose |
+| DELETE | /api/location-contexts/{context} | Remove an optional location context when authorised |
+| POST | /api/location/places/autocomplete | Server-side Google Places autocomplete; server API key is never exposed |
+| GET | /api/location/static-map/{context} | Authenticated lightweight Static Map image for an authorised stored context |
+| POST | /api/location/route | Optional explicit route calculation between two authorised stored contexts |
+| GET | /api/location/nearby-services | One-shot nearby partner-service search; query location is not stored |
+| GET | /api/admin/location-insights | Aggregate Financial Space/service-point geography for operations; minimum cohort 5 and no individual customer pins |
+| GET | /api/partner/location-network | Programme partner's own recorded service-point network; no customer pins |
+
+Location subjects are user, financial_space, financial_asset, protection_policy, protection_claim and partner_service_point. Purpose is validated against subject type.
+
+Personal service discovery is forced to approximate precision. Device coordinates remain user-reported provenance at the API boundary; only server-resolved Google places or authorised partner/field workflows gain stronger verification state. Every Location Context is credit_decision_eligible=false.
+
+Google-dependent functions fail closed when Google Maps Platform is not configured; manual location remains available.
+
+## 16D. Financial Space treasury, statement import and reconciliation
+
+Available to eligible group/organisation Financial Spaces. Personal Spaces are excluded.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/financial-spaces/{space}/treasury/accounts` | List authorised treasury accounts |
+| POST | `/api/financial-spaces/{space}/treasury/accounts` | Create a bank/mobile-money/cash/custodian/broker/investment-wallet account; finance role required |
+| GET | `/api/financial-spaces/{space}/treasury/accounts/{account}/transactions` | List internal cashbook transactions |
+| POST | `/api/financial-spaces/{space}/treasury/accounts/{account}/transactions` | Record an append-only cashbook transaction; finance role required |
+| GET | `/api/financial-spaces/{space}/treasury/accounts/{account}/statement-imports` | Recent external statement imports |
+| POST | `/api/financial-spaces/{space}/treasury/accounts/{account}/statement-imports` | Upload/map CSV statement evidence; finance role required |
+| GET | `/api/financial-spaces/{space}/statement-imports/{import}` | Inspect imported rows, matches and exceptions |
+| POST | `/api/financial-spaces/{space}/statement-imports/{import}/reconcile` | Run confidence-scored auto-reconciliation and return only unresolved to-dos |
+| POST | `/api/financial-spaces/{space}/statement-rows/{row}/resolve` | Apply a suggested match, create a missing cashbook entry, or record an accepted external exception |
+| POST | `/api/financial-spaces/{space}/statement-imports/{import}/book-transactions/{transaction}/accept` | Accept a documented book-only transaction |
+| POST | `/api/financial-spaces/{space}/statement-imports/{import}/balance-variance` | Accept/document a closing-balance variance |
+| POST | `/api/financial-spaces/{space}/statement-imports/{import}/confirm` | Confirm only after all review to-dos are cleared |
+| POST | `/api/financial-spaces/{space}/statement-rows/{row}/match` | Backwards-compatible direct manual match endpoint |
+| GET | `/api/financial-spaces/{space}/statements` | List immutable issued statements |
+| POST | `/api/financial-spaces/{space}/treasury/accounts/{account}/statements` | Issue an immutable bank-style account statement; finance role required |
+| POST | `/api/financial-spaces/{space}/statements/consolidated` | Issue one professional all-activity statement across all treasury accounts and recorded Financial Space position |
+| GET | `/api/financial-spaces/{space}/statements/{statement}` | Read frozen statement snapshot |
+| GET | `/api/financial-spaces/{space}/statements/{statement}/html` | Print-ready bank-style HTML |
+| GET | `/api/financial-spaces/{space}/statements/{statement}/csv` | CSV statement export |
+
+CSV import maps date, description and either debit/credit or amount+direction. Value date, reference and running balance are optional. Duplicate files are deduplicated by source hash per account.
+
+Reconciliation never silently overwrites the OpFin cashbook. OpFin scores plausible candidates using hard amount/currency/direction/account constraints plus reference, date proximity and description similarity. Only high-confidence candidates auto-match. Lower-confidence candidates become suggested user to-dos.
+
+User resolutions may create a missing book entry or explicitly accept external-only, duplicate, book-only or balance-variance exceptions with reasons. Confirmation remains a separate authorised action after the to-do list is empty.
+
+Issued statements preserve a frozen Financial Space/account presentation snapshot and transaction payload. They cannot be edited/deleted; corrections require a new statement. Consolidated statements include all treasury accounts and a recorded asset/obligation snapshot, with multi-currency totals kept separate.
+
 ## 17. Financial Spaces and multi-entity membership
 
 Authenticated routes:
@@ -264,16 +365,21 @@ Authenticated routes:
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | GET | `/api/financial-spaces` | List Financial Spaces the signed-in person can access |
-| POST | `/api/financial-spaces` | Create Household, Savings Group, Business, SACCO, Investment/Fund or Partner Space |
+| POST | `/api/financial-spaces` | Create Household, Savings Group, Investment Club, Business, SACCO, Investment/Fund or Partner Space |
 | POST | `/api/financial-spaces/invitations/accept` | Join a Space using a single-use invitation token |
 | GET | `/api/financial-spaces/{space}/members` | List members when authorised |
 | POST | `/api/financial-spaces/{space}/invitations` | Invite a person with a scoped role |
 | PUT | `/api/financial-spaces/{space}/capabilities` | Configure a Space capability when authorised |
+| GET | `/api/financial-spaces/{space}/credentials` | List government, regulator, cooperative, tax or other external identifiers attached to the Space |
+| POST | `/api/financial-spaces/{space}/credentials` | Declare/update an external Space identifier; verification remains a separate operations action |
+| GET | `/api/financial-spaces/{space}/protection/products` | List approved group-capable protection products for an authorised non-Personal Space; catalogue access does not activate group enrolment or premium collection |
 | GET | `/api/financial-spaces/{space}/workspace` | Role-aware institutional workspace summary |
 | PUT | `/api/financial-spaces/{space}/organisation-onboarding` | Progress Business/SACCO/Fund/Partner onboarding |
 | POST | `/api/financial-spaces/{space}/employer/enable` | Enable Employer services on a Business Space |
 
-A person is registered once and can hold different roles in many Spaces. Membership does not grant access to the member's Personal Space.
+A person is registered once and can hold different roles in many Spaces. Membership does not grant access to the member's Personal Space. Space `public_id` remains the OpFin identity even when external authority identifiers are later added or verified.
+
+Operations users may verify a declared Space credential through `PATCH /api/admin/financial-space-credentials/{credential}/verification`. Verification records the verifier and optional authority reference/evidence hash; it does not recreate the Space or confer financial-product eligibility.
 
 ## 18. Complete financial-life APIs
 

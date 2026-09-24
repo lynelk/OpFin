@@ -1,7 +1,7 @@
 # OpFin API quick reference
 
 Status: Controlled external developer reference  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 This is a task-oriented entry point. For the complete registered surface, use `api/current-endpoints.md` plus `php artisan route:list --json`.
@@ -49,6 +49,45 @@ Cito is the preferred NIN/phone-ownership route where configured. Biometric/docu
 | Enable employer capability | `POST /api/financial-spaces/{space}/employer/enable` |
 
 Membership, role, entitlement and financial-product eligibility are separate gates.
+
+## Investment Club / group treasury
+
+| Task | Method / endpoint |
+| --- | --- |
+| Treasury accounts | `GET/POST /api/financial-spaces/{space}/treasury/accounts` |
+| Cashbook transactions | `GET/POST /api/financial-spaces/{space}/treasury/accounts/{account}/transactions` |
+| Statement imports | `GET/POST /api/financial-spaces/{space}/treasury/accounts/{account}/statement-imports` |
+| Inspect imported statement | `GET /api/financial-spaces/{space}/statement-imports/{import}` |
+| Smart reconciliation | `POST /api/financial-spaces/{space}/statement-imports/{import}/reconcile` |
+| Resolve statement-row to-do | `POST /api/financial-spaces/{space}/statement-rows/{row}/resolve` |
+| Accept book-only item | `POST /api/financial-spaces/{space}/statement-imports/{import}/book-transactions/{transaction}/accept` |
+| Accept balance variance | `POST /api/financial-spaces/{space}/statement-imports/{import}/balance-variance` |
+| Confirm reconciliation | `POST /api/financial-spaces/{space}/statement-imports/{import}/confirm` |
+| Issued statements | `GET /api/financial-spaces/{space}/statements` |
+| Issue account statement | `POST /api/financial-spaces/{space}/treasury/accounts/{account}/statements` |
+| Issue consolidated all-activity statement | `POST /api/financial-spaces/{space}/statements/consolidated` |
+| Statement detail | `GET /api/financial-spaces/{space}/statements/{statement}` |
+| Print-ready HTML | `GET /api/financial-spaces/{space}/statements/{statement}/html` |
+| Statement CSV | `GET /api/financial-spaces/{space}/statements/{statement}/csv` |
+
+Statement imports are external evidence; the OpFin treasury cashbook is internal book truth. High-confidence items auto-match; uncertain items become a short user to-do list and reconciliation is not confirmed until those decisions are cleared. Issued OpFin statements are immutable snapshots and are clearly identified as OpFin Financial Space statements rather than bank-issued documents. Consolidated statements keep totals separated by currency unless an explicit FX policy exists.
+
+## Location Context
+
+| Task | Method / endpoint |
+| --- | --- |
+| Capability state | `GET /api/location/status` |
+| List subject locations | `GET /api/location-contexts?subject_type=...&subject_id=...` |
+| Save purpose-bound location | `POST /api/location-contexts` |
+| Remove optional location | `DELETE /api/location-contexts/{context}` |
+| Search Google places | `POST /api/location/places/autocomplete` |
+| Authenticated static map | `GET /api/location/static-map/{context}` |
+| Explicit route calculation | `POST /api/location/route` |
+| Nearby partner services | `GET /api/location/nearby-services` |
+| Operations aggregate geography | `GET /api/admin/location-insights` |
+| Partner-owned service network | `GET /api/partner/location-network` |
+
+Location is foreground/manual and purpose-bound. Personal service discovery is approximate; background tracking is not configured. All Location Context records are non-credit by default. Google credentials remain server-side and Google-dependent functions fail closed when the adapter is disabled.
 
 ## Responsible credit
 

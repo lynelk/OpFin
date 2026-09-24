@@ -7,6 +7,7 @@ import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/home_screen.dart';
 import 'package:opfin/services/user_session.dart';
+import 'package:opfin/widgets/auth_scaffold.dart';
 
 class CompleteRegistrationScreen extends StatefulWidget {
   const CompleteRegistrationScreen({
@@ -92,53 +93,63 @@ class _CompleteRegistrationScreenState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Your details')),
-    body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          Semantics(
-            header: true,
-            child: Text('Tell us your name',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
-          ),
-          const SizedBox(height: 8),
-          const Text('Use the names on your National ID. Other name is optional.'),
-          const SizedBox(height: 24),
-          Form(
-            key: _formKey,
-            child: Column(children: [
+  Widget build(BuildContext context) => OpFinAuthScaffold(
+        eyebrow: 'Create account',
+        title: 'Tell us your name',
+        description:
+            'Use the names on your National ID. Your other name is optional. Then create the 6-digit PIN you will use to sign in.',
+        showBackButton: true,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               TextFormField(
                 controller: _first,
                 textCapitalization: TextCapitalization.words,
+                autofillHints: const [AutofillHints.givenName],
                 decoration: const InputDecoration(
-                  labelText: 'First name', prefixIcon: Icon(Icons.person_outline)),
-                validator: (v) => (v?.trim().isEmpty ?? true) ? 'Enter first name' : null,
+                  labelText: 'First name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (v) =>
+                    (v?.trim().isEmpty ?? true) ? 'Enter first name' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _other,
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
-                  labelText: 'Other name (optional)', prefixIcon: Icon(Icons.person_outline)),
+                  labelText: 'Other name (optional)',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _last,
                 textCapitalization: TextCapitalization.words,
+                autofillHints: const [AutofillHints.familyName],
                 decoration: const InputDecoration(
-                  labelText: 'Last name', prefixIcon: Icon(Icons.person_outline)),
-                validator: (v) => (v?.trim().isEmpty ?? true) ? 'Enter last name' : null,
+                  labelText: 'Last name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (v) =>
+                    (v?.trim().isEmpty ?? true) ? 'Enter last name' : null,
               ),
               const SizedBox(height: 28),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Create a 6-digit PIN',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              const Text(
+                'Create a 6-digit PIN',
+                style: TextStyle(
+                  color: OpFinColors.ink,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 8),
-              const Text('Use this PIN to sign in. Never share it with anyone, including OpFin staff.'),
+              const Text(
+                'Use this PIN to sign in. Never share it with anyone, including OpFin staff.',
+                style: TextStyle(color: OpFinColors.muted),
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _pin,
@@ -146,8 +157,11 @@ class _CompleteRegistrationScreenState
                 keyboardType: TextInputType.number,
                 maxLength: 6,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                autofillHints: const [AutofillHints.newPassword],
                 decoration: const InputDecoration(
-                  labelText: '6-digit PIN', prefixIcon: Icon(Icons.lock_outline)),
+                  labelText: '6-digit PIN',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
                 validator: (value) {
                   final pin = value ?? '';
                   if (!RegExp(r'^\d{6}$').hasMatch(pin)) return 'Enter 6 digits';
@@ -162,31 +176,35 @@ class _CompleteRegistrationScreenState
                 keyboardType: TextInputType.number,
                 maxLength: 6,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                autofillHints: const [AutofillHints.newPassword],
                 decoration: const InputDecoration(
-                  labelText: 'Confirm PIN', prefixIcon: Icon(Icons.lock_outline)),
+                  labelText: 'Confirm PIN',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
                 validator: (v) => v != _pin.text ? 'PINs do not match' : null,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
               SizedBox(
-                width: double.infinity, height: 52,
+                height: 52,
                 child: FilledButton(
                   onPressed: _loading ? null : _submit,
                   child: _loading
-                    ? const SizedBox(width: 22, height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Create my account'),
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Create my account'),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               const Text(
                 'Someone you trust may help enter information. Keep your PIN and OTP private.',
                 style: TextStyle(color: OpFinColors.muted),
                 textAlign: TextAlign.center,
               ),
-            ]),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
