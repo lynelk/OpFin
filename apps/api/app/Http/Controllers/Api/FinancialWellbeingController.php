@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\FinancialWellbeingService;
+use App\Services\PersonalFinancialSpaceService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +18,8 @@ class FinancialWellbeingController extends Controller
 {
     public function __construct(
         private readonly FinancialWellbeingService $service,
-        private readonly AuditLogger $auditLogger
+        private readonly AuditLogger $auditLogger,
+        private readonly PersonalFinancialSpaceService $personalSpaces,
     ) {}
 
     public function compass(Request $request): JsonResponse
@@ -492,18 +494,8 @@ class FinancialWellbeingController extends Controller
             : $query->where('institution_id', $user->institution_id);
     }
 
-    private function personalSpaceId(User $user): ?int
+    private function personalSpaceId(User $user): int
     {
-        $spaceId = DB::table('financial_spaces as spaces')
-            ->join('financial_space_memberships as memberships', 'memberships.financial_space_id', '=', 'spaces.id')
-            ->where('memberships.user_id', $user->id)
-            ->where('memberships.status', 'active')
-            ->whereNull('memberships.deleted_at')
-            ->where('spaces.type', 'personal')
-            ->where('spaces.status', 'active')
-            ->whereNull('spaces.deleted_at')
-            ->value('spaces.id');
-
-        return $spaceId === null ? null : (int) $spaceId;
+        return $this->personalSpaces->ensure($user)->id;
     }
 }
