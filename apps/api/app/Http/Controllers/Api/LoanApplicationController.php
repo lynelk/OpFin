@@ -128,7 +128,7 @@ class LoanApplicationController extends Controller
     {
         try {
             $user = Auth::user();
-            $products = LoanProduct::with('institution')->where(function ($query) use ($user) {
+            $products = LoanProduct::with('institution')->where('status', 'Active')->where(function ($query) use ($user) {
                 $query->where('institution_id', $user->institution_id)
                     ->orWhere('institution_id', null);
             })->get();
@@ -142,7 +142,10 @@ class LoanApplicationController extends Controller
     public function getProductTerms($id)
     {
         try {
-            $terms = LoanProductTerm::with('product.institution')->where('loan_product_id', $id)->get();
+            $terms = LoanProductTerm::with('product.institution')
+                ->where('loan_product_id', $id)
+                ->where('status', 'Active')
+                ->get();
 
             return ApiResponse::success('Product terms retrieved successfully.', $terms->toArray());
         } catch (Exception $e) {
