@@ -14,6 +14,7 @@ use App\Models\MobileMoneyTransaction;
 use App\Models\ReconciliationItem;
 use App\Models\ReconciliationRun;
 use App\Models\User;
+use App\Services\FinancialReadinessService;
 use App\Services\MobileMoney\MobileMoneyService;
 use App\Services\ProductionCreditOfferService;
 use App\Services\ProductionLedgerService;
@@ -301,6 +302,56 @@ class FinancialHardeningRegressionTest extends TestCase
         $this->assertSame(MobileMoneyTransaction::STATEMENT_EXCEPTION, $money->fresh()->statement_reconciliation_status);
         $this->assertSame(MobileMoneyTransaction::RECONCILIATION_EXCEPTION, $money->fresh()->reconciliation_status);
         $this->assertDatabaseHas('financial_control_overrides', ['id' => $overrideId, 'status' => 'applied']);
+    }
+
+    public function test_financial_readiness_requires_integrations_funding_disclosure_tax_determination_and_balanced_integrity(): void
+    {
+        config([
+            'services.cpay.base_url' => 'https://cpay.example.test',
+            'services.cpay.merchant_number' => 'MERCHANT-001',
+            'services.cpay.private_key' => 'test-key',
+            'services.cpay.callback_url' => 'https://opfin.example.test/callback',
+            'services.cpay.callback_secret' => 'callback-secret',
+            'services.sms_gateway' => 'YO',
+            'services.yo.base_url' => 'https://sms.example.test',
+            'services.yo.account' => 'account',
+            'services.yo.password' => 'password',
+            'services.identity_verification.url' => 'https://identity.example.test',
+            'services.identity_verification.token' => 'identity-token',
+            'services.crb.base_url' => 'https://crb.example.test',
+            'services.crb.account' => 'client',
+            'services.crb.password' => 'secret',
+            'services.credit_reference_reporting.url' => 'https://reporting.example.test',
+            'services.credit_reference_reporting.token' => 'reporting-token',
+            'services.cito.financial_data_certified' => false,
+            'opfin.credit.require_funding_pool_assignment' => true,
+            'opfin.regulatory.require_credit_disclosure' => true,
+            'opfin.regulatory.licensed_entity_name' => 'Test Regulated Lender',
+            'opfin.regulatory.umra_license_number' => 'TEST-LICENCE',
+            'opfin.regulatory.business_address' => 'Kampala',
+            'opfin.regulatory.complaints_email' => 'complaints@example.test',
+            'opfin.regulatory.complaints_phone' => '+256700000000',
+            'opfin.accounting.efris_required' => false,
+            'opfin.accounting.efris_determination_reference' => 'TAX-DETERMINATION-TEST',
+        ]);
+        DB::table('financial_integrity_runs')->insert([
+            'status' => 'balanced',
+            'scope' => 'platform',
+            'evidence_hash' => hash('sha256', 'financial-readiness-test'),
+            'started_at' => now()->subSecond(),
+            'completed_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $ready = app(FinancialReadinessService::class)->report();
+        $this->assertTrue($ready['financial_operations_ready']);
+        $this->assertSame('ready', $ready['status']);
+
+        config(['opfin.accounting.efris_required' => null]);
+        $blocked = app(FinancialReadinessService::class)->report();
+        $this->assertFalse($blocked['financial_operations_ready']);
+        $this->assertSame('blocked', $blocked['checks']['tax_and_efris_determination']['status']);
     }
 
     private function approvedApplication(): array
