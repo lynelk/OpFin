@@ -91,7 +91,6 @@ class ProductionOperationsController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'status' => ['required', Rule::in([ReconciliationItem::STATUS_EXCEPTION])],
-            'provider_amount_minor' => 'nullable|integer|min:0',
             'notes' => 'required|string|max:1000',
         ]);
 
@@ -105,7 +104,6 @@ class ProductionOperationsController extends Controller
 
         $item->update([
             'status' => ReconciliationItem::STATUS_EXCEPTION,
-            'provider_amount_minor' => $validator->validated()['provider_amount_minor'] ?? $item->provider_amount_minor,
             'notes' => $validator->validated()['notes'],
             'resolved_by' => null,
             'resolved_at' => null,
