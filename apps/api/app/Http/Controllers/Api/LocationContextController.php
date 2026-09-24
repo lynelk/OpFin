@@ -138,40 +138,6 @@ class LocationContextController extends Controller
         }
     }
 
-    public function place(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'place_id' => ['required', 'string', 'max:255'],
-        ]);
-
-        try {
-            return ApiResponse::success('Place loaded.', [
-                'place' => $this->google->placeDetails((string) $validated['place_id']),
-            ]);
-        } catch (InvalidArgumentException|RuntimeException $exception) {
-            return ApiResponse::error($exception->getMessage(), 503);
-        }
-    }
-
-    public function reverse(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
-        ]);
-
-        try {
-            return ApiResponse::success('Location resolved.', [
-                'place' => $this->google->reverseGeocode(
-                    (float) $validated['latitude'],
-                    (float) $validated['longitude'],
-                ),
-            ]);
-        } catch (InvalidArgumentException|RuntimeException $exception) {
-            return ApiResponse::error($exception->getMessage(), 503);
-        }
-    }
-
     public function staticMap(LocationContext $context, Request $request)
     {
         $this->locations->assertReadable($request->user(), $context);
