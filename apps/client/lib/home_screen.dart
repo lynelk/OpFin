@@ -138,31 +138,45 @@ class _HomePageState extends State<_HomePage>{
           style:const TextStyle(color:OpFinColors.muted)),
         const SizedBox(height:18),
         Card(
+          color:OpFinColors.indigoStrong,
           child:Padding(padding:const EdgeInsets.all(20),child:Column(
             crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Text(amountDue>0?'Amount due':pending?'Loan limit':'Available to borrow',
-                style:const TextStyle(color:OpFinColors.muted)),
-              const SizedBox(height:5),
-              Text(amountDue>0?_ugx(amountDue):pending?'Not ready yet':_ugx(available),
-                style:const TextStyle(fontSize:32,fontWeight:FontWeight.w800)),
+              const Text('YOUR NEXT STEP',
+                style:TextStyle(color:OpFinColors.apricot,fontSize:12,fontWeight:FontWeight.w800,letterSpacing:1.1)),
+              const SizedBox(height:8),
+              Text(next['label']?.toString()??'Continue',
+                style:const TextStyle(color:OpFinColors.white,fontSize:24,fontWeight:FontWeight.w800)),
+              const SizedBox(height:8),
+              Text(
+                amountDue>0
+                  ? 'You have ${_ugx(amountDue)} due. Review the obligation before taking another financial step.'
+                  : pending
+                    ? 'Build your financial picture one verified step at a time.'
+                    : 'Your current responsible-credit headroom is ${_ugx(available)}. Eligibility is not a guarantee of approval.',
+                style:const TextStyle(color:OpFinColors.periwinkle,height:1.45)),
               if(!pending&&score!=null)...[
-                const SizedBox(height:12),
+                const SizedBox(height:14),
                 Row(children:[
                   Expanded(child:Text('OpFin Score  $score / 100 · ${profile['band']??''}',
-                    style:const TextStyle(fontWeight:FontWeight.w700))),
-                  TextButton(onPressed:()=>_scoreDetails(profile),child:const Text('Details')),
+                    style:const TextStyle(color:OpFinColors.white,fontWeight:FontWeight.w700))),
+                  TextButton(
+                    style:TextButton.styleFrom(foregroundColor:OpFinColors.apricot),
+                    onPressed:()=>_scoreDetails(profile),
+                    child:const Text('Details')),
                 ]),
               ],
-              if(_n(profile['total_outstanding_minor'])>0)...[
+              if(_n(profile['total_outstanding_minor'])>0&&profile['next_due_date']!=null)...[
                 const SizedBox(height:8),
-                Text('Total outstanding: ${_ugx(profile['total_outstanding_minor'])}'),
-                if(profile['next_due_date']!=null)
-                  Text('Next payment date: ${profile['next_due_date']}'),
+                Text('Next payment date: ${profile['next_due_date']}',
+                  style:const TextStyle(color:OpFinColors.periwinkle)),
               ],
               const SizedBox(height:18),
               SizedBox(width:double.infinity,height:50,child:FilledButton(
+                style:FilledButton.styleFrom(
+                  backgroundColor:OpFinColors.apricot,
+                  foregroundColor:OpFinColors.ink),
                 onPressed:()=>_next(data),
-                child:Text(next['label']?.toString()??'Continue'))),
+                child:const Text('Continue'))),
             ])),
         ),
         const SizedBox(height:14),
