@@ -18,7 +18,7 @@ One person may access authorised Personal, Household, Savings Group, Investment 
 
 - Android OTP auto-fill uses SMS Retriever/app-signature support where available; manual entry remains possible.
 - Legacy password compatibility is a migration concern, not the preferred mobile UX.
-- Sign-in, registration, OTP and PIN-reset screens use the current OpFin monogram and shared brand tokens rather than generic financial icons.
+- Sign-in, registration, OTP, account-completion and PIN-reset screens use the current OpFin monogram and shared brand tokens rather than generic financial icons.
 - A second phone is optional.
 
 ## Personal Home and everyday money
