@@ -69,11 +69,18 @@ class LocationContextController extends Controller
             'accuracy_metres' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'consent_purpose' => ['required', Rule::in(LocationContextService::PURPOSES)],
             'captured_at' => ['nullable', 'date'],
-            'metadata' => ['nullable', 'array'],
             'resolve_with_google' => ['sometimes', 'boolean'],
         ]);
 
         try {
+            if (($validated['source'] ?? null) === 'google_place'
+                && empty($validated['google_place_id'])) {
+                return ApiResponse::error(
+                    'Google-place provenance requires a server-resolved Place ID.',
+                    422
+                );
+            }
+
             $attributes = $validated;
             unset($attributes['resolve_with_google']);
 
