@@ -58,15 +58,19 @@ Membership, role, entitlement and financial-product eligibility are separate gat
 | Cashbook transactions | `GET/POST /api/financial-spaces/{space}/treasury/accounts/{account}/transactions` |
 | Statement imports | `GET/POST /api/financial-spaces/{space}/treasury/accounts/{account}/statement-imports` |
 | Inspect imported statement | `GET /api/financial-spaces/{space}/statement-imports/{import}` |
-| Reconcile statement | `POST /api/financial-spaces/{space}/statement-imports/{import}/reconcile` |
-| Manual exception match | `POST /api/financial-spaces/{space}/statement-rows/{row}/match` |
+| Smart reconciliation | `POST /api/financial-spaces/{space}/statement-imports/{import}/reconcile` |
+| Resolve statement-row to-do | `POST /api/financial-spaces/{space}/statement-rows/{row}/resolve` |
+| Accept book-only item | `POST /api/financial-spaces/{space}/statement-imports/{import}/book-transactions/{transaction}/accept` |
+| Accept balance variance | `POST /api/financial-spaces/{space}/statement-imports/{import}/balance-variance` |
+| Confirm reconciliation | `POST /api/financial-spaces/{space}/statement-imports/{import}/confirm` |
 | Issued statements | `GET /api/financial-spaces/{space}/statements` |
-| Issue statement | `POST /api/financial-spaces/{space}/treasury/accounts/{account}/statements` |
+| Issue account statement | `POST /api/financial-spaces/{space}/treasury/accounts/{account}/statements` |
+| Issue consolidated all-activity statement | `POST /api/financial-spaces/{space}/statements/consolidated` |
 | Statement detail | `GET /api/financial-spaces/{space}/statements/{statement}` |
 | Print-ready HTML | `GET /api/financial-spaces/{space}/statements/{statement}/html` |
 | Statement CSV | `GET /api/financial-spaces/{space}/statements/{statement}/csv` |
 
-Statement imports are external evidence; the OpFin treasury cashbook is internal book truth. Issued OpFin statements are immutable snapshots and are clearly identified as OpFin Financial Space statements rather than bank-issued documents.
+Statement imports are external evidence; the OpFin treasury cashbook is internal book truth. High-confidence items auto-match; uncertain items become a short user to-do list and reconciliation is not confirmed until those decisions are cleared. Issued OpFin statements are immutable snapshots and are clearly identified as OpFin Financial Space statements rather than bank-issued documents. Consolidated statements keep totals separated by currency unless an explicit FX policy exists.
 
 ## Location Context
 
