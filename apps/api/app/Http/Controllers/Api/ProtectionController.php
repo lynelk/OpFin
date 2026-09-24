@@ -35,6 +35,7 @@ class ProtectionController extends Controller
             ->where('financial_space_id', $space->id)
             ->where('user_id', $request->user()->id)
             ->where('status', 'active')
+            ->whereNull('deleted_at')
             ->exists();
 
         abort_unless($isMember, 403);
