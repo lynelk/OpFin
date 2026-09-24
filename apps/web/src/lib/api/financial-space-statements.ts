@@ -132,6 +132,12 @@ export const financialSpaceStatementsApi = {
       { method: "POST", bodyJson: payload }
     ),
 
+  imports: (spaceId: number, accountId: number, token?: string) =>
+    jsonRequest<{ imports: StatementImport[] }>(
+      "/financial-spaces/" + spaceId + "/treasury/accounts/" + accountId + "/statement-imports",
+      token
+    ),
+
   importCsv: async (
     spaceId: number,
     accountId: number,
