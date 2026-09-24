@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 760" role="img" aria-labelledby="title">
+  <title id="title">OpFin stacked lock-up</title>
+  <g transform="translate(64 16)" style="color:#353B78">
+    <path d="M96 74h184c82 0 148 66 148 148v64c0 82-66 148-148 148h-54v-52h54c53 0 96-43 96-96v-64c0-53-43-96-96-96H96V74Z" fill="currentColor"/>
+    <path d="M96 158h176c25 0 45 20 45 45s-20 45-45 45H96v-90Z" fill="currentColor"/>
+    <path d="M96 248h154c25 0 45 20 45 45s-20 45-45 45H148v96l-52-43V248Z" fill="currentColor"/>
+  </g>
+  <text x="320" y="660" text-anchor="middle" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="120" font-weight="600" letter-spacing="-4">OpFin</text>
+</svg>
