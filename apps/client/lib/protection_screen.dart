@@ -181,6 +181,7 @@ class _ProtectionScreenState extends State<ProtectionScreen> {
                 ),
                 TextField(
                   controller: description,
+                  onChanged: (_) => setLocal(() {}),
                   minLines: 3,
                   maxLines: 5,
                   decoration: const InputDecoration(
