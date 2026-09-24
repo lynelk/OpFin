@@ -34,7 +34,7 @@ Canonical new-customer App journey:
 4. create a six-digit PIN;
 5. enter Home.
 
-The Web sign-in route is for existing/authorised access and should not be taught as the preferred new-customer registration path. It presents phone number + six-digit PIN and routes the user to the workspace their role is authorised to use. Legacy password compatibility remains an implementation migration detail.
+The Web sign-in route is for existing/authorised access and should not be taught as the preferred new-customer registration path. It presents phone number + PIN as the preferred credential and routes the user to the workspace their role is authorised to use. Legacy authorised Web accounts may continue to use their existing password during migration.
 
 Do not teach separate logins for Admin, Support, Commercial Performance, Programme Delivery or Inclusion. Those are role-gated modules within **OpFin Operations**. Programme check-ins remain part of the participant's Personal experience, while programme partners use their dedicated aggregate Programme Partner Workspace.
 
