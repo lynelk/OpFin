@@ -20,7 +20,7 @@ class FinancialSpaceController extends Controller
         $this->personalSpaces->ensure($request->user());
         $spaces = DB::table('financial_space_memberships as m')
             ->join('financial_spaces as s', 's.id', '=', 'm.financial_space_id')
-            ->where('m.user_id', $request->user()->id)->where('m.status', 'active')->whereNull('s.deleted_at')
+            ->where('m.user_id', $request->user()->id)->where('m.status', 'active')->whereNull('m.deleted_at')->whereNull('s.deleted_at')
             ->select('s.id','s.public_id','s.type','s.name','s.country','s.currency','s.status','m.role')
             ->orderByRaw("CASE WHEN s.type = 'personal' THEN 0 ELSE 1 END")
             ->orderBy('s.name')
@@ -75,6 +75,6 @@ class FinancialSpaceController extends Controller
         return response()->json(['data'=>['updated'=>true]]);
     }
 
-    private function assertMember(Request $r, FinancialSpace $s): void { abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$s->id)->where('user_id',$r->user()->id)->where('status','active')->exists(),403); }
-    private function assertAdministrator(Request $r, FinancialSpace $s): void { abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$s->id)->where('user_id',$r->user()->id)->where('status','active')->whereIn('role',['owner','administrator','chairperson','treasurer','director'])->exists(),403); }
+    private function assertMember(Request $r, FinancialSpace $s): void { abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$s->id)->where('user_id',$r->user()->id)->where('status','active')->whereNull('deleted_at')->exists(),403); }
+    private function assertAdministrator(Request $r, FinancialSpace $s): void { abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$s->id)->where('user_id',$r->user()->id)->where('status','active')->whereNull('deleted_at')->whereIn('role',['owner','administrator','chairperson','treasurer','director'])->exists(),403); }
 }
