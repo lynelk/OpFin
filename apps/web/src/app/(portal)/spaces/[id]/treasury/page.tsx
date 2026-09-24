@@ -5,7 +5,6 @@ import {
   generateConsolidatedStatementAction,
   generateTreasuryStatementAction,
   importTreasuryStatementAction,
-  matchTreasuryStatementRowAction,
   reconcileTreasuryStatementAction,
   recordTreasuryTransactionAction,
   resolveReconciliationTodoAction
@@ -725,55 +724,10 @@ export default async function TreasuryPage({
                                   ).replaceAll("_", " ")}
                                 </td>
                                 <td>
-                                  <div>
-                                    {String(row.exception_type ?? "—").replaceAll(
-                                      "_",
-                                      " "
-                                    )}
-                                    {canManage &&
-                                    row.reconciliation_status !== "matched" ? (
-                                      <form
-                                        action={matchTreasuryStatementRowAction}
-                                        className="inline-form"
-                                        style={{ marginTop: 8 }}
-                                      >
-                                        <input
-                                          type="hidden"
-                                          name="space_id"
-                                          value={spaceId}
-                                        />
-                                        <input
-                                          type="hidden"
-                                          name="account_id"
-                                          value={selectedAccount.id}
-                                        />
-                                        <input
-                                          type="hidden"
-                                          name="import_id"
-                                          value={String(selectedImport.id)}
-                                        />
-                                        <input
-                                          type="hidden"
-                                          name="row_id"
-                                          value={String(row.id)}
-                                        />
-                                        <input
-                                          name="transaction_id"
-                                          type="number"
-                                          min="1"
-                                          placeholder="OpFin transaction ID"
-                                          aria-label="OpFin transaction ID"
-                                          required
-                                        />
-                                        <button
-                                          className="button secondary"
-                                          type="submit"
-                                        >
-                                          Match
-                                        </button>
-                                      </form>
-                                    ) : null}
-                                  </div>
+                                  {String(row.exception_type ?? "—").replaceAll(
+                                    "_",
+                                    " "
+                                  )}
                                 </td>
                               </tr>
                             ))}
@@ -912,32 +866,62 @@ export default async function TreasuryPage({
               {selectedStatement ? (
                 <div style={{ marginTop: 20 }}>
                   <h3>{selectedStatement.statement.statement_number}</h3>
-                  <div className="grid grid-3">
-                    <div className="case-card">
-                      <p className="eyebrow">Opening</p>
-                      <strong>
-                        {money(
-                          selectedStatement.statement.opening_balance_minor,
-                          selectedStatement.account?.currency ?? space.currency
+                  {selectedStatement.statement.statement_scope === "consolidated" ? (
+                    <>
+                      <p className="muted">
+                        Consolidated all-activity statement · currencies reported separately.
+                      </p>
+                      <div className="grid grid-3">
+                        {Object.entries(selectedStatement.totals_by_currency).map(
+                          ([currency, totals]) => (
+                            <div className="case-card" key={currency}>
+                              <p className="eyebrow">{currency}</p>
+                              <strong>
+                                Closing {money(totals.closing_balance_minor, currency)}
+                              </strong>
+                              <p className="muted">
+                                Debits {money(totals.total_debits_minor, currency)} · Credits{" "}
+                                {money(totals.total_credits_minor, currency)}
+                              </p>
+                            </div>
+                          )
                         )}
-                      </strong>
+                        <div className="case-card">
+                          <p className="eyebrow">Integrity</p>
+                          <strong>
+                            {selectedStatement.statement.content_hash.slice(0, 16)}…
+                          </strong>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="grid grid-3">
+                      <div className="case-card">
+                        <p className="eyebrow">Opening</p>
+                        <strong>
+                          {money(
+                            selectedStatement.statement.opening_balance_minor,
+                            selectedStatement.account?.currency ?? space.currency
+                          )}
+                        </strong>
+                      </div>
+                      <div className="case-card">
+                        <p className="eyebrow">Closing</p>
+                        <strong>
+                          {money(
+                            selectedStatement.statement.closing_balance_minor,
+                            selectedStatement.account?.currency ?? space.currency
+                          )}
+                        </strong>
+                      </div>
+                      <div className="case-card">
+                        <p className="eyebrow">Integrity</p>
+                        <strong>
+                          {selectedStatement.statement.content_hash.slice(0, 16)}…
+                        </strong>
+                      </div>
                     </div>
-                    <div className="case-card">
-                      <p className="eyebrow">Closing</p>
-                      <strong>
-                        {money(
-                          selectedStatement.statement.closing_balance_minor,
-                          selectedStatement.account?.currency ?? space.currency
-                        )}
-                      </strong>
-                    </div>
-                    <div className="case-card">
-                      <p className="eyebrow">Integrity</p>
-                      <strong>
-                        {selectedStatement.statement.content_hash.slice(0, 16)}…
-                      </strong>
-                    </div>
-                  </div>
+                  )}
                 </div>
               ) : null}
             </section>
