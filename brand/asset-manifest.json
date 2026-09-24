@@ -1,8 +1,8 @@
 {
   "source": {
-    "source": "apps/client/assets/logo.png",
-    "sourceGitBlob": "5b440fbc74804b68a8d0ab12803a3185999157da",
-    "rule": "Derive resized and recoloured assets from the existing monogram, preserving its silhouette. No invented replacement mark. Interface app-name text is not represented as the supplied vector wordmark."
+    "source": "brand/v3/assets/opfin-symbol-master.svg",
+    "sourceGitBlob": "37b7720925aa688229640b5d1cbc5506cd773ce2",
+    "rule": "The v3 vector master is the canonical monogram source. Preserve its geometry and clear space; derive platform exports from this source."
   },
   "fontSource": {
     "repository": "rsms/inter",
@@ -41,21 +41,26 @@
     "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png": "dbb2a0d0683a5b8962852c5723e5930dbe70a11af50f4ac06cae9ca98823e915",
     "apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": "53b0b1396243a8961c6076ef1597273ddd3df419d1613cf8031f4b4f78911e8b",
     "distribution/google-play/assets/opfin-play-icon-512.png": "42b080d693a2d1192a4739da9d34c27db160f0fd7dcba070ce06c04c7d2f5dc5",
-    "distribution/google-play/assets/opfin-feature-graphic-1024x500.png": "e894a4433400100d015436d3216b243e3b1abe7df5b38bab1920f35656b1c666"
+    "distribution/google-play/assets/opfin-feature-graphic-1024x500.png": "e894a4433400100d015436d3216b243e3b1abe7df5b38bab1920f35656b1c666",
+    "brand/v3/assets/opfin-symbol-master.svg": "ce1e3a85a68ccf51cfe10efdc239bb2baa6381ae288020cc5b752173fd520f1a",
+    "brand/v3/assets/opfin-app-icon-master.svg": "1e09b2d271db49eb31df8c58c4cb47e2b73352c4055317e2814ae631df5d06f8",
+    "brand/v3/assets/opfin-lockup-horizontal.svg": "ea598e40e70750284c58d8fb4c74d69195929468785ed08e00010ee9ad3a3e81",
+    "brand/v3/assets/opfin-lockup-stacked.svg": "d02debf0885f275328493c3032b5a979c4ccb8df0ad5b9e17d451d06e91d2cdd",
+    "brand/v3/assets/opfin-wordmark.svg": "77c0fdb4ce22ffbb80e76ee2aa2effac8eb3f202dee83b78be67faa553f01ced",
+    "brand/v3/assets/opfin-progress-path.svg": "40d85bb5b38f7b30b9996a4e4be41021c5111e16f961b750921ba8417ca59ca0",
+    "brand/v3/assets/opfin-feature-graphic-master.svg": "bae5472370100e18b9fed635b04efef7cc6437367683ecc4ab2b79f4393a5275",
+    "brand/v3/templates/presentation-cover-16x9.svg": "a169273279d0b6d45f6a88e6288d1cf4c116da232ac400eac944b0c2bbf88a6d",
+    "brand/v3/templates/document-cover-a4.svg": "5cfba8454a4bb8de893c8d24f0543b26d351acaee10421578525e4ca42841be9",
+    "brand/v3/templates/social-square.svg": "e821b32b733e9f74071b6b948a7b9ddf232ddb7e3c85299593d99aff5779c69f",
+    "brand/v3/templates/partner-cobranding.svg": "7ce028b280da6383bae4913467199b2802cebc481458c8701be86b255b0f02e8",
+    "apps/web/public/brand/opfin-symbol.svg": "678ac60b5f36060fcb93cc30f8b25ec2d0eb285d434824e889d033c08e4aa560",
+    "apps/web/public/brand/opfin-symbol-reverse.svg": "8e8ee6d615c2df06d66c2d35e5c2c96424d85116c5a8a9d57db4e30288060595"
   },
-  "extraction": {
-    "cornerColour": [
-      0,
-      0,
-      209
-    ],
-    "sourceHasTransparency": false,
-    "wordmarkSeparated": true,
-    "bounds": {
-      "left": 291,
-      "top": 221,
-      "width": 186,
-      "height": 204
-    }
+  "brandSystemVersion": "3.0.0-rc.1",
+  "status": "v3 vector sources established; generated raster exports remain provenance-checked until the v3 regeneration/sign-off gate",
+  "appIcon": {
+    "source": "brand/v3/assets/opfin-app-icon-master.svg",
+    "sourceGitBlob": "c0b1ebeda551e86462db4a55b2311a91d6cd91de",
+    "rule": "Use the Indigo field with the approved Apricot and Warm Ivory monogram treatment."
   }
 }
