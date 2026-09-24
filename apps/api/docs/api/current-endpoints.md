@@ -1,7 +1,7 @@
 # Current API endpoints
 
 Status: Controlled external developer reference  
-Updated: 23 September 2026  
+Updated: 24 September 2026  
 Language: English (United Kingdom)
 
 Updated against the registered canonical platform routes on **23 September 2026**. Routes remain subject to the middleware and role gates in source.
@@ -264,16 +264,21 @@ Authenticated routes:
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | GET | `/api/financial-spaces` | List Financial Spaces the signed-in person can access |
-| POST | `/api/financial-spaces` | Create Household, Savings Group, Business, SACCO, Investment/Fund or Partner Space |
+| POST | `/api/financial-spaces` | Create Household, Savings Group, Investment Club, Business, SACCO, Investment/Fund or Partner Space |
 | POST | `/api/financial-spaces/invitations/accept` | Join a Space using a single-use invitation token |
 | GET | `/api/financial-spaces/{space}/members` | List members when authorised |
 | POST | `/api/financial-spaces/{space}/invitations` | Invite a person with a scoped role |
 | PUT | `/api/financial-spaces/{space}/capabilities` | Configure a Space capability when authorised |
+| GET | `/api/financial-spaces/{space}/credentials` | List government, regulator, cooperative, tax or other external identifiers attached to the Space |
+| POST | `/api/financial-spaces/{space}/credentials` | Declare/update an external Space identifier; verification remains a separate operations action |
+| GET | `/api/financial-spaces/{space}/protection/products` | List approved group-capable protection products for an authorised non-Personal Space; catalogue access does not activate group enrolment or premium collection |
 | GET | `/api/financial-spaces/{space}/workspace` | Role-aware institutional workspace summary |
 | PUT | `/api/financial-spaces/{space}/organisation-onboarding` | Progress Business/SACCO/Fund/Partner onboarding |
 | POST | `/api/financial-spaces/{space}/employer/enable` | Enable Employer services on a Business Space |
 
-A person is registered once and can hold different roles in many Spaces. Membership does not grant access to the member's Personal Space.
+A person is registered once and can hold different roles in many Spaces. Membership does not grant access to the member's Personal Space. Space `public_id` remains the OpFin identity even when external authority identifiers are later added or verified.
+
+Operations users may verify a declared Space credential through `PATCH /api/admin/financial-space-credentials/{credential}/verification`. Verification records the verifier and optional authority reference/evidence hash; it does not recreate the Space or confer financial-product eligibility.
 
 ## 18. Complete financial-life APIs
 
