@@ -445,6 +445,8 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
   List<Map<String, dynamic>> _results = const [];
   bool _searching = false;
   String? _error;
+  final String _sessionToken =
+      'opfin-' + DateTime.now().microsecondsSinceEpoch.toString();
 
   Future<void> _search() async {
     final query = _query.text.trim();
@@ -457,8 +459,7 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
       final results = await LocationContextApi.autocomplete(
         query,
         countryCode: widget.countryCode,
-        sessionToken:
-            'opfin-' + DateTime.now().millisecondsSinceEpoch.toString(),
+        sessionToken: _sessionToken,
       );
       if (mounted) setState(() => _results = results);
     } catch (error) {
@@ -535,9 +536,13 @@ class _NearbyServicesScreenState extends State<NearbyServicesScreen> {
       final current = await PlatformLocationService.currentLocation(
         precision: 'approximate',
       );
+      final rawLatitude = (current['latitude'] as num).toDouble();
+      final rawLongitude = (current['longitude'] as num).toDouble();
+      final approximateLatitude = (rawLatitude * 1000).round() / 1000;
+      final approximateLongitude = (rawLongitude * 1000).round() / 1000;
       final future = LocationContextApi.nearbyServices(
-        (current['latitude'] as num).toDouble(),
-        (current['longitude'] as num).toDouble(),
+        approximateLatitude,
+        approximateLongitude,
       );
       setState(() => _services = future);
       await future;
