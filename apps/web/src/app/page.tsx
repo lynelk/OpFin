@@ -23,6 +23,37 @@ const steps = [
   ["04", "Progress over time", "Build a stronger verified financial record without turning programme data into hidden underwriting."],
 ];
 
+const portalWorkspaces = [
+  {
+    eyebrow: "PERSONAL",
+    title: "Personal & Financial Spaces",
+    text: "Your personal dashboard plus authorised household, savings-group, investment-club, business and SACCO spaces. Programme check-ins stay inside the personal experience.",
+    href: "/login?context=personal",
+    action: "Sign in to Personal"
+  },
+  {
+    eyebrow: "EMPLOYER",
+    title: "Employer Workspace",
+    text: "Verified employer administration and financial-wellbeing programmes for authorised employer roles.",
+    href: "/login?context=employer",
+    action: "Sign in to Employer"
+  },
+  {
+    eyebrow: "PROGRAMME PARTNER",
+    title: "Programme Partner Workspace",
+    text: "Programme-scoped aggregate impact and service-network reporting for assigned partner accounts.",
+    href: "/login?context=partner",
+    action: "Sign in to Partner"
+  },
+  {
+    eyebrow: "OPFIN TEAM",
+    title: "OpFin Operations",
+    text: "Operations, support, compliance, inclusion, programme delivery, impact and commercial tools, filtered by staff role.",
+    href: "/login?context=operations",
+    action: "Sign in to Operations"
+  }
+];
+
 export default function HomePage() {
   return (
     <main className="marketing-shell">
@@ -36,6 +67,7 @@ export default function HomePage() {
           <a href="#groups">Groups</a>
           <a href="#employers">Businesses</a>
           <a href="#partners">Partners</a>
+          <a href="#access">Access</a>
           <a href="#learn">Learn</a>
         </nav>
         <div className="marketing-nav-actions">
@@ -173,6 +205,29 @@ export default function HomePage() {
             <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>
           ))}
         </div>
+      </section>
+
+      <section className="marketing-section" id="access">
+        <div className="marketing-section-head">
+          <p className="marketing-eyebrow">PORTAL ACCESS</p>
+          <h2>One sign-in. The workspace follows your authorised role.</h2>
+          <p>
+            OpFin keeps Financial Spaces connected under one identity while separating institutional and staff authority. The public site therefore exposes a small number of workspace entry points rather than a separate login for every module.
+          </p>
+        </div>
+        <div className="portal-access-grid">
+          {portalWorkspaces.map((workspace) => (
+            <article className="portal-access-card" key={workspace.title}>
+              <p className="marketing-eyebrow">{workspace.eyebrow}</p>
+              <h3>{workspace.title}</h3>
+              <p>{workspace.text}</p>
+              <Link className="button secondary" href={workspace.href}>{workspace.action}</Link>
+            </article>
+          ))}
+        </div>
+        <p className="portal-access-note">
+          Support, inclusion & programmes, impact framework, programme delivery and commercial performance are role-gated modules inside OpFin Operations, not separate authentication portals. First-time programme partners activate an authorised invitation before using the same sign-in.
+        </p>
       </section>
 
       <section className="marketing-final-cta">
