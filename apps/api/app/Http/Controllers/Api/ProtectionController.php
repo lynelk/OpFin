@@ -38,6 +38,7 @@ class ProtectionController extends Controller
             ->exists();
 
         abort_unless($isMember, 403);
+        abort_if($space->type === 'personal', 422, 'Group protection catalogue requires a non-personal Financial Space.');
 
         return ApiResponse::success('Group protection products loaded.', [
             'products' => $this->protection->activeProducts($space->country, 'group'),
