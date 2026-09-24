@@ -13,7 +13,7 @@ This is the navigation point for current OpFin documentation. Publication class,
 | Leadership / product | [Current state](CURRENT_STATE.md) | [Product blueprint](product/OPFIN_PRODUCT_BLUEPRINT.md), [implementation status](product/CANONICAL_IMPLEMENTATION_STATUS.md) |
 | Customer / support | [User manual](manuals/OPFIN_USER_MANUAL.md) | [Training manual](manuals/OPFIN_TRAINING_MANUAL.md), [launch journey](LAUNCH_CUSTOMER_JOURNEY.md) |
 | Operations / compliance | [Operational manual](manuals/OPFIN_OPERATIONAL_MANUAL.md) | [UAT manual](manuals/OPFIN_UAT_MANUAL.md), [UMRA controls](UMRA_DIGITAL_LENDING_CONTROLS.md) |
-| Developer | [Developer start](DEVELOPER_START_HERE.md) | [API docs](../apps/api/docs/README.md), [Location Context](architecture/LOCATION_CONTEXT.md), `AGENTS.md`, `SECURITY.md` |
+| Developer | [Developer start](DEVELOPER_START_HERE.md) | [Financial core architecture](architecture/FINANCIAL_CORE_ARCHITECTURE.md), [API docs](../apps/api/docs/README.md), [Location Context](architecture/LOCATION_CONTEXT.md), `AGENTS.md`, `SECURITY.md` |
 | API integrator | [API quick reference](../apps/api/docs/api/API_QUICK_REFERENCE.md) | [Current endpoints](../apps/api/docs/api/current-endpoints.md) |
 | Programme / MEL partner | [Inclusive-finance framework](product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md) | [Partner reporting standard](product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md) |
 | Release owner | [Current state](CURRENT_STATE.md) | [Publication register](PUBLICATION_REGISTER.md), [Railway topology](../infrastructure/railway/README.md), store/release documentation |
