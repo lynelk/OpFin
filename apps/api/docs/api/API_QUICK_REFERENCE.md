@@ -50,6 +50,24 @@ Cito is the preferred NIN/phone-ownership route where configured. Biometric/docu
 
 Membership, role, entitlement and financial-product eligibility are separate gates.
 
+## Investment Club / group treasury
+
+| Task | Method / endpoint |
+| --- | --- |
+| Treasury accounts | `GET/POST /api/financial-spaces/{space}/treasury/accounts` |
+| Cashbook transactions | `GET/POST /api/financial-spaces/{space}/treasury/accounts/{account}/transactions` |
+| Statement imports | `GET/POST /api/financial-spaces/{space}/treasury/accounts/{account}/statement-imports` |
+| Inspect imported statement | `GET /api/financial-spaces/{space}/statement-imports/{import}` |
+| Reconcile statement | `POST /api/financial-spaces/{space}/statement-imports/{import}/reconcile` |
+| Manual exception match | `POST /api/financial-spaces/{space}/statement-rows/{row}/match` |
+| Issued statements | `GET /api/financial-spaces/{space}/statements` |
+| Issue statement | `POST /api/financial-spaces/{space}/treasury/accounts/{account}/statements` |
+| Statement detail | `GET /api/financial-spaces/{space}/statements/{statement}` |
+| Print-ready HTML | `GET /api/financial-spaces/{space}/statements/{statement}/html` |
+| Statement CSV | `GET /api/financial-spaces/{space}/statements/{statement}/csv` |
+
+Statement imports are external evidence; the OpFin treasury cashbook is internal book truth. Issued OpFin statements are immutable snapshots and are clearly identified as OpFin Financial Space statements rather than bank-issued documents.
+
 ## Location Context
 
 | Task | Method / endpoint |
