@@ -125,6 +125,20 @@ class FinancialIntegrityService
 
             $paymentExceptions = $paymentAccountingExceptions + $paymentStatementExceptions;
 
+            $ambiguousProviderSubmissions = MobileMoneyTransaction::query()
+                ->whereIn('status', [
+                    MobileMoneyTransaction::STATUS_PROCESSING,
+                    MobileMoneyTransaction::STATUS_PENDING,
+                ])
+                ->where('failure_reason', 'like', 'Provider submission outcome is ambiguous%')
+                ->count();
+            if ($ambiguousProviderSubmissions > 0) {
+                $findings[] = $this->alert($runId, 'high', 'ambiguous_provider_submission', null,
+                    'Money-movement intents have an ambiguous provider submission outcome and must be reconciled by canonical reference before retry.', [
+                        'count' => $ambiguousProviderSubmissions,
+                    ]);
+            }
+
             $duplicateProviderRefs = MobileMoneyTransaction::query()
                 ->whereNotNull('provider_reference')->select('provider', 'provider_reference')
                 ->groupBy('provider', 'provider_reference')->havingRaw('count(*) > 1')->get();
