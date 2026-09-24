@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
+use App\Services\PersonalFinancialSpaceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,8 +13,11 @@ use Illuminate\Validation\Rule;
 
 class FinancialSpaceController extends Controller
 {
+    public function __construct(private readonly PersonalFinancialSpaceService $personalSpaces) {}
+
     public function index(Request $request): JsonResponse
     {
+        $this->personalSpaces->ensure($request->user());
         $spaces = DB::table('financial_space_memberships as m')
             ->join('financial_spaces as s', 's.id', '=', 'm.financial_space_id')
             ->where('m.user_id', $request->user()->id)->where('m.status', 'active')->whereNull('s.deleted_at')
