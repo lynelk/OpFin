@@ -97,6 +97,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           if [[ "$EVENT_NAME" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
@@ -114,24 +115,26 @@ jobs:
 
           pr="$PR_NUMBER"
           author="$PR_AUTHOR"
+          approved_head="$PR_HEAD_SHA"
           if [[ -z "$pr" ]]; then
             pr="$(gh api -H 'Accept: application/vnd.github+json' "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].number // empty')"
             if [[ -n "$pr" ]]; then
               author="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr" --jq '.user.login')"
+              approved_head="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr" --jq '.head.sha')"
             fi
           fi
 
-          if [[ -z "$pr" || -z "$author" ]]; then
-            echo "Financial-control changes must reach main through a reviewed pull request."
+          if [[ -z "$pr" || -z "$author" || -z "$approved_head" ]]; then
+            echo "Financial-control changes must reach main through a reviewed pull request with an identifiable head commit."
             exit 1
           fi
 
-          approvals="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr/reviews" --jq "[.[] | select(.state == \"APPROVED\" and .user.login != \"$author\")] | length")"
+          approvals="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr/reviews" --jq "[.[] | select(.state == \"APPROVED\" and .user.login != \"$author\" and .commit_id == \"$approved_head\")] | length")"
           if [[ "${approvals:-0}" -lt 1 ]]; then
-            echo "Financial-control changes require at least one APPROVED review from a user other than the PR author."
+            echo "Financial-control changes require at least one APPROVED review from a user other than the PR author on the exact latest PR head $approved_head."
             exit 1
           fi
-          echo "Independent financial-control approval confirmed for PR #$pr."
+          echo "Independent financial-control approval confirmed for PR #$pr at head $approved_head."
 
   api:
     runs-on: ubuntu-latest
