@@ -4,7 +4,7 @@ Status: Controlled external developer reference
 Updated: 24 September 2026  
 Language: English (United Kingdom)
 
-Updated against the registered canonical platform routes on **23 September 2026**. Routes remain subject to the middleware and role gates in source.
+Updated against the registered canonical platform routes on **24 September 2026**. Routes remain subject to the middleware and role gates in source.
 
 All JSON API responses use the standard envelope:
 
@@ -256,6 +256,50 @@ Admin/operations:
 
 Offer acceptance now additionally records explicit electronic consent for complete positive/negative credit-information reporting.
 
+
+## 16A. Personal financial wellbeing
+
+Authenticated routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/financial-compass` | Personal financial position: recorded available money, safe-to-spend, savings, total known debt, upcoming commitments, cash flow and next best action |
+| GET/POST | `/api/financial-accounts` | List or record the person's current cash, mobile-money, bank or other balances |
+| PATCH/DELETE | `/api/financial-accounts/{account}` | Update or deactivate a recorded balance source |
+| GET/POST | `/api/budgets` | List or create personal budgets |
+| PATCH/DELETE | `/api/budgets/{budget}` | Update or deactivate a budget |
+| GET | `/api/cash-flow` | Personal cash-flow summary and recorded/imported entries |
+| POST | `/api/cash-flow/entries` | Record an income or expense entry |
+| PATCH | `/api/cash-flow/entries/{entry}` | Correct a personal cash-flow entry, including category override |
+| GET | `/api/financial-calendar` | Upcoming financial events, including server-derived OpFin loan schedules and Personal-Space debt due dates |
+| POST | `/api/financial-calendar/events` | Add a scheduled/recurring personal financial event |
+| PATCH/DELETE | `/api/financial-calendar/events/{event}` | Update or remove a manual calendar event |
+
+The Financial Compass does not invent unavailable external balances. Total known debt includes server-derived OpFin credit exposure plus open `i_owe` obligations explicitly recorded in the person's canonical Personal Space. A Personal-Space obligation with a due date is included in upcoming commitments and therefore reduces safe-to-spend for the relevant period.
+
+## 16B. Personal savings and protection
+
+Authenticated routes:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/savings/products` | List approved active partner-held savings products for the requested country |
+| GET/POST | `/api/savings/goals` | List or create personal savings goals |
+| GET | `/api/savings/goals/{goal}` | Goal detail, confirmed position and movements |
+| PATCH | `/api/savings/goals/{goal}/schedule` | Configure the savings schedule subject to current collection controls |
+| POST | `/api/savings/goals/{goal}/pause` | Pause a goal |
+| POST | `/api/savings/goals/{goal}/resume` | Resume a goal |
+| POST | `/api/savings/goals/{goal}/contributions` | Initiate a savings contribution; position changes only after partner confirmation |
+| POST | `/api/savings/goals/{goal}/withdrawals` | Request a withdrawal; partner release and provider finality remain separate |
+| GET | `/api/protection/products` | List independently approved personal protection products |
+| GET | `/api/protection/policies` | List the signed-in person's protection policies |
+| GET | `/api/protection/policies/{policy}` | Policy, premium and claims detail |
+| POST | `/api/protection/products/{product}/enroll` | Record disclosure-bound enrolment; this does not itself issue cover |
+| POST | `/api/protection/policies/{policy}/premiums` | Initiate premium collection |
+| POST | `/api/protection/policies/{policy}/claims` | Submit a claim for insurer/underwriter decision |
+| POST | `/api/protection/claims/{claim}/dispute` | Request reconsideration of an eligible declined claim |
+
+Protection product audience is explicit: `personal`, `group` or `both`. Personal catalogue endpoints do not return group-only products. Premium collection, partner settlement and insurer policy issuance remain separate states; clients must not call cover active before insurer issuance.
 
 ## 17. Financial Spaces and multi-entity membership
 
