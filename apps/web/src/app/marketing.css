@@ -358,9 +358,14 @@
 .marketing-footer > div:last-child { display: flex; gap: 18px; justify-content: flex-end; }
 
 .marketing-preview-disclosure {
-  bottom: 10px;
   color: var(--opfin-muted);
   font-size: 12px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+
+.marketing-product-stage > .marketing-preview-disclosure {
+  bottom: 10px;
   left: 18px;
   margin: 0;
   position: absolute;
