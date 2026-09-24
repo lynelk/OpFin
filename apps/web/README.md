@@ -19,7 +19,7 @@ The homepage communicates the broad OpFin proposition:
 
 Public copy must distinguish implemented capability from activated provider service. Illustrative product cards are not production screenshots. Programme outcomes are not causal claims. Web sign-in is not the preferred new-customer onboarding route.
 
-Canonical new-customer onboarding remains phone → OTP → names → six-digit PIN in the mobile experience. Web sign-in now presents the same phone + six-digit PIN language for existing/authorised users and account-deletion verification; legacy password compatibility remains a backend migration concern rather than a separate user-facing login model.
+Canonical new-customer onboarding remains phone → OTP → names → six-digit PIN in the mobile experience. Web sign-in is PIN-first for existing/authorised users and account-deletion verification, while retaining the existing legacy-password fallback during migration. The interface labels the credential field clearly without forcing six-digit validation on legacy Web accounts.
 
 ### Portal access model
 
