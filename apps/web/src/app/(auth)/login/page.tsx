@@ -26,8 +26,8 @@ export default async function LoginPage({
     : contextEyebrow[context] ?? "Secure access";
 
   const description = deletingAccount
-    ? "Use your OpFin phone number and 6-digit PIN to verify that this deletion request belongs to you."
-    : "Use your OpFin phone number and 6-digit PIN. After sign-in, OpFin opens the workspace your account is authorised to use.";
+    ? "Use your OpFin phone number and PIN to verify that this deletion request belongs to you. Legacy Web accounts may use their existing password."
+    : "Use your OpFin phone number and PIN. Legacy Web accounts may use their existing password. OpFin then opens the workspace your account is authorised to use.";
 
   const sandboxNext =
     requestedNext ||
@@ -73,16 +73,12 @@ export default async function LoginPage({
           />
         </div>
         <div className="field">
-          <label htmlFor="password">6-digit PIN</label>
+          <label htmlFor="password">PIN or password</label>
           <input
             id="password"
             name="password"
             type="password"
-            inputMode="numeric"
             autoComplete="current-password"
-            pattern="[0-9]{6}"
-            minLength={6}
-            maxLength={6}
             required
           />
         </div>
