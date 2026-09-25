@@ -7,7 +7,9 @@ use App\Models\CreditProfile;
 use App\Models\CreditScoreComponent;
 use App\Models\EssentialsAccount;
 use App\Models\EssentialsBiller;
+use App\Models\Institution;
 use App\Models\User;
+use App\Services\CitoEssentialsLendingClient;
 use App\Services\ExternalScoringService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -195,6 +197,87 @@ class EssentialsFinanceTest extends TestCase
         $this->assertSame('SHORTBANK', $quoteResponse->json('data.quote.disclosure_snapshot.lender.partner_code'));
     }
 
+    public function test_affiliated_essentials_credit_is_hidden_withheld_and_fallback_only_under_admin_strategy(): void
+    {
+        [$customer] = $this->customerWithCreditProfile(200000);
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $core = $this->seedMandateLender($admin, 'CORETEST', 200000, 90);
+        $lender = Institution::create(['authority_basis' => 'licensed', 'authority_reference' => 'TEST-AUTHORITY-NOT-LIVE', 'regulator_code' => 'TEST', 'name' => 'Core test entity', 'address' => 'Test address', 'phone' => '256700000000', 'email' => 'test@example.org', 'status' => 'Active', 'lender_relationship' => 'affiliated']);
+        DB::table('partners')->where('id', $core['partner_id'])->update(['institution_id' => $lender->id]);
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/essentials/eligibility', ['channel' => 'web'])->assertOk()->assertJsonCount(0, 'data.lines')->assertJsonPath('data.overall.overall_available_limit_minor', 0);
+        $account = $this->verifiedElectricityAccount($customer);
+        $request = ['essentials_account_id' => $account->id, 'amount_minor' => 50000, 'channel' => 'web'];
+        $this->postJson('/api/essentials/quotes', $request)->assertUnprocessable();
+        Sanctum::actingAs($admin);
+        $this->postJson('/api/admin/lending-platform/strategy', ['mode' => 'external_first', 'reason' => 'Test affiliated fallback deployment', 'effective_from' => now()->toISOString()])->assertCreated();
+        Sanctum::actingAs($customer);
+        $quote = $this->postJson('/api/essentials/quotes', $request)->assertCreated()->assertJsonPath('data.quote.lender_partner_id', $core['partner_id'])->json('data.quote');
+        $external = $this->seedMandateLender($admin, 'EXTERNALTEST', 200000, 90);
+        $this->postJson('/api/essentials/eligibility', ['channel' => 'web'])->assertOk()->assertJsonCount(1, 'data.lines');
+        $this->postJson('/api/essentials/quotes', $request)->assertCreated()->assertJsonPath('data.quote.lender_partner_id', $external['partner_id']);
+        $this->configureCpay();
+        Http::fake();
+        $this->postJson('/api/essentials/quotes/'.$quote['id'].'/accept', ['disclosure_hash' => $quote['disclosure_hash'], 'accept_disclosures' => true])->assertStatus(422)->assertJsonPath('message', 'This lender offer is no longer available under the current distribution or credit deployment policy.');
+        Http::assertNothingSent();
+        $this->assertDatabaseCount('essentials_advances', 0);
+        $this->assertDatabaseHas('capital_mandates', ['id' => $core['pool_id'], 'reserved_capital_minor' => 0]);
+    }
+
+    public function test_withheld_or_unneeded_affiliate_is_not_contacted_for_credit_decisions(): void
+    {
+        [$customer] = $this->customerWithCreditProfile(200000);
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $affiliateProduct = $this->seedCitoLender('AFFILIATE-CITO', 200000, 90);
+        $lender = Institution::create(['authority_basis' => 'licensed', 'authority_reference' => 'TEST-ONLY', 'regulator_code' => 'TEST', 'name' => 'Affiliate Test', 'address' => 'Test', 'phone' => '256700000000', 'email' => 'affiliate@example.org', 'status' => 'Active', 'lender_relationship' => 'affiliated']);
+        DB::table('partners')->where('id', DB::table('partner_products')->where('id', $affiliateProduct)->value('partner_id'))->update(['institution_id' => $lender->id]);
+        $client = $this->mock(CitoEssentialsLendingClient::class);
+        $client->shouldReceive('drawdownConfigured')->andReturn(true);
+        $client->shouldNotReceive('requestCreditLine');
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/essentials/eligibility', ['channel' => 'web'])->assertOk()->assertJsonCount(0, 'data.lines');
+        $this->assertDatabaseCount('essentials_credit_lines', 0);
+        $this->seedMandateLender($admin, 'INDEPENDENT', 200000, 90);
+        Sanctum::actingAs($admin);
+        $this->postJson('/api/admin/lending-platform/strategy', ['mode' => 'external_first', 'reason' => 'Test independent first deployment', 'effective_from' => now()->toISOString()])->assertCreated();
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/essentials/eligibility', ['channel' => 'web'])->assertOk()->assertJsonCount(1, 'data.lines');
+        $this->assertDatabaseMissing('essentials_credit_lines', ['partner_product_id' => $affiliateProduct]);
+    }
+
+    public function test_channel_restriction_removes_existing_lines_from_refresh_and_summary(): void
+    {
+        [$customer] = $this->customerWithCreditProfile(200000);
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $seed = $this->seedMandateLender($admin, 'SCOPED', 200000, 90);
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/essentials/eligibility', ['channel' => 'web'])->assertOk()->assertJsonCount(1, 'data.lines');
+        Sanctum::actingAs($admin);
+        $this->postJson('/api/admin/lending-platform/distribution', ['channel' => 'play_store', 'country' => 'UG', 'product_category' => 'personal_loan', 'partner_product_id' => $seed['product_id'], 'availability' => 'unavailable', 'reason' => 'Test channel suspension', 'source_reference' => 'TEST', 'effective_from' => now()->toISOString()])->assertCreated();
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/essentials/eligibility', ['channel' => 'android'])->assertOk()->assertJsonCount(0, 'data.lines')->assertJsonPath('data.overall.overall_available_limit_minor', 0);
+        $this->getJson('/api/essentials?channel=android')->assertOk()->assertJsonPath('data.overall_available_limit_minor', 0);
+        $this->getJson('/api/essentials?channel=web')->assertOk()->assertJsonPath('data.overall_available_limit_minor', 200000);
+        $this->getJson('/api/essentials?channel=unknown')->assertUnprocessable();
+    }
+
+    public function test_affiliate_fallback_is_evaluated_for_amount_after_independent_discovery(): void
+    {
+        [$customer] = $this->customerWithCreditProfile(200000);
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $this->seedMandateLender($admin, 'SMALL-INDEPENDENT', 20000, 90);
+        $core = $this->seedMandateLender($admin, 'LARGER-AFFILIATE', 200000, 90);
+        $lender = Institution::create(['authority_basis' => 'licensed', 'authority_reference' => 'TEST-ONLY', 'regulator_code' => 'TEST', 'name' => 'Affiliate Test', 'address' => 'Test', 'phone' => '256700000000', 'email' => 'affiliate@example.org', 'status' => 'Active', 'lender_relationship' => 'affiliated']);
+        DB::table('partners')->where('id', $core['partner_id'])->update(['institution_id' => $lender->id]);
+        Sanctum::actingAs($admin);
+        $this->postJson('/api/admin/lending-platform/strategy', ['mode' => 'external_first', 'reason' => 'Test independent first deployment', 'effective_from' => now()->toISOString()])->assertCreated();
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/essentials/eligibility', ['channel' => 'web'])->assertOk()->assertJsonCount(1, 'data.lines');
+        $this->assertDatabaseMissing('essentials_credit_lines', ['partner_product_id' => $core['product_id']]);
+        $account = $this->verifiedElectricityAccount($customer);
+        $this->postJson('/api/essentials/quotes', ['essentials_account_id' => $account->id, 'amount_minor' => 80000, 'channel' => 'web'])->assertCreated()->assertJsonPath('data.quote.lender_partner_id', $core['partner_id']);
+    }
+
     public function test_embedded_platform_requires_customer_permission_before_it_can_write_essentials_data(): void
     {
         [$customer, $space] = $this->customerWithCreditProfile(100000);
@@ -281,6 +364,9 @@ class EssentialsFinanceTest extends TestCase
             'amount_minor' => 50000,
             'channel' => 'android',
         ])->assertCreated()->json('data.quote');
+
+        // A later catalogue change must not reprice the immutable quoted offer.
+        DB::table('partner_products')->where('id', $seed['product_id'])->update(['pricing' => json_encode(['term_days' => 7, 'monthly_interest_rate_percent' => 0, 'fixed_fee_minor' => 0, 'fee_percent' => 0], JSON_THROW_ON_ERROR)]);
 
         $this->configureCpay();
         Http::fake([

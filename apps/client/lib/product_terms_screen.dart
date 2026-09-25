@@ -1,5 +1,6 @@
 import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
+import 'package:opfin/services/distribution_channel.dart';
 
 import 'package:flutter/material.dart';
 import 'package:opfin/constants.dart';
@@ -226,7 +227,7 @@ class ProductTermsPageState extends State<ProductTermsPage> {
     final token = await UserSession.getAccessToken();
 
     final response = await http.get(
-      Uri.parse("$apiUrl/product-terms/$productId"),
+      Uri.parse("$apiUrl/product-terms/$productId?distribution_channel=${resolveDistributionChannel()}"),
       headers: {
         'Authorization': 'Bearer $token',
         'Accept': 'application/json',
@@ -237,7 +238,6 @@ class ProductTermsPageState extends State<ProductTermsPage> {
       final data = jsonDecode(response.body);
       List<ProductTerm> productTerms = (data['data'] as List)
           .map((item) => ProductTerm.fromJson(item))
-          .where((term) => term.duration >= 61)
           .toList();
       return productTerms;
     } else {

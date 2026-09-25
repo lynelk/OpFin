@@ -15,7 +15,13 @@ class LoanProduct extends Model
         'type',
         'status',
         'institution_id',
+        'country', 'currency', 'product_category', 'min_amount_minor', 'max_amount_minor', 'borrower_purposes', 'funding_pool_id',
     ];
+
+    protected function casts(): array
+    {
+        return ['borrower_purposes' => 'array', 'min_amount_minor' => 'integer', 'max_amount_minor' => 'integer', 'funding_pool_id' => 'integer'];
+    }
 
     public function terms()
     {
@@ -42,7 +48,7 @@ class LoanProduct extends Model
         });
 
         static::deleting(function ($loanProduct) {
-            if (!$loanProduct->isForceDeleting()) {
+            if (! $loanProduct->isForceDeleting()) {
                 $loanProduct->terms->each->delete();
                 $loanProduct->account->delete();
             }

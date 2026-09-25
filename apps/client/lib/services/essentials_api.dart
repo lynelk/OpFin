@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:opfin/services/distribution_channel.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:opfin/constants.dart';
@@ -42,14 +43,14 @@ class EssentialsApi {
     return (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
   }
 
-  static Future<Map<String, dynamic>> summary() => _request('/essentials');
+  static Future<Map<String, dynamic>> summary() => _request('/essentials?channel=${resolveDistributionChannel()}');
 
   static Future<Map<String, dynamic>> catalogue() => _request('/essentials/catalogue');
 
   static Future<Map<String, dynamic>> refreshEligibility({int? financialSpaceId}) =>
       _request('/essentials/eligibility', method: 'POST', body: {
         if (financialSpaceId != null) 'financial_space_id': financialSpaceId,
-        'channel': 'android',
+        'channel': resolveDistributionChannel(),
       });
 
   static Future<Map<String, dynamic>> addAccount({
@@ -75,7 +76,7 @@ class EssentialsApi {
   }) => _request('/essentials/quotes', method: 'POST', body: {
         'essentials_account_id': accountId,
         'amount_minor': amountMinor,
-        'channel': 'android',
+        'channel': resolveDistributionChannel(),
       });
 
   static Future<Map<String, dynamic>> acceptQuote({

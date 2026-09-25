@@ -259,6 +259,7 @@ export default async function AdminEssentialsPage({
           </p>
           <form action={saveEssentialsLenderAction} className="form-grid">
             <div className="grid grid-3">
+              <div className="field"><label htmlFor="institution_id">Lender institution ID (from Lenders & credit deployment)</label><input id="institution_id" name="institution_id" type="number" /></div>
               <div className="field"><label htmlFor="partner_code">Lender code</label><input id="partner_code" name="partner_code" required /></div>
               <div className="field"><label htmlFor="partner_name">Lender name</label><input id="partner_name" name="partner_name" required /></div>
               <div className="field">
@@ -292,7 +293,7 @@ export default async function AdminEssentialsPage({
               <div className="field"><label htmlFor="min_limit_minor">Minimum limit (UGX)</label><input id="min_limit_minor" name="min_limit_minor" type="number" min="1" defaultValue="10000" /></div>
               <div className="field"><label htmlFor="max_limit_minor">Maximum limit (UGX)</label><input id="max_limit_minor" name="max_limit_minor" type="number" min="1" defaultValue="500000" /></div>
               <div className="field"><label htmlFor="line_valid_days">Line validity (days)</label><input id="line_valid_days" name="line_valid_days" type="number" min="1" max="365" defaultValue="30" /></div>
-              <div className="field"><label htmlFor="term_days">Term (days)</label><input id="term_days" name="term_days" type="number" min="61" defaultValue="90" required /></div>
+              <div className="field"><label htmlFor="term_days">Term (days)</label><input id="term_days" name="term_days" type="number" min="1" required /></div>
               <div className="field"><label htmlFor="monthly_interest_rate_percent">Monthly interest %</label><input id="monthly_interest_rate_percent" name="monthly_interest_rate_percent" type="number" min="0" step="0.01" defaultValue="0" /></div>
               <div className="field"><label htmlFor="fixed_fee_minor">Fixed customer fee (UGX)</label><input id="fixed_fee_minor" name="fixed_fee_minor" type="number" min="0" defaultValue="0" /></div>
               <div className="field"><label htmlFor="fee_percent">Customer fee %</label><input id="fee_percent" name="fee_percent" type="number" min="0" step="0.01" defaultValue="0" /></div>

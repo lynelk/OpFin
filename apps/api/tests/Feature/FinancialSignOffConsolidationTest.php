@@ -208,7 +208,7 @@ class FinancialSignOffConsolidationTest extends TestCase
 
     private function productionLoan(): array
     {
-        $institution = Institution::create([
+        $institution = Institution::create(['authority_basis' => 'licensed', 'authority_reference' => 'TEST-AUTHORITY-NOT-LIVE', 'regulator_code' => 'TEST',
             'name' => 'Financial Sign-Off Institution',
             'address' => 'Kampala',
             'phone' => '256700009001',
@@ -290,6 +290,7 @@ class FinancialSignOffConsolidationTest extends TestCase
             'code' => 'TEST-LENDER-'.Str::upper(Str::random(8)),
             'name' => 'Test Licensed Lender '.Str::random(6),
             'partner_type' => 'financial_institution',
+            'institution_id' => $owner->institution_id,
             'country' => 'UG',
             'status' => 'active',
             'regulatory_evidence' => json_encode([

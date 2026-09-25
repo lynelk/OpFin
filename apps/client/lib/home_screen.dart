@@ -197,7 +197,7 @@ class _HomePageState extends State<_HomePage>{
           child:Padding(
             padding:const EdgeInsets.all(20),
             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              const Text('FINANCIAL COMPASS',
+              const Text('Financial Compass',
                 style:TextStyle(
                   color:OpFinColors.indigo,
                   fontSize:12,
@@ -330,6 +330,13 @@ class _HomePageState extends State<_HomePage>{
               :'Credit is one financial tool. Review affordability and every cost before borrowing.'),
           trailing:creditAvailable?const Icon(Icons.chevron_right):null,
           onTap:!creditAvailable?null:()=>_handleCredit(credit))),
+
+        if(creditAvailable&&profile['composite_score']!=null)
+          Card(child:ListTile(
+            leading:const Icon(Icons.insights_outlined),
+            title:Text('OpFin Score ${profile['composite_score']}'),
+            subtitle:Text('Band: ${profile['band']??'Not yet available'}'),
+            onTap:()=>_handleCredit(credit))),
 
         if(creditAvailable&&setup['kyc_status']!='verified')
           Card(child:ListTile(

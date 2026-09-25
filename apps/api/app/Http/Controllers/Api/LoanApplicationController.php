@@ -8,6 +8,8 @@ use App\Models\LoanApplication;
 use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
 use App\Models\User;
+use App\Services\CreditDistributionService;
+use App\Services\PlatformCreditRoutingService;
 use App\Support\ApiResponse;
 use Exception;
 use Illuminate\Http\Request;
@@ -15,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class LoanApplicationController extends Controller
 {
@@ -67,7 +70,7 @@ class LoanApplicationController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
-        if (!$this->canManageLoans($request)) {
+        if (! $this->canManageLoans($request)) {
             return ApiResponse::error('Unauthorized.', 403);
         }
 
@@ -106,7 +109,7 @@ class LoanApplicationController extends Controller
             DB::commit();
 
             return ApiResponse::success('Loan application status updated successfully.', $loanApplication->toArray());
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error updating loan application status: '.$e->getMessage());
 
@@ -134,20 +137,20 @@ class LoanApplicationController extends Controller
             })->get();
 
             return ApiResponse::success('Products retrieved successfully.', $products->toArray());
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ApiResponse::error($e->getMessage(), 500);
         }
     }
 
-    public function getProductTerms($id)
+    public function getProductTerms($id, Request $request)
     {
-        try {
-            $terms = LoanProductTerm::with('product.institution')->where('loan_product_id', $id)->get();
+        $data = $request->validate(['distribution_channel' => ['nullable', Rule::in(app(CreditDistributionService::class)->channels())]]);
+        $product = LoanProduct::findOrFail($id);
+        $allowed = app(PlatformCreditRoutingService::class)->options($data['distribution_channel'] ?? 'play_store', $product->country)
+            ->filter(fn ($row) => $row['product']->id === $product->id)->pluck('term.id');
+        $terms = LoanProductTerm::with('product.institution')->whereIn('id', $allowed)->get();
 
-            return ApiResponse::success('Product terms retrieved successfully.', $terms->toArray());
-        } catch (Exception $e) {
-            return ApiResponse::error($e->getMessage(), 500);
-        }
+        return ApiResponse::success('Product terms retrieved successfully.', $terms->toArray());
     }
 
     public function getInstitutions()
