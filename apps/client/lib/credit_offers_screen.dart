@@ -74,7 +74,7 @@ class _CreditOffersScreenState extends State<CreditOffersScreen> {
             children: [
               const Text('Review every cost before accepting', style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              const Text('Mobile-store personal-loan applications cannot require full repayment in 60 days or less. Standard OpFin mobile terms begin at 90 days where an eligible product is available. Every offer shows its equivalent APR, fees and final repayment date.'),
+              const Text('Available products depend on the lender, your market and this app channel. Review the named lender, APR, fees and repayment dates before accepting an offer.'),
               const SizedBox(height: 18),
               if (offers.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('No credit offers are ready yet.'))),
               ...offers.map((offer) => Card(
@@ -211,9 +211,10 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
           const SizedBox(height: 16),
           const Text('Who provides this credit?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 6),
-          Text(provider['licensed_entity_name']?.toString() ?? provider['trading_name']?.toString() ?? 'OpFin'),
-          if (provider['umra_license_number'] != null)
-            Text('UMRA licence: ${provider['umra_license_number']}'),
+          Text(provider['legal_name']?.toString() ?? provider['licensed_entity_name']?.toString() ?? 'Lender details unavailable'),
+          const Text('OpFin provides infrastructure and orchestration for the named lender.'),
+          if (provider['authority_reference'] != null)
+            Text('${provider['regulator'] ?? 'Authority'}: ${provider['authority_reference']}'),
           if (provider['business_address'] != null)
             Text(provider['business_address'].toString()),
         ],

@@ -605,3 +605,19 @@ Operations routes:
 - `POST /api/admin/essentials/repayments/{repayment}/reconcile`
 
 These endpoints are lender-neutral and fail closed when the required certified provider route is not configured.
+
+## Lending platform configuration (25 September 2026)
+
+All routes require Sanctum and the existing `platform_admin`/`operations` route group. Operations additionally need delegated platform credit access for reading/managing lender configuration. Strategy, ownership, channel rules and delegation are platform-admin only.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/admin/lending-platform` | Institutions, internal partner IDs, products/terms, strategy/history, rule revisions/defaults and enabled markets |
+| POST | `/api/admin/lending-platform/institutions` | Create/update legal lender and authority profile; create internal funding partner record without a login |
+| POST | `/api/admin/lending-platform/products` | Create/update product metadata, amount/purpose ranges and funding association |
+| POST | `/api/admin/lending-platform/products/{product}/terms` | Create a repayment term without store-specific tenure restrictions |
+| POST | `/api/admin/lending-platform/strategy` | Append affiliated deployment decision, rationale, optional per-loan cap and effective interval |
+| POST | `/api/admin/lending-platform/distribution` | Append scoped, evidence-backed channel policy revision |
+| PATCH | `/api/admin/lending-platform/access/{user}` | Set `enabled` for delegated operations credit access |
+
+`GET /api/credit/options` accepts optional `distribution_channel`, two-letter `country`, positive integer `amount_minor` and `reason`. Responses include actual lender disclosure and product currency/country. Channels include `play_store`, `app_store`, `huawei_appgallery`, `web`, `whatsapp`, `ussd`; `android` remains a Google Play alias. Applications and first offer acceptance use the same server policy. See [the contract](frontend-backend-contract.md) and [lender orchestration](../../../../docs/architecture/LENDER_ORCHESTRATION.md).
