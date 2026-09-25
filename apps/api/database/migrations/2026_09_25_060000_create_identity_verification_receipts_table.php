@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('public_id')->unique();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('kyc_case_id')->constrained('kyc_cases')->cascadeOnDelete();
             $table->foreignId('consent_record_id')->constrained('consent_records')->cascadeOnDelete();
             $table->char('lookup_hash', 64)->index();
             $table->char('receipt_key', 64)->unique();

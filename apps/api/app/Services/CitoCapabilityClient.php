@@ -33,7 +33,7 @@ class CitoCapabilityClient
         );
     }
 
-    public function identityCheck(User $user, KycCase $case, string $capability, bool $forceRefresh = false): array
+    public function identityCheck(User $user, KycCase $case, string $capability, bool $forceRefresh = false, bool $systemInitiated = false): array
     {
         if ((int) $case->user_id !== (int) $user->id) {
             throw new InvalidArgumentException('Identity verification must target the case owner.');
@@ -51,12 +51,10 @@ class CitoCapabilityClient
                 consentReference: 'kyc-case:'.$case->id,
             );
         }
-
         $evidence = app(VerifiedIdentityEvidenceService::class);
         if (! $forceRefresh && ($cached = $evidence->reusableNin($user, $case)) !== null) {
             return $cached;
         }
-
         // Serialise NIN checks without locking the customer's financial rows.
         $lock = Cache::lock('opfin:identity:nin:'.$user->id, max(60, (int) config('services.cito.timeout_seconds', 15) + 30));
         if (! $lock->get()) {
@@ -71,7 +69,7 @@ class CitoCapabilityClient
                 capability: $capability, purpose: 'identity_verification',
                 consentReference: 'kyc-case:'.$case->id,
             );
-            app(IdentityEvidenceRevocationService::class)->recordDefinitiveResult($user, $case, $result);
+            app(IdentityEvidenceRevocationService::class)->recordDefinitiveResult($user, $case, $result, $systemInitiated);
 
             return $result;
         } finally {
