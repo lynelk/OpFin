@@ -190,7 +190,7 @@ final class ContractCatalogue
             'definition_errors' => $internal ? $this->issues : [], 'provenance' => $this->provenance];
     }
 
-    /** Only explicitly documented operations are SDK inputs by default. */
+    /** Reviewed operations only; internal inventory bypasses role filtering, never schema review. */
     public function openApi(?string $role = null, bool $internalInventory = false): array
     {
         $paths = [];
@@ -214,7 +214,6 @@ final class ContractCatalogue
             } elseif ($operation['public_documentation']) {
                 $item['security'] = [];
             } else {
-                // A route without Sanctum is not automatically an unsigned public callback.
                 throw new InvalidArgumentException('A documented non-Sanctum operation needs explicit reviewed authentication before OpenAPI publication.');
             }
             if ($operation['request_body'] !== null) {
@@ -225,7 +224,7 @@ final class ContractCatalogue
         ksort($paths, SORT_STRING);
 
         return ['openapi' => '3.1.1', 'info' => ['title' => 'OpFin API', 'version' => '1.0.0',
-            'description' => 'Source-linked contracts. Registration, documented shape, authorisation, provider activation and release acceptance are separate. Unreviewed operations are excluded unless this is an explicitly labelled internal inventory.'],
+            'description' => 'Source-linked reviewed contracts. Registration, documented shape, authorisation, provider activation and release acceptance are separate. Unreviewed operations are excluded from both HTTP and offline OpenAPI exports.'],
             'servers' => [['url' => '/', 'description' => 'Same deployment origin. Paths already include /api.']],
             'paths' => $paths === [] ? new \stdClass : $paths,
             'components' => ['securitySchemes' => [
@@ -251,15 +250,35 @@ final class ContractCatalogue
         if (($baseline['format_version'] ?? null) !== 1 || ! is_array($baseline['operations'] ?? null)) {
             throw new InvalidArgumentException('A versioned OpFin catalogue snapshot is required.');
         }
-        $before = array_column($baseline['operations'], null, 'key');
+        $before = [];
+        foreach ($baseline['operations'] as $entry) {
+            if (! is_array($entry) || ! is_string($entry['key'] ?? null) || ! is_string($entry['id'] ?? null)
+                || ! array_key_exists('source_digest', $entry) || ! is_string($entry['contract_digest'] ?? null)
+                || ! in_array($entry['contract_status'] ?? null, ['documented', 'registration_only'], true)
+                || isset($before[$entry['key']])) {
+                throw new InvalidArgumentException('The baseline contains malformed or duplicate operation entries.');
+            }
+            $before[$entry['key']] = $entry;
+        }
         $after = array_column($this->snapshot()['operations'], null, 'key');
         $changed = [];
         foreach ($after as $key => $row) {
             if (! isset($before[$key])) {
                 $changed[] = ['kind' => 'added', 'operation' => $key, 'review_required' => $row['contract_status'] !== 'documented'];
-            } elseif ($row['source_digest'] !== $before[$key]['source_digest'] || $row['contract_digest'] !== $before[$key]['contract_digest']) {
+                continue;
+            }
+            $previous = $before[$key];
+            $identityChanged = $row['id'] !== $previous['id'];
+            $statusChanged = $row['contract_status'] !== $previous['contract_status'];
+            $sourceChanged = $row['source_digest'] !== $previous['source_digest'];
+            $contractChanged = $row['contract_digest'] !== $previous['contract_digest'];
+            if ($identityChanged || $statusChanged || $sourceChanged || $contractChanged) {
                 $changed[] = ['kind' => 'changed', 'operation' => $key,
-                    'review_required' => $row['source_digest'] !== $before[$key]['source_digest'] && $row['contract_digest'] === $before[$key]['contract_digest']];
+                    'previous_operation_id' => $previous['id'], 'operation_id' => $row['id'],
+                    'identity_changed' => $identityChanged, 'contract_status_changed' => $statusChanged,
+                    'review_required' => $identityChanged
+                        || ($statusChanged && $row['contract_status'] !== 'documented')
+                        || ($sourceChanged && ! $contractChanged)];
             }
         }
         foreach (array_diff_key($before, $after) as $key => $_) {
