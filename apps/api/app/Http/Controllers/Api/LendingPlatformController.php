@@ -144,8 +144,8 @@ class LendingPlatformController extends Controller
             'max_affiliated_loan_minor' => 'nullable|integer|min:1',
             'effective_from' => 'required|date', 'effective_to' => 'nullable|date|after:effective_from',
         ]);
-        $data['effective_from'] = Carbon::parse($data['effective_from']);
-        $data['effective_to'] = empty($data['effective_to']) ? null : Carbon::parse($data['effective_to']);
+        $data['effective_from'] = Carbon::parse($data['effective_from'])->setTimezone(config('app.timezone'));
+        $data['effective_to'] = empty($data['effective_to']) ? null : Carbon::parse($data['effective_to'])->setTimezone(config('app.timezone'));
         $id = DB::table('platform_credit_strategies')->insertGetId([...$data, 'created_by' => $request->user()->id, 'created_at' => now(), 'updated_at' => now()]);
         $this->audit->record('lending_platform.strategy.created', $request->user(), null, ['strategy_id' => $id, ...$data]);
 
@@ -178,8 +178,8 @@ class LendingPlatformController extends Controller
             'source_url' => 'nullable|url:http,https|max:2000',
             'effective_from' => 'required|date', 'effective_to' => 'nullable|date|after:effective_from',
         ]);
-        $data['effective_from'] = Carbon::parse($data['effective_from']);
-        $data['effective_to'] = empty($data['effective_to']) ? null : Carbon::parse($data['effective_to']);
+        $data['effective_from'] = Carbon::parse($data['effective_from'])->setTimezone(config('app.timezone'));
+        $data['effective_to'] = empty($data['effective_to']) ? null : Carbon::parse($data['effective_to'])->setTimezone(config('app.timezone'));
         abort_if(! empty($data['loan_product_id']) && ! empty($data['partner_product_id']), 422, 'Select one product catalogue scope.');
         if (! empty($data['partner_product_id'])) {
             $owner = DB::table('partner_products as pp')->join('partners as p', 'p.id', '=', 'pp.partner_id')->where('pp.id', $data['partner_product_id'])->value('p.institution_id');

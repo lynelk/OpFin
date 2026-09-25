@@ -50,3 +50,9 @@ The 18:07 UTC automated review on PR #123 identified nine concrete defects. Corr
 A Railway volume backup was created and shown restorable at 21:24 Africa/Kampala on 25 September 2026 (1.13 GB). No database restore was executed and no new service, database or environment was provisioned. The documented Railway restore procedure was inspected. GitHub Actions remains deferred. The mobile execution limitation recorded above remains unresolved; source corrections are not signed app-store releases.
 
 The corrected full API suite passed locally: 305 tests, 2,052 assertions, zero failures/errors and the same two PHP 8.5 deprecation notices. Changed-file PHP formatting and documentation/publication checks passed. Web source and dependency versions are unchanged by this correction. Mobile source was reviewed; execution remains blocked as previously documented.
+
+## Deployment timezone correction
+
+PR #123 merged as `1df8af61f8d8a6a956a42055aeeb3007e7b7f265`. Its first API build correctly stopped at a failing policy-expiry test under `APP_TIMEZONE=Africa/Kampala`, before running migrations. Reproducing that environment locally exposed offset-bearing API timestamps being stored as offset-free wall-clock values without conversion to the configured application timezone. Both distribution rules and platform credit strategies now normalise the submitted instant before storage. No test or deployment gate was removed.
+
+New boundary regressions exercise future activation, inclusive start and exclusive expiry under UTC, Africa/Kampala and America/New_York, including different explicit input offsets. The full API suite passes with the production application timezone: **308 tests, 2,076 assertions**, no failures/errors, with the same two existing PHP 8.5 deprecations. Changed PHP formatting passes. Live deployment and PostgreSQL migration results remain to be recorded after the corrective release.

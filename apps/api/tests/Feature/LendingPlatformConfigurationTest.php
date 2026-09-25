@@ -12,9 +12,11 @@ use App\Services\CreditTermGovernanceService;
 use App\Services\FundingPoolService;
 use App\Services\PlatformCreditRoutingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class LendingPlatformConfigurationTest extends TestCase
@@ -67,6 +69,49 @@ class LendingPlatformConfigurationTest extends TestCase
         $this->assertFalse($policy->assess($product, $term, 'play_store')['available']);
         $this->travel(2)->hours();
         $this->assertFalse($policy->assess($product, $term, 'huawei_appgallery')['available']);
+    }
+
+    public static function applicationTimezones(): array
+    {
+        return [['UTC'], ['Africa/Kampala'], ['America/New_York']];
+    }
+
+    #[DataProvider('applicationTimezones')]
+    public function test_policy_and_strategy_intervals_preserve_the_submitted_instant(string $timezone): void
+    {
+        $originalTimezone = date_default_timezone_get();
+        config(['app.timezone' => $timezone]);
+        date_default_timezone_set($timezone);
+
+        try {
+            $this->travelTo(Carbon::parse('2026-09-25T12:00:00Z')->setTimezone($timezone));
+            [$lender, $product, $term] = $this->route('affiliated', 7);
+            $this->admin();
+            $interval = ['effective_from' => '2026-09-25T13:00:00Z', 'effective_to' => '2026-09-25T17:00:00+03:00'];
+            $this->postJson('/api/admin/lending-platform/strategy', [
+                ...$interval, 'mode' => 'affiliated_first', 'reason' => 'Test-only scheduled credit deployment',
+            ])->assertCreated();
+            $this->postJson('/api/admin/lending-platform/distribution', [
+                ...$interval, 'channel' => 'huawei_appgallery', 'country' => 'UG', 'product_category' => 'personal_loan',
+                'institution_id' => $lender->id, 'loan_product_id' => $product->id, 'availability' => 'available',
+                'min_duration_days' => 7, 'reason' => 'Test-only scheduled channel evidence', 'source_reference' => 'TEST-NOT-LIVE',
+            ])->assertCreated();
+            $policy = app(CreditDistributionService::class);
+            $routing = app(PlatformCreditRoutingService::class);
+            $this->assertFalse($policy->assess($product, $term, 'huawei_appgallery')['available']);
+            $this->assertSame('withhold', $routing->strategy()['mode']);
+
+            $this->travel(1)->hours();
+            $this->assertTrue($policy->assess($product, $term, 'huawei_appgallery')['available']);
+            $this->assertSame('affiliated_first', $routing->strategy()['mode']);
+
+            $this->travel(1)->hours();
+            $this->assertFalse($policy->assess($product, $term, 'huawei_appgallery')['available']);
+            $this->assertSame('withhold', $routing->strategy()['mode']);
+        } finally {
+            $this->travelBack();
+            date_default_timezone_set($originalTimezone);
+        }
     }
 
     public function test_unknown_channel_and_cross_lender_policy_scope_are_rejected(): void
