@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\EssentialsAdvance;
 use App\Models\EssentialsQuote;
+use App\Services\CreditDistributionService;
 use App\Services\EssentialsOrchestrationService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -18,7 +20,9 @@ class EssentialsController extends Controller
 
     public function summary(Request $request): JsonResponse
     {
-        return ApiResponse::success('OpFin Essentials loaded.', $this->essentials->summary($request->user()));
+        $data = $request->validate(['channel' => ['nullable', Rule::in(app(CreditDistributionService::class)->channels())]]);
+
+        return ApiResponse::success('OpFin Essentials loaded.', $this->essentials->summary($request->user(), $data['channel'] ?? 'web'));
     }
 
     public function catalogue(): JsonResponse

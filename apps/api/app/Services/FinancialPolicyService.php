@@ -17,7 +17,7 @@ class FinancialPolicyService
         ?Carbon $asOf = null,
     ): object {
         $country = strtoupper($country ?: (string) config('opfin.default_country', 'UG'));
-        $licenceClass = $licenceClass ?: (string) config('opfin.regulatory.licence_class');
+        $licenceClass = $licenceClass ?? (string) config('opfin.regulatory.licence_class');
         $asOf ??= now();
 
         $query = DB::table('financial_policies')
@@ -38,6 +38,13 @@ class FinancialPolicyService
             $query->where(function ($q) use ($productScope) {
                 $q->whereNull('product_scope')->orWhere('product_scope', $productScope);
             });
+        }
+
+        if ($productScope === null || $productScope === '') {
+            $query->whereNull('product_scope');
+        }
+        if ($licenceClass === '') {
+            $query->whereNull('licence_class');
         }
 
         $policy = $query

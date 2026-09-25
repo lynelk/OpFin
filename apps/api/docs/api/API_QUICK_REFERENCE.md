@@ -126,3 +126,7 @@ See [UMRA controls](../../../../docs/UMRA_DIGITAL_LENDING_CONTROLS.md) and curre
 ## Contract maintenance
 
 Keep purpose, required/optional fields, validation, ownership, status/error handling and retry/finality evidence in sync. Do not claim every framework/proxy error or HTML/CSV export has the ordinary JSON envelope. Keep secrets and real customer data out of examples. Route registration and publication checks are not complete semantic or production certification.
+
+## Lender and distribution administration
+
+Use `/api/admin/lending-platform` for lender profiles/products, Core Synergies affiliated deployment, scoped Google/Apple/Huawei policy and delegated operations access. [Endpoint list](current-endpoints.md#lending-platform-configuration-25-september-2026) and [lender contract](../../../../docs/architecture/LENDER_ORCHESTRATION.md) describe exact permissions and activation boundaries.

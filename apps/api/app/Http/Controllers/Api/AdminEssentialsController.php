@@ -8,11 +8,12 @@ use App\Models\EssentialsAdvance;
 use App\Models\EssentialsBiller;
 use App\Models\EssentialsRepayment;
 use App\Services\EssentialsOrchestrationService;
+use App\Services\LenderAuthorityEvidence;
+use App\Services\PlatformCreditRoutingService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -173,11 +174,15 @@ class AdminEssentialsController extends Controller
 
     public function storeLender(Request $request): JsonResponse
     {
+        abort_unless(app(PlatformCreditRoutingService::class)->canManage($request->user()), 403);
         $validated = $request->validate([
             'partner_code' => ['required', 'string', 'max:80'],
             'partner_name' => ['required', 'string', 'max:160'],
             'partner_type' => ['required', 'in:lender,bank,mfi,sacco,credit_provider,financial_institution'],
             'institution_id' => ['nullable', 'integer', 'exists:institutions,id'],
+            'country' => ['nullable', 'regex:/^[A-Z]{2}$/'],
+            'currency' => ['nullable', 'regex:/^[A-Z]{3}$/'],
+            'distribution_category' => ['nullable', 'regex:/^[a-z][a-z0-9_]{1,79}$/'],
             'regulatory_evidence' => ['required', 'array'],
             'status' => ['required', 'in:onboarding,active'],
             'product_code' => ['required', 'string', 'max:80'],
@@ -192,9 +197,10 @@ class AdminEssentialsController extends Controller
         if (strcasecmp($validated['partner_code'], 'OPFIN') === 0 || strcasecmp($validated['partner_name'], 'OpFin') === 0) {
             return ApiResponse::error('OpFin cannot be configured as the primary lender for Essentials.', 422);
         }
-        if ($validated['status'] === 'active'
-            && (empty($validated['regulatory_evidence']['licence_number']) || empty($validated['regulatory_evidence']['licence_authority']))) {
-            return ApiResponse::error('Active lenders require licence number and licensing authority evidence.', 422);
+        $evidence = $validated['regulatory_evidence'];
+        $authorityComplete = LenderAuthorityEvidence::complete($evidence);
+        if ($validated['status'] === 'active' && ! $authorityComplete) {
+            return ApiResponse::error('Record the applicable lender licence, other authority or exemption evidence before activation.', 422);
         }
         if ($validated['status'] === 'active'
             && $validated['decision_route'] === 'capital_mandate'
@@ -203,75 +209,76 @@ class AdminEssentialsController extends Controller
         }
 
         try {
-            $result = DB::transaction(function () use ($validated) {
-            $partner = DB::table('partners')->where('code', strtoupper($validated['partner_code']))->first();
-            $partnerLicenceComplete = ! empty($validated['regulatory_evidence']['licence_number'])
-                && ! empty($validated['regulatory_evidence']['licence_authority']);
-            $partnerValues = [
-                'institution_id' => $validated['institution_id'] ?? null,
-                'code' => strtoupper($validated['partner_code']),
-                'name' => $validated['partner_name'],
-                'partner_type' => $validated['partner_type'],
-                'country' => 'UG',
-                'status' => $partnerLicenceComplete ? 'active' : 'onboarding',
-                'adapter_key' => $validated['decision_route'],
-                'regulatory_evidence' => json_encode($validated['regulatory_evidence'], JSON_THROW_ON_ERROR),
-                'metadata' => json_encode(['essentials_enabled' => true], JSON_THROW_ON_ERROR),
-                'updated_at' => now(),
-            ];
-            if ($partner) {
-                DB::table('partners')->where('id', $partner->id)->update($partnerValues);
-                $partnerId = $partner->id;
-            } else {
-                $partnerId = DB::table('partners')->insertGetId([...$partnerValues, 'created_at' => now()]);
-            }
-
-            $integration = [
-                'decision_route' => $validated['decision_route'],
-                'funding_pool_id' => $validated['funding_pool_id'] ?? null,
-            ];
-            $product = DB::table('partner_products')
-                ->where('partner_id', $partnerId)
-                ->where('code', strtoupper($validated['product_code']))
-                ->first();
-            $productValues = [
-                'partner_id' => $partnerId,
-                'code' => strtoupper($validated['product_code']),
-                'name' => $validated['product_name'],
-                'product_type' => $validated['product_type'],
-                'status' => $validated['status'] === 'active' ? 'active' : 'draft',
-                'country' => 'UG',
-                'currency' => 'UGX',
-                'eligibility_rules' => json_encode($validated['eligibility_rules'], JSON_THROW_ON_ERROR),
-                'pricing' => json_encode($validated['pricing'], JSON_THROW_ON_ERROR),
-                'disclosures' => json_encode(['lender_of_record' => $validated['partner_name'], 'opfin_role' => 'orchestrator_and_servicer'], JSON_THROW_ON_ERROR),
-                'integration_config' => json_encode($integration, JSON_THROW_ON_ERROR),
-                'updated_at' => now(),
-            ];
-            if ($product) {
-                DB::table('partner_products')->where('id', $product->id)->update($productValues);
-                $productId = $product->id;
-            } else {
-                $productId = DB::table('partner_products')->insertGetId([...$productValues, 'created_at' => now()]);
-            }
-
-            if (! empty($validated['funding_pool_id'])) {
-                $pool = DB::table('capital_mandates')->where('id', $validated['funding_pool_id'])->lockForUpdate()->first();
-                if (! $pool
-                    || ! in_array(strtolower((string) $pool->status), ['active', 'approved'], true)
-                    || ! $pool->approved_at
-                    || (int) $pool->committed_capital_minor <= 0) {
-                    throw new InvalidArgumentException('The selected funding pool must be approved, active and funded.');
+            $result = DB::transaction(function () use ($validated, $authorityComplete) {
+                $partner = DB::table('partners')->where('code', strtoupper($validated['partner_code']))->first();
+                if ($partner && $partner->institution_id && (int) ($validated['institution_id'] ?? $partner->institution_id) !== (int) $partner->institution_id) {
+                    throw new InvalidArgumentException('A lender partner cannot be reassigned to another institution.');
                 }
-                if ($pool->partner_id !== null && (int) $pool->partner_id !== (int) $partnerId) {
-                    throw new InvalidArgumentException('The selected funding pool is already assigned to another lender.');
-                }
-
-                DB::table('capital_mandates')->where('id', $pool->id)->update([
-                    'partner_id' => $partnerId,
+                $partnerValues = [
+                    'institution_id' => $validated['institution_id'] ?? $partner?->institution_id,
+                    'code' => strtoupper($validated['partner_code']),
+                    'name' => $validated['partner_name'],
+                    'partner_type' => $validated['partner_type'],
+                    'country' => $validated['country'] ?? config('opfin.default_country', 'UG'),
+                    'status' => $authorityComplete ? 'active' : 'onboarding',
+                    'adapter_key' => $validated['decision_route'],
+                    'regulatory_evidence' => json_encode($validated['regulatory_evidence'], JSON_THROW_ON_ERROR),
+                    'metadata' => json_encode(['essentials_enabled' => true], JSON_THROW_ON_ERROR),
                     'updated_at' => now(),
-                ]);
-            }
+                ];
+                if ($partner) {
+                    DB::table('partners')->where('id', $partner->id)->update($partnerValues);
+                    $partnerId = $partner->id;
+                } else {
+                    $partnerId = DB::table('partners')->insertGetId([...$partnerValues, 'created_at' => now()]);
+                }
+
+                $integration = [
+                    'decision_route' => $validated['decision_route'],
+                    'funding_pool_id' => $validated['funding_pool_id'] ?? null,
+                ];
+                $product = DB::table('partner_products')
+                    ->where('partner_id', $partnerId)
+                    ->where('code', strtoupper($validated['product_code']))
+                    ->first();
+                $productValues = [
+                    'partner_id' => $partnerId,
+                    'code' => strtoupper($validated['product_code']),
+                    'name' => $validated['product_name'],
+                    'product_type' => $validated['product_type'],
+                    'status' => $validated['status'] === 'active' ? 'active' : 'draft',
+                    'country' => $validated['country'] ?? config('opfin.default_country', 'UG'),
+                    'currency' => $validated['currency'] ?? config('services.mobile_money.currency', 'UGX'),
+                    'eligibility_rules' => json_encode($validated['eligibility_rules'], JSON_THROW_ON_ERROR),
+                    'pricing' => json_encode($validated['pricing'], JSON_THROW_ON_ERROR),
+                    'disclosures' => json_encode(['lender_of_record' => $validated['partner_name'], 'opfin_role' => 'orchestrator_and_servicer', 'distribution_category' => $validated['distribution_category'] ?? 'personal_loan'], JSON_THROW_ON_ERROR),
+                    'integration_config' => json_encode($integration, JSON_THROW_ON_ERROR),
+                    'updated_at' => now(),
+                ];
+                if ($product) {
+                    DB::table('partner_products')->where('id', $product->id)->update($productValues);
+                    $productId = $product->id;
+                } else {
+                    $productId = DB::table('partner_products')->insertGetId([...$productValues, 'created_at' => now()]);
+                }
+
+                if (! empty($validated['funding_pool_id'])) {
+                    $pool = DB::table('capital_mandates')->where('id', $validated['funding_pool_id'])->lockForUpdate()->first();
+                    if (! $pool
+                        || ! in_array(strtolower((string) $pool->status), ['active', 'approved'], true)
+                        || ! $pool->approved_at
+                        || (int) $pool->committed_capital_minor <= 0) {
+                        throw new InvalidArgumentException('The selected funding pool must be approved, active and funded.');
+                    }
+                    if ($pool->partner_id !== null && (int) $pool->partner_id !== (int) $partnerId) {
+                        throw new InvalidArgumentException('The selected funding pool is already assigned to another lender.');
+                    }
+
+                    DB::table('capital_mandates')->where('id', $pool->id)->update([
+                        'partner_id' => $partnerId,
+                        'updated_at' => now(),
+                    ]);
+                }
 
                 return ['partner_id' => $partnerId, 'partner_product_id' => $productId];
             });

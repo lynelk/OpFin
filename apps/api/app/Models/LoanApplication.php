@@ -19,6 +19,7 @@ class LoanApplication extends Model
         'status',
         'reason',
         'distribution_channel',
+        'routing_snapshot',
         'disbursed_at',
         'approved_at',
         'rejected_at',
@@ -28,6 +29,7 @@ class LoanApplication extends Model
     protected function casts(): array
     {
         return [
+            'routing_snapshot' => 'array',
             'user_id' => 'integer',
             'loan_product_id' => 'integer',
             'loan_product_term_id' => 'integer',

@@ -60,3 +60,7 @@ Dated audit, demo, migration and release files remain historical. They are not s
 Each material system/API change must update the relevant current contracts, manual task and UAT record in the same change. The current-state and comparison records must identify the source and acceptance evidence, not simply the latest merge date.
 
 GitHub Actions remains disabled by the owner's instruction. Retain equivalent candidate-specific verification and do not re-enable it or provision additional infrastructure merely to produce checks. The latest observed API/Web failures must not be reported as a green production release.
+
+## Lending platform implementation — 25 September 2026
+
+Current implementation: [lender orchestration contract](architecture/LENDER_ORCHESTRATION.md), [executed development roadmap](development/2026-09-25-lending-platform-roadmap.md), [cross-border backlog](development/CROSS_BORDER_ROADMAP.md), and [validation/release evidence](operations/LENDING_DELIVERY_2026-09-25.md). These record platform-admin affiliated lending and configurable distribution; they do not amend the weekly management-review schedule.

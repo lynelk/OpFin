@@ -9,7 +9,8 @@ const roleNames: Record<UserRole, string> = {
   operations: "Operations User",
   support: "Support User",
   employer_admin: "Employer Admin",
-  programme_partner: "Programme Partner"
+  programme_partner: "Programme Partner",
+  partner_api: "Partner API"
 };
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8;
