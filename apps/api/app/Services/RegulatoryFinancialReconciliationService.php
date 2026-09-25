@@ -25,7 +25,10 @@ class RegulatoryFinancialReconciliationService
             ->where('statement_reconciliation_status', '!=', MobileMoneyTransaction::STATEMENT_MATCHED)
             ->count();
 
+        // Count grouped exceptions, not SELECT * across joined detail rows.
+        // PostgreSQL requires each selected column to be grouped or aggregated.
         $ledgerImbalances = DB::table('ledger_transactions as t')
+            ->select('t.id')
             ->leftJoin('ledger_entries as e', 'e.ledger_transaction_id', '=', 't.id')
             ->whereBetween('t.posted_at', [$start, $end])
             ->groupBy('t.id')
@@ -33,6 +36,7 @@ class RegulatoryFinancialReconciliationService
             ->count();
 
         $scheduleMismatches = DB::table('loans as l')
+            ->select('l.id', 'o.total_repayment_minor')
             ->join('credit_offers as o', 'o.id', '=', 'l.credit_offer_id')
             ->leftJoin('credit_repayment_schedule_items as s', 's.loan_id', '=', 'l.id')
             ->whereBetween('l.created_at', [$start, $end])
