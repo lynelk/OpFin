@@ -1,10 +1,10 @@
 <?php
 
 /**
- * One-shot verification in an ephemeral build, never a runtime deployment.
- * No inherited DB/provider credentials are passed to subprocesses. The PG
- * cluster has a private Unix socket, no TCP listener and synthetic data only.
- * Successful completion deliberately exits 23 to block runtime rollout.
+ * One-shot SQLite and PostgreSQL 18 verification in an ephemeral build.
+ * No inherited DB/provider credentials reach subprocesses. The synthetic PG
+ * fixture uses a private Unix socket and no TCP listener. Success exits 23:
+ * this script can never authorise or perform a runtime deployment.
  */
 $sha = $argv[1] ?? '';
 if (! preg_match('/^[a-f0-9]{40}$/D', $sha)) {
@@ -39,7 +39,7 @@ $must = static function (array $command, string $directory, array $override = []
     if ($status !== 0) { throw new RuntimeException('Isolated verification stage failed with exit '.$status); }
 };
 $started = false;
-$bin = null;
+$bin = '/usr/lib/postgresql/18/bin';
 $exitCode = 1;
 try {
     $must(['curl', '-fLsS', '--proto', '=https', '--proto-redir', '=https', '--max-time', '120',
@@ -56,17 +56,32 @@ try {
     if (! in_array('pgsql', PDO::getAvailableDrivers(), true)) {
         throw new RuntimeException('PDO PostgreSQL is not available in this build environment.');
     }
-    $binaries = glob('/usr/lib/postgresql/*/bin/initdb') ?: [];
-    if ($binaries === []) {
-        // Packages live only in this disposable build container. No Railway
-        // database/service/volume is provisioned, and no image is deployed.
+    if (! is_file($bin.'/initdb')) {
+        // Use the PostgreSQL project's signed Debian repository, matching the
+        // production major version rather than silently using Debian's default.
+        // Package changes affect only this disposable build container.
+        $os = file_get_contents('/etc/os-release');
+        if (! preg_match('/^ID="?debian"?$/m', $os)
+            || ! preg_match('/^VERSION_CODENAME="?([a-z]+)"?$/m', $os, $match)
+            || ! in_array($match[1], ['trixie', 'bookworm', 'bullseye'], true)) {
+            throw new RuntimeException('An approved Debian fixture image or preinstalled PostgreSQL 18 is required.');
+        }
+        $keyDirectory = '/usr/share/postgresql-common/pgdg';
+        if (! is_dir($keyDirectory) && ! mkdir($keyDirectory, 0755, true)) {
+            throw new RuntimeException('Cannot prepare the signed package repository.');
+        }
+        $key = $keyDirectory.'/apt.postgresql.org.asc';
+        $must(['curl', '-fLsS', '--proto', '=https', '--proto-redir', '=https', '--max-time', '60',
+            'https://www.postgresql.org/media/keys/ACCC4CF8.asc', '-o', $key], $root);
+        $repository = 'Types: deb'."\n".'URIs: https://apt.postgresql.org/pub/repos/apt'."\n"
+            .'Suites: '.$match[1].'-pgdg'."\n".'Components: main'."\n".'Signed-By: '.$key."\n";
+        if (file_put_contents('/etc/apt/sources.list.d/opfin-pgdg.sources', $repository) === false) {
+            throw new RuntimeException('Cannot write the ephemeral signed package source.');
+        }
         $must(['timeout', '120', 'apt-get', 'update', '-qq'], $root);
-        $must(['timeout', '180', 'apt-get', 'install', '-y', '-qq', '--no-install-recommends', 'postgresql'], $root);
-        $binaries = glob('/usr/lib/postgresql/*/bin/initdb') ?: [];
+        $must(['timeout', '180', 'apt-get', 'install', '-y', '-qq', '--no-install-recommends', 'postgresql-18'], $root);
     }
-    if ($binaries === []) { throw new RuntimeException('No PostgreSQL fixture binary is available.'); }
-    natsort($binaries);
-    $bin = dirname(end($binaries));
+    if (! is_file($bin.'/initdb')) { throw new RuntimeException('PostgreSQL 18 fixture binaries are unavailable.'); }
     $must([$bin.'/postgres', '--version'], $root);
     $must(['chown', '-R', 'postgres:postgres', $pgRoot], $root);
     $must(['runuser', '-u', 'postgres', '--', $bin.'/initdb', '-D', $pgRoot.'/data',
@@ -90,20 +105,18 @@ try {
         $php->appendChild($node);
     }
     $configuration->save($api.'/.phpunit-postgres.xml');
-    echo 'OPFIN_POSTGRES_VALIDATION_START '.$sha.PHP_EOL;
+    echo 'OPFIN_POSTGRES18_VALIDATION_START '.$sha.PHP_EOL;
     $must(['php', 'artisan', 'config:clear'], $api, $pg);
     $must(['php', 'artisan', 'migrate:fresh', '--force'], $api, $pg);
     $status = $run(['php', 'vendor/bin/phpunit', '-c', '.phpunit-postgres.xml'], $api, $pg);
-    echo 'OPFIN_POSTGRES_VALIDATION_RESULT '.$sha.' exit='.$status.PHP_EOL;
-    if ($status !== 0) { throw new RuntimeException('The PostgreSQL suite did not pass.'); }
+    echo 'OPFIN_POSTGRES18_VALIDATION_RESULT '.$sha.' exit='.$status.PHP_EOL;
+    if ($status !== 0) { throw new RuntimeException('The PostgreSQL 18 suite did not pass.'); }
     echo 'OPFIN_DUAL_DB_PASSED_NO_RUNTIME_DEPLOYMENT'.PHP_EOL;
     $exitCode = 23;
 } catch (Throwable $error) {
-    // The error text is generated locally; provider/customer payloads and
-    // inherited credentials are never part of this verification environment.
     fwrite(STDERR, 'OPFIN_VALIDATION_STOP: '.$error->getMessage().PHP_EOL);
 } finally {
-    if ($started && $bin !== null) {
+    if ($started) {
         $run(['runuser', '-u', 'postgres', '--', $bin.'/pg_ctl', '-D', $pgRoot.'/data', '-m', 'immediate', '-w', 'stop'], '/tmp');
     }
 }
