@@ -190,9 +190,9 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
 
     public function test_mobile_store_policy_defines_safe_personal_loan_boundaries(): void
     {
-        $this->assertSame(61, AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS);
-        $this->assertSame(90, AppStoreCreditPolicy::PREFERRED_FULL_REPAYMENT_DAYS);
-        $this->assertSame(36.0, AppStoreCreditPolicy::MAX_APR_PERCENT);
+        $this->assertSame(61, config('credit_distribution.defaults.play_store.personal_loan.min_duration_days'));
+        $this->assertSame('review', config('credit_distribution.defaults.huawei_appgallery.*.availability'));
+        $this->assertSame(36, config('credit_distribution.defaults.app_store.personal_loan.max_apr_percent'));
         $this->assertTrue(app(AppStoreCreditPolicy::class)->isStoreChannel('android'));
         $this->assertTrue(app(AppStoreCreditPolicy::class)->isStoreChannel('play_store'));
         $this->assertTrue(app(AppStoreCreditPolicy::class)->isStoreChannel('app_store'));

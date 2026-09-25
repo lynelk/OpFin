@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\ConsentRecord;
 use App\Models\CreditOffer;
 use App\Models\LoanApplication;
-use App\Services\AppStoreCreditPolicy;
 use App\Services\ProductionCreditOfferService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +18,6 @@ class ProductionCreditOfferController extends Controller
 {
     public function __construct(
         private readonly ProductionCreditOfferService $offerService,
-        private readonly AppStoreCreditPolicy $appStorePolicy,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -71,16 +69,8 @@ class ProductionCreditOfferController extends Controller
 
         try {
             $validated = $validator->validated();
-            $appStoreDisclosure = $this->appStorePolicy->validateOffer($application, $validated);
-            $offer = $this->offerService->createOffer($application, $request->user(), $validated);
 
-            if ($appStoreDisclosure !== []) {
-                $offer->forceFill([
-                    'pricing_snapshot' => array_merge($offer->pricing_snapshot ?? [], $appStoreDisclosure),
-                    'disclosure_snapshot' => array_merge($offer->disclosure_snapshot ?? [], $appStoreDisclosure),
-                ])->save();
-                $offer = $offer->fresh();
-            }
+            $offer = $this->offerService->createOffer($application, $request->user(), $validated);
         } catch (InvalidArgumentException $exception) {
             return ApiResponse::error($exception->getMessage(), 409);
         }
@@ -95,16 +85,6 @@ class ProductionCreditOfferController extends Controller
     {
         if ($offer->user_id !== $request->user()->id) {
             return ApiResponse::error('Forbidden.', 403);
-        }
-
-        $channel = (string) ($offer->application?->distribution_channel ?? 'web');
-        if (in_array($channel, AppStoreCreditPolicy::STORE_CHANNELS, true)
-            && $offer->duration_days < AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS) {
-            return ApiResponse::error(
-                'This offer cannot be accepted through a mobile app store because full repayment would be due in 60 days or less.',
-                409,
-                ['code' => ['STORE_TERM_TOO_SHORT']],
-            );
         }
 
         $validator = Validator::make($request->all(), [
@@ -123,6 +103,7 @@ class ProductionCreditOfferController extends Controller
             return ApiResponse::error('The offer disclosure has changed or the supplied disclosure hash is invalid. Reload the offer before accepting it.', 409, ['disclosure_hash' => ['DISCLOSURE_HASH_MISMATCH']]);
         }
 
+        $channel = $offer->application->distribution_channel ?? 'web';
         ConsentRecord::where('user_id', $request->user()->id)
             ->where('purpose', ConsentRecord::PURPOSE_CREDIT_INFORMATION_REPORTING)
             ->where('status', ConsentRecord::STATUS_GRANTED)

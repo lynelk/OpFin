@@ -112,3 +112,9 @@ Never place provider secrets in Flutter.
 Start with `../../docs/CURRENT_STATE.md`, `../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`, `../../docs/manuals/OPFIN_USER_MANUAL.md`, `../../docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md`, `../api/docs/api/API_QUICK_REFERENCE.md` and `../../SECURITY.md`.
 
 Run `make publication-check` before externally publishing product/developer documentation.
+
+## Credit distribution channels
+
+Credit options, applications and Essentials send the actual channel through `lib/services/distribution_channel.dart`. iOS infers `app_store`, Android infers `play_store`, and web infers `web`. Build Huawei Android with `--dart-define=OPFIN_DISTRIBUTION_CHANNEL=huawei_appgallery`; configure actual store policy before publication. Invalid channel/platform combinations are rejected. The channel flag does not replace Huawei device/service integration testing or store approval.
+
+Repayment terms come from the server's configurable lender/channel rules. The client no longer hides terms using a universal 61-day filter or prefers a universal 90-day product. Options/review/offers identify the actual lender; OpFin is the orchestration platform. Home displays an OpFin Score only when the server supplies one. Flutter analysis/tests, Android/iOS release compilation and device UAT remain required. See [the lender contract](../../docs/architecture/LENDER_ORCHESTRATION.md).

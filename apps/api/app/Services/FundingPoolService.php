@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CreditOffer;
+use App\Models\Institution;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -36,6 +37,18 @@ class FundingPoolService
         $this->assertUsable($pool, $principalMinor);
     }
 
+    public function validateLender(?int $fundingPoolId, ?Institution $institution): void
+    {
+        if (! $fundingPoolId || ! $institution) {
+            throw new InvalidArgumentException('A funding pool and responsible lender are required.');
+        }
+        $pool = DB::table('capital_mandates')->where('id', $fundingPoolId)->first();
+        $owner = $pool?->partner_id ? DB::table('partners')->where('id', $pool->partner_id)->value('institution_id') : null;
+        if ($owner === null || (int) $owner !== (int) $institution->id) {
+            throw new InvalidArgumentException('The funding pool must belong to the responsible lender.');
+        }
+    }
+
     public function reserve(CreditOffer $offer): CreditOffer
     {
         if (! $offer->funding_pool_id) {
@@ -53,6 +66,7 @@ class FundingPoolService
 
             $pool = DB::table('capital_mandates')->where('id', $lockedOffer->funding_pool_id)->lockForUpdate()->first();
             $this->assertUsable($pool, (int) $lockedOffer->principal_amount_minor);
+            $this->validateLender($lockedOffer->funding_pool_id, $lockedOffer->application->loanProduct->institution);
 
             DB::table('capital_mandates')->where('id', $pool->id)->update([
                 'reserved_capital_minor' => (int) $pool->reserved_capital_minor + (int) $lockedOffer->principal_amount_minor,
@@ -226,10 +240,8 @@ class FundingPoolService
             throw new InvalidArgumentException('The selected funding pool partner is not configured as a lending institution.');
         }
         $evidence = json_decode((string) ($partner->regulatory_evidence ?? '{}'), true);
-        if (! is_array($evidence)
-            || trim((string) ($evidence['licence_number'] ?? '')) === ''
-            || trim((string) ($evidence['licence_authority'] ?? '')) === '') {
-            throw new InvalidArgumentException('The selected lender is missing required regulatory licence evidence.');
+        if (! LenderAuthorityEvidence::complete(is_array($evidence) ? $evidence : null)) {
+            throw new InvalidArgumentException('The selected lender is missing the applicable authority or exemption evidence.');
         }
         if (in_array(strtolower((string) $pool->status), self::BLOCKED_STATUSES, true)) {
             throw new InvalidArgumentException('The selected funding pool is not available for new credit.');

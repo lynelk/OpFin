@@ -1,7 +1,7 @@
 # OpFin documentation hub
 
 Status: Current documentation and evidence index  
-Reviewed: 24 September 2026  
+Reviewed: 25 September 2026  
 Language: English (United Kingdom)
 
 Start with [current state](CURRENT_STATE.md), the [concept and plan comparison](product/CONCEPT_AND_PLAN_COMPARISON.md), and the [dated delivery evidence](operations/DELIVERY_EVIDENCE_2026-09-24.md). They separate what has been implemented, what was actually tested, unresolved internal defects and external activation.
@@ -20,12 +20,13 @@ Start with [current state](CURRENT_STATE.md), the [concept and plan comparison](
 | Essentials partners | [Essentials specification](product/OPFIN_ESSENTIALS.md) | [Current control findings](operations/DELIVERY_EVIDENCE_2026-09-24.md), [field-level API guide](../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) |
 | Programme/MEL partners | [Inclusive-finance framework](product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md) | [Partner reporting standard](product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md) |
 | Publication and release owners | [Publication standard](PUBLICATION_STANDARD.md) | [Register](PUBLICATION_REGISTER.md), [deployment guidance](../infrastructure/railway/README.md), [UMRA controls](UMRA_DIGITAL_LENDING_CONTROLS.md) |
+| Quality, security and governance | [Integrated management-system policy proposal](governance/INTEGRATED_MANAGEMENT_SYSTEM.md) | [ISO readiness action register](governance/ISO_READINESS_ACTION_REGISTER.md); adoption and effectiveness are not yet evidenced |
 
 ## What changed in the current review
 
 The achievement comparison retains the original concept's four delivery phases and distinguishes later Financial Space, programme, club-treasury and Essentials decisions. It does not assign a misleading completion percentage or infer business success from a reporting endpoint.
 
-The manuals now distinguish treasury records from full investment-club accounting, identify the current Web import/reconciliation boundary, and qualify Essentials instructions while accounting, authorisation, deletion, concurrency and reservation findings remain unresolved. The new API contract records actual input/response differences, including Essentials repayment's body idempotency key and non-final 201 response.
+The manuals distinguish treasury records from full investment-club accounting, identify the current Web import/reconciliation boundary, and qualify Essentials instructions while accounting, authorisation, deletion, concurrency and reservation findings remain unresolved. The new API contract records actual input/response differences, including Essentials repayment's body idempotency key and non-final 201 response.
 
 Optional Location Context, programme privacy and independent Stolets boundaries remain part of the whole-product story. No new brand, provider activation or original-concept rewrite is implied by this update.
 
@@ -59,4 +60,8 @@ Dated audit, demo, migration and release files remain historical. They are not s
 
 Each material system/API change must update the relevant current contracts, manual task and UAT record in the same change. The current-state and comparison records must identify the source and acceptance evidence, not simply the latest merge date.
 
-GitHub Actions remains disabled by the owner's instruction. Retain equivalent candidate-specific verification and do not re-enable it or provision additional infrastructure merely to produce checks. The latest observed API/Web failures must not be reported as a green production release.
+GitHub Actions remains disabled by the owner's instruction. Retain equivalent candidate-specific verification and do not re-enable it or provision additional infrastructure merely to produce checks. Earlier failed runs remain historical; only actual candidate-specific evidence establishes a passing release.
+
+## Lending platform implementation: 25 September 2026
+
+Current implementation: [lender orchestration contract](architecture/LENDER_ORCHESTRATION.md), [executed development roadmap](development/2026-09-25-lending-platform-roadmap.md), [cross-border backlog](development/CROSS_BORDER_ROADMAP.md), and [validation/release evidence](operations/LENDING_DELIVERY_2026-09-25.md). These record platform-admin affiliated lending and configurable distribution; they do not amend the weekly management-review schedule.

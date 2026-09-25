@@ -88,3 +88,9 @@ Record candidate, changed paths and actual checks. Retain independent review whe
 Use existing approved infrastructure. Do not create a new service, database, environment, volume, bucket or replica, use Railway Agent, enable Actions or remove a test/audit merely to force a release. Validation-only runs must have an explicit no-deployment barrier and their temporary configuration must be restored.
 
 The [concept comparison](../product/CONCEPT_AND_PLAN_COMPARISON.md) separates original requirements, later decisions, implementation and acceptance. A merge, test count or documentation publication is not a blanket financial-launch certificate.
+
+## Affiliated lending and channel decisions
+
+Use **Admin → Lenders & credit deployment** to configure Core Synergies as an affiliated institution and record its actual authority. Link its internal funding partner to a maker-checker-approved capital mandate. Choose withhold, external-first fallback or explicit affiliated priority; record the reason, per-loan cap and expiry. Only platform admin can set strategy or delegate credit management. Existing repayments continue while origination is withheld.
+
+Record product-specific store restrictions as distribution revisions with source evidence and a partner-facing reason. Keep the product definition intact. A lender's licence does not by itself establish store approval. Follow the [full operating contract](../architecture/LENDER_ORCHESTRATION.md); foreign-country metadata does not activate local rails.

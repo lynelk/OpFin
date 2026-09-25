@@ -19,6 +19,7 @@ use App\Services\RegulatoryReportingService;
 use App\Services\TransactionReceiptService;
 use App\Services\UmraNplCapService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -52,7 +53,7 @@ class UmraDigitalLendingControlsTest extends TestCase
         $this->assertNotNull($case->regulatory_due_at);
         $this->assertSame(
             30,
-            (int) now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($case->regulatory_due_at)->startOfDay()),
+            (int) now()->startOfDay()->diffInDays(Carbon::parse($case->regulatory_due_at)->startOfDay()),
         );
     }
 
@@ -82,6 +83,8 @@ class UmraDigitalLendingControlsTest extends TestCase
 
     public function test_npl_default_interest_cap_is_tracked_and_enforced(): void
     {
+        config(['opfin.regulatory.licence_class' => 'TEST-LEGACY-CLASS']);
+        DB::table('financial_policies')->where('policy_type', 'regulatory_pricing')->update(['licence_class' => 'TEST-LEGACY-CLASS']);
         [, , , $offer, $loan] = $this->facility(withLoan: true);
 
         CreditRepaymentScheduleItem::create([
@@ -118,6 +121,7 @@ class UmraDigitalLendingControlsTest extends TestCase
     public function test_interest_rate_change_requires_prior_umra_approval_and_maker_checker(): void
     {
         [, $operations, $application] = $this->facility();
+        $application->institution->update(['regulator_code' => 'UMRA']);
         $term = $application->loanProductTerm;
         $otherOfficer = User::factory()->create([
             'role' => User::ROLE_PLATFORM_ADMIN,
@@ -131,6 +135,7 @@ class UmraDigitalLendingControlsTest extends TestCase
     public function test_governed_interest_rate_change_can_be_applied_with_umra_evidence(): void
     {
         [, $operations, $application] = $this->facility();
+        $application->institution->update(['regulator_code' => 'UMRA']);
         $term = $application->loanProductTerm;
         $checker = User::factory()->create([
             'role' => User::ROLE_PLATFORM_ADMIN,

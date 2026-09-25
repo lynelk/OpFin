@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -205,6 +206,8 @@ class LongRangeGovernanceService
     {
         $record = DB::table('capital_mandates')->find($id);
         $this->assertRecord($record, 'Capital mandate');
+        $institutionId = DB::table('partners')->where('id', $record->partner_id)->value('institution_id');
+        app(PlatformCreditRoutingService::class)->assertManager($actor, $institutionId ? Institution::find($institutionId) : null);
         if ((int) $record->owner_user_id === (int) $actor->id) {
             throw ValidationException::withMessages(['id' => ['Mandate owner cannot approve their own mandate.']]);
         }
@@ -218,9 +221,8 @@ class LongRangeGovernanceService
                 || strtolower((string) $partner->status) !== 'active'
                 || in_array(strtoupper((string) $partner->code), ['OPFIN'], true)
                 || ! in_array(strtolower((string) $partner->partner_type), ['lender', 'bank', 'mfi', 'sacco', 'credit_provider', 'financial_institution'], true)
-                || trim((string) ($evidence['licence_number'] ?? '')) === ''
-                || trim((string) ($evidence['licence_authority'] ?? '')) === '') {
-                throw ValidationException::withMessages(['partner_id' => ['Capital mandates used for credit require an active licensed third-party lender.']]);
+                || ! LenderAuthorityEvidence::complete(is_array($evidence) ? $evidence : null)) {
+                throw ValidationException::withMessages(['partner_id' => ['Capital mandates used for credit require an active lender with applicable authority evidence.']]);
             }
         }
         DB::table('capital_mandates')->where('id', $id)->update([

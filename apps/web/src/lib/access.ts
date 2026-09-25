@@ -16,7 +16,8 @@ const roleHomes: Record<UserRole, string> = {
   operations: "/admin/dashboard",
   support: "/admin/support",
   employer_admin: "/employer",
-  programme_partner: "/partner/impact"
+  programme_partner: "/partner/impact",
+  partner_api: "/login"
 };
 
 export const protectedPortalPrefixes = [

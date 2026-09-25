@@ -13,8 +13,7 @@ import { Screen, StateNotice } from "@/components/Screen";
 import { financialSpacesApi } from "@/lib/api/client";
 import {
   financialSpaceStatementsApi,
-  type StatementImport,
-  type TreasuryAccount
+  type StatementImport
 } from "@/lib/api/financial-space-statements";
 import { getAccessToken } from "@/lib/auth/session";
 
