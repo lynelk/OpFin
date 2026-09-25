@@ -50,6 +50,7 @@ class FoundationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.user.id', $user->id)
+            ->assertJsonPath('data.user.role', 'customer')
             ->assertJsonPath('data.permissions.0', 'profile.view');
     }
 
