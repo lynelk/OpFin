@@ -1,9 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\ClubAccountingController;
+use App\Http\Middleware\ProtectClubAccountingErrors;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['api', 'auth:sanctum', 'throttle:api'])->prefix('api')->group(function (): void {
+Route::middleware(['api', 'auth:sanctum', 'throttle:api', ProtectClubAccountingErrors::class])->prefix('api')->group(function (): void {
     Route::get('accounting/club-schema', [ClubAccountingController::class, 'schema']);
     Route::get('accounting/my-club-books', [ClubAccountingController::class, 'myBooks']);
     Route::prefix('financial-spaces/{space}/accounting')->where(['space' => '[0-9]+'])->group(function (): void {
@@ -24,8 +25,7 @@ Route::middleware(['api', 'auth:sanctum', 'throttle:api'])->prefix('api')->group
             Route::get('statements', [ClubAccountingController::class, 'statements']);
             Route::post('statements', [ClubAccountingController::class, 'issueStatement']);
             Route::get('statements/{statement}', [ClubAccountingController::class, 'statement'])->whereNumber('statement');
-            Route::get('statements/{statement}/{format}', [ClubAccountingController::class, 'export'])
-                ->where(['statement' => '[0-9]+', 'format' => 'html|csv']);
+            Route::get('statements/{statement}/{format}', [ClubAccountingController::class, 'export'])->where(['statement' => '[0-9]+', 'format' => 'html|csv']);
         });
     });
 });
