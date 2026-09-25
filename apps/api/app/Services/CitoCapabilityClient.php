@@ -6,6 +6,7 @@ use App\Models\ConsentRecord;
 use App\Models\KycCase;
 use App\Models\User;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -32,23 +33,51 @@ class CitoCapabilityClient
         );
     }
 
-    public function identityCheck(User $user, KycCase $case, string $capability): array
+    public function identityCheck(User $user, KycCase $case, string $capability, bool $forceRefresh = false): array
     {
+        if ((int) $case->user_id !== (int) $user->id) {
+            throw new InvalidArgumentException('Identity verification must target the case owner.');
+        }
         $capability = strtoupper(trim($capability));
         $path = match ($capability) {
             'NIN' => '/api/v2/identity/nin/verifications',
             'PHONE_OWNERSHIP' => '/api/v2/identity/verifications',
             default => throw new InvalidArgumentException("Unsupported Cito identity capability: {$capability}"),
         };
+        if ($capability !== 'NIN') {
+            return $this->executeCapability(
+                path: $path, user: $user, nationalId: (string) $case->national_id,
+                capability: $capability, purpose: 'identity_verification',
+                consentReference: 'kyc-case:'.$case->id,
+            );
+        }
 
-        return $this->executeCapability(
-            path: $path,
-            user: $user,
-            nationalId: (string) $case->national_id,
-            capability: $capability,
-            purpose: 'identity_verification',
-            consentReference: 'kyc-case:'.$case->id,
-        );
+        $evidence = app(VerifiedIdentityEvidenceService::class);
+        if (! $forceRefresh && ($cached = $evidence->reusableNin($user, $case)) !== null) {
+            return $cached;
+        }
+
+        // A subject-level lock avoids concurrent paid NIN checks. It does not
+        // lock the customer's financial rows or suspend unrelated OpFin tasks.
+        $lock = Cache::lock('opfin:identity:nin:'.$user->id, max(60, (int) config('services.cito.timeout_seconds', 15) + 30));
+        if (! $lock->get()) {
+            throw new RuntimeException('NIN verification is already in progress. Check its status before retrying.');
+        }
+        try {
+            if (! $forceRefresh && ($cached = $evidence->reusableNin($user, $case)) !== null) {
+                return $cached;
+            }
+            $result = $this->executeCapability(
+                path: $path, user: $user, nationalId: (string) $case->national_id,
+                capability: $capability, purpose: 'identity_verification',
+                consentReference: 'kyc-case:'.$case->id,
+            );
+            $evidence->rememberNin($user, $case, $result);
+
+            return $result;
+        } finally {
+            $lock->release();
+        }
     }
 
     private function executeCapability(
@@ -62,13 +91,11 @@ class CitoCapabilityClient
         if (! $this->configured()) {
             throw new InvalidArgumentException('Cito capability integration is not configured.');
         }
-
         $fullName = trim(implode(' ', array_filter([
             $user->first_name,
             $user->other_name,
             $user->last_name,
         ]))) ?: ($user->name ?: null);
-
         $payload = [
             'merchantNumber' => $this->merchantNumber(),
             'capability' => strtoupper(trim($capability)),
@@ -97,13 +124,11 @@ class CitoCapabilityClient
                 'customerReference' => 'user:'.$user->id,
             ],
         ];
-
         $response = $this->sendSigned($path, $payload);
         if (! $response->successful()) {
             $code = (string) ($response->json('code') ?? 'CITO_CAPABILITY_ERROR');
             throw new RuntimeException("Cito capability request failed with {$code} (HTTP {$response->status()}).");
         }
-
         $result = $response->json();
         if (! is_array($result)) {
             throw new RuntimeException('Cito capability response was not valid JSON.');
@@ -141,7 +166,6 @@ class CitoCapabilityClient
         if ($privateKey === false) {
             throw new RuntimeException('Cito private key is invalid or unreadable.');
         }
-
         if (! openssl_sign($canonical, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
             throw new RuntimeException('Unable to sign Cito capability request.');
         }
