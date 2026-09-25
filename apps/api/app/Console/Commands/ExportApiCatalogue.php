@@ -49,7 +49,9 @@ class ExportApiCatalogue extends Command
                 foreach ([
                     'catalogue-snapshot.json' => $catalogue->snapshot(),
                     'coverage.json' => $coverage,
-                    'reviewed-openapi.json' => $catalogue->openApi('platform_admin'),
+                    // Offline repository-wide inventory is not a particular user's
+                    // HTTP view. Only reviewed schemas are included in either mode.
+                    'reviewed-openapi.json' => $catalogue->openApi(null, true),
                     'guides.json' => $guideData,
                     'changes.json' => $changes,
                 ] as $name => $value) {
@@ -70,7 +72,6 @@ class ExportApiCatalogue extends Command
 
             return self::SUCCESS;
         } catch (Throwable $exception) {
-            // Developer-owned local paths/errors only. Do not dump environment or request contents.
             $this->error('Catalogue export failed: '.$exception->getMessage());
 
             return self::FAILURE;
