@@ -64,6 +64,16 @@ class ClubIntegrity
         if ($memberCapital !== -$this->ledger->debitBalance($book, 'MEMBER_CAPITAL')) {
             $issues[] = ['code' => 'member_capital_control_difference'];
         }
+        if ($book->status === 'active') {
+            $memberUnits = (int) ClubMember::where('book_id', $book->id)->sum('units_micro');
+            $ownershipIssue = ClubOwnershipInvariant::issue($book->ownership_model,
+                $trial['position']['net_assets_minor'], $memberCapital, $memberUnits);
+            if ($ownershipIssue !== null) {
+                // The instruction service treats this as fatal and rolls back
+                // opening/other accounting changes before committing approval.
+                $issues[] = ['code' => $ownershipIssue];
+            }
+        }
         foreach (ClubMember::where('book_id', $book->id)->get() as $member) {
             $movements = DB::table('club_member_movements')->where('member_id', $member->id)
                 ->selectRaw('COALESCE(SUM(units_delta_micro), 0) as units, COALESCE(SUM(capital_delta_minor), 0) as capital')->first();
