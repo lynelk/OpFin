@@ -29,15 +29,9 @@ class ClubPostingContext
         public readonly ClubLedger $ledger,
     ) {}
 
-    public function payload(): array
-    {
-        return $this->instruction->payload;
-    }
+    public function payload(): array { return $this->instruction->payload; }
 
-    public function date(): string
-    {
-        return $this->instruction->business_date->toDateString();
-    }
+    public function date(): string { return $this->instruction->business_date->toDateString(); }
 
     public function member(int $userId, bool $requireActive = true): ClubMember
     {
@@ -68,25 +62,27 @@ class ClubPostingContext
         ]);
     }
 
-    public function cash(string $direction, int $amount): array
+    /** Overrides are internal to the reviewed reversal workflow, never arbitrary request routes. */
+    public function cash(string $direction, int $amount, ?int $accountOverride = null, ?int $sourceOverride = null): array
     {
-        if ($amount <= 0 || ! in_array($direction, ['credit', 'debit'], true)) {
-            throw new InvalidArgumentException('Cashbook movements require a positive amount and direction.');
+        if ($amount <= 0 || $amount > 9007199254740991 || ! in_array($direction, ['credit', 'debit'], true)) {
+            throw new InvalidArgumentException('Cashbook movements require a supported positive integer amount and direction.');
         }
         $payload = $this->payload();
         $treasury = FinancialSpaceTreasuryAccount::query()->where('financial_space_id', $this->book->financial_space_id)
-            ->where('currency', $this->book->currency)->findOrFail((int) ($payload['treasury_account_id'] ?? 0));
+            ->where('currency', $this->book->currency)->lockForUpdate()
+            ->findOrFail($accountOverride ?? (int) ($payload['treasury_account_id'] ?? 0));
         $link = app(ClubBooks::class)->linkTreasury($this->book, $treasury);
         if ($direction === 'debit' && $this->ledger->debitBalance($this->book, 'CASH-'.$treasury->id) < $amount) {
             throw new InvalidArgumentException('The recorded treasury balance cannot fund this payment.');
         }
-        $sourceId = (int) ($payload['treasury_transaction_id'] ?? 0);
+        $sourceId = $sourceOverride ?? (int) ($payload['treasury_transaction_id'] ?? 0);
         if ($sourceId > 0) {
             $transaction = FinancialSpaceTransaction::query()->where('financial_space_id', $this->book->financial_space_id)
                 ->where('treasury_account_id', $treasury->id)->lockForUpdate()->findOrFail($sourceId);
             if ($transaction->currency !== $this->book->currency || $transaction->direction !== $direction
                 || (int) $transaction->amount_minor !== $amount || $transaction->transaction_date->toDateString() !== $this->date()) {
-                throw new InvalidArgumentException('The selected source transaction does not match the approved date, account, currency, direction and amount.');
+                throw new InvalidArgumentException('The selected source transaction must match the approved date, account, currency, direction and amount.');
             }
             if (DB::table('club_treasury_posts')->where('treasury_transaction_id', $sourceId)->exists()) {
                 throw new InvalidArgumentException('This cashbook transaction is already posted to accounting.');
