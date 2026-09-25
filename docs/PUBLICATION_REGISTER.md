@@ -1,9 +1,9 @@
 # OpFin publication register
 
-Reviewed: 23 September 2026  
+Reviewed: 25 September 2026  
 Authority: `docs/PUBLICATION_STANDARD.md`
 
-This register controls how repository documentation should be published or shared.
+This register controls how repository documentation should be published or shared. Publication classes identify intended audiences, not access controls; a public repository does not protect a document labelled internal.
 
 ## Public documents
 
@@ -48,6 +48,8 @@ Publication-quality for internal controlled use, but not intended for unrestrict
 - `docs/manuals/OPFIN_UAT_MANUAL.md`;
 - `docs/product/CANONICAL_IMPLEMENTATION_STATUS.md`;
 - `docs/product/IMPLEMENTATION_BACKLOG.md`;
+- `docs/governance/INTEGRATED_MANAGEMENT_SYSTEM.md`, a policy proposal awaiting evidenced adoption, not an effective-policy or certification claim;
+- `docs/governance/ISO_READINESS_ACTION_REGISTER.md`, an implementation/evidence register, not proof of conformity;
 - operational, production, security and UAT documents under `apps/api/docs/`;
 - `apps/web/docs/` technical/audit/production material;
 - `infrastructure/railway/` and `docs/operations/`;
