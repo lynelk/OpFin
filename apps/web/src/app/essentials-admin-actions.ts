@@ -73,6 +73,7 @@ export async function saveEssentialsLenderAction(formData: FormData) {
 
     await essentialsApi.adminSaveLender(
       {
+        institution_id: num(formData, "institution_id"),
         partner_code: value(formData, "partner_code"),
         partner_name: value(formData, "partner_name"),
         partner_type: value(formData, "partner_type") || "financial_institution",
