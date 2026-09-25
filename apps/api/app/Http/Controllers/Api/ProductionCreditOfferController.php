@@ -97,16 +97,6 @@ class ProductionCreditOfferController extends Controller
             return ApiResponse::error('Forbidden.', 403);
         }
 
-        $channel = (string) ($offer->application?->distribution_channel ?? 'web');
-        if (in_array($channel, AppStoreCreditPolicy::STORE_CHANNELS, true)
-            && $offer->duration_days < AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS) {
-            return ApiResponse::error(
-                'This offer cannot be accepted through a mobile app store because full repayment would be due in 60 days or less.',
-                409,
-                ['code' => ['STORE_TERM_TOO_SHORT']],
-            );
-        }
-
         $validator = Validator::make($request->all(), [
             'accept_disclosures' => 'required|accepted',
             'disclosure_hash' => 'required|string|size:64',
@@ -123,6 +113,7 @@ class ProductionCreditOfferController extends Controller
             return ApiResponse::error('The offer disclosure has changed or the supplied disclosure hash is invalid. Reload the offer before accepting it.', 409, ['disclosure_hash' => ['DISCLOSURE_HASH_MISMATCH']]);
         }
 
+        $channel = $offer->application->distribution_channel ?? 'web';
         ConsentRecord::where('user_id', $request->user()->id)
             ->where('purpose', ConsentRecord::PURPOSE_CREDIT_INFORMATION_REPORTING)
             ->where('status', ConsentRecord::STATUS_GRANTED)

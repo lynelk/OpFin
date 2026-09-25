@@ -102,3 +102,21 @@ Programme reports describe measured/observed change only, unless an appropriate 
 Do not sign off unresolved Critical/High issues in identity, authorisation, Space isolation, accounting, privacy, money movement, replay/concurrency, reconciliation or required mobile completeness. Record lesser exceptions with accountable owner and accepted disposition.
 
 A build or deployment result is not sufficient by itself. Use equivalent candidate-specific test/security/operational evidence while GitHub Actions remains disabled; do not disable existing tests, audits or financial controls to obtain a release.
+
+## Lender orchestration UAT
+
+Run on an isolated UAT environment using synthetic identities and mock/sandbox providers. Do not treat licence placeholders as production evidence.
+
+| Scenario | Expected outcome |
+| --- | --- |
+| Prepare Core Synergies profile from platform admin | Internal lender/funding record; no partner login; inactive until evidence supplied |
+| Delegate/revoke an operations user | Configuration and affiliate credit/capital management allowed/revoked; strategy and delegation remain admin-only |
+| Withhold → external first → affiliated first; include cap and expiry | Consistent discovery/application/quote/acceptance; independent route leads under external first; no new affiliated commitment after withhold/expiry |
+| Link another lender's pool | Rejected; capital and ledger remain unchanged |
+| Create a 7-day product | Retained in catalogue; offered only under applicable channel policy; no global rewrite to 61/90 days |
+| Revise Huawei or product-specific policy | Only matching scope changes; evidence/reason/version retained; expiry restores broader/default policy |
+| Change catalogue after a quote, or lender name after an offer | Accepted economics and lender snapshot unchanged; current channel/deployment availability still checked |
+| Configure a foreign country/currency | Remains unavailable until country and certified currency route are activated |
+| Repay an existing affiliate loan after withholding | Existing provider-finality, repayment allocation and immutable ledger path remains usable |
+
+Automated regression results and remaining mobile/PostgreSQL/reviewer gates are recorded in [delivery evidence](../operations/LENDING_DELIVERY_2026-09-25.md). Device UAT must cover Google Play, iOS and Huawei accessibility, actual lender labels and clear unavailable-product reasons.

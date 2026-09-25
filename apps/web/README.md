@@ -63,3 +63,9 @@ GitHub Actions remains disabled at the owner's direction; equivalent candidate-s
 Existing setup addresses are `https://opfin-web-production.up.railway.app` and `https://opfin-production.up.railway.app/api`. They do not prove custom-domain cutover or health. The [dated release evidence](../../docs/operations/DELIVERY_EVIDENCE_2026-09-24.md) records the previous failed API/Web attempts; verify running-version parity and supported API contracts before declaring production aligned.
 
 Read [current state](../../docs/CURRENT_STATE.md), the [Blueprint](../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md), [manuals](../../docs/manuals/OPFIN_USER_MANUAL.md), [operations](../../docs/manuals/OPFIN_OPERATIONAL_MANUAL.md) and [API index](../api/docs/README.md). Update affected current docs in the same PR as a Web workflow or public-claim change.
+
+## Platform lending administration
+
+`/admin/lending-platform` manages actual lenders, products/terms, affiliated-credit deployment, scoped distribution revisions and delegated operations access. It calls authenticated Laravel endpoints with no mock fallback and no cached configuration. Core Synergies uses an internal lender record under platform admin; no separate partner login is required. Offers show the snapshotted actual lender. See [the operating contract](../../docs/architecture/LENDER_ORCHESTRATION.md).
+
+Local lint uses the TypeScript 6 compatibility procedure already present in `.github/workflows/ci.yml`; restore lockfile dependencies before the normal TypeScript/build gates. Do not disable lint rules to hide compatibility errors.

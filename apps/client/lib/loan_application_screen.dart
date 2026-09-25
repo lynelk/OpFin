@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:opfin/services/distribution_channel.dart';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -47,7 +47,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     'Other personal need',
   ];
 
-  String get _channel => Platform.isIOS ? 'app_store' : 'play_store';
+  String get _channel => resolveDistributionChannel();
 
   @override
   void initState() {
@@ -168,6 +168,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               _ReviewRow(
                   'Repayment period', '${_n(option['duration_days'])} days'),
               _ReviewRow('Purpose', _reason!),
+              _ReviewRow('Lender', (option['lender'] as Map?)?['legal_name']?.toString() ?? 'Named in your offer'),
+              const Text('OpFin provides the platform. The named lender provides your credit.'),
               const SizedBox(height: 12),
               const Text(
                 'This is a request, not yet a loan. If approved, OpFin will show the exact amount you receive, interest, fees, APR where required, total repayment and payment dates before you accept.',
@@ -366,7 +368,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       .map(
                         (option) => DropdownMenuItem(
                           value: _n(option['loan_product_term_id']),
-                          child: Text('${_n(option['duration_days'])} days'),
+                          child: Text('${_n(option['duration_days'])} days · ${(option['lender'] as Map?)?['legal_name'] ?? 'Lender'}', overflow: TextOverflow.ellipsis),
                         ),
                       )
                       .toList(),

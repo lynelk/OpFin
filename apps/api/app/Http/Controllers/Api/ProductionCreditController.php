@@ -9,6 +9,7 @@ use App\Models\LoanApplication;
 use App\Models\User;
 use App\Services\AffordabilityService;
 use App\Services\AuditLogger;
+use App\Services\PlatformCreditRoutingService;
 use App\Services\ProductionCreditDecisionService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -93,6 +94,7 @@ class ProductionCreditController extends Controller
         }
 
         $application = LoanApplication::query()->with('loanProductTerm')->findOrFail($decision->loan_application_id);
+        app(PlatformCreditRoutingService::class)->assertManager($request->user(), $application->institution);
         $customer = User::withoutGlobalScopes()->findOrFail($decision->user_id);
         $affordability = $this->affordability->assess($customer, $application, $approvedAmountMinor);
 
@@ -169,5 +171,4 @@ class ProductionCreditController extends Controller
             'next_state' => 'offer_generation',
         ]);
     }
-
 }

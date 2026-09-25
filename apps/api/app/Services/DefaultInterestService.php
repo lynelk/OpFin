@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\CreditRepaymentScheduleItem;
 use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
+use App\Models\LedgerTransaction;
 use App\Models\Loan;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
@@ -30,7 +32,8 @@ class DefaultInterestService
         }
 
         $currency = strtoupper((string) ($loan->creditOffer?->currency ?? config('services.mobile_money.currency', 'UGX')));
-        $policy = $this->policies->active('regulatory_pricing', (string) $loan->loan_product_id, null, null, $asOf);
+        $lender = $loan->creditOffer?->disclosure_snapshot['lender_of_record'] ?? [];
+        $policy = $this->policies->active('regulatory_pricing', (string) $loan->loan_product_id, $lender['licence_class'] ?? '', $lender['country'] ?? null, $asOf);
         $rules = $this->policies->rules($policy);
         $defaultRules = (array) ($rules['default_interest'] ?? []);
         if ($defaultRules === []) {
@@ -121,7 +124,7 @@ class DefaultInterestService
         $delta = max(0, $permittedTotal - $current);
         if ($delta > 0) {
             $reference = 'loan.default_interest_accrual:'.$loan->id.':'.$asOf->toDateString();
-            if (! \App\Models\LedgerTransaction::where('reference', $reference)->exists()) {
+            if (! LedgerTransaction::where('reference', $reference)->exists()) {
                 $this->ledger->post(
                     $reference,
                     'loan.default_interest_accrual',
@@ -187,14 +190,14 @@ class DefaultInterestService
 
     private function principalOutstandingMinor(Loan $loan): int
     {
-        return (int) \App\Models\CreditRepaymentScheduleItem::query()
+        return (int) CreditRepaymentScheduleItem::query()
             ->where('loan_id', $loan->id)
             ->sum('principal_outstanding_minor');
     }
 
     private function contractualInterestOutstandingMinor(Loan $loan): int
     {
-        return (int) \App\Models\CreditRepaymentScheduleItem::query()
+        return (int) CreditRepaymentScheduleItem::query()
             ->where('loan_id', $loan->id)
             ->sum('interest_outstanding_minor');
     }

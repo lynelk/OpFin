@@ -88,7 +88,7 @@ class ProductionLoanApplicationTest extends TestCase
         $this->assertDatabaseCount('loan_applications', 0);
     }
 
-    public function test_google_play_request_prefers_a_90_day_term_and_never_routes_to_a_short_term(): void
+    public function test_google_play_request_uses_available_terms_without_a_hardcoded_90_day_preference(): void
     {
         [$user, $institution, $product] = $this->eligibleCustomer();
         $sixtyOneDayTerm = LoanProductTerm::create([
@@ -116,7 +116,7 @@ class ProductionLoanApplicationTest extends TestCase
             'reason' => 'School fees',
             'distribution_channel' => 'play_store',
         ])->assertCreated()
-            ->assertJsonPath('data.application.loan_product_term_id', $ninetyDayTerm->id)
+            ->assertJsonPath('data.application.loan_product_term_id', $sixtyOneDayTerm->id)
             ->assertJsonPath('data.application.distribution_channel', 'play_store');
 
         $this->assertNotSame($sixtyOneDayTerm->id, $ninetyDayTerm->id);

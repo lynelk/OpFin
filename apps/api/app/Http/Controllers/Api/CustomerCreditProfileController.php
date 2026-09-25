@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\LoanProduct;
 use App\Services\AppStoreCreditPolicy;
+use App\Services\CreditDistributionService;
 use App\Services\CustomerCreditProfileService;
+use App\Services\PlatformCreditRoutingService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class CustomerCreditProfileController extends Controller
 {
@@ -37,35 +39,33 @@ class CustomerCreditProfileController extends Controller
 
     public function options(Request $request): JsonResponse
     {
-        $channel = (string) $request->query('distribution_channel', 'play_store');
-        $storeChannel = in_array($channel, AppStoreCreditPolicy::STORE_CHANNELS, true);
-        $minimumDuration = $storeChannel ? AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS : 1;
-
-        $options = LoanProduct::query()
-            ->where('status', 'Active')
-            ->whereNotNull('institution_id')
-            ->with(['terms' => fn ($query) => $query
-                ->where('status', 'Active')
-                ->where('duration', '>=', $minimumDuration)
-                ->orderBy('duration')])
-            ->orderBy('id')
-            ->get()
-            ->flatMap(fn ($product) => $product->terms->map(fn ($term) => [
-                'loan_product_id' => $product->id,
-                'loan_product_term_id' => $term->id,
-                'institution_id' => $product->institution_id,
-                'duration_days' => (int) $term->duration,
-                'repayment_frequency' => (string) $term->repayment_frequency,
-                'interest_rate_percent' => (float) $term->interest_rate,
-                'interest_cycle' => (string) $term->interest_cycle,
-                'interest_type' => (string) $term->interest_type,
-            ]))
-            ->sortBy('duration_days')
-            ->values();
+        $data = $request->validate([
+            'distribution_channel' => ['nullable', Rule::in(app(CreditDistributionService::class)->channels())],
+            'country' => ['nullable', 'regex:/^[A-Z]{2}$/'],
+            'amount_minor' => ['nullable', 'integer', 'min:1'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+        $channel = $data['distribution_channel'] ?? 'play_store';
+        $country = $data['country'] ?? config('opfin.default_country', 'UG');
+        $options = app(PlatformCreditRoutingService::class)->options($channel, $country, $data['amount_minor'] ?? null, $data['reason'] ?? null)
+            ->map(fn ($item) => [
+                'loan_product_id' => $item['product']->id,
+                'loan_product_term_id' => $item['term']->id,
+                'institution_id' => $item['product']->institution_id,
+                'product_name' => $item['product']->name,
+                'lender' => $item['product']->institution->lenderDisclosure(),
+                'currency' => $item['product']->currency,
+                'country' => $item['product']->country,
+                'duration_days' => (int) $item['term']->duration,
+                'repayment_frequency' => (string) $item['term']->repayment_frequency,
+                'interest_rate_percent' => (float) $item['term']->interest_rate,
+                'interest_cycle' => (string) $item['term']->interest_cycle,
+                'interest_type' => (string) $item['term']->interest_type,
+            ])->values();
 
         return ApiResponse::success('Eligible repayment options loaded.', [
-            'options' => $options,
-            'distribution_channel' => $channel,
+            'options' => $options, 'distribution_channel' => $channel, 'country' => $country,
+            'message' => $options->isEmpty() ? 'No lender product is currently available for this market and channel.' : null,
         ]);
     }
 

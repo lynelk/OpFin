@@ -323,3 +323,15 @@ Clients treat location as task-specific context rather than a persistent trackin
 - partner users receive only service points associated with their own institution's partner records.
 
 Static maps are authenticated images and are supplemental visual context. Clients should use normal Google Maps URLs for navigation instead of embedding a full routing UI.
+
+## Lender orchestration contract — 25 September 2026
+
+Credit option rows include `loan_product_id`, `loan_product_term_id`, `institution_id`, `product_name`, `lender`, `country`, `currency`, `duration_days`, `repayment_frequency` and `interest_rate_percent`. `lender` identifies the actual institution, relationship, regulator/authority reference and OpFin infrastructure role. Discovery is indicative; exact fees/APR, affordability, funding and deployment are checked when an offer is created and first accepted. Send the actual distribution channel on all discovery/application/Essentials requests.
+
+Offer `disclosure_snapshot.lender_of_record` is immutable. Display its `legal_name` and `authority_reference`; do not fill missing licence details from an OpFin-wide constant. `regulated_provider` retains the same lender data for compatibility. `distribution_policy` records the applied channel assessment. Essentials quotes include lender/partner identity, deployment strategy, channel policy and exact quoted APR. Refreshed lender terms do not alter quoted principal/interest/fees/schedule.
+
+Lender configuration: `name`, `address`, `phone`, `email`, `status` (Active/Inactive), `lender_relationship` (independent/affiliated), `country`, `regulator_code`, `licence_class`, `authority_basis` (pending/licensed/other_authority/exempt), evidence reference/expiry and `rate_change_approval_required`. An `id` updates a record; omit it to create. Active records require applicable evidence. No user is created. Only admin can create a relationship or change ownership.
+
+Strategy: `mode` (withhold/external_first/affiliated_first), required `reason`, optional positive `max_affiliated_loan_minor`, required `effective_from` and optional later `effective_to`. Distribution: `channel`, `country`/`product_category` (or `*`), optional lender and one catalogue product scope (`loan_product_id` or `partner_product_id`), availability (available/unavailable/review), optional minimum days/APR cap, required `reason`/`source_reference`, optional URL and effective interval. Policy scopes are ownership-validated; later revisions replace the full scoped rule.
+
+The `/admin/umra/term-change-requests` compatibility workflow accepts generic `regulatory_approval_reference` and `regulatory_approved_at`, as well as legacy UMRA names. Regulatory evidence is required according to the lender profile; independent maker-checker approval and immutable accepted offers still apply. Capital mandates recognise licensed, other-authority and exemption evidence; affiliated creation/review requires delegated access and distinct maker/checker users.

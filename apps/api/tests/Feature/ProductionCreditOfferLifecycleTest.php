@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\CreditDecision;
 use App\Models\CreditOffer;
-use App\Models\CreditScoreComponent;
 use App\Models\CreditRepaymentScheduleItem;
+use App\Models\CreditScoreComponent;
 use App\Models\Institution;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
@@ -198,6 +198,31 @@ class ProductionCreditOfferLifecycleTest extends TestCase
         ])->assertStatus(409);
         $this->assertDatabaseCount('mobile_money_transactions', 0);
         $this->assertDatabaseCount('loans', 0);
+    }
+
+    public function test_actual_lender_is_snapshotted_and_new_channel_restriction_blocks_acceptance_without_money_movement(): void
+    {
+        [$customer, $operations, $application] = $this->approvedApplication();
+        $lender = $application->institution;
+        $lender->update(['name' => 'Actual Test Lender', 'regulator_code' => 'TEST-AUTHORITY', 'authority_reference' => 'TEST-ONLY-REF']);
+        $application->update(['distribution_channel' => 'web']);
+        $offer = app(ProductionCreditOfferService::class)->createOffer($application->fresh(), $operations, ['funding_pool_id' => $this->fundingPoolId($operations)]);
+        $this->assertSame('Actual Test Lender', $offer->disclosure_snapshot['lender_of_record']['legal_name']);
+        $this->assertSame('TEST-ONLY-REF', $offer->disclosure_snapshot['lender_of_record']['authority_reference']);
+        $snapshot = $offer->disclosure_snapshot;
+        $lender->update(['name' => 'Changed Test Lender Name']);
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+        $this->postJson('/api/admin/lending-platform/distribution', ['channel' => 'web', 'country' => 'UG', 'product_category' => 'personal_loan', 'loan_product_id' => $application->loan_product_id, 'availability' => 'unavailable', 'reason' => 'Test channel restriction before acceptance', 'source_reference' => 'TEST-ONLY', 'effective_from' => now()->toISOString()])->assertCreated();
+        $this->assertSame($snapshot, $offer->fresh()->disclosure_snapshot);
+        try {
+            app(ProductionCreditOfferService::class)->acceptOffer($offer, $customer, []);
+            $this->fail('A newly unavailable route must not originate credit.');
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContainsString('Test channel restriction', $exception->getMessage());
+        }
+        $this->assertDatabaseCount('mobile_money_transactions', 0);
+        $this->assertNull($offer->fresh()->funding_reserved_at);
     }
 
     private function approvedApplication(): array
