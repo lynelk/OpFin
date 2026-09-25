@@ -8,7 +8,6 @@ use App\Services\PersonalFinancialSpaceService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use RuntimeException;
 
 class ScopedPartnerEssentialsController extends PartnerEssentialsController
 {
@@ -33,16 +32,5 @@ class ScopedPartnerEssentialsController extends PartnerEssentialsController
         $response->setData($body);
 
         return $response;
-    }
-
-    public function storeAccount(Request $request, int $customer): JsonResponse
-    {
-        try {
-            return parent::storeAccount($request, $customer);
-        } catch (RuntimeException) {
-            // A competing customer operation is a retry-after-status conflict,
-            // not permission to drop the mutex or disclose raw database errors.
-            return ApiResponse::error('This account instruction could not complete while the customer state was changing. Refresh its status before retrying.', 409);
-        }
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\EssentialsCustomerBusy;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class EssentialsCustomerMutex
             // Use the writer PDO for both lock and unlock, never a read replica.
             $result = $connection->selectOne('SELECT pg_try_advisory_lock(hashtextextended(?, 0)) AS acquired', [$name], false);
             if (! in_array($result->acquired, [true, 1, '1', 't', 'true'], true)) {
-                throw new RuntimeException('Another financial operation is in progress for this customer. Refresh its status before retrying.');
+                throw new EssentialsCustomerBusy('Another financial operation is in progress for this customer. Refresh its status before retrying.');
             }
         } else {
             if (! in_array(app()->environment(), ['local', 'testing'], true)) {
@@ -43,7 +44,7 @@ class EssentialsCustomerMutex
             }
             $cacheLock = Cache::lock($name, 300);
             if (! $cacheLock->get()) {
-                throw new RuntimeException('Another financial operation is in progress for this customer. Refresh its status before retrying.');
+                throw new EssentialsCustomerBusy('Another financial operation is in progress for this customer. Refresh its status before retrying.');
             }
         }
         $this->held[$userId] = true;
