@@ -8,6 +8,8 @@ use InvalidArgumentException;
 
 class EssentialsPartnerScopeService
 {
+    private const DENIED = 'The customer has not authorised this operation in an active Financial Space.';
+
     public function __construct(
         private readonly PersonalFinancialSpaceService $personalSpaces,
         private readonly EssentialsOrchestrationService $essentials,
@@ -16,11 +18,19 @@ class EssentialsPartnerScopeService
     public function resolve(User $customer, int $partnerAccountId, string $scope, ?int $requestedSpaceId): int
     {
         if ($customer->deleted_at !== null) {
-            throw new InvalidArgumentException('This customer is not available for partner access.');
+            throw new InvalidArgumentException(self::DENIED);
         }
         $spaceId = $requestedSpaceId ?? $this->personalSpaces->find($customer)?->id;
         if (! $spaceId || $spaceId <= 0) {
-            throw new InvalidArgumentException('An existing authorised Financial Space is required.');
+            throw new InvalidArgumentException(self::DENIED);
+        }
+
+        // An unauthorised partner must not learn whether this customer belongs
+        // to a particular Space. Check the exact grant before membership.
+        try {
+            $this->essentials->assertPartnerCustomerAuthorised($customer, $partnerAccountId, $scope, (int) $spaceId);
+        } catch (InvalidArgumentException) {
+            throw new InvalidArgumentException(self::DENIED);
         }
         $membership = DB::table('financial_space_memberships as membership')
             ->join('financial_spaces as space', 'space.id', '=', 'membership.financial_space_id')
@@ -32,12 +42,10 @@ class EssentialsPartnerScopeService
             ->whereNull('space.deleted_at')
             ->exists();
         if (! $membership) {
-            throw new InvalidArgumentException('The customer is not an active member of the requested Financial Space.');
+            // A formerly valid grant cannot override membership removal; use
+            // exactly the same denial as an absent or revoked partner grant.
+            throw new InvalidArgumentException(self::DENIED);
         }
-
-        // Always pass the resolved positive identifier. A permission for one
-        // Space cannot satisfy an omitted or different target Space.
-        $this->essentials->assertPartnerCustomerAuthorised($customer, $partnerAccountId, $scope, (int) $spaceId);
 
         return (int) $spaceId;
     }
