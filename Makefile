@@ -1,4 +1,4 @@
-.PHONY: help test api-test web-test client-test layout docs-check publication-check docs-search api-search
+.PHONY: help test api-test web-test client-test layout docs-check publication-check docs-search api-search api-docs api-docs-check agent-docs-test
 
 help:
 	@printf '%s\n' \
@@ -10,7 +10,10 @@ help:
 	  '  make docs-check                   Verify current documentation drift rules' \
 	  '  make publication-check            Verify publication-facing documentation' \
 	  '  make docs-search QUERY="receipt" Search current repository documentation' \
-	  '  make api-search QUERY="umra"      Search registered Laravel API routes'
+	  '  make api-search QUERY="umra"      Search registered Laravel API routes' \
+	  '  make api-docs                     Export current catalogue, reviewed OpenAPI and guides' \
+	  '  make api-docs-check               Check reviewed definitions; report coverage gaps' \
+	  '  make agent-docs-test              Test the documentation-only MCP bridge'
 
 test: layout api-test web-test client-test
 
@@ -40,3 +43,13 @@ docs-search:
 api-search:
 	@test -n "$(QUERY)" || (echo 'Set QUERY, e.g. make api-search QUERY="umra"' && exit 2)
 	python3 scripts/search-api.py "$(QUERY)"
+
+api-docs:
+	cd apps/api && php artisan api:catalogue
+
+api-docs-check:
+	cd apps/api && php artisan api:catalogue --check
+
+agent-docs-test:
+	python3 -m unittest discover -s tools/opfin-mcp -p 'test_*.py' -v
+	php tools/opfin-mcp/test_catalogue.php
