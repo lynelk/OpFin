@@ -176,17 +176,44 @@ return new class extends Migration
                 }
             }
         }
+        $protected = [
+            'fi_sources' => ['public_id', 'financial_space_id', 'name', 'population', 'country', 'lawful_basis_reference', 'created_by', 'created_at'],
+            'fi_imports' => ['public_id', 'financial_space_id', 'source_id', 'submitted_by', 'idempotency_key', 'instruction_hash', 'source_hash', 'engine_version', 'as_of', 'row_count', 'payload_cipher', 'analysis_cipher', 'created_at'],
+            'fi_issuer_versions' => ['public_id', 'issuer_code', 'legal_name', 'country', 'product_type', 'regulator', 'licence_reference', 'evidence_reference', 'valid_from', 'valid_until', 'review_due_on', 'proposed_by', 'created_at'],
+            'fi_statements' => ['public_id', 'financial_space_id', 'issuer_version_id', 'uploaded_by', 'idempotency_key', 'instruction_hash', 'file_hash', 'storage_path', 'media_type', 'bytes', 'period_start', 'period_end', 'authority_expires_at', 'authority_cipher', 'created_at'],
+        ];
+        foreach ($protected as $table => $fields) {
+            if ($driver === 'pgsql') {
+                $changed = implode(' OR ', array_map(fn ($field) => "OLD.{$field} IS DISTINCT FROM NEW.{$field}", $fields));
+                DB::unprepared("CREATE FUNCTION {$table}_protect_source() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Source evidence cannot be deleted'; END IF; IF {$changed} THEN RAISE EXCEPTION 'Source evidence fields are immutable'; END IF; RETURN NEW; END; $$");
+                DB::unprepared("CREATE TRIGGER {$table}_protect_source BEFORE UPDATE OR DELETE ON {$table} FOR EACH ROW EXECUTE FUNCTION {$table}_protect_source()");
+            } elseif ($driver === 'sqlite') {
+                $changed = implode(' OR ', array_map(fn ($field) => "OLD.{$field} IS NOT NEW.{$field}", $fields));
+                DB::unprepared("CREATE TRIGGER {$table}_protect_source BEFORE UPDATE ON {$table} WHEN {$changed} BEGIN SELECT RAISE(ABORT, 'Source evidence fields are immutable'); END");
+                DB::unprepared("CREATE TRIGGER {$table}_protect_delete BEFORE DELETE ON {$table} BEGIN SELECT RAISE(ABORT, 'Source evidence cannot be deleted'); END");
+            }
+        }
     }
 
     public function down(): void
     {
-        // This rollback is for empty disposable test databases, never production evidence removal.
+        // Never silently destroy populated analytical evidence in a production rollback.
+        if (! app()->environment('testing')) {
+            foreach (['fi_sources', 'fi_imports', 'fi_statements', 'fi_issuer_versions', 'fi_reports'] as $table) {
+                if (Schema::hasTable($table) && DB::table($table)->exists()) {
+                    throw new LogicException('Financial Intelligence evidence exists. Use an approved forward migration, not destructive rollback.');
+                }
+            }
+        }
         foreach (['fi_network_grants', 'fi_statements', 'fi_issuer_versions', 'fi_reports', 'fi_case_events', 'fi_cases', 'fi_publications', 'fi_imports', 'fi_grants', 'fi_sources'] as $table) {
             Schema::dropIfExists($table);
         }
         if (DB::getDriverName() === 'pgsql') {
             foreach (['fi_publications', 'fi_case_events', 'fi_reports'] as $table) {
                 DB::unprepared("DROP FUNCTION IF EXISTS {$table}_immutable()");
+            }
+            foreach (['fi_sources', 'fi_imports', 'fi_issuer_versions', 'fi_statements'] as $table) {
+                DB::unprepared("DROP FUNCTION IF EXISTS {$table}_protect_source()");
             }
         }
     }

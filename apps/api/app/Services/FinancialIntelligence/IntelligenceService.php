@@ -17,6 +17,38 @@ final class IntelligenceService
 {
     public function __construct(private readonly Access $access, private readonly PortfolioEngine $engine, private readonly AuditLogger $audit) {}
 
+    public function context(FinancialSpace $space, User $actor): array
+    {
+        if ($space->type === 'personal') {
+            $this->access->require($space, $actor, 'statement');
+            return ['space_id' => $space->id, 'space_name' => $space->name, 'space_type' => 'personal',
+                'role' => 'personal', 'permissions' => ['statement'], 'country' => $space->country];
+        }
+        $role = $this->access->role($space, $actor);
+        return ['space_id' => $space->id, 'space_name' => $space->name, 'space_type' => $space->type,
+            'role' => $role, 'permissions' => $this->access->permissions($role), 'country' => $space->country];
+    }
+
+    public function members(FinancialSpace $space, User $actor): array
+    {
+        $this->access->require($space, $actor, 'grant');
+        $members = FinancialSpaceMembership::query()->where('financial_space_id', $space->id)->where('status', 'active')
+            ->whereHas('user')->orderBy('user_id')->get(['user_id', 'role']);
+        $grants = DB::table('fi_grants')->where('financial_space_id', $space->id)->get(['user_id', 'role', 'expires_at', 'revoked_at']);
+        $this->audit->record('intelligence.access_register_viewed', $actor, $space);
+        return ['members' => $members->toArray(), 'grants' => $grants->toArray()];
+    }
+
+    public function reports(FinancialSpace $space, User $actor, int $page): array
+    {
+        $this->access->require($space, $actor, 'report');
+        $query = DB::table('fi_reports')->where('financial_space_id', $space->id);
+        $total = (clone $query)->count();
+        $this->audit->record('intelligence.report_register_viewed', $actor, $space, ['page' => $page]);
+        return ['items' => $query->orderByDesc('id')->forPage($page, 25)->get(['id', 'public_id', 'import_id', 'content_hash', 'created_at'])->all(),
+            'page' => $page, 'page_size' => 25, 'total' => $total];
+    }
+
     public function overview(FinancialSpace $space, User $actor): array
     {
         $role = $this->access->require($space, $actor, 'overview');
@@ -282,8 +314,8 @@ final class IntelligenceService
             $report['analysis']['concentrations'] = [];
             $report['analysis']['vintages'] = [];
             foreach ($report['analysis']['currency_metrics'] as $code => $metrics) {
-                if (($metrics['loan_count'] ?? 0) < 5) {
-                    $report['analysis']['currency_metrics'][$code] = ['suppressed' => true, 'reason' => 'Fewer than five loan records'];
+                if (($metrics['distinct_borrower_count'] ?? 0) < 5) {
+                    $report['analysis']['currency_metrics'][$code] = ['suppressed' => true, 'reason' => 'Fewer than five distinct borrowers'];
                 }
             }
             $report['analysis']['financials'] = []; // Accounting information is not included in the portfolio-sharing mandate.

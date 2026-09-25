@@ -197,11 +197,13 @@ final class PortfolioEngine
             throw new InvalidArgumentException('Management NPL threshold must be between 1 and 365 days.');
         }
         $currencies = [];
+        $borrowers = [];
         $concentrations = [];
         $vintages = [];
         foreach ($dataset['loans'] as $loan) {
             $currency = $loan['currency'];
             $amount = $loan['principal_outstanding_minor'];
+            $borrowers[$currency]['borrower:'.$loan['borrower_ref']] = true;
             $m = $currencies[$currency] ?? $this->emptyMetrics();
             $m['loan_count']++;
             $m['gross_principal_minor'] = Values::add($m['gross_principal_minor'], $amount);
@@ -256,7 +258,8 @@ final class PortfolioEngine
             }
             $vintages[$key] = $v;
         }
-        foreach ($currencies as &$m) {
+        foreach ($currencies as $currency => &$m) {
+            $m['distinct_borrower_count'] = count($borrowers[$currency] ?? []);
             foreach ([0, 7, 30, 90] as $threshold) {
                 $m['par'.$threshold.'_bps'] = $m['unknown_delinquency_count'] > 0 ? null : Values::bps($m['par'.$threshold.'_principal_minor'], $m['gross_principal_minor']);
             }

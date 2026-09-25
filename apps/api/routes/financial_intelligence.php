@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\StatementIntelligenceController as Statements;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('financial-spaces/{space}/intelligence')->group(function (): void {
+    Route::get('/context', [FI::class, 'context']);
+    Route::get('/members', [FI::class, 'members']);
     Route::get('/', [FI::class, 'overview']);
     Route::get('/template', [FI::class, 'template']);
     Route::post('/sources', [FI::class, 'source']);
@@ -19,6 +21,7 @@ Route::prefix('financial-spaces/{space}/intelligence')->group(function (): void 
     Route::get('/cases/{case}/events', [FI::class, 'caseHistory']);
     Route::post('/cases/{case}/events', [FI::class, 'caseEvent']);
     Route::put('/grants', [FI::class, 'grant']);
+    Route::get('/reports', [FI::class, 'reports']);
     Route::post('/reports', [FI::class, 'freezeReport']);
     Route::get('/reports/{report}', [FI::class, 'report']);
     Route::get('/reports/{report}/csv', [FI::class, 'reportCsv']);

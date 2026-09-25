@@ -22,6 +22,21 @@ final class FinancialIntelligenceController extends Controller
 {
     public function __construct(private readonly IntelligenceService $service, private readonly Access $access, private readonly CsvImportReader $csv) {}
 
+    public function context(Request $request, FinancialSpace $space): JsonResponse
+    {
+        return $this->result(fn () => $this->service->context($space, $request->user()));
+    }
+
+    public function members(Request $request, FinancialSpace $space): JsonResponse
+    {
+        return $this->result(fn () => $this->service->members($space, $request->user()));
+    }
+
+    public function reports(Request $request, FinancialSpace $space): JsonResponse
+    {
+        return $this->result(fn () => $this->service->reports($space, $request->user(), $this->page($request)));
+    }
+
     public function overview(Request $request, FinancialSpace $space): JsonResponse
     {
         return $this->result(fn () => $this->service->overview($space, $request->user()));
