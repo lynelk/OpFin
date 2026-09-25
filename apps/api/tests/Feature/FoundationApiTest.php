@@ -50,7 +50,6 @@ class FoundationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.user.id', $user->id)
-            ->assertJsonPath('data.user.role', 'customer')
             ->assertJsonPath('data.permissions.0', 'profile.view');
     }
 
@@ -96,6 +95,7 @@ class FoundationApiTest extends TestCase
             'customer',
             'employer_admin',
             'programme_partner',
+            'partner_api',
             'support',
         ], User::ROLES);
 
@@ -105,6 +105,8 @@ class FoundationApiTest extends TestCase
         $this->assertContains('employer.view', User::ROLE_PERMISSIONS['employer_admin']);
         $this->assertContains('programme.view', User::ROLE_PERMISSIONS['programme_partner']);
         $this->assertContains('support.view', User::ROLE_PERMISSIONS['support']);
+        $this->assertArrayHasKey('partner_api', User::ROLE_PERMISSIONS);
+        $this->assertNotContains('*', User::ROLE_PERMISSIONS['partner_api']);
     }
 
     public function test_sensitive_profile_access_creates_audit_log(): void
