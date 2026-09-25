@@ -234,7 +234,7 @@ class ProductionLoanApplicationTest extends TestCase
 
     private function customerAndProduct(): array
     {
-        $institution = Institution::create([
+        $institution = Institution::create(['authority_basis' => 'licensed', 'authority_reference' => 'TEST-AUTHORITY-NOT-LIVE', 'regulator_code' => 'TEST',
             'name' => 'Production Credit Institution',
             'address' => 'Kampala',
             'phone' => '256700000501',

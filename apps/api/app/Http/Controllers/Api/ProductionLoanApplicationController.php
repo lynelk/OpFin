@@ -11,7 +11,6 @@ use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
-use App\Services\AppStoreCreditPolicy;
 use App\Services\AuditLogger;
 use App\Services\CreditDistributionService;
 use App\Services\PlatformCreditRoutingService;
@@ -31,7 +30,6 @@ class ProductionLoanApplicationController extends Controller
         private readonly AuditLogger $auditLogger,
         private readonly ProductionCreditDecisionService $decisionService,
         private readonly ProductionCreditOfferService $offerService,
-        private readonly AppStoreCreditPolicy $appStorePolicy,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -215,15 +213,8 @@ class ProductionLoanApplicationController extends Controller
                 ];
 
                 try {
-                    $appStoreDisclosure = $this->appStorePolicy->validateOffer($application->fresh(), $pricing);
+
                     $offer = $this->offerService->createOffer($application->fresh(), $user, $pricing);
-                    if ($appStoreDisclosure !== []) {
-                        $offer->forceFill([
-                            'pricing_snapshot' => array_merge($offer->pricing_snapshot ?? [], $appStoreDisclosure),
-                            'disclosure_snapshot' => array_merge($offer->disclosure_snapshot ?? [], $appStoreDisclosure),
-                        ])->save();
-                        $offer = $offer->fresh();
-                    }
                     $nextState = 'offer_ready';
                 } catch (InvalidArgumentException $exception) {
                     $application->update(['status' => 'Referred']);

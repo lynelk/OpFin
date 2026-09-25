@@ -23,7 +23,7 @@ class LendingPlatformConfigurationTest extends TestCase
 
     private function route(string $relationship = 'independent', int $days = 30): array
     {
-        $lender = Institution::create(['name' => $relationship === 'affiliated' ? 'Core Synergies test lender' : 'Independent test lender', 'address' => 'Test address', 'phone' => '256700000000', 'email' => fake()->unique()->safeEmail(), 'lender_relationship' => $relationship, 'status' => 'Active']);
+        $lender = Institution::create(['authority_basis' => 'licensed', 'authority_reference' => 'TEST-AUTHORITY-NOT-LIVE', 'regulator_code' => 'TEST', 'name' => $relationship === 'affiliated' ? 'Core Synergies test lender' : 'Independent test lender', 'address' => 'Test address', 'phone' => '256700000000', 'email' => fake()->unique()->safeEmail(), 'lender_relationship' => $relationship, 'status' => 'Active']);
         $product = LoanProduct::create(['name' => 'Test credit', 'type' => 'Cash', 'status' => 'Active', 'institution_id' => $lender->id]);
         $term = LoanProductTerm::create(['loan_product_id' => $product->id, 'interest_rate' => 0, 'interest_type' => 'Flat', 'interest_cycle' => 'monthly', 'repayment_frequency' => 'monthly', 'duration' => $days, 'status' => 'Active']);
 
@@ -90,6 +90,10 @@ class LendingPlatformConfigurationTest extends TestCase
         $this->assertSame($external->id, $router->options('web', 'UG', 20000)->first()['product']->id);
         $this->assertFalse($router->options('web', 'UG', 20000)->contains(fn ($row) => $row['product']->id === $affiliate->id));
         $this->assertSame($affiliate->id, $router->options('web', 'UG', 80000)->first()['product']->id);
+        $this->getJson('/api/credit/options?distribution_channel=web')->assertOk()->assertJsonPath('data.options.0.loan_product_id', $external->id);
+        $this->getJson('/api/credit/options?distribution_channel=web&amount_minor=80000&reason=Emergency')->assertOk()->assertJsonPath('data.options.0.loan_product_id', $affiliate->id);
+        $external->update(['borrower_purposes' => ['Education']]);
+        $this->getJson('/api/credit/options?distribution_channel=web&amount_minor=20000&reason=Emergency')->assertOk()->assertJsonPath('data.options.0.loan_product_id', $affiliate->id);
     }
 
     public function test_withhold_priority_cap_and_expiry_control_new_affiliated_origination(): void
@@ -191,6 +195,25 @@ class LendingPlatformConfigurationTest extends TestCase
         $this->assertSame('independent', $lender->lender_relationship);
         $this->assertSame('pending', $lender->authority_basis);
         $this->assertNull($lender->authority_reference);
+    }
+
+    public function test_upgrade_lender_with_pending_or_missing_authority_cannot_originate(): void
+    {
+        [$lender, $product, $term] = $this->route();
+        $lender->update(['authority_basis' => 'pending', 'authority_reference' => null]);
+        $this->assertSame('LENDER_AUTHORITY_INCOMPLETE', app(CreditDistributionService::class)->assess($product->fresh(), $term, 'web')['code']);
+        $this->assertCount(0, app(PlatformCreditRoutingService::class)->options('web', 'UG', 10000, 'Emergency'));
+        $this->expectException(InvalidArgumentException::class);
+        app(PlatformCreditRoutingService::class)->assertOrigination(new LoanApplication(['loan_product_id' => $product->id, 'loan_product_term_id' => $term->id, 'institution_id' => $lender->id, 'amount' => 10000, 'reason' => 'Emergency', 'distribution_channel' => 'web']));
+    }
+
+    public function test_admin_creates_category_without_violating_legacy_product_type(): void
+    {
+        [$lender] = $this->route();
+        $this->admin();
+        $this->postJson('/api/admin/lending-platform/products', ['institution_id' => $lender->id, 'name' => 'Personal credit', 'product_category' => 'personal_loan', 'country' => 'UG', 'currency' => 'UGX', 'status' => 'Active', 'min_amount_minor' => 1])
+            ->assertCreated()->assertJsonPath('data.product.type', 'Cash')->assertJsonPath('data.product.product_category', 'personal_loan');
+        $this->assertDatabaseHas('loan_products', ['name' => 'Personal credit', 'type' => 'Cash']);
     }
 
     public function test_country_metadata_does_not_activate_an_uncertified_currency_route(): void

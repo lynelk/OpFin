@@ -44,8 +44,7 @@ class FundingPoolService
         }
         $pool = DB::table('capital_mandates')->where('id', $fundingPoolId)->first();
         $owner = $pool?->partner_id ? DB::table('partners')->where('id', $pool->partner_id)->value('institution_id') : null;
-        if (($owner !== null && (int) $owner !== (int) $institution->id)
-            || ($institution->lender_relationship === 'affiliated' && (int) $owner !== (int) $institution->id)) {
+        if ($owner === null || (int) $owner !== (int) $institution->id) {
             throw new InvalidArgumentException('The funding pool must belong to the responsible lender.');
         }
     }

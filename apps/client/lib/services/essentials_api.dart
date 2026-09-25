@@ -43,7 +43,7 @@ class EssentialsApi {
     return (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
   }
 
-  static Future<Map<String, dynamic>> summary() => _request('/essentials');
+  static Future<Map<String, dynamic>> summary() => _request('/essentials?channel=${resolveDistributionChannel()}');
 
   static Future<Map<String, dynamic>> catalogue() => _request('/essentials/catalogue');
 

@@ -83,6 +83,9 @@ class ProductionCreditOfferService
         $regulatedIdentity = $application->institution->lenderDisclosure();
         $expiresInMinutes = max(5, min((int) ($pricing['expires_in_minutes'] ?? 1440), 10080));
         $fundingPoolId = isset($pricing['funding_pool_id']) ? (int) $pricing['funding_pool_id'] : null;
+        if ($application->loanProduct->funding_pool_id !== null && $fundingPoolId !== (int) $application->loanProduct->funding_pool_id) {
+            throw new InvalidArgumentException('The offer must use the funding pool configured for this lender product.');
+        }
         $this->fundingPools->validateSelection($fundingPoolId, $principalMinor);
         $this->fundingPools->validateLender($fundingPoolId, $application->loanProduct->institution);
 
@@ -129,6 +132,7 @@ class ProductionCreditOfferService
                 'fee_treatment' => $feeTreatment,
                 'policy_version' => (string) $decision->policy_version,
                 'pricing_snapshot' => [
+                    ...$distributionSnapshot,
                     'algorithm_version' => $quote['algorithm_version'],
                     'product_term_id' => $term->id,
                     'funding_pool_id' => $fundingPoolId,

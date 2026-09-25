@@ -83,6 +83,8 @@ class UmraDigitalLendingControlsTest extends TestCase
 
     public function test_npl_default_interest_cap_is_tracked_and_enforced(): void
     {
+        config(['opfin.regulatory.licence_class' => 'TEST-LEGACY-CLASS']);
+        DB::table('financial_policies')->where('policy_type', 'regulatory_pricing')->update(['licence_class' => 'TEST-LEGACY-CLASS']);
         [, , , $offer, $loan] = $this->facility(withLoan: true);
 
         CreditRepaymentScheduleItem::create([

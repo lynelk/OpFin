@@ -34,7 +34,7 @@ class EssentialsOrchestrationService
         private readonly AuditLogger $audit,
     ) {}
 
-    public function summary(User $user): array
+    public function summary(User $user, string $channel = 'web'): array
     {
         $profile = CreditProfile::query()->where('user_id', $user->id)->first();
         $outstanding = (int) EssentialsAdvance::query()
@@ -49,7 +49,7 @@ class EssentialsOrchestrationService
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
             ->get();
-        $maxLine = (int) $this->visibleCreditLines($lines)->max('available_limit_minor');
+        $maxLine = (int) $this->visibleCreditLines($lines, $channel)->max('available_limit_minor');
 
         $profileHeadroom = max(0, (int) ($profile?->available_to_borrow_minor ?? 0));
         $overallAvailable = min($maxLine, $profileHeadroom);
@@ -299,7 +299,7 @@ class EssentialsOrchestrationService
         return $account->fresh();
     }
 
-    public function refreshEligibility(User $user, ?int $financialSpaceId, string $channel = 'android'): array
+    public function refreshEligibility(User $user, ?int $financialSpaceId, string $channel = 'android', ?int $requestedAmount = null, ?string $category = null): array
     {
         $spaceId = $this->resolveSpaceId($user, $financialSpaceId);
         $profile = CreditProfile::query()->where('user_id', $user->id)->first();
@@ -327,8 +327,23 @@ class EssentialsOrchestrationService
             ->select('pp.*', 'p.code as partner_code', 'p.name as partner_name', 'p.partner_type')
             ->get();
 
+        $routing = app(PlatformCreditRoutingService::class);
+        $strategy = $routing->strategy();
+        $partners = DB::table('partners')->whereIn('id', $products->pluck('partner_id'))->get()->keyBy('id');
+        $isAffiliated = fn ($product) => app(CreditDistributionService::class)
+            ->partnerContext($product, $partners[$product->partner_id])->institution?->lender_relationship === 'affiliated';
+        // Independent decisions run first so an affiliate is contacted only if needed.
+        if ($strategy['mode'] === 'external_first') {
+            $products = $products->sortBy(fn ($product) => $isAffiliated($product) ? 1 : 0);
+        }
         $created = [];
+        $externalAvailable = false;
         foreach ($products as $product) {
+            $affiliated = $isAffiliated($product);
+            if ($affiliated && ($strategy['mode'] === 'withhold' || ($strategy['mode'] === 'external_first' && $externalAvailable))) {
+                continue;
+            }
+            $partner = $partners[$product->partner_id];
             if (strtolower((string) $product->partner_code) === 'opfin' || strcasecmp((string) $product->partner_name, 'OpFin') === 0) {
                 continue;
             }
@@ -341,6 +356,21 @@ class EssentialsOrchestrationService
                 continue;
             }
 
+            $categories = array_map('strtolower', (array) ($eligibility['categories'] ?? []));
+            if ($category !== null && $categories && ! in_array(strtolower($category), $categories, true)) {
+                continue;
+            }
+            $candidateLimit = min((int) $profile->available_to_borrow_minor, (int) ($eligibility['max_limit_minor'] ?? PHP_INT_MAX));
+            if ($affiliated && isset($strategy['max_affiliated_loan_minor'])) {
+                $candidateLimit = min($candidateLimit, (int) $strategy['max_affiliated_loan_minor']);
+            }
+            if ($candidateLimit <= 0 || ($requestedAmount !== null && $requestedAmount > $candidateLimit)) {
+                continue;
+            }
+            // Apply authority/channel rules before disclosing a profile to a lender.
+            if (! $this->price($requestedAmount ?? $candidateLimit, $this->json($product->pricing), $channel, $product, $partner)) {
+                continue;
+            }
             $integration = $this->json($product->integration_config);
             $route = strtolower((string) ($integration['decision_route'] ?? 'capital_mandate'));
             $approvedLimit = 0;
@@ -375,7 +405,6 @@ class EssentialsOrchestrationService
                 if (! $this->citoLending->drawdownConfigured()) {
                     continue;
                 }
-                $partner = (object) ['code' => $product->partner_code, 'name' => $product->partner_name];
                 $result = $this->citoLending->requestCreditLine(
                     $user,
                     $profile,
@@ -399,8 +428,10 @@ class EssentialsOrchestrationService
                 continue;
             }
 
-            $minimum = (int) ($eligibility['min_limit_minor'] ?? 1);
-            if ($approvedLimit < $minimum) {
+            $approvedLimit = min($approvedLimit, $candidateLimit);
+            $minimum = max(1, (int) ($eligibility['min_limit_minor'] ?? 1));
+            if ($approvedLimit < $minimum || ($requestedAmount !== null && $requestedAmount > $approvedLimit)
+                || ! $this->price($requestedAmount ?? $approvedLimit, $this->json($product->pricing), $channel, $product, $partner)) {
                 continue;
             }
 
@@ -429,11 +460,14 @@ class EssentialsOrchestrationService
                 ],
             );
             $created[] = $line;
+            if (! $affiliated && $line->available_limit_minor >= max(1, $requestedAmount ?? 1)) {
+                $externalAvailable = true;
+            }
         }
 
         return [
-            'lines' => $this->visibleCreditLines(collect($created))->values(),
-            'overall' => $this->summary($user),
+            'lines' => $this->visibleCreditLines(collect($created), $channel)->values(),
+            'overall' => $this->summary($user, $channel),
             'channel' => $channel,
         ];
     }
@@ -465,37 +499,45 @@ class EssentialsOrchestrationService
             $this->assertPartnerAccount($sourcePartnerAccountId, $data['source_platform'] ?? null);
         }
 
-        $lines = EssentialsCreditLine::query()
-            ->where('user_id', $user->id)
-            ->where('financial_space_id', $account->financial_space_id)
-            ->where('status', 'active')
-            ->where('available_limit_minor', '>=', $amount)
-            ->where(function ($q) {
-                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
-            })
-            ->get();
-
         $candidates = collect();
-        foreach ($lines as $line) {
-            $product = DB::table('partner_products')->where('id', $line->partner_product_id)->where('status', 'active')->first();
-            $partner = DB::table('partners')->where('id', $line->lender_partner_id)->where('status', 'active')->first();
-            if (! $product || ! $partner || (int) $product->partner_id !== (int) $partner->id) {
-                continue;
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $lines = EssentialsCreditLine::query()
+                ->where('user_id', $user->id)
+                ->where('financial_space_id', $account->financial_space_id)
+                ->where('status', 'active')
+                ->where('available_limit_minor', '>=', $amount)
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->get();
+
+            $candidates = collect();
+            foreach ($lines as $line) {
+                $product = DB::table('partner_products')->where('id', $line->partner_product_id)->where('status', 'active')->first();
+                $partner = DB::table('partners')->where('id', $line->lender_partner_id)->where('status', 'active')->first();
+                if (! $product || ! $partner || (int) $product->partner_id !== (int) $partner->id) {
+                    continue;
+                }
+                if ($line->decision_route === 'cito' && ! $this->citoLending->drawdownConfigured()) {
+                    continue;
+                }
+                $eligibility = $this->json($product->eligibility_rules);
+                $categories = array_map('strtolower', (array) ($eligibility['categories'] ?? []));
+                if ($categories && ! in_array(strtolower((string) $account->biller->category), $categories, true)) {
+                    continue;
+                }
+                $pricing = $this->price($amount, $this->json($product->pricing), $channel, $product, $partner);
+                if (! $pricing) {
+                    continue;
+                }
+                $candidate = compact('line', 'product', 'partner', 'pricing');
+                $candidates->push($candidate);
             }
-            if ($line->decision_route === 'cito' && ! $this->citoLending->drawdownConfigured()) {
-                continue;
+
+            if (app(PlatformCreditRoutingService::class)->rankPartnerCandidates($candidates, $amount)->isNotEmpty() || $attempt === 1) {
+                break;
             }
-            $eligibility = $this->json($product->eligibility_rules);
-            $categories = array_map('strtolower', (array) ($eligibility['categories'] ?? []));
-            if ($categories && ! in_array(strtolower((string) $account->biller->category), $categories, true)) {
-                continue;
-            }
-            $pricing = $this->price($amount, $this->json($product->pricing), $channel, $product, $partner);
-            if (! $pricing) {
-                continue;
-            }
-            $candidate = compact('line', 'product', 'partner', 'pricing');
-            $candidates->push($candidate);
+            $this->refreshEligibility($user, $account->financial_space_id, $channel, $amount, $account->biller->category);
         }
 
         $best = app(PlatformCreditRoutingService::class)->rankPartnerCandidates(
@@ -1503,12 +1545,27 @@ class EssentialsOrchestrationService
         }
     }
 
-    private function visibleCreditLines(Collection $lines): Collection
+    private function visibleCreditLines(Collection $lines, string $channel): Collection
     {
-        $candidates = $lines->map(function ($line) {
-            $partner = DB::table('partners')->where('id', $line->lender_partner_id)->first();
+        $candidates = $lines->map(function ($line) use ($channel) {
+            $partner = DB::table('partners')->where('id', $line->lender_partner_id)->where('status', 'active')->first();
+            $product = DB::table('partner_products')->where('id', $line->partner_product_id)->where('status', 'active')->first();
+            if (! $partner || ! $product || (int) $product->partner_id !== (int) $partner->id || $line->available_limit_minor <= 0) {
+                return null;
+            }
+            $context = app(CreditDistributionService::class)->partnerContext($product, $partner);
+            $strategy = app(PlatformCreditRoutingService::class)->strategy();
+            if ($context->institution?->lender_relationship === 'affiliated' && isset($strategy['max_affiliated_loan_minor'])) {
+                $line = clone $line;
+                $line->available_limit_minor = min((int) $line->available_limit_minor, (int) $strategy['max_affiliated_loan_minor']);
+            }
+            try {
+                $pricing = $this->price((int) $line->available_limit_minor, $this->json($product->pricing), $channel, $product, $partner);
+            } catch (InvalidArgumentException) {
+                return null;
+            }
 
-            return $partner ? ['line' => $line, 'partner' => $partner] : null;
+            return $pricing ? compact('line', 'partner') : null;
         })->filter();
 
         return app(PlatformCreditRoutingService::class)->rankPartnerCandidates($candidates, 0)->pluck('line');

@@ -69,6 +69,13 @@ class CreditDistributionService
         } elseif (strcasecmp((string) $product->status, 'Active') !== 0 || strcasecmp((string) $term->status, 'Active') !== 0 || ! $product->institution || strcasecmp((string) $product->institution->status, 'Active') !== 0) {
             $code = 'CREDIT_ROUTE_INACTIVE';
             $reason = 'The lender, product or term is not active.';
+        } elseif (! LenderAuthorityEvidence::complete([
+            'authority_basis' => $product->institution->authority_basis,
+            'authority_reference' => $product->institution->authority_reference,
+            'regulator' => $product->institution->regulator_code,
+        ])) {
+            $code = 'LENDER_AUTHORITY_INCOMPLETE';
+            $reason = 'The lender authority or exemption evidence must be completed before offering credit.';
         } elseif ($product->institution->authority_valid_until?->isBefore(today())) {
             $code = 'LENDER_AUTHORITY_EXPIRED';
             $reason = 'The lender authority record requires renewal.';
@@ -95,7 +102,14 @@ class CreditDistributionService
         ]);
         $context->distribution_partner_product_id = $product->id;
         $institution = isset($partner->institution_id) ? Institution::find($partner->institution_id) : null;
-        $context->setRelation('institution', $partner->institution_id ? $institution : new Institution(['name' => $partner->name, 'status' => ucfirst($partner->status), 'lender_relationship' => 'independent']));
+        $evidence = is_array($partner->regulatory_evidence ?? null) ? $partner->regulatory_evidence : json_decode($partner->regulatory_evidence ?? '{}', true);
+        $context->setRelation('institution', ($partner->institution_id ?? null) ? $institution : new Institution([
+            'name' => $partner->name, 'status' => ucfirst($partner->status), 'lender_relationship' => 'independent',
+            'authority_basis' => $evidence['authority_basis'] ?? (filled($evidence['licence_number'] ?? null) ? 'licensed' : 'pending'),
+            'authority_reference' => $evidence['authority_reference'] ?? $evidence['licence_number'] ?? null,
+            'regulator_code' => $evidence['regulator'] ?? $evidence['licence_authority'] ?? null,
+            'authority_valid_until' => $evidence['authority_valid_until'] ?? null,
+        ]));
 
         return $context;
     }

@@ -41,3 +41,12 @@ Automatic approval review rejected pushing this implementation to the public `ly
 ## Completion statement
 
 Coding is implemented and the listed local tests/builds have completed. Full build/release completion is not yet verified: mobile analysis/tests and Android/iOS compilation, PostgreSQL migrations, Composer audit and the existing HTTP smoke mismatch remain outstanding. Skipping GitHub Actions does not mark those checks passed. Publication uses `[skip ci]` to honour the owner’s instruction without reconfiguring repository workflows.
+
+
+## Pre-merge review correction checkpoint
+
+The 18:07 UTC automated review on PR #123 identified nine concrete defects. Corrections close unlinked pool ownership, missing lender authority, amount/purpose-specific mobile fallback, channel-filtered Essentials eligibility, compatibility product type, legacy default-interest policy selection, configured-pool substitution, pre-decision affiliated strategy checks, and duplicate controller distribution snapshots. Regression fixtures explicitly identify synthetic lender authority and pool ownership; production records are not backfilled with invented evidence.
+
+A Railway volume backup was created and shown restorable at 21:24 Africa/Kampala on 25 September 2026 (1.13 GB). No database restore was executed and no new service, database or environment was provisioned. The documented Railway restore procedure was inspected. GitHub Actions remains deferred. The mobile execution limitation recorded above remains unresolved; source corrections are not signed app-store releases.
+
+The corrected full API suite passed locally: 305 tests, 2,052 assertions, zero failures/errors and the same two PHP 8.5 deprecation notices. Changed-file PHP formatting and documentation/publication checks passed. Web source and dependency versions are unchanged by this correction. Mobile source was reviewed; execution remains blocked as previously documented.

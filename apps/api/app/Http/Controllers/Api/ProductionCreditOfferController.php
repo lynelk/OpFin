@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\ConsentRecord;
 use App\Models\CreditOffer;
 use App\Models\LoanApplication;
-use App\Services\AppStoreCreditPolicy;
 use App\Services\ProductionCreditOfferService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +18,6 @@ class ProductionCreditOfferController extends Controller
 {
     public function __construct(
         private readonly ProductionCreditOfferService $offerService,
-        private readonly AppStoreCreditPolicy $appStorePolicy,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -71,16 +69,8 @@ class ProductionCreditOfferController extends Controller
 
         try {
             $validated = $validator->validated();
-            $appStoreDisclosure = $this->appStorePolicy->validateOffer($application, $validated);
-            $offer = $this->offerService->createOffer($application, $request->user(), $validated);
 
-            if ($appStoreDisclosure !== []) {
-                $offer->forceFill([
-                    'pricing_snapshot' => array_merge($offer->pricing_snapshot ?? [], $appStoreDisclosure),
-                    'disclosure_snapshot' => array_merge($offer->disclosure_snapshot ?? [], $appStoreDisclosure),
-                ])->save();
-                $offer = $offer->fresh();
-            }
+            $offer = $this->offerService->createOffer($application, $request->user(), $validated);
         } catch (InvalidArgumentException $exception) {
             return ApiResponse::error($exception->getMessage(), 409);
         }

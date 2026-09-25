@@ -110,7 +110,7 @@ class LendingPlatformController extends Controller
         unset($data['id']);
         $product->fill($data);
         if (! $product->exists) {
-            $product->type = $data['product_category'];
+            $product->type = $data['product_category'] === 'asset_finance' ? 'Asset' : 'Cash';
         }
         $product->save();
         $this->audit->record('lending_platform.product.updated', $request->user(), $product, ['institution_id' => $institution->id, 'country' => $product->country, 'currency' => $product->currency]);

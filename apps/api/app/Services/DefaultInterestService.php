@@ -32,8 +32,12 @@ class DefaultInterestService
         }
 
         $currency = strtoupper((string) ($loan->creditOffer?->currency ?? config('services.mobile_money.currency', 'UGX')));
-        $lender = $loan->creditOffer?->disclosure_snapshot['lender_of_record'] ?? [];
-        $policy = $this->policies->active('regulatory_pricing', (string) $loan->loan_product_id, $lender['licence_class'] ?? '', $lender['country'] ?? null, $asOf);
+        $lender = $loan->creditOffer?->disclosure_snapshot['lender_of_record'] ?? null;
+        // Legacy offers retain their snapshotted class, or the pre-upgrade configured class.
+        // A new lender disclosure with no class intentionally uses the generic policy.
+        $licenceClass = $lender !== null ? ($lender['licence_class'] ?? '')
+            : ($loan->creditOffer?->pricing_snapshot['regulatory_policy']['licence_class'] ?? null);
+        $policy = $this->policies->active('regulatory_pricing', (string) $loan->loan_product_id, $licenceClass, $lender['country'] ?? null, $asOf);
         $rules = $this->policies->rules($policy);
         $defaultRules = (array) ($rules['default_interest'] ?? []);
         if ($defaultRules === []) {
