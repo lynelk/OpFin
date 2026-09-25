@@ -1,93 +1,90 @@
 # OpFin operational manual
 
 Status: Controlled operations and release reference  
-Version: 24 September 2026  
+Version: 25 September 2026  
 Language: English (United Kingdom)  
 Audience: operations, support, Finance, Compliance and authorised institutional/programme administrators
 
 ## Operating model
 
-OpFin separates Person identity, Financial Spaces, membership/roles, capabilities, entitlements and eligibility. Cito is the preferred third-party gateway and CPay the preferred payment route. OpFin remains responsible for its own product state, expected accounting, reconciliation and audit evidence.
+OpFin separates Person identity, Financial Spaces, membership/roles, capabilities, entitlements and eligibility. Cito is the preferred external-service gateway and CPay the preferred payment route. They are not permission to block unrelated internal record keeping, reporting or account access during an outage. OpFin owns product state, expected accounting, reconciliation and audit evidence.
 
-Commercial/service-economics records do not replace the financial ledger. Stolets remains a separate operating product, and specific gnuGrid routing requirements are not overridden by a general direct-provider policy.
+Commercial/service-economics records do not replace the ledger. Stolets remains a separate operating product, and the specific gnuGrid-through-Cito rule is not overridden by a generic fallback policy. Do not send an ambiguous money instruction through a second route.
 
-## Current release position
+## Current release evidence
 
-Use the [dated delivery evidence](../operations/DELIVERY_EVIDENCE_2026-09-24.md) rather than the earlier 23 September deployment snapshot. For the reviewed `35abeeef57ff8b4a29d6bd5ba2d6575fa9e54c7f` source, the latest API build had six failed tests; Web failed TypeScript checking; worker/scheduler records reported success. This does not establish aligned production.
+The [24 September record](../operations/DELIVERY_EVIDENCE_2026-09-24.md) preserves the then-failing API and Web build evidence. The treasury baseline/role repair at `a56289bcfbf05759d6afd844d89f7e8a39ae34db` subsequently passed the existing isolated API build procedure with **265 tests and 1,872 assertions**, dependency audit and asset compilation. It deliberately stopped before runtime deployment. Those six earlier failures are therefore resolved in the tested candidate; a later production claim must identify the actual merged/running revision.
 
-Essentials has unresolved internal financial-control review findings. Documentation updates do not waive them. GitHub Actions remains disabled by owner instruction; retain equivalent candidate-specific verification without disabling existing build tests or audits.
+The repair preserves the account opening date instead of replacing it during balance refreshes, and includes the implemented partner API role without granting it general administration. It does not complete club investment accounting or the wider Essentials control review.
+
+GitHub Actions remains disabled at the owner's instruction. Equivalent candidate-specific checks remain required. A release tool that reports success without the expected tests is not acceptable evidence; review actual logs and outputs.
 
 ## Daily controls
 
-Review API live/readiness, worker heartbeat/queue, scheduler cycles, provider callbacks and ambiguous operations, reconciliation/integrity exceptions, failed financial actions, KYC/consent exceptions, complaints/SLA, programme follow-ups, privacy suppression and security alerts.
+Review API live/readiness, worker heartbeat and queue, scheduler cycles, provider callbacks and ambiguous requests, accounting/reconciliation exceptions, failed financial actions, KYC/consent exceptions, complaint SLAs, programme follow-ups, privacy suppression and security alerts.
 
-Never repair a money-state exception by editing a customer status without corresponding provider and accounting evidence. A successful historical deployment is not a fresh health check.
+Do not change customer financial status without matching provider and accounting evidence. A historical successful deployment is not a fresh health check. Keep secrets out of diagnostic commands and restrict access to operational logs; any accidental credential output requires incident handling and controlled rotation.
 
-## Financial Space and institutional administration
+## Space and institutional administration
 
-Confirm Space, role and target record before every administrative action. Personal information is not disclosed merely through group, employer, programme or partner membership.
+Confirm Space, role and target record before every administrative action. Group, employer, programme or partner membership does not automatically disclose Personal Space information.
 
-Institutional progression is profile → required KYB/regulatory evidence → capabilities/products → integration → certification. Technical enablement alone does not activate regulated distribution.
+Institutional progression is profile → required KYB/regulatory evidence → capabilities/products → integration → certification. Enabling a capability does not itself activate regulated distribution.
 
-Employer is a Business capability. Current positive-only enrichment permits an approved capped benefit and treats missing/negative information neutrally, but permitted fields must still respect the original minimal-employment-data/privacy boundary. Do not use unrelated disciplinary, attendance or performance data by implication.
+Employer is a Business capability. Approved positive-only enrichment may provide a capped benefit and treats missing/negative information neutrally. Permitted fields must still respect the original minimal-employment-data boundary; do not infer authority to use unrelated disciplinary, attendance or performance records.
 
 ## Programmes and partner identities
 
-Use Inclusion & programmes and Programme delivery for programme/sponsor records, versioned instruments, reviewed translations, follow-ups, enrolment/exit, consent exceptions, dedicated partner access and aggregate MEL reporting.
+Inclusion & programmes and Programme delivery manage programme/sponsor records, versioned instruments, reviewed translations, follow-ups, enrolment/exit, consent exceptions, dedicated partner identities and aggregate MEL reporting.
 
-Participant measurements require applicable active consent and enrolment. Protected/programme attributes are not credit-risk inputs. Retain participation-window boundaries after exit. Small cohorts remain suppressed; do not reconstruct them through adjacent filters or exports.
+Participant measurement requires applicable active consent and enrolment. Protected/programme fields are not credit-risk inputs. Retain participation-window boundaries after exit. Small cohorts remain suppressed; do not reconstruct them through adjacent filters or exports.
 
-Invite only the intended partner to the intended programme, using a dedicated identity and the configured verification process. Revoke access when authorisation ends. `programme_partner` reporting access is distinct from `partner_api` lending-platform authority.
+Invite only the intended partner to the intended programme through dedicated identity verification. Revoke authority when it ends. Programme-partner reporting and Essentials partner-API permissions are not interchangeable.
 
-## Club treasury and statement operations
+## Club treasury and statements
 
-Follow the [current capability supplement](CURRENT_CAPABILITY_SUPPLEMENT.md) and [treasury specification](../product/INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md).
+Follow the [capability supplement](CURRENT_CAPABILITY_SUPPLEMENT.md), [treasury specification](../product/INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md) and [current API contract](../../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md). The 25 September repair supersedes earlier statements that the five tested historical-date workflows remain blocked.
 
-Validate the account opening balance/date and currency against source evidence. Import mapped CSV into the correct Space/account and preserve original dates/references. Source-hash deduplication is not proof that two differently formatted files contain no overlapping economic records; inspect overlap and match evidence.
+Verify currency, opening balance and opening date against source evidence. **The opening date remains fixed after account creation.** Current-balance recalculation must not move that baseline. Entries and statements before the genuine opening baseline still fail validation. The tested example opens at UGX 1,000,000 on 1 September, receives 250,000 on 5 September and pays 100,000 on 10 September, leaving 1,150,000 without changing the opening date.
 
-Resolve suggested matches, missing book items, external-only/duplicate rows, book-only entries and variances through the supported review decisions. Retain reasons. Do not fabricate a balancing transaction or suppress a difference simply to reach confirmation.
+The repair does not guess or rewrite an already-corrupted historical baseline. Resolve any existing affected account from original approved records. Never alter correct source dates or remove the date guard merely to make an import pass.
 
-Issue a statement only after the required review state is satisfied. Preserve the issued snapshot and separate currency balances. An internal statement is not external bank verification or complete investment/member-capital accounting.
+Import mapped CSV into the correct account. Identical-file deduplication is not proof that differently formatted files contain no overlapping transactions. Review suggestions, missing book items, external-only or duplicate rows, book-only items and closing variances with source evidence and reasons.
 
-Current historical-date/baseline failures must be resolved and re-tested before treasury acceptance. Investigate whether balance refresh alters the opening baseline; do not replace valid historical dates with today's date. Detailed import/reconciliation remains a Web workflow in the reviewed source.
+Confirmation retains accepted differences; it must not fabricate balancing entries. Issued snapshots preserve history and separate currencies. OpFin statements are not bank-issued statements or complete member-capital, NAV/unitisation, distribution and investment-performance accounting. Detailed import/reconciliation remains a Web workflow requiring the appropriate channel acceptance.
 
-## Provider and money-movement operations
+## Providers, identity evidence and money movement
 
-Keep adapters disabled until genuine configuration, credentials and legal basis are confirmed. Evidence ingestion proves provenance, not automatic risk eligibility. An ambiguous Cito/provider failure must not silently start the same operation through a direct provider.
+Keep providers unactivated until genuine configuration, contracts and certification are supplied. Evidence ingestion proves provenance, not automatic underwriting eligibility. Cached identity evidence, where separately implemented and approved, must preserve source, subject, purpose, verification age and consent; it must not stand in for biometric, phone, sanctions or affordability checks.
 
-Preserve pending state, original request and provider references. Reconcile before retry or explicit route change. Apply idempotency and appropriate locking for economic transitions. Only confirmed, expected events may create the corresponding accounting and receipts.
+Provider acknowledgement is not finality. Preserve pending state and original references, reconcile before retry, and change route only under an explicit safe policy. Apply payload-bound idempotency and appropriate concurrency controls. Confirmed, expected financial events must produce the required accounting and receipts.
 
 ## Essentials operations and activation hold
 
-Use Essentials operations only within an approved scope while its control findings remain open. The intended capability covers verified service/rental beneficiaries, named third-party lenders, capacity/reservations, quotes, fulfilment and repayment reconciliation. OpFin must not be configured or described as the primary Essentials lender.
+The intended capability covers verified bill/rental beneficiaries, named third-party lenders, funding capacity, quotes, purpose-bound fulfilment and repayment servicing. OpFin must not be configured or described as the primary Essentials lender.
 
-Before financial activation, prove:
+Before financial activation, prove expected immutable accounting and canonical reconciliation; exact-Space permissions including omitted context; concurrency-safe collection and overcollection prevention; deletion/closure with open advances; retained pending funding/reversal exposure; and a usable approved capital-mandate lifecycle.
 
-- expected immutable accounting and reconciliation for each funding, fulfilment, repayment and reversal event;
-- exact-Space customer/partner authorisation, including omitted-context requests;
-- concurrency-safe repayment reservation and prevention of overcollection;
-- governed deletion/closure with pending, active or overdue advances;
-- pending lender funding/reversal exposure retained in the overall profile;
-- approved, active and funded lender mandates usable through the actual lifecycle.
-
-These are internal acceptance criteria. Lender/biller contracts, Cito/CPay capability certification, rental verification, approved terms and live recovery exercises are additional external/operational gates. Do not say that only credentials remain. All gnuGrid services for this capability remain behind Cito.
+These internal controls are separate from lender/biller agreements, certified Cito/CPay routes, approved terms, beneficiary verification and operational recovery exercises. Treasury test success does not close these findings or make credentials the only remaining work.
 
 ## Commercial evidence and exports
 
-Commercial performance covers attribution, governed costs, funnel/repeat use, overdue/NPL outcomes, recorded revenue and contribution. Unknown remains unknown. Principal, insurance premium and investment capital are not platform revenue. Programme graduation is analytics, not credit approval or pricing.
+Commercial performance includes acquisition attribution, governed costs, funnel/repeat use, portfolio outcomes, recorded revenue and contribution. Unknown is not zero. Principal, premium and investment capital are not platform revenue. Programme graduation is analytics, not loan approval or pricing.
 
-Programme CSV/XLSX/ZIP packs preserve aggregate privacy and causality notices. Financial/provider reports preserve source references, incomplete fields and reconciliation state. Treasury CSV must remain safe to open and must not imply unsupported foreign-exchange conversion.
+Programme CSV/XLSX/ZIP exports retain aggregate privacy and causality notices. Financial/provider reports retain source references, incomplete fields and reconciliation status. Treasury CSV must be safe to open and must not imply unsupported FX conversion.
 
-## Incidents, support and accessibility
+## Incident handling, support and accessibility
 
-Preserve restricted evidence and references, stop duplicate execution, communicate accurate pending/error status, reconcile external/internal truth, escalate financial-integrity/privacy incidents and record remediation. Do not put tokens, identity documents or full customer bank details in public issues.
+Preserve restricted evidence, stop duplicate execution, communicate accurate customer-safe state, reconcile external/internal truth and escalate financial-integrity/privacy incidents. Record cause, containment, remediation and verified closure. Never put tokens, credentials, identity documents or full account numbers in public issues.
 
-Assist customers using supported large text, simple wording, reduced motion and high contrast. Record physical-device evidence for assistive technology. Optional location must remain purpose-specific and must not bypass authorisation before an external provider call. Helpers never request PINs/OTPs or weaken identity assurance.
+For a credential exposure, restore a safe command path, restrict affected logs and rotate using an approved procedure. Database password changes must be coordinated with all consumers. Application-key rotation must preserve required encrypted records and include session invalidation and data re-encryption as applicable; do not simply replace the key and make historical data unreadable.
+
+Assist customers through supported larger text, simple wording, reduced motion and high contrast. Record actual device/assistive-technology evidence. Optional location remains purpose-bound and authorised before provider calls. Helpers never request PINs/OTPs or reduce identity assurance.
 
 ## Release procedure
 
-Record the candidate, affected paths and results; retain independent financial review where required. Run applicable API/Web/client checks, dependency/security checks, Space isolation, replay/concurrency and provider failure/recovery tests. Verify migrations, exact running sources, API/Web health, fresh worker/scheduler heartbeats and applicable reconciliation after deployment.
+Record candidate, changed paths and actual checks. Retain independent review where required. Run applicable API/Web/client tests, dependency/security checks, isolation, replay/concurrency and provider failure/recovery tests. Confirm migrations, actual running source, API/Web health, worker/scheduler freshness and applicable reconciliation after deployment.
 
-Use only the approved existing infrastructure. Do not create services, databases, volumes, environments, buckets or replicas or use Railway Agent. Do not remove an existing test/audit to update production. Where a build fails, retain the previous evidence and state the blocked service explicitly.
+Use existing approved infrastructure. Do not create a new service, database, environment, volume, bucket or replica, use Railway Agent, enable Actions or remove a test/audit merely to force a release. Validation-only runs must have an explicit no-deployment barrier and their temporary configuration must be restored.
 
-The [concept and plan comparison](../product/CONCEPT_AND_PLAN_COMPARISON.md) separates achieved source work, internal defects, acceptance gaps and external activation. Revisit it after each accepted release rather than marking the entire plan complete from a merge.
+The [concept comparison](../product/CONCEPT_AND_PLAN_COMPARISON.md) separates original requirements, later decisions, implementation and acceptance. A merge, test count or documentation publication is not a blanket financial-launch certificate.
