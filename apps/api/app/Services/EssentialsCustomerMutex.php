@@ -11,6 +11,7 @@ use Throwable;
 /**
  * Serialise Essentials mutations and account closure without moving the
  * existing database commit boundary across an external provider request.
+ * PostgreSQL must use a direct or session-affine writer connection.
  */
 class EssentialsCustomerMutex
 {
@@ -31,8 +32,8 @@ class EssentialsCustomerMutex
         if ($postgres) {
             // Session-level, not transaction-level: the native service can
             // commit its reservation before submitting a provider request.
-            // A non-blocking acquisition prevents lock-order waits in callers.
-            $result = $connection->selectOne('SELECT pg_try_advisory_lock(hashtextextended(?, 0)) AS acquired', [$name]);
+            // Use the writer PDO for both lock and unlock, never a read replica.
+            $result = $connection->selectOne('SELECT pg_try_advisory_lock(hashtextextended(?, 0)) AS acquired', [$name], false);
             if (! in_array($result->acquired, [true, 1, '1', 't', 'true'], true)) {
                 throw new RuntimeException('Another financial operation is in progress for this customer. Refresh its status before retrying.');
             }
@@ -52,7 +53,7 @@ class EssentialsCustomerMutex
             unset($this->held[$userId]);
             if ($postgres) {
                 try {
-                    $connection->selectOne('SELECT pg_advisory_unlock(hashtextextended(?, 0)) AS released', [$name]);
+                    $connection->selectOne('SELECT pg_advisory_unlock(hashtextextended(?, 0)) AS released', [$name], false);
                 } catch (Throwable) {
                     // Closing the session releases its advisory locks. Never
                     // retry the financial callback because unlocking failed.

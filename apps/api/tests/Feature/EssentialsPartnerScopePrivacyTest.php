@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\EssentialsPartnerAuthorisation;
 use App\Models\User;
 use App\Services\EssentialsOrchestrationService;
 use App\Services\EssentialsPartnerScopeService;
@@ -40,7 +41,8 @@ class EssentialsPartnerScopePrivacyTest extends TestCase
         $personal->shouldNotReceive('find');
         $essentials = Mockery::mock(EssentialsOrchestrationService::class);
         $essentials->shouldReceive('assertPartnerCustomerAuthorised')->once()
-            ->with($customer, 5, 'status_read', 91)->andReturnNull();
+            ->with($customer, 5, 'status_read', 91)
+            ->andReturn(new EssentialsPartnerAuthorisation);
         $query = Mockery::mock();
         $query->shouldReceive('join')->once()->andReturnSelf();
         $query->shouldReceive('where')->times(4)->andReturnSelf();

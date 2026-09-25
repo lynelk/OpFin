@@ -8,13 +8,14 @@ use App\Services\PersonalFinancialSpaceService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use RuntimeException;
 
 class ScopedPartnerEssentialsController extends PartnerEssentialsController
 {
     public function eligibility(Request $request, int $customer): JsonResponse
     {
-        // The existing controller must complete partner and customer-grant
-        // authorisation before any additional subject context is resolved.
+        // Complete the existing partner/customer-grant authorisation before
+        // resolving any additional subject context for the response projection.
         $response = parent::eligibility($request, $customer);
         if ($response->getStatusCode() >= 400) {
             return $response;
@@ -32,5 +33,16 @@ class ScopedPartnerEssentialsController extends PartnerEssentialsController
         $response->setData($body);
 
         return $response;
+    }
+
+    public function storeAccount(Request $request, int $customer): JsonResponse
+    {
+        try {
+            return parent::storeAccount($request, $customer);
+        } catch (RuntimeException) {
+            // A competing customer operation is a retry-after-status conflict,
+            // not permission to drop the mutex or disclose raw database errors.
+            return ApiResponse::error('This account instruction could not complete while the customer state was changing. Refresh its status before retrying.', 409);
+        }
     }
 }

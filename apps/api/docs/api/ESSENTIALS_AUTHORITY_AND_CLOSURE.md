@@ -1,43 +1,53 @@
 # Essentials partner authority and account closure
 
-Status: Tested remediation; merged/deployed revision must be recorded separately  
+Status: Implemented remediation candidate; independent financial and production acceptance pending  
 Reviewed: 25 September 2026  
 Language: English (United Kingdom)
 
-## Scope and verification
+## Evidence and scope
 
-Candidate `f6173ebc0429190756554cd30d009fdf40937395` passed the existing isolated API build procedure: **274 tests, 1,927 assertions**, dependency audit and asset build. Nine new tests cover the boundaries below. The verifier deliberately exited before runtime deployment. These results do not certify PostgreSQL concurrency, external provider activation or unrelated Essentials accounting.
+This document records the current source contract in PR #118, not a completed financial launch. The original candidate `f6173ebc0429190756554cd30d009fdf40937395` passed an isolated API build with 274 tests and 1,927 assertions. Subsequent independent review identified eligibility-response leakage and account-closure lock ordering; that earlier result did not close those findings.
+
+The integrated candidate `085f4da2b79b6fe6ca9a58146de94cd90cb2ce85` added the response projection and customer mutex. Its full run had 350 passing tests and one failure in an older privacy mock that returned null where the current service contract requires an authorisation model. The revised fixture preserves the grant-first and identical-denial assertions. Exact later candidate results are recorded in the PR; neither test definitions nor this document represent unexecuted checks as passed.
+
+The current [product specification](../../../../docs/product/OPFIN_ESSENTIALS.md), [capability contracts](CURRENT_CAPABILITY_CONTRACTS.md) and [manual supplement](../../../../docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) remain correct to withhold overall financial acceptance. Source remediation, independent approval, production-database behaviour and provider activation are separate requirements.
 
 ## Exact Financial Space authority
 
-Partner customer eligibility, account creation, quote creation, status and completion now resolve a concrete existing Financial Space before checking the customer grant. An omitted Space selects the customer's existing Personal Space; it never means all Spaces or whichever grant is available.
+Partner eligibility, account creation, quote creation, status and completion resolve a concrete existing Financial Space. An omitted Space selects the customer's existing Personal Space; it never means all Spaces or whichever grant is available.
 
-The customer and membership must remain active and not deleted; the Space must be active and not deleted. The customer must have granted the correct scope to the approved partner distribution account for that exact Space. A permission for a Household cannot authorise the Personal Space or another Household. A removed member's earlier partner grant does not override removal.
+The customer, membership and Space must remain active and not deleted. The customer must have granted the correct scope to the approved partner account for that exact Space. Grant checks precede membership-detail checks where the target is explicit, and denial wording does not disclose whether a missing grant or an inactive membership caused the denial.
 
-`GET /api/partner/essentials/customers/{customer}/status` now returns `data.financial_space_id` and only `data.advances` for that resolved Space. The former optional filter that could return every customer Space is removed.
+`GET /api/partner/essentials/customers/{customer}/status` returns `data.financial_space_id` and only that Space's permitted advances. It does not disclose every customer Space.
 
-Partner account creation preserves the resolved Space. A matching service account already held in another Space cannot be moved by the embedded platform through repeated account creation. The request is rejected and the original account remains unchanged. Quote creation/completion rejects records with no explicit Space rather than guessing a target.
+Partner eligibility returns a reduced view: `financial_space_id`, eligible `lines`, and `overall`. Line fields are limited to identifiers, lender/product identifiers, approved/available limits, currency, status and expiry. `overall` supplies the target Space, bounded available limit, currency and `limits_are_not_additive`. Customer account collections, other-Space advances, raw decision snapshots, provider payloads and credit-profile details are not returned. Mixed currencies do not produce a fabricated converted total.
 
-Soft-deleted customers cannot be loaded through the partner endpoints. Partner roles still require customer grants; programme-partner aggregate reporting remains a separate authority. Existing eligibility validation/conflict responses are retained; forbidden and not-found responses must not be presented as provider outages.
+A partner cannot relocate an existing service account from another Space through repeated account creation. Quote creation/completion rejects records without an explicit Space. Soft-deleted customers are unavailable to partner endpoints. Programme-partner reporting and Essentials partner-API authority remain distinct.
 
-## Customer account deletion
+## Account closure and shared customer mutex
 
-`AccountDeletionService` checks Essentials advances and pending collections in addition to existing loan, savings, protection and participatory obligations.
+`AccountDeletionService` checks pending, reservation-bearing, active, overdue and unknown Essentials states and pending collections, in addition to the existing loan, savings, protection and participatory obligations. A settled record with positive remaining debt also requires review. These outcomes reuse the deletion support case and preserve servicing access.
 
-Reservation-bearing, pending, active, overdue and unknown future advance states prevent destructive closure. A settled advance with a positive remaining balance also requires review. A pending repayment collection prevents closure even when another record labels the advance settled. These outcomes record or reuse the account-deletion support case and preserve the user's wallet, profile, Personal Space and servicing access.
+A consistently settled zero-balance advance does not permanently prevent closure. A never-activated failed request is not automatically a permanent borrower debt.
 
-A consistently settled zero-balance advance does not permanently prevent closure; required financial records remain retained. A failed, never-activated advance does not create permanent debt merely because the rejected quote's amount remains as historical evidence.
+The container now binds Essentials mutation entry points and account deletion through the same `EssentialsCustomerMutex`. Covered entry points are service-account creation, eligibility refresh, quote creation, partner completion authorisation, acceptance, repayment and deletion. The PostgreSQL writer session obtains a non-blocking advisory lock before these operations. Busy callers receive a conflict rather than waiting in an inverted set of row locks.
 
-The deletion transaction acquires the existing credit-profile lock used by Essentials acceptance before checking obligations and deleting optional context. It rechecks the current credential against the fresh locked account. Production-database concurrency acceptance is still required; the SQLite suite is not proof of PostgreSQL interleaving.
+The mutex does not wrap the domain operation in a new database transaction. Existing reservation commits remain before external provider calls. It never automatically repeats a financial callback after a provider or unlock exception. A fresh active customer is reloaded after locking, so a stale user object cannot resume work after completed closure.
 
-## Operator procedure
+The PostgreSQL connection must be direct or session-affine. Do not introduce transaction-pooling middleware without replacing this lock design and repeating concurrency acceptance. The local/testing cache-lock fallback is not production PostgreSQL evidence. Tests cover container binding, nesting without changing transaction depth, contention rejection, exception release and stale-customer denial. Two-session PostgreSQL acceptance and the required independent APPROVED review remain outstanding until separately recorded.
 
-When `deletion_status=pending_obligations` is returned, retain the case reference and complete or lawfully transfer the genuine obligation. Do not edit status or outstanding amounts solely to make deletion succeed. Pending provider collections require reconciliation, not a new collection or fabricated finality.
+This is not a claim that every unrelated financial service uses the same mutex or that the broader collection/accounting findings are resolved.
 
-For partner errors, verify the customer, exact target Space, active membership, partner account and granted scope. Do not grant broader access simply to remove a forbidden response. An omitted Space is the existing Personal Space, not unrestricted account-wide authority.
+## Operator and developer handling
+
+When `deletion_status=pending_obligations` is returned, retain the case reference and complete or lawfully transfer the genuine obligation. Do not edit debt values or statuses merely to make deletion succeed. Pending provider collections require reconciliation, not an invented successful collection or a second route.
+
+For partner denials, confirm the intended customer, exact Space, current membership and granted scope. Do not grant wider access simply to suppress an error. For a busy/conflict response, inspect the original instruction's state before retrying; this change does not make ambiguous money retries safe.
+
+The existing [developer index](current-endpoints.md) and [client contract](frontend-backend-contract.md) remain the entry points. Clients must consume the smaller partner eligibility response rather than depending on unrelated account/profile collections.
 
 ## Remaining financial acceptance
 
-These changes address partner scoping and closure; they do not by themselves add the expected immutable Essentials ledger events, canonical provider intents, safe collection concurrency, provider-reference uniqueness, trusted store-channel rules or every pending-exposure/capital-mandate fix. Refer to the current remediation record before claiming full launch readiness.
+Expected immutable Essentials accounting, durable canonical provider instructions, full collection/reversal reconciliation, provider-reference uniqueness, pending exposure and approved capital-mandate lifecycle require their own implementation and tests. This source slice does not resolve them or the separately recorded credential-log incident.
 
-Existing tests and audit gates remain enabled. No live debt, provider activation, new infrastructure or GitHub Actions enablement is introduced by this repair.
+Preserve all tests, audit checks and independent financial-review requirements. No live financing, new infrastructure or GitHub Actions enablement is introduced by this branch update.
