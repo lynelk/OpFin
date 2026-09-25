@@ -57,8 +57,7 @@ class CitoCapabilityClient
             return $cached;
         }
 
-        // A subject-level lock avoids concurrent paid NIN checks. It does not
-        // lock the customer's financial rows or suspend unrelated OpFin tasks.
+        // Serialise NIN checks without locking the customer's financial rows.
         $lock = Cache::lock('opfin:identity:nin:'.$user->id, max(60, (int) config('services.cito.timeout_seconds', 15) + 30));
         if (! $lock->get()) {
             throw new RuntimeException('NIN verification is already in progress. Check its status before retrying.');
@@ -72,7 +71,7 @@ class CitoCapabilityClient
                 capability: $capability, purpose: 'identity_verification',
                 consentReference: 'kyc-case:'.$case->id,
             );
-            $evidence->rememberNin($user, $case, $result);
+            app(IdentityEvidenceRevocationService::class)->recordDefinitiveResult($user, $case, $result);
 
             return $result;
         } finally {
