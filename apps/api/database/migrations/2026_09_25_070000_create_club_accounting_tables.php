@@ -135,7 +135,9 @@ return new class extends Migration
         $immutable = ['club_journals', 'club_journal_entries', 'club_treasury_posts', 'club_member_movements',
             'club_asset_movements', 'club_nav_snapshots', 'club_period_closures', 'club_statements', 'club_reversals'];
         if (DB::getDriverName() === 'pgsql') {
-            DB::unprepared('CREATE FUNCTION opfin_club_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION \'Issued club accounting evidence is immutable; post a correcting entry\' USING ERRCODE = \'23514\'; END; $$');
+            // PostgreSQL table resets leave standalone trigger functions in
+            // place. Reinstall the same protection when rebuilding the schema.
+            DB::unprepared('CREATE OR REPLACE FUNCTION opfin_club_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION \'Issued club accounting evidence is immutable; post a correcting entry\' USING ERRCODE = \'23514\'; END; $$');
             foreach ($immutable as $table) {
                 DB::unprepared("CREATE TRIGGER {$table}_immutable BEFORE UPDATE OR DELETE ON {$table} FOR EACH ROW EXECUTE FUNCTION opfin_club_immutable()");
             }
