@@ -36,8 +36,10 @@ class FinancialSpaceTreasuryAccount extends Model
      */
     public function setOpeningBalanceMinorAttribute(mixed $value): void
     {
-        if ($this->exists && $this->transactions()->exists()) {
-            throw new \LogicException('Opening balance is locked after the first cashbook transaction.');
+        if ($this->exists) {
+            throw new \LogicException(
+                'Opening balance is fixed at treasury-account creation. Use a reviewed accounting correction instead of rebaselining.'
+            );
         }
 
         $this->attributes['opening_balance_minor'] = (int) $value;
