@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/forgot_password_screen.dart';
 import 'package:opfin/home_screen.dart';
@@ -38,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     setState(() => _loading = true);
     try {
-      final response = await http.post(Uri.parse('$apiUrl/login'),
+      final response = await OpFinHttp.post(Uri.parse('$apiUrl/login'),
         body: {'phone': _normalise(phone), 'pin': _pin.text});
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode != 200 || decoded['success'] != true) {
