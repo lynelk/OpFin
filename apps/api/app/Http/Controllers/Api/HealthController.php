@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\RecordWorkerHeartbeat;
+use App\Services\FinancialReadinessService;
 use App\Services\ProductionIntegrationReadinessService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +18,10 @@ class HealthController extends Controller
 {
     private const HEARTBEAT_FRESH_MINUTES = 12;
 
-    public function __construct(private readonly ProductionIntegrationReadinessService $integrations) {}
+    public function __construct(
+        private readonly ProductionIntegrationReadinessService $integrations,
+        private readonly FinancialReadinessService $financialReadiness,
+    ) {}
 
     public function live(): JsonResponse
     {
@@ -59,13 +63,51 @@ class HealthController extends Controller
         ]);
     }
 
+    public function financialReady(): JsonResponse
+    {
+        $report = $this->financialReadiness->report();
+        $checks = collect($report['checks'])->map(function (array $check, string $name): array {
+            $public = ['status' => $check['status'] ?? 'blocked'];
+
+            if ($name === 'financial_integrity') {
+                $public['fresh'] = (bool) ($check['fresh'] ?? false);
+                $public['freshness_limit_minutes'] = (int) ($check['freshness_limit_minutes'] ?? 0);
+                $public['latest_completed_at'] = data_get($check, 'latest_run.completed_at');
+                $public['open_critical_alerts'] = (int) ($check['open_critical_alerts'] ?? 0);
+                $public['open_high_alerts'] = (int) ($check['open_high_alerts'] ?? 0);
+            }
+
+            return $public;
+        })->all();
+
+        $publicReport = [
+            'financial_operations_ready' => (bool) $report['financial_operations_ready'],
+            'status' => $report['status'],
+            'checks' => $checks,
+            'rules' => $report['rules'],
+        ];
+
+        return $report['financial_operations_ready']
+            ? ApiResponse::success('Financial operations are ready.', $publicReport)
+            : ApiResponse::error('Financial operations are blocked.', 503, $publicReport);
+    }
+
     public function integrations(): JsonResponse
     {
         $report = $this->integrations->report();
+        $public = [
+            'production_ready' => (bool) $report['production_ready'],
+            'required_integrations_ready' => (bool) $report['required_integrations_ready'],
+            'integrations' => collect($report['integrations'])->map(fn (array $integration) => [
+                'status' => $integration['status'] ?? 'blocked',
+                'required' => (bool) ($integration['required'] ?? false),
+                'purpose' => $integration['purpose'] ?? null,
+            ])->all(),
+        ];
 
         return ApiResponse::success(
             $report['production_ready'] ? 'Required production integrations are configured.' : 'One or more required production integrations still need configuration.',
-            $report,
+            $public,
         );
     }
 
