@@ -11,9 +11,7 @@ use InvalidArgumentException;
 
 class FinancingController extends Controller
 {
-    public function __construct(private readonly FinancingService $financing)
-    {
-    }
+    public function __construct(private readonly FinancingService $financing) {}
 
     public function intents(Request $request)
     {
