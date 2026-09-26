@@ -6,6 +6,7 @@ use App\Models\CreditDecision;
 use App\Models\CreditOffer;
 use App\Models\CreditRepaymentScheduleItem;
 use App\Models\CreditScoreComponent;
+use App\Models\CustomerWallet;
 use App\Models\Institution;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
@@ -348,6 +349,15 @@ class ProductionCreditOfferLifecycleTest extends TestCase
             'email' => fake()->unique()->safeEmail(),
         ]);
         $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER, 'institution_id' => $institution->id]);
+        CustomerWallet::create([
+            'user_id' => $customer->id,
+            'provider' => 'mock',
+            'msisdn' => $customer->phone ?: '256700000602',
+            'status' => 'active',
+            'verified_at' => now(),
+            'is_default_disbursement' => true,
+            'is_default_repayment' => true,
+        ]);
         $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS, 'institution_id' => $institution->id]);
 
         CreditScoreComponent::create([
