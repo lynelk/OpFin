@@ -10,7 +10,7 @@ use RuntimeException;
 /** Deterministic financial rules. No provider calls, database access or side effects. */
 final class AccountingRules
 {
-    public const ALLOCATION_VERSION = 'oldest_due_fees_interest_principal_v1';
+    public const ALLOCATION_VERSION = 'oldest_due_interest_fees_principal_v1';
     public const LIVE_COLLECTIONS = ['prepared', 'submitting', 'pending', 'confirmed_unapplied', 'exception'];
     public const ACTIVE_DEBT = ['active', 'overdue', 'fulfilment_reversal_review'];
     public const TERMINAL_ADVANCES = ['settled', 'fulfilment_failed', 'lender_funding_failed', 'reversed'];
@@ -48,7 +48,6 @@ final class AccountingRules
             if (in_array($status, ['applied', 'failed', 'reversed'], true)) {
                 continue;
             }
-            // Unknown future states remain reserved until their semantics are reviewed.
             $reserved = self::add($reserved, $amount);
         }
         if ($reserved > $outstanding) {
@@ -65,12 +64,14 @@ final class AccountingRules
         }
     }
 
-    /**
-     * @return array{rows:array,allocations:array,principal_minor:int,interest_minor:int,fees_minor:int,total_minor:int,policy:string}
-     */
-    public static function allocate(array $rows, int $collected): array
+    public static function allocate(array $rows, int $collected, string $policy = self::ALLOCATION_VERSION): array
     {
         self::amount($collected, true);
+        $order = match ($policy) {
+            'oldest_due_interest_fees_principal_v1' => ['interest', 'fees', 'principal'],
+            'oldest_due_fees_interest_principal_v1' => ['fees', 'interest', 'principal'],
+            default => throw new InvalidArgumentException('The accepted allocation policy is unsupported.'),
+        };
         $rows = self::schedule($rows);
         $remaining = $collected;
         $totals = ['principal_minor' => 0, 'interest_minor' => 0, 'fees_minor' => 0];
@@ -80,7 +81,7 @@ final class AccountingRules
                 break;
             }
             $allocation = ['schedule_item_id' => $row['id'], 'principal_minor' => 0, 'interest_minor' => 0, 'fees_minor' => 0];
-            foreach (['fees', 'interest', 'principal'] as $component) {
+            foreach ($order as $component) {
                 $field = $component.'_outstanding_minor';
                 $take = min($row[$field], $remaining);
                 $row[$field] -= $take;
@@ -89,8 +90,7 @@ final class AccountingRules
                 $totals[$component.'_minor'] = self::add($totals[$component.'_minor'], $take);
             }
             $row['total_outstanding_minor'] = self::sumComponents($row, '_outstanding_minor');
-            $used = self::sumComponents($allocation, '_minor');
-            if ($used > 0) {
+            if (self::sumComponents($allocation, '_minor') > 0) {
                 $allocations[] = $allocation;
             }
         }
@@ -99,10 +99,10 @@ final class AccountingRules
             throw new InvalidArgumentException('The collected amount cannot be allocated exactly to the outstanding schedule.');
         }
         return ['rows' => $rows, 'allocations' => $allocations] + $totals
-            + ['total_minor' => $collected, 'policy' => self::ALLOCATION_VERSION];
+            + ['total_minor' => $collected, 'policy' => $policy];
     }
 
-    /** Restore the original allocation, not a newly calculated allocation policy. */
+    /** Restore original allocation evidence, not a newly calculated allocation. */
     public static function reverse(array $rows, array $allocations, int $collected): array
     {
         self::amount($collected, true);
@@ -134,7 +134,6 @@ final class AccountingRules
         return array_values($indexed);
     }
 
-    /** Pending principal reserves headroom but is not due customer debt. */
     public static function exposure(array $advances, string $today): array
     {
         self::date($today);
@@ -157,7 +156,6 @@ final class AccountingRules
                         $next = $next === null || $row['due_date'] < $next ? $row['due_date'] : $next;
                     }
                 }
-                // An incomplete schedule cannot manufacture new lending headroom.
                 $debt = self::add($debt, max($sum, $outstanding));
             } elseif (! in_array($status, self::TERMINAL_ADVANCES, true)) {
                 $reserved = self::add($reserved, max($principal, $outstanding));
@@ -179,8 +177,6 @@ final class AccountingRules
             if (in_array($status, ['RELEASED', 'REFUNDED', 'REVERSED'], true)) {
                 return 'success';
             }
-            // A lookup of the original drawdown reporting SUCCESS proves funding,
-            // not its subsequent release. Only the release call may use SUCCESS.
             if (! $statusLookup && in_array($status, ['SUCCESS', 'SUCCESSFUL', 'COMPLETED'], true)) {
                 return 'success';
             }
