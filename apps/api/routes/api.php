@@ -59,6 +59,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/health', [HealthController::class, 'show']);
 Route::get('/health/live', [HealthController::class, 'live']);
 Route::get('/health/ready', [HealthController::class, 'ready']);
+Route::get('/health/financial-ready', [HealthController::class, 'financialReady']);
+Route::get('/health/integrations', [HealthController::class, 'integrations']);
 Route::middleware('throttle:auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
@@ -348,6 +350,8 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/umra/loans/{loan}/default-interest', [UmraComplianceController::class, 'accrueDefaultInterest']);
     Route::patch('/admin/umra/loans/{loan}/npl-enforcement', [UmraComplianceController::class, 'setNplEnforcement']);
     Route::post('/admin/financial-controls/loans/{loan}/overrides', [FinancialControlController::class, 'requestLoanOverride']);
+    Route::post('/admin/reconciliation-items/{item}/write-off-request', [FinancialControlController::class, 'requestReconciliationWriteOff']);
+    Route::post('/admin/reconciliation-items/{item}/write-off', [FinancialControlController::class, 'applyReconciliationWriteOff']);
     Route::post('/admin/financial-controls/overrides/{override}/approve', [FinancialControlController::class, 'approve']);
     Route::get('/admin/umra/term-changes', [UmraComplianceController::class, 'termChanges']);
     Route::post('/admin/umra/product-terms/{term}/changes', [UmraComplianceController::class, 'termChange']);
