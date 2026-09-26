@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
 
@@ -33,7 +34,7 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
   }
 
   Future<Map<String, dynamic>> _get(String path) async {
-    final response = await http.get(Uri.parse('$apiUrl$path'), headers: await _headers());
+    final response = await OpFinHttp.get(Uri.parse('$apiUrl$path'), headers: await _headers());
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300 || decoded['success'] != true) {
       throw Exception(decoded['message']?.toString() ?? 'Unable to load marketplace data.');
@@ -42,7 +43,7 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
   }
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> payload) async {
-    final response = await http.post(Uri.parse('$apiUrl$path'), headers: await _headers(), body: jsonEncode(payload));
+    final response = await OpFinHttp.post(Uri.parse('$apiUrl$path'), headers: await _headers(), body: jsonEncode(payload));
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300 || decoded['success'] != true) {
       throw Exception(decoded['message']?.toString() ?? 'Unable to complete that action.');
@@ -159,7 +160,7 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
   Future<void> _sendOtp() async {
     final phone = await UserSession.getPhone();
     if (phone == null || phone.isEmpty) throw Exception('Your registered phone number is missing.');
-    final response = await http.post(Uri.parse('$apiUrl/generate-otp'), body: {'phone': phone});
+    final response = await OpFinHttp.post(Uri.parse('$apiUrl/generate-otp'), body: {'phone': phone});
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300 || decoded['success'] != true) {
       throw Exception(decoded['message']?.toString() ?? 'Unable to send verification code.');
@@ -189,7 +190,7 @@ class _PeerLendingScreenState extends State<PeerLendingScreen> {
 
     final phone = await UserSession.getPhone();
     if (phone == null || phone.isEmpty) throw Exception('Your registered phone number is missing.');
-    final verify = await http.post(Uri.parse('$apiUrl/verify-otp'), body: {'phone': phone, 'otp': controller.text.trim()});
+    final verify = await OpFinHttp.post(Uri.parse('$apiUrl/verify-otp'), body: {'phone': phone, 'otp': controller.text.trim()});
     final verifyDecoded = jsonDecode(verify.body) as Map<String, dynamic>;
     if (verify.statusCode < 200 || verify.statusCode >= 300 || verifyDecoded['success'] != true) {
       throw Exception(verifyDecoded['message']?.toString() ?? 'Verification failed.');
