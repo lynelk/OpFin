@@ -1,71 +1,83 @@
 # Club accounting: Web and App workflow guide
 
-Version: 26 September 2026  
+Version: 26 September 2026, recovery and native-export revision  
 Language: English (United Kingdom)  
 Status: Implementation candidate; full client build and device acceptance outstanding
 
 ## Purpose and access
 
-The Web Workspace and Flutter App use the same club-accounting API. They do not calculate a second set of prices, ownership units, investment gains or account balances. Server-side membership, roles, book currency, source evidence, period locks and independent approval remain authoritative.
+Web Workspace and Flutter App use the same club-accounting API. They do not calculate a second set of prices, ownership units, investment gains or account balances. Server-side membership, roles, currency, source evidence, period locks and independent approval remain authoritative.
 
-On Web, choose **Member capital, investments and accounting** from the Space's treasury page, or open `/spaces/{id}/accounting`. The former treasury implementation is preserved as `treasury-content.tsx` and still provides its existing cashbook and external-statement workflows.
+On Web, choose **Member capital, investments and accounting** from the Space's treasury page, or open `/spaces/{id}/accounting`. The previous treasury implementation remains in `treasury-content.tsx` and retains its cashbook and external-statement functions.
 
-In the App, the existing club-finance entry now offers **Member capital and investments** and **Treasury and external statements**. The earlier treasury screen is preserved in `financial_space_treasury_screen.dart`. The new screen does not claim that all existing CSV bank-statement import functions have been ported to native Flutter.
+In the App, the club-finance entry offers **Member capital and investments** and **Treasury and external statements**. The previous treasury screen is preserved in `financial_space_treasury_screen.dart`. This does not imply that the Web CSV import/reconciliation tools have been ported to native Flutter.
 
 ## Set up an accounting book
 
-An authorised officer selects the currency, ownership model, approved cutover date and maximum accepted valuation age. A unitised book also requires an approved initial unit price. The app does not suggest an invented price or allocate missing historical ownership.
+An authorised officer selects the currency, ownership model, approved cutover date and maximum accepted valuation age. A unitised book also requires an approved initial unit price. OpFin does not invent a price or allocate missing historical ownership.
 
-Create a separate book for each currency. Member-capital books and ownership-unit books have different subscription/redemption rules. The server rejects conflicting attempts to create the same book with different policy terms.
+Use a separate book for each currency. Member-capital books and ownership-unit books have different subscription/redemption rules. Conflicting attempts to create the same book with different policy terms are rejected.
 
-The new book is a draft. Use **Approve opening accounts** to enter evidenced cash balances, member capital and units, and any existing investment positions. A genuinely empty club can have empty opening arrays. Positive existing assets require corresponding explicit economic ownership. A different authorised officer must approve the opening instruction.
+The new book is a draft. Use **Approve opening accounts** to enter evidenced cash balances, member capital and units, and existing investment positions. A genuinely empty club can have empty opening arrays. Positive existing assets require corresponding explicit ownership. A different authorised officer must approve the opening instruction.
 
 ## Record activity using guided forms
 
-The task menu comes from `/api/accounting/club-schema`. It includes opening accounts, contributions, redemptions, result allocations, ownership transfers, calls and monthly plans, investment acquisition/valuation/disposal/splits, ordinary cash and journal entries, reversals, distribution declarations/payments, account creation, treasury linkage and period closure.
+The task menu comes from `/api/accounting/club-schema`: opening accounts, contributions, redemptions, result allocations, ownership transfers, calls and monthly plans, acquisition/valuation/disposal/splits, ordinary cash and journal entries, reversals, distributions, ordinary-account creation, treasury linkage and period closure.
 
-Choose a task, confirm the displayed currency, enter its business date and complete the labelled fields. Nested lists use **Add row** and **Remove row**, not free-form JSON. Removing one row must not change the remaining values. Unknown future schema types are rejected rather than guessed.
+Choose a task, confirm the currency, enter its business date and complete the labelled fields. Nested lists use **Add row** and **Remove row**, not free-form JSON. Removing one row must preserve the remaining displayed and submitted values. Unsupported future field types are rejected rather than guessed.
 
-Enter whole-number currency minor units without commas. Ownership quantities use the API's micro-unit scale. The server determines exact allocation, rounding, net asset values and other financial outcomes.
+Enter whole-number currency minor units without commas. Ownership uses the API's micro-unit scale. The server calculates allocations, rounding and net asset values.
 
-Where a matching movement already exists in the cashbook, select its original transaction identifier to classify it exactly once. Do not record another cash movement merely to make accounting agree with a statement. Evidence references identify the genuine supporting source.
+Where a matching movement already exists in the cashbook, use its transaction identifier to classify it once. Reversing externally derived cash may require the **actual matching opposite cashbook entry**. An evidence reference and an arithmetic match are not issuer-confirmed statement authenticity.
 
 ## Submission, review and decision
 
-Submission creates a **pending instruction**, not an approved accounting event and not an executed bank/mobile-money payment. Its stable request key and submitted payload hash identify one instruction.
+Submission creates a pending instruction, not an approved event or an executed bank/mobile-money payment. Its request key and payload hash identify one instruction.
 
-The maker may inspect, simulate or cancel their pending instruction with a reason. They cannot approve it. A separate authorised checker reads the exact members, amounts, currency, source evidence and business date, may simulate the current result, and must acknowledge review before approving the exact hash. Rejection requires a reason.
+The maker may inspect, simulate or cancel their pending instruction with a reason. They cannot approve it. A different authorised checker reads the members, amounts, currency, source and date, optionally simulates the current result, acknowledges review and approves the exact hash. Rejection requires a reason.
 
-Simulation is rolled back by the API. Simulated record identifiers are not committed records. Approval re-evaluates current records, membership, source state and period restrictions; a preview is not a price lock or bypass of financial checks.
+Simulation is rolled back. Its identifiers are not committed records. Approval re-evaluates current membership, source state and period restrictions; a preview does not bypass financial checks.
 
-## Interrupted requests
+## Interrupted requests and acknowledgement
 
-On the App, an attempted instruction is stored through the existing secure-storage dependency under the current user, Space and book. Re-entering the workflow resumes the same frozen request. Tokens are never embedded in that request. A result with known validation failure can be corrected while retaining its key; a timeout is not treated as proof that nothing happened.
+Web and App first save the exact request on the server, encrypted and scoped to the current user, book and purpose. This closes the earlier Web reload-recovery gap. The App also retains its existing secure-storage recovery information; neither method stores a bearer token in the financial request.
 
-On Web, the open page retains and locks the original request during an uncertain result. Retry the unchanged instruction or inspect the queue. **Reload-safe Web recovery is not yet implemented in this candidate.** Do not close the page or create a fresh instruction to resolve an ambiguous result. This remains a release requirement rather than a claim of offline completeness.
+Open **Saved requests** after a timeout, reload or device change. Refresh the list, inspect the original request and choose **Resume or read original result**. This returns the original instruction or statement rather than creating another one. Read it and choose **I have read this result** to release its recovery slot before another request of that purpose.
 
-## Reports and frozen statements
+Acknowledgement is not accounting approval or payment execution. An unsubmitted request can be cancelled explicitly. A request already recorded in the domain cannot be cancelled as if unsent; use the ordinary instruction cancellation/decision workflow where allowed. After cancelling a saved unsubmitted request, reopen the form to obtain a new key.
 
-Members default to their own records. Wider club records and operational tasks require an authorised officer. The UI cannot broaden access by sending another person's identifier; the API rechecks it.
+A current role is rechecked when recovering a club instruction. Revoked access does not permit reading a previously saved whole-club payload.
 
-Select a reporting period to read capital positions and movements, contribution calls and distributions. Officers can read the trial balance, financial position, income, cash-flow and investment reports, journal history and integrity findings. Unknown or incomplete evidence remains visibly different from zero.
+## Reports, retained history and frozen statements
 
-Issuing a statement freezes its contents and integrity reference. Web provides authenticated CSV and printable HTML downloads without exposing the bearer token in a URL or browser payload. The App can issue and read the statement in-app; native file export and print/share are not included in this candidate.
+Members default to their own records. Officers may read wider club records when their current role permits it. Supplying another member's ID does not widen authorisation.
 
-An OpFin club statement is not a bank-issued statement, independent asset valuation, custody certificate or proof that a payout was sent. Check the separate treasury matching/confirmation evidence where external reconciliation is required.
+**My club capital history**, linked from Web My financial spaces and App My spaces, remains reachable after leaving a club. It uses retained member positions rather than requiring current membership. It does not expose another member's records or full-club accounts to former members.
+
+Select a reporting period for positions, movements, calls and distributions. Officers can also inspect trial balance, financial position, income, cash flow, investments, journal history and integrity findings. Unknown values remain distinct from zero.
+
+Issuing a statement freezes its contents and integrity reference. It uses the same saved-request recovery flow. A statement is not a bank-issued document, independent valuation, custody certificate or proof of payout. Check the separate treasury matching/confirmation evidence when external reconciliation is required.
+
+## Native export and printing
+
+Web exports authenticated CSV and printable HTML without placing a bearer token in a URL. In the App, open **Records and exports**, choose a book and issued statement, then select **Save CSV**, **Share CSV**, **Save statement**, or **Print / save PDF**.
+
+The operating system controls the destination, recipient and available printers. Files contain financial information; check the destination carefully. Cancelled, saved and dialogue-opened results are distinct. Opening a share or print dialogue is not confirmation of delivery or printing.
+
+The device receives statement bytes, not API credentials. Export accepts only supported formats and bounded document sizes. It does not change financial state. Unavailable print services or failed destination writes must be reported rather than presented as success.
 
 ## Training and UAT exercises
 
-Use synthetic members and at least two authorised officers. Complete an empty opening; add a contribution; inspect the pending instruction; verify self-approval is absent; approve as the checker; inspect resulting member ownership and balanced records. Repeat with an investment, valuation, distribution and partial redemption.
+Use synthetic members and two officers. Complete an empty opening; add a contribution; inspect its pending instruction; verify self-approval is absent; approve as the checker; inspect balanced records. Repeat for an investment, valuation, distribution and partial redemption.
 
-Remove the first of two form rows and confirm the second row retains its displayed and submitted value. Try fractional money, an invalid date, an unsupported field, another book/Space and a removed officer. All relevant server denials must remain visible.
+Remove the first of two form rows and confirm the second retains its values. Try fractional money, invalid dates, unsupported fields, another Space and a removed officer. Server denials must remain visible.
 
-Interrupt submission after the API receives it. Resume the exact same key and verify one instruction only. On App, close and reopen the workflow and test secure recovery for the correct user and Space. Test statement retries separately. Test larger text, screen readers, touch targets, narrow screens and keyboard-only use. These exercises have not been certified by the standalone input tests.
+Interrupt a request after server preparation and after domain submission. Reload Web or restart App, resume the same request and verify one domain record. Acknowledge it, then start a different request. Verify cancellation is available only while truly unsubmitted. Repeat for a frozen statement and for a different signed-in user.
+
+Leave a club and navigate through retained history: only the former member's own records should be available. Exercise CSV save/share, HTML/PDF printing, cancellation and unavailable destination services. Check narrow screens, text scaling, screen readers, touch targets and keyboard focus. These exercises are not certified by isolated parsing or policy tests.
 
 ## Developer and release notes
 
-Web server actions and the App gateway each allow only the explicit supported accounting actions. Provider credentials are not client inputs. The existing API-origin convention already contains `/api`; do not append it twice. Redirects are rejected on authenticated requests.
+The API remains the sole financial authority. The existing API-origin convention already includes `/api`; do not append it twice. Redirects are rejected on authenticated requests. Full source envelopes are retrieved one at a time from recovery rather than included in bulk metadata listings.
 
-The form schema assists users; backend validation is not replaced. Run the complete Next.js and Flutter checks, not just the standalone TypeScript contract harness. The latter validates a pure module, not React rendering, Next routing or a release build.
-
-Remaining client acceptance includes full dependency-aware builds, App/device/accessibility checks, Web reload recovery, native export and former-member own-history navigation. Parent backend test results belong to its own revision. This guide is not a complete financial-launch certificate.
+Run the complete API, Web and Flutter gates, migration checks and independent review on the exact candidate. Targeted transport, policy and parsing checks supplement, not replace, full application and device acceptance. Read [the recovery API contract](../../apps/api/docs/api/CLUB_CLIENT_RECOVERY.md) and [current implementation evidence](../operations/CLUB_RECOVERY_EXPORT_IMPLEMENTATION_2026-09-26.md).

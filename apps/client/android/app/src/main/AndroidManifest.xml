@@ -33,6 +33,13 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <provider
+            android:name="co.opfin.app.ClubStatementFileProvider"
+            android:authorities="${applicationId}.clubstatements"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/club_statement_paths"/>
+        </provider>
         <meta-data android:name="flutterEmbedding" android:value="2" />
     </application>
     <queries>

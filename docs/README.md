@@ -1,7 +1,7 @@
 # OpFin documentation hub
 
 Status: Current documentation and evidence index  
-Reviewed: 25 September 2026  
+Reviewed: 26 September 2026  
 Language: English (United Kingdom)
 
 Start with [current state](CURRENT_STATE.md), the [concept and plan comparison](product/CONCEPT_AND_PLAN_COMPARISON.md), and the [dated delivery evidence](operations/DELIVERY_EVIDENCE_2026-09-24.md). They separate what has been implemented, what was actually tested, unresolved internal defects and external activation.
@@ -16,17 +16,23 @@ Start with [current state](CURRENT_STATE.md), the [concept and plan comparison](
 | Operations and acceptance | [Operational manual](manuals/OPFIN_OPERATIONAL_MANUAL.md) | [UAT manual](manuals/OPFIN_UAT_MANUAL.md), [delivery evidence](operations/DELIVERY_EVIDENCE_2026-09-24.md) |
 | Developers | [Developer start](DEVELOPER_START_HERE.md) | [API index](../apps/api/docs/README.md), [Location Context](architecture/LOCATION_CONTEXT.md), [engineering](../AGENTS.md), [security](../SECURITY.md) |
 | API integrators | [API quick reference](../apps/api/docs/api/API_QUICK_REFERENCE.md) | [Current endpoints](../apps/api/docs/api/current-endpoints.md), [new capability contracts](../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) |
-| Club/treasury administrators | [Treasury specification](product/INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md) | [Task and acceptance supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) |
+| Club/treasury administrators | [Treasury specification](product/INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md) | [Task and acceptance supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md), [club accounting workflows](manuals/CLUB_ACCOUNTING_CLIENT_WORKFLOWS.md) |
 | Essentials partners | [Essentials specification](product/OPFIN_ESSENTIALS.md) | [Current control findings](operations/DELIVERY_EVIDENCE_2026-09-24.md), [field-level API guide](../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) |
 | Programme/MEL partners | [Inclusive-finance framework](product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md) | [Partner reporting standard](product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md) |
 | Publication and release owners | [Publication standard](PUBLICATION_STANDARD.md) | [Register](PUBLICATION_REGISTER.md), [deployment guidance](../infrastructure/railway/README.md), [UMRA controls](UMRA_DIGITAL_LENDING_CONTROLS.md) |
 | Quality, security and governance | [Integrated management-system policy proposal](governance/INTEGRATED_MANAGEMENT_SYSTEM.md) | [ISO readiness action register](governance/ISO_READINESS_ACTION_REGISTER.md); adoption and effectiveness are not yet evidenced |
 
+## Club client implementation: 26 September 2026
+
+Current branch work adds encrypted saved-request recovery across reloads/devices, retained former-member history navigation and native statement save/share/print. Use the [client workflow guide](manuals/CLUB_ACCOUNTING_CLIENT_WORKFLOWS.md), [recovery/API contract](../apps/api/docs/api/CLUB_CLIENT_RECOVERY.md), and [exact implementation evidence](operations/CLUB_RECOVERY_EXPORT_IMPLEMENTATION_2026-09-26.md).
+
+These references distinguish source implementation from dependency-aware builds, device acceptance, independent approval and deployment. They do not certify the broader Essentials lifecycle or resolve the credential-log incident. Earlier dated evidence retains its original scope.
+
 ## What changed in the current review
 
 The achievement comparison retains the original concept's four delivery phases and distinguishes later Financial Space, programme, club-treasury and Essentials decisions. It does not assign a misleading completion percentage or infer business success from a reporting endpoint.
 
-The manuals distinguish treasury records from full investment-club accounting, identify the current Web import/reconciliation boundary, and qualify Essentials instructions while accounting, authorisation, deletion, concurrency and reservation findings remain unresolved. The new API contract records actual input/response differences, including Essentials repayment's body idempotency key and non-final 201 response.
+The general manuals distinguish treasury records from full investment-club accounting, identify the current Web import/reconciliation boundary, and qualify Essentials instructions while its financial-control work remains unresolved. For the newer club accounting candidate, use the dated client/API references above rather than treating the earlier treasury-only comparison as its current implementation contract.
 
 Optional Location Context, programme privacy and independent Stolets boundaries remain part of the whole-product story. No new brand, provider activation or original-concept rewrite is implied by this update.
 
@@ -38,6 +44,7 @@ From repository root:
 python3 scripts/search-docs.py "treasury"
 python3 scripts/search-docs.py "Essentials" --api
 python3 scripts/search-docs.py "concept"
+python3 scripts/search-docs.py "club recovery"
 python3 scripts/search-api.py "essentials"
 python3 scripts/search-api.py "statement"
 make docs-check
