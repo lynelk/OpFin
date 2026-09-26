@@ -85,6 +85,24 @@ Read [Location Context](domain-endpoints.md#16c-location-context-and-lightweight
 
 Read [treasury contracts](domain-endpoints.md#16d-financial-space-treasury-statement-import-and-reconciliation). Fixed opening baselines, reviewed imports and frozen statements do not alone complete member-capital and investment accounting.
 
+
+## 16E. Club accounting, saved requests and retained history
+
+Read [book and instruction contracts](CLUB_ACCOUNTING.md) and [client recovery and native export](CLUB_CLIENT_RECOVERY.md). These are implementation candidates, not a claim of production acceptance.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/accounting/club-schema` | Guided operation fields; approval is not payment execution |
+| GET | `/api/accounting/my-club-books` | Signed-in member's retained own club positions |
+| GET | `/api/accounting/saved-requests` | Current user's paginated recoverable request metadata |
+| POST | `/api/financial-spaces/{space}/accounting/books/{book}/client-requests/prepare/{purpose}` | Persist the original instruction or statement envelope |
+| POST | `/api/financial-spaces/{space}/accounting/books/{book}/client-requests/inspect` | Inspect one exact owned request |
+| POST | `/api/financial-spaces/{space}/accounting/books/{book}/client-requests/submit` | Resume its domain operation or read the original result |
+| POST | `/api/financial-spaces/{space}/accounting/books/{book}/client-requests/acknowledge` | Acknowledge a result, never approve or pay |
+| POST | `/api/financial-spaces/{space}/accounting/books/{book}/client-requests/cancel` | Cancel only a genuinely unsubmitted request |
+
+Instruction recovery rechecks maker authority; statement history retains own-member access after leaving a club. Server-side encryption, exact-key replay and one unresolved slot per user/book/purpose prevent a reload from silently creating another economic instruction. Native exports receive document bytes, not credentials.
+
 ## 17. Financial Spaces and multi-entity membership
 
 Read [Financial Spaces](domain-endpoints.md#17-financial-spaces-and-multi-entity-membership). Membership in one Space does not disclose another.
