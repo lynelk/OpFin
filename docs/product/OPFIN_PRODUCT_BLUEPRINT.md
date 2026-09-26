@@ -215,3 +215,36 @@ Essentials is an embedded financial-service capability inside the wider OpFin fi
 OpFin is not the initial primary lender. Approved third-party lenders provide credit through governed capital mandates or Cito-managed lender routes, every offer identifies the lender, and lender approvals do not stack above the customer's overall responsible-credit headroom. CPay is the preferred settlement/repayment route, all gnuGrid services consumed by OpFin route through Cito, and Stolets/other approved platforms integrate only through customer-controlled Financial Space permissions.
 
 The detailed contract is `product/OPFIN_ESSENTIALS.md`.
+
+
+## OpFin Capital architecture freeze — 26 September 2026
+
+**OpFin Capital** is the umbrella capital-and-asset capability within OpFin. It reuses Financial Spaces, identity, consent, lender orchestration, Partner Catalogue, ledger/reconciliation and audit rather than creating a parallel application or ledger.
+
+The stable long-lived domain is **Person/Organisation ↔ Asset ↔ Finance ↔ Capital**. Initial product families are **OpFin Auto** (vehicles, motorcycles, EVs and fleets), **OpFin Device Finance** (phones, tablets, laptops and approved uniquely identifiable devices), **OpFin Asset Finance** (solar, machinery, agricultural/productive equipment and future asset classes), **OpFin Invest**, **OpFin Assets**, **OpFin Partners**, **OpFin Digital** and the future controlled **OpFin Exchange** capital-allocation/eligible-transfer layer.
+
+### Universal Asset Passport
+
+Every financed asset can have a server-authoritative Asset Passport using a common identity/lifecycle contract plus class-specific evidence. Sensitive customer/commercial data remains off-chain. Vehicles may add VIN/chassis/registration, valuation, inspection, insurance, security-interest and consented telematics. Devices may add IMEI/MEID/eSIM identifiers where applicable, manufacturer serial, model/SKU, merchant/purchase and activation evidence, warranty/protection, device-attestation, finance/ownership state, repair/replacement, loss/theft, trade-in/resale and end-of-finance release. Identifiers are normalised, validated, uniqueness-checked and protected against unauthorised enumeration; an identifier alone is not proof of possession or ownership.
+
+### OpFin Device Finance
+
+Device Finance is a first-class asset-finance channel available to OpFin and through governed partner/API/white-label journeys for SACCOs, FIs, employers and approved merchants. It requires merchant/SKU controls, identifier verification before supplier settlement, KYC/affordability, deposit/LTV/tenor/pricing/funding rules, activation/possession evidence, warranty/protection lifecycle, duplicate-finance/stolen-device/merchant-collusion controls, repayment/restructure/settlement/release and lawful recovery/resale/trade-in.
+
+Remote device restriction is never a default collections mechanism. Any such capability must use approved OEM/enterprise mechanisms, be legally/security reviewed, explicitly disclosed and consented, proportionate, auditable, preserve emergency/safety-critical access where technically applicable, prohibit covert surveillance or personal-content extraction, provide warning/grace/dispute/recovery paths and be removed at settlement/release. OpFin must not implement spyware, rooting/jailbreaking, OS-security bypass or malware-like persistence.
+
+### Partner Product Factory
+
+SACCOs and authorised institutions can configure approved asset/device products using the shared Product Factory: segment, eligibility, deposit, LTV, amount, tenor, pricing, fees, security, protection, guarantors, decision policy, approval hierarchy, funding source, collections and commercial allocation. Configuration cannot bypass country, lender, regulatory, accounting, consumer-protection or activation gates. The actual lender/funder/principal remains explicit.
+
+### Capital, blockchain and digital assets
+
+Qualified finance demand may be allocated to approved funding mandates from affiliates, SACCOs, Investment Clubs, institutions, funds and other permitted sources without exposing borrowers to investor-rail complexity. The OpFin double-entry ledger remains the financial source of truth.
+
+Blockchain is optional infrastructure for cryptographic anchoring, verifiable credentials, approved digital investment interests and programmable settlement. Ordinary repayment/servicing must continue if blockchain, a VASP/custodian or an OEM integration is unavailable. Stablecoin/virtual-asset funding is an optional regulated rail behind jurisdiction, VASP/custodian, AML/KYC, source-of-funds, FX, custody and accounting controls; borrower liability stays in the disclosed contractual currency unless a separately approved product says otherwise.
+
+Tokenised interests only represent/evidence rights established by enforceable legal instruments. Public issuance, collective investment, transferable interests, secondary trading and crypto-backed finance remain fail-closed until separately approved.
+
+### Extension rule
+
+New asset classes extend the Asset Passport and Product Factory contracts. New countries, chains, custodians, OEM device-management providers and payment rails enter through provider-neutral adapters and capability flags. Changes to legal principal, custody, accounting treatment, liability currency, enforceability, automated adverse action, remote device control, public investment solicitation or transferability require explicit governance review.
