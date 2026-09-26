@@ -39,6 +39,7 @@ export function isoDate(value: string): string {
 export function validateFields(fields: Field[], raw: RecordValue): RecordValue {
   const result: RecordValue = {};
   for (const field of fields) {
+    if (!['array','integer','string','date','month'].includes(field.type)) throw new Error('Unsupported form field. Refresh the application contract.');
     const value = raw[field.key];
     if (value === undefined || value === null || value === '') {
       if (field.required) throw new Error(field.label + ' is required.');
