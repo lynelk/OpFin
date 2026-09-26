@@ -3,6 +3,7 @@
 namespace App\Services\MobileMoney;
 
 use App\Contracts\MobileMoneyProviderInterface;
+use App\Contracts\MobileMoneyProviderReadinessInterface;
 use App\Services\MobileMoney\Adapters\CpayV2Adapter;
 use App\Services\MobileMoney\Adapters\MockMobileMoneyAdapter;
 use InvalidArgumentException;
@@ -50,7 +51,21 @@ class MobileMoneyProviderManager
             return;
         }
 
-        $this->configuredDirectProvider($name);
+        $adapter = $this->configuredDirectProvider($name);
+        if (! $adapter instanceof MobileMoneyProviderReadinessInterface) {
+            throw new InvalidArgumentException(
+                "Direct mobile-money provider '{$name}' does not expose the required readiness contract."
+            );
+        }
+
+        $readiness = $adapter->readiness();
+        if (($readiness['status'] ?? null) !== 'ready') {
+            $missing = implode(', ', (array) ($readiness['missing'] ?? []));
+            throw new InvalidArgumentException(
+                "Direct mobile-money provider '{$name}' is not ready for submission"
+                .($missing !== '' ? ": {$missing}" : '.')
+            );
+        }
     }
 
     public function readiness(?string $name = null): array
@@ -97,13 +112,40 @@ class MobileMoneyProviderManager
             && class_exists($class)
             && is_a($class, MobileMoneyProviderInterface::class, true);
 
+        if (! $classValid || ! $certified) {
+            return [
+                'provider' => $name,
+                'status' => 'blocked',
+                'certified' => $certified,
+                'adapter_class_configured' => $class !== '',
+                'adapter_class_valid' => $classValid,
+                'missing' => $class === '' ? ['adapter'] : [],
+            ];
+        }
+
+        $adapter = app($class);
+        if (! $adapter instanceof MobileMoneyProviderReadinessInterface) {
+            return [
+                'provider' => $name,
+                'status' => 'blocked',
+                'certified' => true,
+                'adapter_class_configured' => true,
+                'adapter_class_valid' => true,
+                'missing' => ['provider_readiness_contract'],
+                'reason' => 'A certified direct provider must expose non-secret configuration readiness.',
+            ];
+        }
+
+        $readiness = $adapter->readiness();
+
         return [
             'provider' => $name,
-            'status' => $classValid && $certified ? 'ready' : 'blocked',
-            'certified' => $certified,
-            'adapter_class_configured' => $class !== '',
-            'adapter_class_valid' => $classValid,
-            'missing' => $class === '' ? ['adapter'] : [],
+            'status' => ($readiness['status'] ?? null) === 'ready' ? 'ready' : 'blocked',
+            'certified' => true,
+            'adapter_class_configured' => true,
+            'adapter_class_valid' => true,
+            'missing' => array_values((array) ($readiness['missing'] ?? [])),
+            'reason' => $readiness['reason'] ?? null,
         ];
     }
 
