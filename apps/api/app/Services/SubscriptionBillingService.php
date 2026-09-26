@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CustomerWallet;
 use App\Models\FinancialSpace;
 use App\Models\MobileMoneyTransaction;
 use App\Models\RevenueEvent;
@@ -20,6 +19,7 @@ class SubscriptionBillingService
         private readonly TaxEngineService $taxes,
         private readonly RevenueAccountingService $revenue,
         private readonly AuditLogger $auditLogger,
+        private readonly VerifiedWalletService $wallets,
     ) {}
 
     public function subscribe(
@@ -97,18 +97,8 @@ class SubscriptionBillingService
             return ['contract' => DB::table('subscription_contracts')->find($contract->id), 'invoice' => $invoice, 'mobile_money' => null];
         }
 
-        $walletQuery = CustomerWallet::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'active')
-            ->whereNotNull('verified_at');
-        $wallet = $walletId
-            ? (clone $walletQuery)->whereKey($walletId)->first()
-            : (clone $walletQuery)->where('is_default_repayment', true)->first();
-        if ($walletId && ! $wallet) {
-            throw new InvalidArgumentException('Choose a verified wallet that belongs to your OpFin profile.');
-        }
-        $wallet ??= (clone $walletQuery)->orderByDesc('is_default_repayment')->first();
-        $phone = $wallet?->msisdn ?? $user->phone;
+        $paymentTarget = $this->wallets->forRepayment($user, $walletId);
+        $phone = $paymentTarget['phone'];
 
         $money = $this->mobileMoney->collect([
             'user_id' => $user->id,
