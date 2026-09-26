@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CreditDecision;
 use App\Models\CreditScoreComponent;
+use App\Models\CustomerWallet;
 use App\Models\Institution;
 use App\Models\LedgerAccount;
 use App\Models\LoanApplication;
@@ -239,6 +240,15 @@ class FinancialHardeningRegressionTest extends TestCase
             'email' => fake()->unique()->safeEmail(),
         ]);
         $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER, 'institution_id' => $institution->id]);
+        CustomerWallet::create([
+            'user_id' => $customer->id,
+            'provider' => 'mock',
+            'msisdn' => $customer->phone ?: '256700000712',
+            'status' => 'active',
+            'verified_at' => now(),
+            'is_default_disbursement' => true,
+            'is_default_repayment' => true,
+        ]);
         $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS, 'institution_id' => $institution->id]);
         $product = LoanProduct::create(['name' => 'Hardening Credit', 'type' => 'Cash', 'institution_id' => $institution->id]);
         $term = LoanProductTerm::create([
