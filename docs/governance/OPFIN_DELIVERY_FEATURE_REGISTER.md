@@ -60,3 +60,8 @@ The following remain the first closure targets:
 ## Change-impact requirement
 
 Every material PR must identify affected register IDs and assess Product, Legal, Privacy, Risk, Security, Data, API, UX, Operations, Documentation, Training, AI, QA, Commercial and Compliance impact. A release is incomplete while a required impact remains stale or unevidenced.
+
+
+## CI execution note — 26 September 2026
+
+GitHub Actions was re-enabled by the repository owner on 26 September 2026. Candidate-specific workflow results remain execution evidence only for the exact commit tested; they do not by themselves establish provider, regulatory, Sharia, financial-control or production activation.
