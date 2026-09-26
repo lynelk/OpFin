@@ -49,6 +49,7 @@ Complete against the exact signed candidate. An unchecked item is not silently w
 - [ ] Flutter analysis/tests pass.
 - [ ] Exact candidate has the applicable API/Web/client/security/deployment evidence recorded.
 - [ ] Required camera features remain optional for installation.
+- [ ] Location hardware remains optional and the merged AAB has no prohibited fine/background location, contacts, SMS, phone-number, broad storage/media or package-inventory permissions.
 - [ ] Sensitive backup/cleartext controls pass.
 - [ ] No provider secret is embedded in the AAB.
 

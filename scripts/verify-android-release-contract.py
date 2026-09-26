@@ -30,17 +30,29 @@ require(re.search(r"^version:\s*[^\s+]+\+\d+\s*$", pubspec, re.M) is not None, "
 require("package co.opfin.app" in activity and "class MainActivity" in activity, "Kotlin launcher namespace/class contract is missing")
 
 android = "{http://schemas.android.com/apk/res/android}"
-permissions = {node.get(android + "name") for node in manifest.findall("uses-permission")}
+permissions = {node.get(android + "name") for tag in ("uses-permission", "uses-permission-sdk-23")
+               for node in manifest.findall(tag)}
 require("android.permission.INTERNET" in permissions, "INTERNET permission is required")
 require("android.permission.CAMERA" in permissions, "CAMERA permission is required for KYC capture")
-for forbidden in ("android.permission.READ_SMS", "android.permission.READ_CONTACTS", "android.permission.READ_CALL_LOG",
-                  "android.permission.READ_EXTERNAL_STORAGE", "android.permission.MANAGE_EXTERNAL_STORAGE"):
+for forbidden in ("android.permission.READ_SMS", "android.permission.RECEIVE_SMS", "android.permission.SEND_SMS",
+                  "android.permission.READ_CONTACTS", "android.permission.READ_CALL_LOG", "android.permission.WRITE_CALL_LOG",
+                  "android.permission.READ_EXTERNAL_STORAGE", "android.permission.MANAGE_EXTERNAL_STORAGE",
+                  "android.permission.READ_MEDIA_IMAGES", "android.permission.READ_MEDIA_VIDEO",
+                  "android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_BACKGROUND_LOCATION",
+                  "android.permission.READ_PHONE_NUMBERS", "android.permission.QUERY_ALL_PACKAGES",
+                  "android.permission.WRITE_EXTERNAL_STORAGE"):
     require(forbidden not in permissions, f"Forbidden launch permission present: {forbidden}")
+require("ACCESS_FINE_LOCATION" not in activity,
+        "Android native location bridge must not request prohibited precise location")
 features = {node.get(android + "name"): node.get(android + "required")
             for node in manifest.findall("uses-feature")}
 for optional_camera in ("android.hardware.camera", "android.hardware.camera.autofocus"):
     require(features.get(optional_camera) == "false",
             f"{optional_camera} must be optional so Play does not filter devices by camera hardware")
+if "android.permission.ACCESS_COARSE_LOCATION" in permissions:
+    for optional_location in ("android.hardware.location", "android.hardware.location.network"):
+        require(features.get(optional_location) == "false",
+                f"{optional_location} must be optional to preserve device installation support")
 application = manifest.find("application")
 require(application is not None, "Android application element is missing")
 if application is not None:
