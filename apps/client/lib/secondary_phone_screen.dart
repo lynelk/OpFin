@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
 import 'package:sms_autofill/sms_autofill.dart';
@@ -29,7 +30,7 @@ class _SecondaryPhoneScreenState extends State<SecondaryPhoneScreen>{
     try{
       String sig='';if(Platform.isAndroid)sig=await SmsAutoFill().getAppSignature;
       _normalised=_format(raw);
-      final r=await http.post(Uri.parse('$apiUrl/generate-otp'),body:{
+      final r=await OpFinHttp.post(Uri.parse('$apiUrl/generate-otp'),body:{
         'phone':_normalised!,if(sig.isNotEmpty)'app_signature':sig});
       final d=jsonDecode(r.body) as Map<String,dynamic>;
       if(r.statusCode!=200||d['success']!=true)throw Exception(d['message']??'Unable to send code.');
@@ -41,12 +42,12 @@ class _SecondaryPhoneScreenState extends State<SecondaryPhoneScreen>{
     if(!RegExp(r'^\d{6}$').hasMatch(_otp.text)){_message('Enter the 6-digit code.');return;}
     setState(()=>_loading=true);
     try{
-      final v=await http.post(Uri.parse('$apiUrl/verify-otp'),body:{'phone':_normalised!,'otp':_otp.text});
+      final v=await OpFinHttp.post(Uri.parse('$apiUrl/verify-otp'),body:{'phone':_normalised!,'otp':_otp.text});
       final vd=jsonDecode(v.body) as Map<String,dynamic>;
       if(v.statusCode!=200||vd['success']!=true)throw Exception(vd['message']??'Code did not work.');
       final verification=((vd['data'] as Map?)?['verification_token'])?.toString();
       final access=await UserSession.getAccessToken();
-      final a=await http.post(Uri.parse('$apiUrl/phone-numbers/secondary'),headers:{
+      final a=await OpFinHttp.post(Uri.parse('$apiUrl/phone-numbers/secondary'),headers:{
         'Authorization':'Bearer $access','Accept':'application/json'
       },body:{'phone':_normalised!,'verification_token':verification});
       final ad=jsonDecode(a.body) as Map<String,dynamic>;
