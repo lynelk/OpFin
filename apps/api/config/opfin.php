@@ -76,6 +76,12 @@ return [
         'impairment_max_age_days' => (int) env('OPFIN_IMPAIRMENT_MAX_AGE_DAYS', 31),
     ],
 
+    'data' => [
+        'network_usage_logging' => filter_var(env('OPFIN_NETWORK_USAGE_LOGGING', true), FILTER_VALIDATE_BOOL),
+        'sponsorship_confirmed' => filter_var(env('OPFIN_SPONSORED_DATA_CONFIRMED', false), FILTER_VALIDATE_BOOL),
+        'sponsorship_operator_reference' => env('OPFIN_SPONSORED_OPERATOR_REFERENCE', ''),
+    ],
+
     'customer_experience' => [
         'secondary_phone_required' => false,
         'simple_language_default' => true,
