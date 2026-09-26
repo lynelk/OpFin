@@ -1,231 +1,135 @@
 # OpFin Essentials
 
-Status: Controlled external product and implementation contract  
-Updated: 23 September 2026  
+Status: Product contract with tested authority/closure remediation and outstanding financial acceptance  
+Reviewed: 25 September 2026  
 Language: English (United Kingdom)  
-Implementation status: software capability implemented; live provider activation remains configuration-, contract- and approval-gated.
+Authority/closure verification candidate: `e336daf4962cb735d1ff0b2360690b1eaffab83e`
+
+## Current acceptance position
+
+Essentials source capability has been merged, but the whole capability is not financially launch-certified. PR #118 now implements exact Financial Space partner authority, a minimal eligibility response, open-advance account-deletion protection and a shared customer-operation mutex. Its integrated candidate passed 358 tests and 2,362 assertions on both SQLite and PostgreSQL 18. These are source and test results, not a merged/deployed financial-release approval. See [authority and closure](../../apps/api/docs/api/ESSENTIALS_AUTHORITY_AND_CLOSURE.md) and the [25 September verification record](../operations/ESSENTIALS_AUTHORITY_VERIFICATION_2026-09-25.md).
+
+Separate expected-accounting, durable provider-instruction, pending-exposure, full repayment/reversal and capital-mandate acceptance remain open until their own evidence closes them. Serialising an in-flight method does not reserve a provider collection still pending after that method returns. Independent financial approval and production operating acceptance remain required.
+
+The [24 September delivery evidence](../operations/DELIVERY_EVIDENCE_2026-09-24.md) is historical. Its then-failing API/Web checks must not be described as the latest results. Preserve that record and use the later exact-candidate verification record for this remediation. Provider credentials, contracts and certification are additional gates, not the only remaining work.
+
+The original product requirements below remain distinct from later implementation decisions. This authority/closure update does not silently approve a different lender model, selection objective or store-distribution policy; reconcile any separately approved change through the concept/plan record.
 
 ## 1. Product position
 
-**OpFin remains a financial operating platform with embedded financial services.** Essentials is one capability within OpFin. It does not redefine OpFin as a utility lender, rent lender or lending-only application.
+OpFin remains a financial operating platform with embedded financial services. Essentials is one capability, not a redefinition as a utility lender, rent lender or lending-only application.
 
-OpFin Essentials helps a customer keep verified household or business essentials running when a payment timing gap exists. It combines the customer's existing OpFin financial picture, responsible-credit headroom, consented eligibility data, approved third-party lenders and purpose-bound provider settlement.
+Essentials addresses a timing gap for verified household or business essentials using the customer's financial picture, responsible-credit headroom, consented eligibility information, approved third-party lenders and purpose-bound settlement.
 
-OpFin is **not the primary lender** for Essentials. Every offer must identify the third-party lender that supplies the credit. OpFin acts as the customer experience, orchestration, servicing, controls, reconciliation and partner-integration layer.
+OpFin is not the primary Essentials lender under this product contract. Each offer must name the third party supplying credit. OpFin provides the experience, orchestration, servicing, controls, reconciliation and partner integration.
 
-## 2. What can be financed
+## 2. Categories and settlement
 
-| Category | Initial examples | Settlement rule |
+| Category | Initial examples, subject to actual approval/activation | Required settlement boundary |
 | --- | --- | --- |
-| Electricity | UEDCL | Verified account/meter; provider payment |
-| Water | NWSC | Verified account; provider payment |
-| Internet | Approved fixed/mobile internet billers | Verified subscriber account; provider payment |
-| Television | DStv, GOtv, StarTimes and approved billers | Verified subscriber account; provider payment |
+| Electricity | UEDCL and approved electricity billers | Verified meter/account; provider payment |
+| Water | NWSC and approved water billers | Verified account; provider payment |
+| Internet | Approved fixed/mobile internet billers | Verified subscriber; provider payment |
+| Television | DStv, GOtv, StarTimes and approved billers | Verified subscriber; provider payment |
 | Household energy | Approved LPG/energy providers | Verified provider/customer reference |
-| Rent | Verified landlord/property beneficiary | Manual beneficiary verification then purpose-bound beneficiary payment |
+| Rent | Verified landlord/property beneficiary | Reviewed rental/beneficiary evidence and purpose-bound beneficiary payment |
 
-Additional categories can be added through the governed biller catalogue without changing the credit domain.
+These names are catalogue examples, not evidence of active commercial arrangements. New categories use governed configuration. Cash-out is not an Essentials fulfilment route.
 
-Cash-out is not an Essentials fulfilment route. The financed amount goes to the verified provider or beneficiary.
+## 3. Intended customer journey
 
-## 3. Customer proposition
+Capture the service account or rental beneficiary; verify it or await manual rental review; refresh approved lender eligibility; request an amount for a specific verified essential; review lender identity, provider amount, interest, fees, total repayment and term; explicitly accept or reject; track authoritative provider fulfilment; repay through the approved verified-wallet/phone path; view the obligation in the relevant Space; and control/revoke embedded-platform permissions.
 
-The customer can:
+Ordinary borrowing, savings, growth, protection, employer and Compass journeys remain intact. A source UI or this guide is not authorisation for live financial execution before acceptance.
 
-1. add an essential-service account or rental beneficiary;
-2. verify the provider account, or wait for manual rental-beneficiary review;
-3. refresh eligibility across approved participating lenders;
-4. request financing for a specific verified essential;
-5. review the lender, provider payment, interest, fees, total repayment and term;
-6. accept or reject the offer;
-7. receive provider-payment confirmation and any provider fulfilment evidence;
-8. repay through a verified repayment wallet/phone;
-9. see the resulting obligation inside the relevant Financial Space;
-10. control and revoke permissions granted to Stolets or another embedded platform.
+## 4. Overall responsible-credit headroom
 
-Ordinary OpFin borrowing, savings, growth, protection, employer and Financial Compass journeys remain separate and intact.
+Eligible lender limits are not added together. Availability must be bounded by overall OpFin headroom and a lender line capable of serving the requested category. All outstanding and reservation-bearing Essentials states must reduce headroom appropriately.
 
-## 4. One responsible-credit headroom
+Three UGX 200,000 lender lines must not become UGX 600,000 simultaneous capacity. Lender-funding-pending and lender-reversal-pending states must retain exposure until authoritative resolution. The partner-response projection preserves the existing overall ceiling and does not sum lender limits; that projection is not a replacement for complete domain exposure accounting.
 
-A customer can be eligible with more than one lender, but lender limits are **not added together**.
+## 5. Third-party lender model
 
-Essentials availability is constrained by the customer's overall OpFin responsible-credit headroom and the largest eligible lender line that can serve the requested purpose. Existing active Essentials exposure reduces that headroom.
+Each lender requires an approved partner, active product, regulatory/licensing evidence, eligibility/pricing/term rules, supported categories and an approved funding/decision route. OpFin lender-code/name configurations are prohibited by the intended business model in this contract; a later change needs explicit product, legal and accounting approval. This remediation does not supply or infer that approval.
 
-This prevents a customer from turning three UGX 200,000 lender approvals into UGX 600,000 of simultaneous exposure merely because multiple providers exist.
+### Capital-mandate route
 
-## 5. Lender model
+An approved active lender-linked mandate must have sufficient unreserved committed capital. Acceptance reserves it; confirmed provider settlement deploys it; confirmed principal repayment restores capacity according to policy. Failed/reversed states require explicit release/reversal evidence.
 
-Essentials starts with third-party lending.
+Mandate-usability and lifecycle acceptance remain separate from this authority/closure remediation. Do not infer that an existing pool or a successful established loan test proves the complete Essentials route works.
 
-A lender is represented by an approved partner, an active partner product, regulatory/licensing evidence, eligibility rules, pricing and term rules, supported Essentials categories, and one approved decision/funding route.
+### Cito-managed lender route
 
-### 5.1 Capital-mandate route
+The lender exposes its approved eligibility/credit-line capability through Cito. OpFin supplies the applicable lender/product reference, profile snapshot and valid credit-processing consent reference. The participating third party remains the lender.
 
-The lender has an approved, active capital mandate linked to the lender partner.
+## 6. External data and payments
 
-OpFin may reserve capital for an accepted quote, but cannot deploy more than unreserved committed capital. On confirmed provider settlement, reserved capital becomes deployed capital. Confirmed principal repayment restores lender capital capacity.
+Cito is the preferred gateway. All gnuGrid services used by OpFin must be accessed through Cito under the current integration direction; a generic direct-adapter fallback does not authorise bypassing that restriction.
 
-### 5.2 Cito-managed lender route
+CPay is the preferred execution/reconciliation route. Essentials has configuration surfaces for service-account lookup, utility/biller payment, verified-beneficiary payment including rent, lender-repayment collection and transaction-status reconciliation. Do not invent a provider endpoint because a configuration slot exists.
 
-A participating lender can expose an eligibility/credit-line capability through Cito. OpFin sends the lender/product reference, the relevant OpFin credit-profile snapshot and a valid credit-processing consent reference. The third party remains the lender.
+A provider outage must not disable unrelated internal record keeping or account access. A dependent financial action must still preserve honest pending/unavailable state rather than inventing verification or settlement. An ambiguous request must not be silently sent through another provider.
 
-### 5.3 OpFin lender prohibition
+Repayment wallet/phone ownership and contractual allocation must be verified by the applicable policy. A nullable wallet identifier in controller input is not a guarantee that every omission is safe. See the [field-level contract](../../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md).
 
-The operations API rejects a lender configuration whose lender code or name identifies OpFin. This is deliberate. Changing the business model later requires an explicit product, legal, regulatory and accounting decision rather than a configuration accident.
+Genuine certification, credentials, contracts, operating ownership and recovery exercises remain required. The separate internal NIN-evidence reuse capability does not establish a direct NIRA contract or complete every KYC check.
 
-## 6. Data and external services
+## 7. Financial Space obligations and accounting
 
-### 6.1 Cito
+Accounts, lines, quotes and advances must resolve to the correct Space. The intended settlement lifecycle creates the appropriate third-party-lender obligation and reduces it through confirmed repayments, settling it when fully paid.
 
-Cito is the preferred external-service gateway.
+An obligation record is not a substitute for expected immutable accounting or canonical payment evidence. Accounting, obligations, provider finality and reconciliation must agree before financial acceptance. The current authority/closure change does not create the remaining lifecycle controls by itself.
 
-**All gnuGrid services used by OpFin must be accessed through Cito.** Direct CRB or identity configuration identified as gnuGrid is blocked. This applies beyond Essentials as a platform-wide integration rule.
-
-Cito can also expose third-party lender decisioning for an Essentials product.
-
-### 6.2 CPay
-
-CPay is the preferred money-movement and settlement route.
-
-The implemented Essentials contract supports separate configuration for service-account lookup, utility/biller payment, verified-beneficiary payment including rent, lender repayment collection, and transaction-status reconciliation.
-
-A customer repayment identifies the verified repayment wallet/phone. CPay moves and reconciles money; OpFin remains authoritative for contractual allocation between non-principal amounts and principal.
-
-### 6.3 External activation gates
-
-Code completeness does not imply that a provider route is commercially live. Production activation requires the corresponding certified CPay/Cito route, provider credentials, commercial agreement, reconciliation acceptance and operating ownership.
-
-The API fails closed when a required provider path is not configured.
-
-## 7. Financial Spaces
-
-Every Essentials account, lender line, quote and advance is linked to the appropriate Financial Space.
-
-When provider settlement succeeds, OpFin creates a financial obligation in that space. The obligation records the third-party lender as counterparty and the total customer repayment obligation. Confirmed repayments reduce the obligation; full repayment settles it.
-
-This allows Essentials to improve the customer's overall financial picture rather than creating an isolated loan ledger beside it.
+PR #118 includes pending, active, overdue, unknown and inconsistent settled Essentials states in account-deletion checks. Pending collections also preserve servicing access. A consistently settled zero balance can proceed through the existing closure process. The shared customer mutex serialises covered Essentials mutation methods and deletion without wrapping a provider call in a new database transaction. Its PostgreSQL fixture tests are described in the [verification record](../operations/ESSENTIALS_AUTHORITY_VERIFICATION_2026-09-25.md).
 
 ## 8. Rental finance
 
-Rent is built into the domain from the start.
-
-Rental finance requires a tenancy/landlord or property reference, landlord/property-manager name, payment-beneficiary name, beneficiary payment channel, and operations verification before financing.
-
-The customer does not receive rental cash. Following verification and acceptance, CPay uses the verified-beneficiary settlement route.
-
-Rental limits, lender eligibility, pricing and permitted tenures remain product-configurable.
+Capture the tenancy/landlord or property reference, landlord/property-manager identity, beneficiary name and payment channel, then obtain operations verification. The customer does not receive rental cash. Approved settlement uses the verified beneficiary. Limits, eligibility, pricing and tenures remain product-configurable and subject to applicable approval.
 
 ## 9. SME and embedded distribution
 
-Stolets is an intended SME distribution channel, but the architecture is provider-neutral.
+Stolets and other approved platforms may distribute Essentials without becoming part of OpFin's merchant-operations domain. They require due diligence, an active distribution account, product authorisation and a customer-granted permission for the exact target Space.
 
-Any approved platform can use the partner API after completing OpFin platform due diligence, receiving an active partner distribution account, being authorised for the Essentials product, and obtaining a customer-granted, Financial-Space-scoped Essentials authorisation.
+Customer scopes are `eligibility`, `account_write`, `quote_create` and `status_read`. API access alone does not authorise creating debt. Quote completion requires separate short-lived customer authorisation after disclosure review. Revoke permissions when authority ends.
 
-Supported customer-controlled scopes are eligibility, account_write, quote_create and status_read.
+The revised partner routes resolve an omitted Space to the existing Personal Space, not all Spaces or whichever grant is available. Active membership and the exact grant are both required. Eligibility responses exclude account/debt collections and raw decision snapshots; status is scoped to the resolved Space. Negative tests cover other-Space grants, removed members, deleted customers and service-account relocation. A `programme_partner` aggregate-reporting account is not an interchangeable `partner_api` credential. Independent approval and runtime rollout remain separate from the passing tests.
 
-A platform cannot create debt for a customer merely because it has API access. Embedded completion requires a separate, short-lived customer authorisation token after the customer has seen the offer.
+## 10. Offer selection and commercial economics
 
-Stolets remains a separate SME automation/digitisation product. It may originate an Essentials journey or provide consented business context; OpFin remains the financial-services domain.
+The intended selection in this product contract favours the eligible category/channel offer with the lowest total customer repayment, not OpFin commission. Validity, expiry, consent, headroom and lender funding must all hold. Any later approved routing priority must be explicitly reconciled with this requirement rather than silently changing the document to match implementation.
 
-## 10. Offer selection and commercial model
+Possible contracted economics include lender origination/servicing revenue, biller commissions, platform distribution arrangements and API servicing fees. Customer interest/fees follow the approved lender product and active pricing policy. Platform revenue is separate; principal and pass-through provider amounts are not automatically revenue.
 
-Among eligible lender lines capable of serving the category and channel, the current orchestration selects the valid offer with the **lowest total customer repayment**. OpFin revenue does not determine the selected lender.
+A configurable commercial agreement does not prove live pricing or settled revenue. This authority/closure change does not independently certify the broader commercial or lender-routing implementation.
 
-Possible commercial revenue sources include disclosed lender-funded origination or servicing revenue, biller/provider transaction commissions where contracted, embedded-platform commercial arrangements, lender/platform API servicing fees, and other contracted service revenue captured through service-economics events.
+## 11. Store-distributed credit
 
-Customer interest and customer fees belong to the configured lender product and must comply with applicable lending and distribution rules. Every Essentials quote is validated against OpFin's active effective-dated regulatory pricing policy before it can be offered. OpFin's platform revenue is recorded separately so economics can be audited without disguising it as customer pricing.
+The earlier repository store-channel policy recorded at this contract's original baseline uses at least 61 days for full repayment and prefers eligible 90-day-plus terms. Product/legal classification and the actual submitted distribution channel must be verified against the currently approved policy. Test omitted/spoofed channel inputs as well as ordinary Android requests; a client field must not bypass a required policy.
 
-## 11. Android / store-distributed credit controls
+This document does not independently certify current store or legal compliance, nor does this remediation silently change the original tenure requirement. A short loan must not be renamed to evade a distribution rule.
 
-For store-distributed personal-credit journeys, the current OpFin policy requires a full-repayment term of at least 61 days and prefers eligible 90-day-plus structures. The Android Essentials quote engine rejects lender products that do not satisfy the store-channel minimum.
+## 12. State handling
 
-Product/legal classification remains authoritative. A short loan must not be relabelled as another product merely to evade a platform rule.
+Account verification includes pending, pending manual review, verified and failed states. Lines have validity/expiry controls; quotes have offered, accepted and expired states.
 
-## 12. Core states
+Advance handling must distinguish reservations, lender funding, provider fulfilment, active/overdue debt, settlement, failures and reversals. Integrations must not ignore `lender_funding_pending` or `lender_reversal_pending` because an earlier short list omitted them. Repayment handling distinguishes pending/provider-confirmation, successful and failed records.
 
-Account verification: pending, pending_manual_review, verified, failed.
+Treat this as a lifecycle explanation, not an exhaustive generated enum. Read the current service state and provider references. A 201 acceptance/repayment response is not economic finality. A busy-customer 409 means inspect the original instruction before retrying, not request a new economic action with another key.
 
-Credit line: active, or inactive/expired through status and expiry controls.
+## 13. Required security and financial controls
 
-Quote: offered, accepted, expired.
+Acceptance requires no cash-out; verified beneficiaries; named lender and immutable disclosure hash; explicit customer confirmation; overall headroom; locked capital reservations and collection limits; payload-bound idempotency; expected balanced immutable accounting; encrypted sensitive account evidence and masked normal responses; exact-Space partner scopes; pending-state reconciliation; correct obligation/repayment synchronisation; lawful deletion handling; attributable audit events; and redaction of tokens/secrets from provider evidence.
 
-Advance: funding_reserved, fulfilment_pending, active, overdue, settled, fulfilment_failed.
+These are requirements, not a claim that every control has passed. Sequential replay tests do not prove all concurrency cases, and a successful response does not replace provider reconciliation. The PostgreSQL customer mutex uses a direct or session-affine writer connection; transaction-pooling changes require renewed design and acceptance.
 
-Repayment: pending, pending_provider_confirmation, successful, failed.
+## 14. API reference
 
-## 13. Security and control requirements
+The registered customer, partner and operations maps and inspected field/status contracts are maintained in [Current capability contracts](../../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md), linked from the [API index](../../apps/api/docs/README.md). The [authority/closure supplement](../../apps/api/docs/api/ESSENTIALS_AUTHORITY_AND_CLOSURE.md) records the smaller partner eligibility response and customer-conflict handling.
 
-Essentials preserves the following controls:
+Use `python3 scripts/search-api.py "essentials"` from repository root with local API dependencies installed to inspect actual registration. A route index is not a substitute for request validation, ownership, retry or accounting tests.
 
-- no customer cash-out;
-- verified provider/beneficiary before finance;
-- named lender in disclosures;
-- immutable disclosure hash at acceptance;
-- explicit customer confirmation for debt creation;
-- one overall responsible-credit headroom;
-- atomic lender-capital reservation/deployment;
-- idempotent repayments;
-- encrypted service-account references at rest;
-- account references masked in normal API responses;
-- customer-controlled embedded-platform permissions;
-- provider acknowledgement is not treated as financial finality unless the configured response is a confirmed final state;
-- reconciliation routes for ambiguous/pending fulfilment and repayment collections;
-- audit events for account, offer, advance, repayment and partner-permission actions;
-- financial obligation kept in sync with repayment;
-- sensitive provider tokens redacted from stored fulfilment evidence.
+## 15. Production acceptance sequence
 
-## 14. API map
+First close the remaining internal findings with candidate-specific tests and required independent financial approval. Then verify the named participating lender's legal evidence, approved product/pricing, usable funded mandate or certified Cito route, certified CPay lookup/payment/repayment/reconciliation, verified-beneficiary rent settlement, signed biller agreements, approved customer disclosures, recovery/reconciliation exercises, assigned operations owners, server-enforced store policy and operational monitoring/complaints/audit.
 
-Customer:
-
-- GET /api/essentials
-- GET /api/essentials/catalogue
-- POST /api/essentials/accounts
-- POST /api/essentials/accounts/{account}/verify
-- POST /api/essentials/eligibility
-- GET /api/essentials/quotes
-- POST /api/essentials/quotes
-- POST /api/essentials/quotes/{quote}/authorise-partner
-- POST /api/essentials/quotes/{quote}/accept
-- GET /api/essentials/advances
-- POST /api/essentials/advances/{advance}/repay
-- GET /api/essentials/partner-authorisations
-- POST /api/essentials/partner-authorisations
-- DELETE /api/essentials/partner-authorisations/{authorisation}
-
-Embedded platforms:
-
-- POST /api/partner/essentials/customers/{customer}/eligibility
-- POST /api/partner/essentials/customers/{customer}/accounts
-- POST /api/partner/essentials/customers/{customer}/quotes
-- GET /api/partner/essentials/customers/{customer}/status
-- POST /api/partner/essentials/quotes/{quote}/complete
-
-Operations:
-
-- GET /api/admin/essentials/portfolio
-- GET /api/admin/essentials/work-queue
-- POST /api/admin/essentials/billers
-- PATCH /api/admin/essentials/billers/{biller}
-- POST /api/admin/essentials/accounts/{account}/verify
-- POST /api/admin/essentials/lenders
-- POST /api/admin/essentials/advances/{advance}/reconcile
-- POST /api/admin/essentials/repayments/{repayment}/reconcile
-
-## 15. Production acceptance
-
-Essentials is ready for production activation only when all applicable gates are satisfied:
-
-- at least one non-OpFin lender has current regulatory evidence;
-- lender product and pricing are approved;
-- lender capital mandate or Cito-managed lender route is active;
-- CPay lookup/payment/repayment/reconciliation routes are certified;
-- verified-beneficiary settlement is certified before rental activation;
-- required service-provider/biller contracts are signed;
-- customer disclosures and legal documents are approved;
-- repayment and fulfilment reconciliation exercises pass;
-- operations owners are assigned for verification and exceptions;
-- Android/store policy review passes for the configured product terms;
-- monitoring, complaints and audit reporting are enabled.
-
-Until those external gates are satisfied, the software remains implemented but the affected provider route must remain disabled.
+Affected financial routes must remain unactivated until internal acceptance and external gates are satisfied. A merged source commit or updated manual is not activation approval. See the [concept comparison](CONCEPT_AND_PLAN_COMPARISON.md) and [manual supplement](../manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) for priorities and safe training boundaries.

@@ -11,6 +11,7 @@ class CreditTermGovernanceService
 {
     public function requestChange(LoanProductTerm $term, User $actor, array $proposed, string $reason): object
     {
+        app(PlatformCreditRoutingService::class)->assertManager($actor, $term->product?->institution);
         $current = [
             'interest_rate' => (float) $term->interest_rate,
             'interest_type' => $term->interest_type,
@@ -52,17 +53,20 @@ class CreditTermGovernanceService
 
             $current = json_decode($request->current_terms, true, 512, JSON_THROW_ON_ERROR);
             $proposed = json_decode($request->proposed_terms, true, 512, JSON_THROW_ON_ERROR);
-            $interestChanged = array_key_exists('interest_rate', $proposed)
-                && (float) $proposed['interest_rate'] !== (float) ($current['interest_rate'] ?? 0);
+            $interestChanged = collect(['interest_rate', 'default_interest_rate', 'interest_cycle', 'default_interest_cycle'])->contains(fn ($key) => array_key_exists($key, $proposed) && (string) $proposed[$key] !== (string) ($current[$key] ?? ''));
+            $term = LoanProductTerm::findOrFail($request->loan_product_term_id);
+            app(PlatformCreditRoutingService::class)->assertManager($actor, $term->product?->institution);
 
-            if ($interestChanged && (blank($umraReference) || blank($umraApprovedAt))) {
-                throw new InvalidArgumentException('Prior written UMRA approval reference and date are required before an interest-rate change can be approved.');
+            if ($interestChanged && $term->requiresRateApproval() && (blank($umraReference) || blank($umraApprovedAt))) {
+                throw new InvalidArgumentException('The lender regulatory profile requires a prior approval reference and date for this rate change.');
             }
 
             DB::table('credit_term_change_requests')->where('id', $requestId)->update([
                 'status' => 'approved',
                 'approved_by' => $actor->id,
-                'umra_approval_reference' => $umraReference,
+                'umra_approval_reference' => $term->product?->institution?->regulator_code === 'UMRA' ? $umraReference : null,
+                'regulatory_approval_reference' => $umraReference,
+                'regulatory_approved_at' => $umraApprovedAt,
                 'umra_approved_at' => $umraApprovedAt,
                 'approved_at' => now(),
                 'updated_at' => now(),
@@ -83,11 +87,11 @@ class CreditTermGovernanceService
             $term = LoanProductTerm::query()->lockForUpdate()->findOrFail($request->loan_product_term_id);
             $proposed = json_decode($request->proposed_terms, true, 512, JSON_THROW_ON_ERROR);
             $current = json_decode($request->current_terms, true, 512, JSON_THROW_ON_ERROR);
-            $interestChanged = array_key_exists('interest_rate', $proposed)
-                && (float) $proposed['interest_rate'] !== (float) ($current['interest_rate'] ?? 0);
+            $interestChanged = collect(['interest_rate', 'default_interest_rate', 'interest_cycle', 'default_interest_cycle'])->contains(fn ($key) => array_key_exists($key, $proposed) && (string) $proposed[$key] !== (string) ($current[$key] ?? ''));
+            app(PlatformCreditRoutingService::class)->assertManager($actor, $term->product?->institution);
 
-            if ($interestChanged && blank($request->umra_approval_reference)) {
-                throw new InvalidArgumentException('Interest-rate changes cannot be applied without recorded prior UMRA approval.');
+            if ($interestChanged && $term->requiresRateApproval() && blank($request->regulatory_approval_reference ?? $request->umra_approval_reference)) {
+                throw new InvalidArgumentException('This lender requires recorded regulatory approval before the rate change can be applied.');
             }
 
             $allowed = array_intersect_key($proposed, array_flip([
@@ -101,6 +105,8 @@ class CreditTermGovernanceService
             ]));
 
             if ($interestChanged) {
+                $allowed['regulatory_approval_reference'] = $request->regulatory_approval_reference ?? $request->umra_approval_reference;
+                $allowed['regulatory_approved_at'] = $request->regulatory_approved_at ?? $request->umra_approved_at;
                 $allowed['umra_interest_approval_reference'] = $request->umra_approval_reference;
                 $allowed['umra_interest_approved_at'] = $request->umra_approved_at;
             }

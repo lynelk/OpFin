@@ -331,6 +331,13 @@ class _HomePageState extends State<_HomePage>{
           trailing:creditAvailable?const Icon(Icons.chevron_right):null,
           onTap:!creditAvailable?null:()=>_handleCredit(credit))),
 
+        if(creditAvailable&&profile['composite_score']!=null)
+          Card(child:ListTile(
+            leading:const Icon(Icons.insights_outlined),
+            title:Text('OpFin Score ${profile['composite_score']}'),
+            subtitle:Text('Band: ${profile['band']??'Not yet available'}'),
+            onTap:()=>_handleCredit(credit))),
+
         if(creditAvailable&&setup['kyc_status']!='verified')
           Card(child:ListTile(
             leading:const Icon(Icons.verified_user_outlined),

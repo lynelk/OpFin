@@ -1,97 +1,133 @@
-# OpFin User Acceptance Testing Manual
+# OpFin user acceptance testing manual
 
-Status: Controlled internal UAT manual  
-Version: 23 September 2026  
+Status: Controlled acceptance requirements, not a completed test certificate  
+Version: 24 September 2026  
 Language: English (United Kingdom)
 
-Record tester, exact build/commit, environment, date, evidence and result for every case. Use synthetic data unless an authorised production acceptance plan explicitly requires otherwise.
+Record tester/role, exact source and build, environment/channel/device, date, fixture, actual result, non-sensitive evidence, defect reference and accountable sign-off for every case. Use synthetic data unless a separately authorised production exercise requires otherwise.
+
+Existing UAT identifiers 01–66 are retained. New treasury/Essentials/release cases use `DEL-` identifiers in the [current capability supplement](CURRENT_CAPABILITY_SUPPLEMENT.md), which forms part of this manual. No expected result below is a claim that the test has passed.
+
+## Current acceptance position
+
+The [24 September delivery record](../operations/DELIVERY_EVIDENCE_2026-09-24.md) reports six API regression failures and a Web TypeScript failure at the inspected baseline. Essentials also has unresolved financial-control review findings. Do not certify affected journeys from documentation, a source merge, or tests that cover only the established loan path.
+
+## Existing acceptance scenarios
 
 | ID | Scenario | Procedure | Expected result |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | UAT-01 | Register person once | App: phone → OTP → names → PIN | Account created; Personal Space available; no duplicate persona |
-| UAT-02 | Web sign-in boundary | Open public site and select Web sign-in | Existing/authorised sign-in is clear; site does not present Web password login as preferred new-customer registration |
-| UAT-03 | Progressive verification | Use basic feature, then regulated feature | Basic feature avoids unnecessary KYC; regulated journey requests required verification |
+| UAT-02 | Web sign-in boundary | Open public site and select Web sign-in | Existing/authorised access is clear; password-compatible Web login is not the preferred new App registration flow |
+| UAT-03 | Progressive verification | Use basic feature, then regulated feature | Verification requested when the selected activity requires it |
 | UAT-04 | Multi-Space | Create/join Group and Business | Same identity sees authorised Spaces with distinct context |
-| UAT-05 | Isolation | Attempt Personal data access from Group/Employer context | Access denied unless explicitly authorised |
-| UAT-06 | Individual mobile completeness | Complete supported everyday-money journeys in App | Normal Individual journey does not require Web |
-| UAT-07 | Savings Group mobile completeness | Create/join/manage group context in App | Normal group journey does not require Web |
-| UAT-08 | Financial position | Add asset, debt and receivable | Position reflects recorded values deterministically |
-| UAT-09 | Safe to spend | Add available money and commitments | Guidance reflects recorded inputs and remains labelled guidance |
-| UAT-10 | Web enhancement | Open Spaces/Workspace on Web | Same server-authoritative context; ownership unchanged |
-| UAT-11 | Employer | Enable employer on Business Space | Capability enabled without exposing employee Personal Space |
-| UAT-12 | Partner catalogue | Load activated products | Only applicable active/territory-appropriate entries appear |
-| UAT-13 | Subscription/entitlement | Activate plan | Entitlement remains separate from role and product eligibility |
-| UAT-14 | Commercial idempotency | Record same source revenue/cost event twice | Duplicate source reference does not create duplicate event |
-| UAT-15 | CPay reconciliation | Reconcile payment/reference | Provider reference and final state remain attributable |
-| UAT-16 | Provider failure | Interrupt request/callback and retry | No duplicate money movement; pending/error remains recoverable |
-| UAT-17 | Offline | Capture supported offline action and reconnect | Action syncs once; conflicts do not overwrite server truth silently |
-| UAT-18 | Low literacy | Complete core App journey | Labels/actions understandable; minimal typing |
-| UAT-19 | Accessibility | Text scale/high contrast/screen-reader test | Core journey remains operable; physical-device evidence recorded |
-| UAT-20 | Permissions | Member attempts admin action | Blocked; authorised role succeeds |
-| UAT-21 | Documentation | Compare routes, clients, website and manuals | Terminology and availability claims agree |
-| UAT-22 | Programme measurement opt-in | Save measurement before/after consent | Rejected before consent; accepted only under valid programme state |
-| UAT-23 | Programme consent withdrawal | Withdraw measurement consent | New programme measurement stops; normal financial journeys remain |
-| UAT-24 | Protected signal boundary | Attempt risk eligibility for protected field | Blocked; protected field never becomes risk input |
-| UAT-25 | Governed provider signal | Attempt approved non-protected signal before/after consent/policy | Only passes the separate governed pathway; ingestion alone remains non-risk |
-| UAT-26 | Programme eligibility | Test matching/incomplete/non-matching participant | Deterministic programme result; credit state unchanged |
-| UAT-27 | Programme privacy | Create cohorts below/above threshold | Small cohort count/values suppressed |
-| UAT-28 | Outcome window | Create activity before/during/after enrolment | Programme reporting respects participation window |
-| UAT-29 | Alternative collateral | Submit evidence without/with issuer reference | Verification requires evidence; verification does not auto-approve credit |
-| UAT-30 | Cito/direct routing | Simulate ambiguous Cito timeout | No silent direct fallback; reconcile then explicitly switch if allowed |
-| UAT-31 | Positive employer enrichment | Compare no/negative/verified-positive signal | No/negative is neutral; approved positive benefit is capped |
-| UAT-32 | Service economics | Record unknown cost then enrich/reconcile | Unknown stays null until evidence; principal/premium not revenue |
-| UAT-33 | Partner reports | Generate capital/insurance/savings/service-economics reports | Totals reconcile; exceptions/incomplete fields remain visible |
-| UAT-34 | Direct-provider certification | Try unconfigured/uncertified then certified test adapter | Fails closed until gate satisfied |
-| UAT-35 | Cito-primary identity | Run NIN/phone checks without biometric provider | Partial evidence stays partial; KYC not falsely completed |
-| UAT-36 | Ambiguous identity failure | Timeout primary route with direct provider configured | Case remains pending/error; direct provider not called silently |
-| UAT-37 | Explicit direct KYC fallback | Reconcile prior request then select direct route | Explicit policy/source/provider references retained |
-| UAT-38 | Inclusion Space isolation | Attach support/programme evidence to another user's Space | Blocked; no cross-Space write |
-| UAT-39 | Voluntary programme exit | Enrol, record, leave twice, record again | Exit idempotent; post-exit events excluded from participation period |
-| UAT-40 | Programme partner isolation | Dedicated partner accesses ungranted/granted programme | Only granted programme visible; aggregate data only |
-| UAT-41 | Programme instruments | Create typed instrument and due baseline | Only due/channel-enabled instrument appears |
-| UAT-42 | Programme localisation | Test reviewed locale missing/present | Reviewed translation used; otherwise English fallback explicit |
-| UAT-43 | Multi-channel programme response | Submit via App/Web/verified WhatsApp/USSD/assisted | Same server-authoritative model; assisted actor separated |
-| UAT-44 | Partner invitation/revocation | Activate with verified phone, then revoke | Dedicated account activates; revocation removes access |
-| UAT-45 | MEL exports | Generate CSV/XLSX/ZIP | Aggregate-only; privacy suppression and notices preserved |
-| UAT-46 | Commercial dashboard | Record acquisition/cost/revenue | CAC/contribution reconcile to recorded evidence; unknown remains incomplete |
-| UAT-47 | Commercial graduation | Evaluate programme-to-commercial state | Transparent analytics only; no score/price/limit change |
-| UAT-48 | Financial-health enrichment | Use recorded OpFin evidence | Provenance retained; output remains non-credit |
-| UAT-49 | Adapter activation | Attempt activation without credentials/legal evidence | Blocked until explicit gate satisfied |
-| UAT-50 | Adapter ingestion allow-list | Send non-allow-listed then allow-listed key | Unknown key rejected; accepted evidence remains non-risk by default |
-| UAT-51 | Website claims | Review marketing homepage against current docs | No guarantee of unavailable provider/service; illustrative preview disclosed |
-| UAT-52 | Deployment evidence | Compare commit statuses and workflow runs | Source-deployed vs CI-certified states recorded separately |
+| UAT-05 | Isolation | Attempt Personal data access from Group/Employer context | Denied unless explicitly authorised |
+| UAT-06 | Individual mobile completeness | Complete supported everyday-money journeys in App | Normal essential Individual journey does not require Web |
+| UAT-07 | Savings Group mobile completeness | Create/join/manage group context in App | Essential group journey completes in App; any Web-only treasury administration gap is recorded, not waived |
+| UAT-08 | Financial position | Add asset, debt and receivable | Recorded values determine position consistently |
+| UAT-09 | Safe to spend | Add money and commitments | Guidance reflects recorded inputs and is not a cash guarantee |
+| UAT-10 | Web enhancement | Open Spaces/Workspace on Web | Same server-authoritative context and ownership |
+| UAT-11 | Employer | Enable employer on Business Space | Capability without automatic employee Personal Space access |
+| UAT-12 | Partner catalogue | Load activated products | Only applicable, active, territory-appropriate entries |
+| UAT-13 | Subscription/entitlement | Activate plan | Entitlement separate from role and product eligibility |
+| UAT-14 | Commercial idempotency | Record same source event twice | No duplicate economic event |
+| UAT-15 | CPay reconciliation | Reconcile payment/reference | Provider reference and final state attributable |
+| UAT-16 | Provider failure | Interrupt request/callback and retry | No duplicate movement; pending/error recoverable |
+| UAT-17 | Offline | Capture supported action and reconnect | Synchronises once; no silent conflict overwrite |
+| UAT-18 | Low literacy | Complete core App journey | Understandable labels and minimal typing |
+| UAT-19 | Accessibility | Text scale/high contrast/screen-reader test | Operable journey with actual device evidence |
+| UAT-20 | Permissions | Member attempts admin action | Denied; authorised official succeeds |
+| UAT-21 | Documentation | Compare routes, clients, website and manuals | Terminology, fields, availability and recovery agree |
+| UAT-22 | Programme measurement opt-in | Save measurement before/after consent | Rejected without required consent and programme state |
+| UAT-23 | Programme consent withdrawal | Withdraw measurement consent | New measurement stops; ordinary financial use remains |
+| UAT-24 | Protected signal boundary | Attempt risk eligibility for protected field | Blocked; no protected field enters credit risk |
+| UAT-25 | Governed provider signal | Exercise consent/provenance/policy requirements | Only separate approved pathway can grant eligibility; ingestion alone is not underwriting |
+| UAT-26 | Programme eligibility | Match, incomplete and non-matching profiles | Deterministic programme state; credit decision unchanged |
+| UAT-27 | Programme privacy | Create cohorts below/above threshold | Small counts and values suppressed |
+| UAT-28 | Outcome window | Activity before/during/after participation | Programme reporting respects participation window |
+| UAT-29 | Alternative collateral | Submit with/without issuer evidence | Verification requires evidence and does not itself approve credit |
+| UAT-30 | Cito/direct routing | Simulate ambiguous Cito failure | No silent duplicate fallback; reconcile before approved route change |
+| UAT-31 | Positive employer enrichment | No/negative/verified-positive signal | No/negative neutral; permitted positive benefit capped; privacy purpose preserved |
+| UAT-32 | Service economics | Unknown cost, then evidenced enrichment | Unknown remains null until known; principal/premium is not revenue |
+| UAT-33 | Partner reports | Capital, insurance, savings and service reports | Reconciled sources and visible incomplete fields/exceptions |
+| UAT-34 | Provider certification | Unconfigured/uncertified then certified fixture | Fails closed until required gate satisfied |
+| UAT-35 | Partial identity evidence | NIN/phone succeeds without biometric provider | Partial evidence is not falsely completed KYC |
+| UAT-36 | Ambiguous identity failure | Primary timeout with direct adapter configured | Explicit pending/error; no silent second enquiry |
+| UAT-37 | Explicit KYC route change | Reconcile first, then select approved route | Route, source and provider references retained; no prohibited direct gnuGrid bypass |
+| UAT-38 | Inclusion Space isolation | Write evidence to another person's Space | Denied; no cross-Space write |
+| UAT-39 | Voluntary programme exit | Enrol, record, leave twice, record later | Idempotent exit; no post-exit inclusion in the closed participation period |
+| UAT-40 | Programme partner isolation | Access ungranted/granted programme | Only granted aggregate reporting available |
+| UAT-41 | Programme instruments | Create typed instrument and due baseline | Only due and channel-enabled instrument shown |
+| UAT-42 | Programme localisation | Reviewed locale present/absent | Reviewed translation or explicit English fallback |
+| UAT-43 | Programme channels | App/Web/verified WhatsApp/USSD/assisted response | One governed response model; assisted actor separate |
+| UAT-44 | Partner invitation/revocation | Verify phone, activate, revoke | Dedicated identity; revocation removes access |
+| UAT-45 | MEL exports | Generate CSV/XLSX/ZIP | Aggregate-only with suppression and notices |
+| UAT-46 | Commercial dashboard | Attribution, costs and revenue | Metrics reconcile; unknown remains incomplete |
+| UAT-47 | Commercial graduation | Evaluate graduation | Transparent analytics, not score/price/limit change |
+| UAT-48 | Health enrichment | Use recorded evidence | Source provenance retained; result non-credit |
+| UAT-49 | Adapter activation | Attempt without configuration/legal evidence | Required gates fail closed |
+| UAT-50 | Adapter allow-list | Unknown and allowed signal keys | Unknown rejected; accepted evidence non-risk by default |
+| UAT-51 | Website claims | Review current public copy | No unsupported provider availability or fabricated production preview |
+| UAT-52 | Release evidence | Compare source, builds and running services | Deployment and acceptance distinct; equivalent candidate evidence retained while Actions is disabled |
+| UAT-53 | Location optionality | Use core money/credit without permission | Baseline financial use remains available |
+| UAT-54 | Approximate discovery | Search services with coarse permission | Discovery works where configured; query coordinates not retained as a hidden profile |
+| UAT-55 | Precise purpose | Add asset/risk location | Precise permission requested for the explicit task only |
+| UAT-56 | Background tracking | Inspect permissions/background behaviour | No background location permission or continuous tracking |
+| UAT-57 | Manual location fallback | Provider disabled; add manually | Manual task works; provider-dependent action fails safely |
+| UAT-58 | Place search | Select a place with provider enabled | Server returns permitted result; no provider key in client/payload |
+| UAT-59 | Static map | Authorised and unauthorised preview | Authorised map; unauthorised denial |
+| UAT-60 | Location Space isolation | Member/admin/removed-member | Appropriate reads/writes only; removed member denied |
+| UAT-61 | Location purpose | Mismatched subject/purpose/consent | Rejected; retained purpose remains accurate |
+| UAT-62 | Credit/location separation | Add/remove location and refresh credit | No location-driven score, limit or pricing change |
+| UAT-63 | Insurance location | Insured-risk and claim location | Separate evidence; insurer remains claim authority |
+| UAT-64 | Partner location network | Partner opens service network | Own permitted service points, not customer pins |
+| UAT-65 | Aggregate geography | Small/large cohorts | Small cohorts suppressed; individual contexts excluded |
+| UAT-66 | Location deletion | Delete eligible account with optional location | Optional personal location removed through governed closure |
 
-| UAT-53 | Location optionality | Use Home/My Money/credit without location permission | Baseline OpFin remains fully usable |
-| UAT-54 | Approximate service discovery | Find nearby services and grant coarse/approximate location only | Search works; query coordinates are not stored |
-| UAT-55 | Precise purpose gate | Add asset/risk location | Precise permission requested only for that explicit task |
-| UAT-56 | Background tracking | Inspect Android/iOS permissions and background behaviour | No background location permission or continuous tracking |
-| UAT-57 | Manual fallback | Disable Google Maps/provider and add a location manually | Manual location succeeds; Google-dependent actions fail closed |
-| UAT-58 | Place search | Search/select a place with Google enabled | Place ID/address/coordinates returned through server API; key absent from client/API payload |
-| UAT-59 | Static map | Open authorised location preview | Small authenticated map renders; unauthorised user is denied |
-| UAT-60 | Space isolation | Member/admin/removed-member access to group locations | Member reads, approved admin writes, removed member is denied |
-| UAT-61 | Location purpose | Submit mismatched subject/purpose or consent purpose | Rejected; stored purpose/consent stay aligned |
-| UAT-62 | Credit boundary | Add/remove/change location context and refresh credit | Credit score/limit/pricing are unchanged by Location Context |
-| UAT-63 | Insurance location | Add insured-risk and claim incident locations | Location stored separately; insurer/underwriter remains claim decision authority |
-| UAT-64 | Partner network | Partner opens Service network | Only own institution's service points appear; no customer pins |
-| UAT-65 | Aggregate geography | Create cohorts below/above five | Below five suppressed; individual user contexts excluded |
-| UAT-66 | Account deletion | Delete account after adding personal location | Optional personal location is purged with other optional context |
+## Treasury and Essentials additions
 
-## Impact and causality acceptance
+Execute `DEL-TR-01` through `DEL-TR-05` for stable opening baselines, duplicate imports, ambiguous matching, reasoned variance/issued-snapshot preservation and separate-currency statements.
 
-Programme dashboards and partner exports must state or imply only measured/observed change unless the evaluation design separately supports causal attribution.
+Execute `DEL-ES-01` through `DEL-ES-06` for expected immutable accounting, concurrent repayments, exact-Space partner grants, open-obligation deletion, pending lender funding/reversal exposure and approved capital-mandate lifecycle.
 
-Financial-health and programme measurements must remain explicitly separate from credit scoring and pricing.
+`DEL-REL-01` verifies exact running sources, migrations and health; `DEL-DOC-01` checks original requirements, later decisions, API and manual consistency. Procedures and expected evidence are in the [supplement](CURRENT_CAPABILITY_SUPPLEMENT.md). Keep existing test IDs stable when extending a suite.
+
+Essentials acceptance must additionally cover biller/rental verification, non-stacking overall headroom, rejection of OpFin as the primary lender, server-enforced distribution-channel terms, immutable disclosures, failed/ambiguous provider outcomes, repayment schedules, reconciliation and customer-controlled embedded-platform scopes. No financial exercise may create an unauthorised real obligation.
+
+## Causality and privacy
+
+Programme reports describe measured/observed change only, unless an appropriate evaluation design supports causal attribution. Financial-health and programme measurement remain distinct from credit scoring. Record privacy and financial-control failures as defects, not missing provider credentials.
 
 ## Release decision
 
-Do not sign off with unresolved Critical/High defects in identity, permissions, Financial Space isolation, financial integrity, privacy, money movement, reconciliation, provider retry safety, programme-data separation or required mobile completeness.
+Do not sign off unresolved Critical/High issues in identity, authorisation, Space isolation, accounting, privacy, money movement, replay/concurrency, reconciliation or required mobile completeness. Record lesser exceptions with accountable owner and accepted disposition.
 
-Record medium/low exceptions with owner, rationale and accepted disposition.
+A build or deployment result is not sufficient by itself. Use equivalent candidate-specific test/security/operational evidence while GitHub Actions remains disabled; do not disable existing tests, audits or financial controls to obtain a release.
 
-A deployment-success status is not sufficient release evidence when the required exact-head CI/security/deployment gates have not also run.
+## Lender orchestration UAT
 
-## UAT: OpFin Essentials
+Run on an isolated UAT environment using synthetic identities and mock/sandbox providers. Do not treat licence placeholders as production evidence.
 
-Acceptance must cover provider/rental-account verification, non-stacking lender headroom, rejection of OpFin as primary lender, Android/store term controls, immutable disclosure hashes, fail-closed provider configuration, lender-capital reservation/deployment/release, Financial Space obligations, normalised repayment schedules, repayment reconciliation, embedded-platform customer scopes, and blocking direct gnuGrid CRB/identity routes.
+| Scenario | Expected outcome |
+| --- | --- |
+| Prepare Core Synergies profile from platform admin | Internal lender/funding record; no partner login; inactive until evidence supplied |
+| Delegate/revoke an operations user | Configuration and affiliate credit/capital management allowed/revoked; strategy and delegation remain admin-only |
+| Withhold → external first → affiliated first; include cap and expiry | Consistent discovery/application/quote/acceptance; independent route leads under external first; no new affiliated commitment after withhold/expiry |
+| Link another lender's pool | Rejected; capital and ledger remain unchanged |
+| Create a 7-day product | Retained in catalogue; offered only under applicable channel policy; no global rewrite to 61/90 days |
+| Revise Huawei or product-specific policy | Only matching scope changes; evidence/reason/version retained; expiry restores broader/default policy |
+| Change catalogue after a quote, or lender name after an offer | Accepted economics and lender snapshot unchanged; current channel/deployment availability still checked |
+| Configure a foreign country/currency | Remains unavailable until country and certified currency route are activated |
+| Repay an existing affiliate loan after withholding | Existing provider-finality, repayment allocation and immutable ledger path remains usable |
 
-Capture request/response evidence, audit events and reconciliation references for each financial state transition.
+Automated regression results and remaining mobile/PostgreSQL/reviewer gates are recorded in [delivery evidence](../operations/LENDING_DELIVERY_2026-09-25.md). Device UAT must cover Google Play, iOS and Huawei accessibility, actual lender labels and clear unavailable-product reasons.
+
+
+### Lending release review regression scenarios
+
+- An independent mandate without an institution owner cannot fund an offer; another mandate of the same lender cannot replace a product's selected pool. Verify no offer, reservation or payment was created on rejection.
+- A legacy active lender whose authority remains pending cannot advertise or originate credit. Complete actual evidence through platform administration before activation; never manufacture a licence reference.
+- Create a personal-loan product from the new admin form and verify its category and valid Cash compatibility type persist.
+- Start mobile discovery with an independent small-loan product, enter an amount/purpose it cannot serve, and verify permitted affiliated fallback is shown for fresh review before submission.
+- With affiliated credit withheld, or independent-first with an eligible independent lender, verify no eligibility request or new credit line is created for the affiliate. Then request a genuinely underserved amount/category and verify permitted fallback.
+- Suspend an Essentials product for one channel and verify eligibility, displayed limit, quote and acceptance agree while another authorised channel remains available.
+- Verify legacy loan default-interest caps continue under the configured/snapshotted licence class and each new offer uses one distribution revision in pricing and disclosures.

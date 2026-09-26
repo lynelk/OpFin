@@ -1,66 +1,68 @@
 # OpFin developer start here
 
-Status: Controlled internal developer guide  
-Updated: 23 September 2026  
+Status: Current developer and verification guide  
+Reviewed: 24 September 2026  
 Language: English (United Kingdom)
 
-Read [CURRENT_STATE.md](CURRENT_STATE.md) first. This guide is the shortest path from checkout to a safe change.
+Read [current state](CURRENT_STATE.md), the [original concept comparison](product/CONCEPT_AND_PLAN_COMPARISON.md) and [current delivery evidence](operations/DELIVERY_EVIDENCE_2026-09-24.md) before changing the platform. Source implementation, passing tests, deployed versions and activated providers are different states.
 
-## Repository map
+## Repository and domain map
 
-| Path | Owns |
+| Location | Responsibility |
 | --- | --- |
-| `apps/api` | Laravel API, identity, consent, Financial Spaces, credit, programmes, partners, provider routing, money movement, ledger, reconciliation and governance |
-| `apps/web` | marketing site, customer Web, Workspaces and operational/admin UI |
-| `apps/client` | Flutter Android/iOS mobile-complete Individual and Savings Group experience |
-| `packages/contracts` | shared contract/schema conventions |
-| `docs` | product, operational, training, UAT and release documentation |
-| `infrastructure/railway` | deployment topology and gates |
-| `distribution/google-play` | Android store evidence/listing pack |
+| `apps/api` | Identity/consent, Financial Spaces, financial life, credit, programmes, providers, treasury, Essentials, expected accounting and reconciliation |
+| `apps/web` | Marketing, unified sign-in, customer access, Workspaces and role-gated operations |
+| `apps/client` | Flutter App and essential Individual/Savings Group journeys |
+| `packages/contracts` | Shared contract/schema conventions |
+| `docs` | Product, comparison, manuals, operations and evidence |
+| `infrastructure/railway` | Existing approved service topology and release controls |
+| `distribution/google-play` | Controlled Android release/listing material |
 
-The API is authoritative for financial and regulated state. Clients do not create parallel pricing, scoring, settlement or programme-governance truth.
+Start from **Person → Financial Space → Membership/Role → Capability → Entitlement → Eligibility**. Do not introduce a duplicate identity where a Space or role models the requirement. Clients do not calculate parallel prices, exposure, repayment allocation or finality.
 
-## Domain baseline
+Programme/protected measurements are not underwriting; permitted external risk data uses a separate governed purpose/provenance/consent pathway. Commercial terms remain downstream of need and suitability. Stolets stays a separate operating product.
 
-New work starts from:
+## Safe local setup
 
-`Person → Financial Space → Membership/Role → Capability → Entitlement → Eligibility`
-
-Do not create a new account/person type when a Space, role or capability models the requirement.
-
-Inclusive-finance programme measurement, protected attributes and provider evidence remain outside underwriting unless a separate approved risk-data pathway explicitly permits a non-protected signal. Commercial economics remain downstream of customer need, eligibility and suitability.
-
-Stolets is a separate product; use explicit governed integration contracts rather than importing merchant operations into OpFin.
-
-## Customer channel baseline
-
-Canonical new-customer mobile journey:
-
-`Phone → OTP → names → six-digit PIN → Home → progressive verification → financial position / eligible service → disclosed action → confirmed outcome`
-
-The marketing website links existing/authorised users to Web sign-in. Do not treat its password-compatible login as the preferred new-customer journey.
-
-## Local setup
+Use the versions declared in the current dependency manifests/lockfiles and release contracts. Do not use a historical architecture version label as the installation authority. Read root and component `AGENTS.md` before changing their code.
 
 ### API
 
+From repository root, install into a dedicated local checkout:
+
 ```bash
 cd apps/api
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-php artisan test
+composer install --no-interaction --prefer-dist
+if [ ! -f .env ]; then
+  cp .env.example .env
+  php artisan key:generate
+fi
 ```
 
+Review `.env` before migrations or tests. Use an isolated local/test database and approved mock/sandbox providers. Never copy production credentials or point local tests at a production database. Do not overwrite an existing `.env` or regenerate an established application key.
+
+After confirming the local configuration:
+
+```bash
+php artisan migrate
+php artisan test
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+Use the root `make api-test` for the repository's existing API test procedure. PostgreSQL locking, concurrent requests and migrations require production-like database evidence where relevant; a SQLite success is not that evidence.
+
 ### Web
+
+In a separate terminal from repository root:
 
 ```bash
 cd apps/web
 npm ci --legacy-peer-deps
-cp .env.example .env.local
+test -f .env.local || cp .env.example .env.local
 npm run dev
 ```
+
+Local settings use `NEXT_PUBLIC_OPFIN_API_URL=http://localhost:8000/api`, `NEXT_PUBLIC_USE_MOCK_API=false` and `OPFIN_ENABLE_DEMO_SHORTCUTS=false`. Keep browser origin/CORS consistent. Browser-visible variables must not contain provider secrets.
 
 ### Flutter
 
@@ -69,78 +71,50 @@ cd apps/client
 flutter pub get
 flutter analyze
 flutter test
-flutter run
 ```
 
-Use testing/local provider configuration. Never use production credentials merely to make a local journey look successful.
+Set the established API build configuration for an authorised test environment. A phone's localhost is not the developer's computer. Do not weaken release transport security to make local networking work. Follow the current Android release contract for package identity, SDK and signing; ordinary `flutter run` is not a distribution procedure.
 
-## Find the API and docs
+## Product and channel baseline
+
+New App onboarding remains phone → OTP → names → six-digit PIN → authenticated Home with progressive verification. Web uses unified role-routed access and retains legacy-password compatibility; it does not create a new person for each portal.
+
+Treasury account/statement foundations do not equal complete member-capital/NAV/distribution accounting. Detailed import/reconciliation currently uses Web administration. Essentials arranges named third-party lender finance to verified service/rental beneficiaries, not unrestricted wallet cash-out. Its financial controls are still under acceptance review.
+
+## Find the API
 
 ```bash
-python3 scripts/search-docs.py "programme"
-python3 scripts/search-docs.py "credit offer" --api
-python3 scripts/search-api.py "programme"
-python3 scripts/search-api.py "umra"
+python3 scripts/search-docs.py "treasury"
+python3 scripts/search-docs.py "Essentials" --api
+python3 scripts/search-api.py "essentials"
+python3 scripts/search-api.py "statement"
 ```
 
-Or:
+With API dependencies installed, `cd apps/api && php artisan route:list --json` supplies registered metadata. Read the [new-capability contracts](../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md), [current endpoints](../apps/api/docs/api/current-endpoints.md) and [client contract](../apps/api/docs/api/frontend-backend-contract.md) alongside handlers/tests.
 
-```bash
-cd apps/api
-php artisan route:list --json
-```
+For example, ordinary loan repayment and Essentials repayment do not have identical status/idempotency contracts. Essentials requires a body key and returns 201 for a created repayment record, not final money collection. CSV/HTML exports and framework errors are not all custom JSON envelopes.
 
-Registered routes establish exact addresses; handlers/tests establish behaviour; prose docs explain purpose and safe use.
+## Change impact
 
-## Where changes belong
+| Change | Required documentation and evidence |
+| --- | --- |
+| Routes, fields, responses, auth or retry | API reference/client contract plus positive and negative behavioural tests |
+| Space/role/capability | Domain/Blueprint, user task, denied-access cases and actor/audit context |
+| Financial state, treasury or Essentials | Financial policy/operations, expected ledger/reconciliation events, replay/concurrency and independent review where required |
+| Programme/impact/provider data | Consent/purpose, suppression, source attribution, programme and partner guidance |
+| Web/App workflow | Component README, exact screen labels, task/training/UAT including recovery/accessibility |
+| Release/security/configuration | Current evidence, manifest, runbooks and configuration/deployment tests |
 
-| Change | Primary code | Documentation review |
-| --- | --- | --- |
-| API route/contract | API routes/controller/service | current endpoints, quick reference, client contract |
-| Financial Space/member/role | API domain + clients | blueprint/domain model, manuals, UAT |
-| Credit/scoring/pricing | API service/config/tests | credit/API/regulatory docs and UAT |
-| Payment/ledger/reconciliation | API financial services | API, operations, security and UAT |
-| Programme/impact | API + client programme surfaces | inclusive-finance framework, manuals, partner docs |
-| Commercial/service economics | API + admin web | partner reporting standard, operations, UAT |
-| Provider adapter/routing | service config + adapter | integration/readiness/current-state docs |
-| Marketing-site claim | `apps/web/src/app/page.tsx` | web README/current state/product docs |
-| Mobile customer journey | `apps/client/lib` | user/training/UAT/current journey |
-| Release/deployment | workflows/infrastructure | release manifest, deployment/current state |
+## Current build correction and remaining blockers
 
-## Safe financial/provider change pattern
+The Web login-error query object receives an explicit `Record<string, string>` annotation in this change. An isolated TypeScript 5.8.3 strict test reproduced TS2345 before and passed afterwards. It is a type-only correction: credentials, cookies, role checks and redirects are unchanged. Full repository and deployment results must be recorded separately.
 
-```text
-authenticated instruction
-→ ownership/authorisation
-→ policy and consent validation
-→ idempotent provider request
-→ verified finality or explicit pending/error
-→ locked domain state
-→ immutable accounting where applicable
-→ receipts/reporting after commit
-→ reconciliation
-```
+The six current API failures and Essentials review findings are not solved by this annotation or by new documentation. Historical treasury dates must remain valid test cases, and new financial paths need their own expected accounting and concurrency tests.
 
-Ambiguous Cito/provider failure must not silently fire a direct fallback. Reconcile first, then switch route explicitly under policy.
+## Verify and release
 
-## Release evidence
+Run affected implementation checks and `make docs-check`/`make publication-check` for their stated scope. Retain the exact candidate, command, environment and actual result. Failed or absent checks are not a pass.
 
-A change is not done because it compiled or deployed. The exact candidate should have applicable CI, security, deployment, migration, provider and reconciliation evidence.
+GitHub Actions remains disabled by owner instruction. Do not re-enable it, remove existing build tests/audits or use Railway Agent. Use only approved existing infrastructure; a build/deployment request is not consent for a new service, database, volume or replica.
 
-At the reviewed 23 September 2026 main head, Railway statuses are successful for API, web, worker and scheduler, but GitHub Actions produced no run for that exact SHA. Preserve that distinction in release notes and documentation.
-
-## Documentation rule
-
-Every material runtime/API/customer-workflow change updates relevant current docs in the same PR. Do not edit historical audit/demo records to make them look current.
-
-Before review:
-
-```bash
-python3 scripts/search-docs.py "<feature>"
-python3 scripts/verify-documentation-drift.py
-make api-test
-make web-test
-make client-test
-```
-
-Run only the affected heavy gates locally if necessary, but the repository release process remains the authority for final acceptance.
+After a permitted release, verify actual running source, forward migrations, API/Web health, worker/scheduler freshness and applicable reconciliation. Preserve original concept requirements and historical evidence; do not rewrite requirements to legitimise a defect.

@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Loan;
 use App\Models\LoanProductTerm;
-use App\Models\User;
 use App\Services\CreditReferenceReportingService;
 use App\Services\CreditTermGovernanceService;
 use App\Services\UmraNplCapService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -46,7 +46,7 @@ class UmraComplianceController extends Controller
     public function accrueDefaultInterest(Loan $loan, Request $request, UmraNplCapService $service): JsonResponse
     {
         $validated = $request->validate(['as_of_date' => 'nullable|date']);
-        $asOf = isset($validated['as_of_date']) ? \Illuminate\Support\Carbon::parse($validated['as_of_date'])->endOfDay() : null;
+        $asOf = isset($validated['as_of_date']) ? Carbon::parse($validated['as_of_date'])->endOfDay() : null;
 
         return ApiResponse::success('Default interest recalculated from governed rate, principal and elapsed time.', [
             'loan' => $service->accrueDefaultInterest($loan, $asOf),
@@ -89,15 +89,17 @@ class UmraComplianceController extends Controller
     {
         $request->validate([
             'umra_approval_reference' => 'nullable|string|max:255',
-            'umra_approved_at' => 'nullable|date',
+            'umra_approved_at' => 'nullable|date|before_or_equal:now',
+            'regulatory_approval_reference' => 'nullable|string|max:255',
+            'regulatory_approved_at' => 'nullable|date|before_or_equal:now',
         ]);
 
         return ApiResponse::success('Credit-term change approved.', [
             'change_request' => $service->approve(
                 $change,
                 $request->user(),
-                $request->input('umra_approval_reference'),
-                $request->input('umra_approved_at'),
+                $request->input('regulatory_approval_reference', $request->input('umra_approval_reference')),
+                $request->input('regulatory_approved_at', $request->input('umra_approved_at')),
             ),
         ]);
     }

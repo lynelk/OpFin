@@ -23,6 +23,7 @@ export const navigationItems: NavItem[] = [
   { href: "/admin/autopilot", label: "Platform Autopilot", group: "admin", section: "Overview & automation", roles: ["platform_admin", "operations"] },
 
   { href: "/admin/long-range", label: "Extended finance", group: "admin", section: "Finance & risk", roles: ["platform_admin", "operations"] },
+  { href: "/admin/lending-platform", label: "Lenders & credit deployment", group: "admin", section: "Finance & risk", roles: ["platform_admin", "operations"] },
   { href: "/admin/essentials", label: "Essentials operations", group: "admin", section: "Finance & risk", roles: ["platform_admin", "operations"] },
   { href: "/admin/credit-review", label: "Credit review", group: "admin", section: "Finance & risk", roles: ["platform_admin", "operations"] },
   { href: "/admin/save-protection", label: "Save & Protection", group: "admin", section: "Finance & risk", roles: ["platform_admin", "operations"] },

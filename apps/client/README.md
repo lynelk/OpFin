@@ -39,7 +39,7 @@ The App supports server-authoritative Space context and financial-life features 
 
 Location is optional and task-driven.
 
-The App uses native Android/iOS foreground location rather than embedding a full Google Maps SDK. Android device location is always approximate, including asset, insured-risk and claim tasks: Google Play financial-services policy prohibits precise device-location permission. An exact place/address can be selected through place search or entered manually. iOS may request precise foreground location for a location-dependent task.
+The App uses native Android/iOS foreground location rather than embedding a full Google Maps SDK. Approximate location is the default for service discovery. Fine/precise permission is requested only for a location-dependent asset, insured risk or claim task.
 
 Customers can also search for a place through the server-side Google Maps adapter or enter a place manually. Small Static Map previews are loaded through the authenticated OpFin API so the Google server API key is never embedded in the client.
 
@@ -52,7 +52,7 @@ Current App entry points include:
 - insured-risk location; and
 - claim incident location.
 
-Android requests only ACCESS_COARSE_LOCATION and labels the result as approximate. Both the Flutter bridge and native Android implementation enforce this restriction. iOS requests When In Use access. Background location is not configured. Location hardware is optional for installation, and refusing location does not prevent baseline account use.
+Android requests ACCESS_COARSE_LOCATION first and ACCESS_FINE_LOCATION only for precise tasks. iOS requests When In Use access. Background location is not configured.
 
 ## Identity verification
 
@@ -90,10 +90,6 @@ Camera features must remain optional for installation so devices without a rear 
 
 The existing Play application ID is `org.rotaryo.opfin`. The Kotlin namespace remains `co.opfin.app`. Distribution builds must use the registered upload key.
 
-The next candidate is `1.0.1+19`. See `../../docs/releases/2026-09-24-android-update.md` for the source, validation and publication status. Build 18 is the earlier compatibility test and does not contain the subsequent product/brand changes. Home uses the canonical **Financial Compass** heading.
-
-On the authorised Windows signing workstation, use `tool/build_release.ps1` with the reviewed full source commit. It runs Flutter analysis/tests, checks the Android permission contract, builds with local signing and records the AAB checksum and source. GitHub Actions remains disabled.
-
 ## Development
 
 ```bash
@@ -116,3 +112,9 @@ Never place provider secrets in Flutter.
 Start with `../../docs/CURRENT_STATE.md`, `../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`, `../../docs/manuals/OPFIN_USER_MANUAL.md`, `../../docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md`, `../api/docs/api/API_QUICK_REFERENCE.md` and `../../SECURITY.md`.
 
 Run `make publication-check` before externally publishing product/developer documentation.
+
+## Credit distribution channels
+
+Credit options, applications and Essentials send the actual channel through `lib/services/distribution_channel.dart`. iOS infers `app_store`, Android infers `play_store`, and web infers `web`. Build Huawei Android with `--dart-define=OPFIN_DISTRIBUTION_CHANNEL=huawei_appgallery`; configure actual store policy before publication. Invalid channel/platform combinations are rejected. The channel flag does not replace Huawei device/service integration testing or store approval.
+
+Repayment terms come from the server's configurable lender/channel rules. The client no longer hides terms using a universal 61-day filter or prefers a universal 90-day product. Options/review/offers identify the actual lender; OpFin is the orchestration platform. Home displays an OpFin Score only when the server supplies one. Flutter analysis/tests, Android/iOS release compilation and device UAT remain required. See [the lender contract](../../docs/architecture/LENDER_ORCHESTRATION.md).

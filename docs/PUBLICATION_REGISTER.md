@@ -1,9 +1,9 @@
 # OpFin publication register
 
-Reviewed: 23 September 2026  
+Reviewed: 26 September 2026  
 Authority: `docs/PUBLICATION_STANDARD.md`
 
-This register controls how repository documentation should be published or shared.
+This register controls how repository documentation should be published or shared. Publication classes identify intended audiences, not access controls; a public repository does not protect a document labelled internal.
 
 ## Public documents
 
@@ -22,6 +22,8 @@ These documents are intended to be clean enough for unrestricted external sharin
 
 Suitable for the named professional audience rather than unrestricted consumer publication:
 
+- `docs/product/OPFIN_CONCEPT_NOTE.md`, continuity/enhancement review edition 2.1; not new legal, credit or release policy;
+- `docs/product/PRODUCT_EVOLUTION_2026-09-26.md`, dated source/status review; not a continuously monitored health report or financial activation;
 - `docs/product/OPFIN_PRODUCT_BLUEPRINT.md`
 - `docs/product/OPFIN_ESSENTIALS.md`
 - `docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md`
@@ -34,6 +36,8 @@ Suitable for the named professional audience rather than unrestricted consumer p
 - `apps/api/docs/api/current-endpoints.md`
 - `apps/api/docs/api/frontend-backend-contract.md`
 - current architecture/integration documents under `apps/api/docs/architecture/`, subject to security review
+
+The Word derivative of concept note 2.1 carries the same audience and evidence boundaries and appends the dated evolution review. The concept and brand version numbers are separate; formatting in Brand System v3 colours does not freeze the brand release candidate or establish service availability.
 
 ## Controlled internal documents
 
@@ -48,6 +52,8 @@ Publication-quality for internal controlled use, but not intended for unrestrict
 - `docs/manuals/OPFIN_UAT_MANUAL.md`;
 - `docs/product/CANONICAL_IMPLEMENTATION_STATUS.md`;
 - `docs/product/IMPLEMENTATION_BACKLOG.md`;
+- `docs/governance/INTEGRATED_MANAGEMENT_SYSTEM.md`, a policy proposal awaiting evidenced adoption, not an effective-policy or certification claim;
+- `docs/governance/ISO_READINESS_ACTION_REGISTER.md`, an implementation/evidence register, not proof of conformity;
 - operational, production, security and UAT documents under `apps/api/docs/`;
 - `apps/web/docs/` technical/audit/production material;
 - `infrastructure/railway/` and `docs/operations/`;
@@ -66,7 +72,7 @@ The following paths retain historical context and must not be presented as curre
 - `docs/releases/`;
 - dated gap analyses where superseded by current canonical status.
 
-Historical evidence can be published as historical evidence if its original date, scope and limitations remain clear.
+Historical evidence can be published as historical evidence if its original date, scope and limitations remain clear. The 24 September comparison and delivery records are not silently rewritten by the 26 September concept review; use the new current-state index for the fresher evidence.
 
 ## Known publication gates
 
@@ -100,3 +106,5 @@ A document moves to Public or Controlled external status only when:
 - unresolved factual gates are completed or clearly excluded from the published artefact;
 - `make publication-check` passes;
 - required legal/compliance/brand approval has been obtained for the intended audience.
+
+This register identifies intended audience and review boundaries. It does not claim those approvals, full-repository validation or financial activation have occurred merely because a documentation change is committed.

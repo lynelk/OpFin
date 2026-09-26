@@ -1,76 +1,72 @@
 # OpFin API documentation
 
-Status: Controlled external developer reference  
-Updated: 23 September 2026  
-Language: English (United Kingdom)  
-Scope: `apps/api` and client-facing contracts used by App, Web, WhatsApp, USSD and authorised integrations
+Status: Source-based developer, integration and operations reference  
+Reviewed: 25 September 2026  
+Language: English (United Kingdom)
 
-## Purpose
+## Start by purpose
 
-This is the publication-ready index for OpFin's API documentation. It is written for developers, integrators, testers and operations teams.
+| Need | Reference |
+| --- | --- |
+| New developer or AI integrator | [Root API entry point](../../../API.md), [Developer Centre interface](api/DEVELOPER_INTERFACE.md) |
+| Current achievements and restrictions | [Current state](../../../docs/CURRENT_STATE.md), [concept/plan comparison](../../../docs/product/CONCEPT_AND_PLAN_COMPARISON.md) |
+| Find an endpoint | [Quick reference](api/API_QUICK_REFERENCE.md), [current endpoint index](api/current-endpoints.md), [preserved detailed domain contracts](api/domain-endpoints.md) |
+| Integrate treasury, Essentials or Location Context | [Current capability contracts](api/CURRENT_CAPABILITY_CONTRACTS.md) |
+| Understand client responsibilities | [Frontend/backend contract](api/frontend-backend-contract.md) |
+| Build an AI integration | [API and AI platform](../../../docs/developer/API_AND_AGENT_PLATFORM.md), [documentation-only MCP bridge](../../../tools/opfin-mcp/README.md) |
+| Understand structure and security | [System overview](architecture/system-overview.md), [API design](architecture/api-design.md), [security/compliance](architecture/security-and-compliance.md) |
+| Operate and verify | [Runbook](operations/operational-runbook.md), [readiness](operations/production-readiness-checklist.md), [current UAT](../../../docs/manuals/OPFIN_UAT_MANUAL.md), [dated delivery evidence](../../../docs/operations/DELIVERY_EVIDENCE_2026-09-24.md) |
+| Regulatory and security controls | [UMRA mapping](../../../docs/UMRA_DIGITAL_LENDING_CONTROLS.md), [security standard](../../../SECURITY.md) |
 
-Use the documentation to understand intent, permissions, state transitions and failure handling. Use the registered Laravel route table and automated tests to confirm exact runtime registration.
+## Searchable Developer Centre
 
-## Start here
+The source-linked `/developers` interface runs on the API origin when its change is deployed. Its six learning guides serve novice, application-developer and advanced/AI audiences. The same guide files are available as readable text through the browser and machine-readable endpoints.
 
-### New developer or integrator
+Public metadata is explicitly allow-listed. The authenticated catalogue derives visibility from the actual Sanctum user, not a caller-supplied role. It inventories current routes, distinguishes reviewed contracts from registration-only gaps, and exports only reviewed operations as SDK-oriented OpenAPI.
 
-1. `../../../docs/CURRENT_STATE.md`
-2. `../../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`
-3. `api/API_QUICK_REFERENCE.md`
-4. `api/current-endpoints.md`
-5. `api/frontend-backend-contract.md`
-6. `architecture/system-overview.md`
-7. `architecture/api-design.md`
-8. `architecture/security-and-compliance.md`
+The MCP bridge exposes four read-only documentation tools. It is not a financial write proxy, hosted OAuth server or arbitrary URL executor. Native domain permissions and financial controls remain authoritative.
 
-### Operations, compliance or UAT
+## Source authority and usability
 
-Use `operations/operational-runbook.md`, `operations/production-readiness-checklist.md`, `uat/customer-uat-scenarios.md`, `../../../docs/manuals/OPFIN_UAT_MANUAL.md`, `../../../docs/UMRA_DIGITAL_LENDING_CONTROLS.md` and `../../../SECURITY.md`.
+The API owns identity, consent, Financial Space authority, financial/product state, provider coordination, expected accounting, reconciliation and programme/commercial evidence. Clients submit authorised instructions and display returned state; they do not maintain competing prices, credit limits or financial finality.
 
-## Product/API baseline
+From repository root:
 
-OpFin is a financial operating platform with server-authoritative state across identity, Financial Spaces, financial management, responsible credit, financial resilience, inclusive-finance programmes, partner/provider orchestration, money movement, ledger/reconciliation and commercial/service-economics evidence.
+```bash
+make api-docs
+make api-docs-check
+make agent-docs-test
+python3 scripts/search-api.py "essentials"
+python3 scripts/search-api.py "statement"
+python3 scripts/search-docs.py "repayment" --api
+```
 
-Canonical new-customer App onboarding is:
-
-`Phone → OTP → names → six-digit PIN → Home → progressive verification → eligible financial journey`
-
-The Web password-compatible sign-in route is retained for existing/authorised access and does not redefine new-customer onboarding.
-
-## API authority
-
-Exact registered routes:
+With local API dependencies installed:
 
 ```bash
 cd apps/api
-php artisan route:list
 php artisan route:list --json
+php artisan api:catalogue --check --require-complete
 ```
 
-Search from repository root:
+The strict completion gate deliberately fails until every registered operation has its reviewed contract. Complete route discovery is not complete field-level/API acceptance. Read validation, service rules and behavioural tests alongside prose. A source implementation that violates an approved requirement is a defect, not authority to rewrite that requirement.
 
-```bash
-python3 scripts/search-api.py "financial-spaces"
-python3 scripts/search-api.py "programme"
-python3 scripts/search-api.py "umra"
-python3 scripts/search-docs.py "provider finality" --api
-```
+## Recent contract distinctions
 
-A route entry confirms registration. It does not by itself document permissions, request validation, idempotency, provider finality or business semantics.
+Treasury imports are reviewable source evidence, not confirmed money movement. Issued statements are frozen OpFin snapshots and preserve currency separation. PR #116 repaired the earlier historical-date/baseline and role-catalogue regression failures; their earlier dated failure record remains historical, not current unresolved status.
 
-## Cross-cutting rules
+PR #117 added governed internal Cito NIN evidence reuse and scheduled revalidation. Its reviewed API build passed 283 tests. The capability remains unactivated until genuine policy settings and subject consent exist; it does not establish a direct NIRA API contract or full KYC reuse.
 
-- clients do not calculate their own credit limits, pricing, repayment allocation or financial finality;
-- provider acknowledgement is not completed money movement;
-- ambiguous primary-provider failure does not silently invoke a direct provider;
-- programme/protected attributes remain outside underwriting;
-- Financial Space membership does not expose a member's Personal Space;
-- unknown commercial/provider values remain unknown rather than becoming zero;
-- provider, licence and certification activation must not be inferred from source code.
+Essentials names the third-party lender and intends settlement to a verified biller/rental beneficiary. Its controller requires a body `idempotency_key` for repayment and returns 201 for accepted repayment records; neither that status nor a success envelope proves collection finality. Current unresolved financial-control reviews, including unmerged changes, remain separate work.
 
-## Documentation maintenance
+Location is purpose-specific optional context with server-side provider access. Programme measurements and health outcomes remain non-credit. `programme_partner` and Essentials `partner_api` roles are not interchangeable.
 
-Every material API/runtime change updates the affected current API documentation in the same pull request. Historical audit/demo documents remain evidence of earlier states.
+Do not assume all responses use the custom JSON envelope. Raw OpenAPI, HTML/CSV exports and framework/proxy failures require their own handling. Never put live tokens, customer identity records or provider credentials in examples.
 
-Run `make docs-check` and `make publication-check` before publication or external distribution.
+## Maintenance and acceptance
+
+The catalogue reads routes and checked-in guides from the running build. Fingerprints identify runtime/contract changes; they do not establish that production equals remote main. `api:catalogue --baseline=<approved snapshot>` highlights route/controller changes, while domain-service semantics still require review.
+
+API changes update affected fields, errors, client contracts, manual tasks and UAT evidence in the same change. Existing documentation/publication checks have a limited scope and are not full schema, permission or financial certification.
+
+GitHub Actions remains deferred by owner instruction. Keep equivalent candidate-specific tests/audits and independent review. The new interface does not close outstanding Essentials, full club accounting, native-schema coverage, PostgreSQL/concurrency or the credential-log security incident. Its own integration results are recorded against the exact PR candidate.

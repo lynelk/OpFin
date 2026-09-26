@@ -104,17 +104,22 @@ class WebhookSignatureValidator
         // Duplicate CPay events remain safe because a legitimate retry is newly signed and is then
         // deduplicated by webhook_event_id in MobileMoneyService.
         try {
-            DB::table('cpay_webhook_nonces')
-                ->where('expires_at', '<', $now)
-                ->delete();
+            // A uniqueness violation must roll back its own transaction or
+            // savepoint before being handled. PostgreSQL otherwise leaves an
+            // enclosing caller transaction aborted after a rejected replay.
+            DB::transaction(function () use ($merchantId, $taskId, $nonce, $replayWindowSeconds, $now): void {
+                DB::table('cpay_webhook_nonces')
+                    ->where('expires_at', '<', $now)
+                    ->delete();
 
-            DB::table('cpay_webhook_nonces')->insert([
-                'merchant_id' => $merchantId,
-                'callback_task_id' => $taskId,
-                'nonce' => $nonce,
-                'expires_at' => $now->addSeconds(max(1, $replayWindowSeconds)),
-                'created_at' => $now,
-            ]);
+                DB::table('cpay_webhook_nonces')->insert([
+                    'merchant_id' => $merchantId,
+                    'callback_task_id' => $taskId,
+                    'nonce' => $nonce,
+                    'expires_at' => $now->addSeconds(max(1, $replayWindowSeconds)),
+                    'created_at' => $now,
+                ]);
+            });
         } catch (UniqueConstraintViolationException) {
             return false;
         }

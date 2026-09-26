@@ -1,132 +1,90 @@
-# OpFin Training Manual
+# OpFin training manual
 
-Status: Controlled internal training manual  
-Version: 23 September 2026  
+Status: Controlled training manual  
+Version: 24 September 2026  
 Language: English (United Kingdom)  
 Audience: customers, savings-group members, facilitators, support and authorised programme staff
 
-## Training outcome
+## Training outcome and evidence
 
-A learner should be able to register/sign in safely, understand Home, switch Financial Spaces, record everyday financial information, manage a savings-group context, understand regulated-service availability, use financial-resilience/programme features and obtain support without surrendering credentials.
+Learners should register/sign in safely, understand Home, switch Financial Spaces, record everyday financial information, use supported group functions, interpret regulated-service availability, understand financial resilience/programmes and obtain support without sharing credentials.
 
-## Module 1 — One identity
+The [current capability supplement](CURRENT_CAPABILITY_SUPPLEMENT.md) is part of this manual. Use its treasury exercise, Essentials restrictions and acceptance records. Lessons describe source workflows, not a claim that current production or all physical-device tasks have passed. Do not use live customer obligations for demonstrations.
 
-Demonstrate the canonical new-customer App journey: phone → OTP → names → six-digit PIN. Explain progressive verification.
+## Module 1: One identity
 
-Explain that Web sign-in is for existing/authorised users and is not the preferred new-customer onboarding route.
+Demonstrate phone → OTP → names → six-digit PIN in the App. Explain progressive verification and the optional second phone. Web password-compatible access is not the preferred new-customer registration journey. Exercise: sign in and identify the Personal Space.
 
-Exercise: sign in and identify the Personal Space.
+## Module 2: Home and the next action
 
-## Module 2 — Understand Home
+Explain the money picture, next action and simple labels. Separate estimates, confirmed information and unavailable data. Exercise: identify available money, upcoming commitments and safe-to-spend where enough information exists.
 
-Show the next action, money picture and simple language. Explain that estimates are not confirmed cash and unavailable data is not replaced with an invented value.
+## Module 3: Financial Spaces
 
-Exercise: identify available money, upcoming commitments and safe-to-spend where enough information exists.
+Open **My money & spaces**. Explain Personal, Household, Savings Group, Business and authorised organisation contexts. Exercise: switch and confirm the name and role. Joining an organisation must not expose personal finances.
 
-## Module 3 — Financial Spaces
+## Module 4: Everyday money
 
-Open **My money & spaces**. Explain Personal, Household, Savings Group, Business and SACCO/organisation contexts.
+Record a training account, money in/out, a budget and an upcoming event. Exercise: distinguish income, expenditure, an asset and a debt. Confirm amounts and currencies before saving.
 
-Exercise: switch Space and confirm the context changes. Reinforce that Personal Space remains private.
+## Module 5: Assets and obligations
 
-## Module 4 — Everyday money
+Add one item under **I own**, one under **I owe** and one under **Owed to me**. Explain recorded net position without representing every asset as immediately available cash.
 
-Record money/accounts, a budget and an upcoming event.
+## Module 6: Savings groups
 
-Exercise: explain the difference between money in, money out, an asset and a debt.
+Create a training group, invite a member, inspect membership and record supported group information. Officials act only within their roles. Identify which administration tasks require Web; do not claim untested mobile completeness.
 
-## Module 5 — Assets and obligations
+## Module 7: Financial services
 
-Add one item under **I own**, one under **I owe**, and one **Owed to me**. Explain how these affect the financial position.
+Demonstrate Save, Borrow, Protect and Grow/Invest only using approved available test services. Review provider, amount received, costs, repayment/premium, risk, dates and disclosures. A provider request is not confirmed movement and a limit is not guaranteed approval.
 
-## Module 6 — Savings groups
+## Module 8: Connectivity and support
 
-Create a training group, invite a member, review membership and record supported group information. Emphasise that officials act only within authorised roles.
+Demonstrate supported queued/retry states, history, receipts and Support. After an ambiguous financial response, retain the reference and check state before retrying. A newly generated key must not be used to conceal a duplicate logical payment.
 
-## Module 7 — Financial services
+## Module 9: Financial resilience
 
-Demonstrate Save, Borrow, Protect and Grow/Invest only with test services that are actually available in the environment.
+Explain health status, non-score reputation, recorded-data enrichment, current credit position and next steps. Financial health and reputation do not replace credit scoring or affordability.
 
-Teach learners to review provider, price/cost, total repayment or premium, risks, due dates and disclosures before confirming.
+## Module 10: Voluntary inclusion and programmes
 
-A provider request is not complete until the final state is confirmed.
+Explain measurement consent and voluntary fields, including **Prefer not to say** where offered. Programme information supports lawful participation and aggregate reporting, not hidden underwriting. Demonstrate join, due check-in and voluntary exit using an approved fixture.
 
-## Module 8 — Poor connectivity and support
+## Module 11: Programme channels and partner privacy
 
-Demonstrate retry/offline states. Learners must know that an initiated financial action may remain pending.
+Demonstrate a due instrument in App/Web and explain configured verified WhatsApp, USSD and assisted capture. Check active consent/enrolment, reviewed translation or explicit English fallback, separate staff actor, dedicated partner identities and privacy-suppressed aggregate exports. Do not describe measured change as causal impact without an appropriate evaluation design.
 
-Show Support, history and receipts.
+## Module 12: Alternative credit support
 
-## Module 9 — Financial resilience
+Use a permitted synthetic undertaking, guarantee, receivable or warehouse receipt. Explain **submitted → independently verified/rejected → recognised by product policy**. Verification alone does not approve borrowing.
 
-Open **Financial resilience**. Explain financial-health status, financial-reputation stage, current credit position and next steps.
+## Module 13: Accessibility and optional location
 
-Reinforce that financial health and financial reputation are not substitute credit scores.
+Demonstrate larger text, simple wording, reduced motion and high contrast. Record the device and actual screen-reader result rather than claiming certification by design. Demonstrate purpose-specific location permission and manual fallback where supported; baseline financial use must not depend on location permission.
 
-## Module 10 — Voluntary inclusion and programmes
+## Module 14: Programme and commercial operations
 
-Show programme-measurement consent and voluntary inclusion fields where available. Explain **Prefer not to say** where offered.
+For authorised staff, demonstrate Inclusion & programmes, Impact framework, Programme delivery, due/overdue follow-ups, partner invitation/revocation, MEL exports and Commercial performance. Explain that acquisition cost, revenue, contribution and provider economics are only as complete as recorded evidence. Unknown is not zero; customer capital is not platform revenue.
 
-Programme data may support lawful programme participation and aggregate reporting, but protected/programme attributes do not become underwriting inputs.
+## Module 15: Club treasury and statements
 
-Demonstrate join, due check-in and voluntary exit. An exited participation is not silently re-opened.
+Use the detailed synthetic exercise in the [supplement](CURRENT_CAPABILITY_SUPPLEMENT.md). Teach opening balance/date, recorded receipts/payments, CSV mapping, duplicate detection, suggestions versus confirmed matches, reasoned exception handling, confirmation and frozen statements.
 
-## Module 11 — Programme check-ins across channels
+The expected example is UGX 1,000,000 opening plus 250,000 receipts less 100,000 payments, giving 1,150,000. The current historical-date regression failed; this arithmetic is an expected criterion, not a claimed passing exercise. Do not change accurate dates to bypass a baseline error.
 
-Demonstrate one due instrument through App or Web, then explain the same server-authoritative question set through verified WhatsApp, USSD or authorised assisted capture.
+Explain separate-currency consolidation and that a generated statement is not a bank-issued statement. Member capital, NAV/unitisation, distributions and investment performance remain additional scope. Identify the current Web import/reconciliation boundary.
 
-Training checks:
+## Module 16: Essentials orientation and controlled practice
 
-1. consent withdrawal stops new participant measurement prompts;
-2. reviewed translation is used where configured, otherwise English fallback is explicit;
-3. assisted capture records the staff actor separately;
-4. partner users are dedicated identities;
-5. partner exports remain aggregate and privacy suppressed;
-6. programme outcomes are not described as causal impact without an evaluation design that supports causality.
+Explain the named third-party lender, verified biller or rental beneficiary, exact offer disclosures, purpose-bound settlement and repayment tracking. OpFin is not to be described as the primary Essentials lender. Limits do not stack and an external platform cannot create unconfirmed debt.
 
-## Module 12 — Alternative credit support
+**Do not demonstrate live financial execution before control acceptance.** Current findings concern immutable accounting, exact-Space permissions, repayment concurrency, deletion, capital mandates and pending exposure. Genuine credentials are not the only remaining requirement.
 
-Demonstrate a permitted training example such as a salary undertaking, guarantee, receivable or warehouse receipt.
+In an approved non-money-moving fixture, practise account capture, verification state, eligibility, quote review, retained references and permission revocation. Explain pending funding, fulfilment, reversal and repayment separately. gnuGrid remains behind Cito under the current capability direction.
 
-Teach the lifecycle: **submitted → independently verified/rejected → recognised by product policy**.
+## Facilitator and publication rules
 
-Verification alone does not create a credit approval.
+Use plain language, demonstrations and synthetic records. Never collect PINs/OTPs or publish identity evidence. Distinguish implementation, deployment, financial activation, device acceptance and publication status. Keep current screen labels and source references with each lesson.
 
-## Module 13 — Accessibility
-
-Demonstrate larger text, simple wording, reduced movement and high contrast.
-
-Where a physical test device is available, demonstrate VoiceOver/TalkBack. Do not claim certification for a device or assistive technology that has not completed acceptance testing.
-
-## Module 14 — Operations and commercial evidence
-
-For authorised staff, demonstrate:
-
-- Inclusion & programmes;
-- Impact framework;
-- Programme delivery and due/overdue follow-ups;
-- programme-partner invitation and revocation;
-- aggregate MEL exports;
-- Commercial performance.
-
-Explain that acquisition cost, recorded revenue, CAC, contribution and provider economics are only as complete as the source evidence recorded. Unknown values remain unknown rather than becoming zero.
-
-## Facilitator rules
-
-- use plain language and demonstrate rather than lecture;
-- never collect a learner's PIN or OTP;
-- use synthetic/training records;
-- distinguish source deployment from release certification;
-- distinguish implemented capability from activated provider service;
-- distinguish programme participation from credit eligibility;
-- distinguish measured change from proven causal impact.
-
-## Acceptance exercise
-
-A learner passes when they can complete the assigned task unaided, explain what information is confirmed versus pending, identify where to get support, and avoid sharing credentials or treating unavailable services as live.
-
-## Training module: OpFin Essentials
-
-Trainees must explain that OpFin arranges and services Essentials financing while the named third party supplies the credit. Practise: add and verify a utility account; refresh eligibility; review lender/cost/term disclosures; accept a purpose-bound provider payment; repay; repeat with a rental beneficiary; and review/revoke connected-platform permissions.
-
-Do not describe lender limits as additive, promise approval, describe OpFin as the primary lender, or imply that Stolets/another platform can create debt without customer confirmation.
+A learner passes a task only when they complete it unaided, explain confirmed versus pending state, recognise unavailable services and identify safe support/recovery. Record actual results, build/environment/device, tester and defects. No lesson or added test case is automatically marked passed.

@@ -311,8 +311,7 @@ Clients treat location as task-specific context rather than a persistent trackin
 - baseline OpFin use must not require location;
 - App location requests are foreground-only;
 - personal service discovery requests approximate location;
-- Android device capture is approximate only, even for a physical asset, insured risk or claim incident; the client persists the returned approximate precision without upgrading it;
-- an exact asset/risk place may instead be selected through place search or described manually; iOS precise foreground capture remains purpose-bound;
+- precise location is used only where a physical asset, insured risk or claim incident genuinely requires it;
 - clients always send a purpose and matching consent purpose;
 - a client cannot promote verification state; device coordinates remain user-reported provenance unless a server-side place/partner/field verification path confirms them;
 - server responses expose credit_decision_eligible=false;
@@ -324,3 +323,24 @@ Clients treat location as task-specific context rather than a persistent trackin
 - partner users receive only service points associated with their own institution's partner records.
 
 Static maps are authenticated images and are supplemental visual context. Clients should use normal Google Maps URLs for navigation instead of embedding a full routing UI.
+
+## Lender orchestration contract — 25 September 2026
+
+Credit option rows include `loan_product_id`, `loan_product_term_id`, `institution_id`, `product_name`, `lender`, `country`, `currency`, `duration_days`, `repayment_frequency` and `interest_rate_percent`. `lender` identifies the actual institution, relationship, regulator/authority reference and OpFin infrastructure role. Discovery is indicative; exact fees/APR, affordability, funding and deployment are checked when an offer is created and first accepted. Send the actual distribution channel on all discovery/application/Essentials requests.
+
+Offer `disclosure_snapshot.lender_of_record` is immutable. Display its `legal_name` and `authority_reference`; do not fill missing licence details from an OpFin-wide constant. `regulated_provider` retains the same lender data for compatibility. `distribution_policy` records the applied channel assessment. Essentials quotes include lender/partner identity, deployment strategy, channel policy and exact quoted APR. Refreshed lender terms do not alter quoted principal/interest/fees/schedule.
+
+Lender configuration: `name`, `address`, `phone`, `email`, `status` (Active/Inactive), `lender_relationship` (independent/affiliated), `country`, `regulator_code`, `licence_class`, `authority_basis` (pending/licensed/other_authority/exempt), evidence reference/expiry and `rate_change_approval_required`. An `id` updates a record; omit it to create. Active records require applicable evidence. No user is created. Only admin can create a relationship or change ownership.
+
+Strategy: `mode` (withhold/external_first/affiliated_first), required `reason`, optional positive `max_affiliated_loan_minor`, required `effective_from` and optional later `effective_to`. Distribution: `channel`, `country`/`product_category` (or `*`), optional lender and one catalogue product scope (`loan_product_id` or `partner_product_id`), availability (available/unavailable/review), optional minimum days/APR cap, required `reason`/`source_reference`, optional URL and effective interval. Policy scopes are ownership-validated; later revisions replace the full scoped rule. Send ISO 8601 timestamps with an explicit timezone; the API preserves their instant by normalising to the configured application timezone before database storage. Intervals include the start and exclude the end.
+
+The `/admin/umra/term-change-requests` compatibility workflow accepts generic `regulatory_approval_reference` and `regulatory_approved_at`, as well as legacy UMRA names. Regulatory evidence is required according to the lender profile; independent maker-checker approval and immutable accepted offers still apply. Capital mandates recognise licensed, other-authority and exemption evidence; affiliated creation/review requires delegated access and distinct maker/checker users.
+
+
+### Release review corrections, 25 September 2026
+
+Refresh `GET /api/credit/options` with `amount_minor`, `reason` and the actual `distribution_channel` after the borrower enters their request. Initial discovery does not promise that an independent lender can serve every amount or purpose. If the returned lender/term changes, show it for review before submitting explicit IDs. The Flutter request screen follows this sequence.
+
+`GET /api/essentials?channel=...` applies channel policy to visible lines and the overall limit; omitted channel defaults to web. Eligibility refresh returns the same channel-filtered view. Withheld affiliated lenders are not contacted, and independent-first refresh contacts an affiliate only after independent decisions cannot serve the request. When quote discovery has no usable existing line, one eligibility refresh uses the requested amount/category before retrying discovery. Consent and existing financial controls still apply.
+
+Active legacy institutions with pending/missing authority evidence are unavailable for new origination until the lender record is completed. Independent and affiliated funding pools both require an explicit matching institution owner. A manual offer cannot substitute a different pool when the product has a configured pool. New product categories remain in `product_category`; the compatibility `type` remains Cash or Asset. Offer creation owns a single distribution snapshot, shared by pricing and disclosures. Legacy default-interest servicing retains its snapshotted or configured licence class when no lender-of-record snapshot exists.

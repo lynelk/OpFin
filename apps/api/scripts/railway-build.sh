@@ -10,4 +10,8 @@ cp .env.example .env
 sh scripts/enforce-governed-provider-routing.sh
 sh scripts/run-tests.sh
 composer audit
+# Validate source-linked documentation definitions without claiming that
+# every existing domain contract is complete. The strict coverage gate is
+# available separately as: php artisan api:catalogue --check --require-complete.
+php artisan api:catalogue --check
 npm run build

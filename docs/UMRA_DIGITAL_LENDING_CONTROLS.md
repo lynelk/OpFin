@@ -1,7 +1,7 @@
 # UMRA digital-lending controls
 
 Status: Controlled external regulatory-control mapping  
-Updated: 23 September 2026  
+Updated: 25 September 2026
 Language: English (United Kingdom)
 
 This document maps the OpFin product/system controls implemented against the January 2024 Uganda Microfinance Regulatory Authority Digital Lending Guidelines. It does not claim that source code alone proves licensing or regulatory approval.
@@ -50,7 +50,7 @@ No source-code flag substitutes for provider credentials, UMRA or other regulato
 
 The immutable offer disclosure now records:
 
-- licensed entity/trading name, UMRA licence reference and business address when configured;
+- actual selected lender legal name, relationship, applicable authority/reference and business address; an UMRA reference only where that lender records UMRA;
 - principal;
 - amount actually received;
 - interest amount;
@@ -139,12 +139,12 @@ The governed process is:
 
 1. authorised officer raises a `credit_term_change_request`;
 2. second officer performs maker-checker approval;
-3. if interest rate changes, prior UMRA approval reference/date is mandatory;
+3. rate/cycle changes require regulatory approval reference/date where the lender profile requires it; UMRA legacy fields remain supported;
 4. approved change applies only through the governed workflow;
 5. existing accepted offer snapshots remain immutable;
 6. customer consent remains required before modifying any already-contracted credit terms.
 
-`LoanProductTerm` also rejects direct interest/default-interest rate mutation unless UMRA approval evidence is recorded.
+`LoanProductTerm` rejects interest/default-interest rate or cycle mutation without the evidence required by the selected lender profile. A lender governed by another authority uses its applicable requirement. Existing accepted snapshots remain immutable.
 
 ## Admin UMRA reporting and books
 
@@ -183,7 +183,7 @@ Before describing these controls as operationally live, configure/verify:
 
 - licensed entity legal name;
 - registered/trading name;
-- UMRA licence number;
+- applicable lender authority/reference (UMRA licence number where applicable);
 - business address;
 - official complaints contacts;
 - applicable credit-reference reporting endpoint, token and provider;
@@ -191,3 +191,7 @@ Before describing these controls as operationally live, configure/verify:
 - actual regulatory approval references for any future interest-rate change.
 
 Missing configuration is intentionally not fabricated.
+
+## Orchestration and affiliated lender scope
+
+OpFin is the platform; Core Synergies may supply affiliated credit under its own evidenced authority. Configuration, store distribution and credit deployment are described in [lender orchestration](architecture/LENDER_ORCHESTRATION.md). This UMRA mapping applies where relevant to the actual lender/activity. It does not imply that every institution is UMRA-regulated, or that platform obligations disappear because a partner lends. Country-specific reporting adapters and responsibility maps require separate activation.

@@ -17,12 +17,14 @@ use App\Http\Controllers\Api\FinancialSpaceController;
 use App\Http\Controllers\Api\FinancialSpaceCredentialController;
 use App\Http\Controllers\Api\FinancialSpaceStatementController;
 use App\Http\Controllers\Api\FinancialWellbeingController;
+use App\Http\Controllers\Api\FinancingController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\GuarantorController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\InclusiveFinanceController;
 use App\Http\Controllers\Api\InclusiveImpactController;
 use App\Http\Controllers\Api\InvestorDemoController;
+use App\Http\Controllers\Api\LendingPlatformController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
 use App\Http\Controllers\Api\LocationContextController;
@@ -33,7 +35,6 @@ use App\Http\Controllers\Api\OrganisationJourneyController;
 use App\Http\Controllers\Api\PartnerEssentialsController;
 use App\Http\Controllers\Api\PartnerReportingController;
 use App\Http\Controllers\Api\PlatformCommerceController;
-use App\Http\Controllers\Api\ProgrammeCompletionController;
 use App\Http\Controllers\Api\ProductionConsentController;
 use App\Http\Controllers\Api\ProductionCreditController;
 use App\Http\Controllers\Api\ProductionCreditOfferController;
@@ -43,6 +44,7 @@ use App\Http\Controllers\Api\ProductionOperationsController;
 use App\Http\Controllers\Api\ProductionPaymentOperationsController;
 use App\Http\Controllers\Api\ProductionReconciliationController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\ProgrammeCompletionController;
 use App\Http\Controllers\Api\ProtectionController;
 use App\Http\Controllers\Api\ReceiptController;
 use App\Http\Controllers\Api\SaveProtectionOperationsController;
@@ -134,6 +136,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/credit/profile/refresh', [CustomerCreditProfileController::class, 'refresh']);
     Route::get('/credit/options', [CustomerCreditProfileController::class, 'options']);
     Route::patch('/accessibility-preferences', [CustomerCreditProfileController::class, 'accessibility']);
+
+    Route::get('/financial-intents', [FinancingController::class, 'intents']);
+    Route::post('/financial-intents', [FinancingController::class, 'createIntent']);
+    Route::post('/product-matches', [FinancingController::class, 'matches']);
+    Route::post('/financing-applications', [FinancingController::class, 'apply']);
 
     Route::get('/essentials', [EssentialsController::class, 'summary']);
     Route::get('/essentials/catalogue', [EssentialsController::class, 'catalogue']);
@@ -267,6 +274,14 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::get('/admin/lending-platform', [LendingPlatformController::class, 'index']);
+    Route::post('/admin/lending-platform/institutions', [LendingPlatformController::class, 'institution']);
+    Route::post('/admin/lending-platform/products', [LendingPlatformController::class, 'product']);
+    Route::post('/admin/lending-platform/products/{product}/terms', [LendingPlatformController::class, 'term']);
+    Route::post('/admin/lending-platform/strategy', [LendingPlatformController::class, 'strategy']);
+    Route::post('/admin/lending-platform/distribution', [LendingPlatformController::class, 'distribution']);
+    Route::patch('/admin/lending-platform/access/{user}', [LendingPlatformController::class, 'delegate']);
+
     Route::get('/admin/location-insights', [LocationContextController::class, 'insights']);
     Route::patch('/admin/financial-space-credentials/{credential}/verification', [FinancialSpaceCredentialController::class, 'verify']);
     Route::post('/admin/hardship/{case}/approve', [V5P0PlatformController::class, 'approveHardship']);

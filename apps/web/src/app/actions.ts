@@ -55,7 +55,7 @@ export async function loginAction(formData: FormData) {
       next = roleHome;
     }
   } catch (error) {
-    const preserved = context ? { next, context } : { next };
+    const preserved: Record<string, string> = context ? { next, context } : { next };
     if (error instanceof OpfinApiError) {
       redirectWith("/login", { error: error.kind, message: error.message, ...preserved });
     }
