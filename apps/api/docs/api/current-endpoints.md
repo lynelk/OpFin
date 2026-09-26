@@ -134,3 +134,12 @@ Authenticated customer endpoints:
 `principles_preference` accepts `ALL_SUITABLE`, `SHARIA_ONLY` or `CONVENTIONAL_ONLY`. It is a product preference and must not be interpreted or stored as the customer's religion.
 
 Product matching fails closed: a product must be `live`, have an approved/effective Legal Product Passport, and an Islamic product must additionally have an approved, unexpired Sharia approval. These endpoints establish the compatibility layer; existing `/api/credit/**` and Essentials endpoints remain operational during migration.
+
+
+## Financial Intelligence candidate (26 September 2026)
+
+Read the [Financial Intelligence contract](FINANCIAL_INTELLIGENCE_CONTRACT.md), [source-scope register](../../../../docs/product/FINANCIAL_INTELLIGENCE.md) and [acceptance runbook](../../../../docs/operations/FINANCIAL_INTELLIGENCE_RUNBOOK.md). These are disabled-by-default candidate routes, not a completed or deployed product. Existing domain and Developer Centre contracts above remain in force.
+
+The institutional namespace is `/api/financial-spaces/{space}/intelligence`. It includes role-aware context, source registration, staged JSON/CSV imports, independent publication, source-reconciled portfolio analysis, comparison and sensitivity analysis, assigned cases, expiring access grants, frozen reports and explicit report-sharing mandates. Personal owners receive statement permissions only. Imports and statement evidence do not post payments, alter core accounting or become credit decisions.
+
+The candidate also includes jurisdiction-specific issuer-version administration under `/api/intelligence/admin/issuers` and purpose-bound statement evidence under the scoped namespace. Original PDFs remain quarantined until an accepted scanner/parser pipeline exists. Arithmetic consistency is not issuer authentication. The actual application, database, browser and mobile build gates remain outstanding; discoverable routes or written tests do not establish acceptance.
