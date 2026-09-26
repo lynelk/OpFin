@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CreditDecision;
 use App\Models\CreditScoreComponent;
+use App\Models\CustomerWallet;
 use App\Models\Institution;
 use App\Models\Loan;
 use App\Models\LoanApplication;
@@ -334,6 +335,15 @@ class ProductionRepaymentAndReconciliationTest extends TestCase
             'role' => User::ROLE_CUSTOMER,
             'institution_id' => $institution->id,
             'phone' => '256700000902',
+        ]);
+        CustomerWallet::create([
+            'user_id' => $customer->id,
+            'provider' => 'mock',
+            'msisdn' => $customer->phone,
+            'status' => 'active',
+            'verified_at' => now(),
+            'is_default_disbursement' => true,
+            'is_default_repayment' => true,
         ]);
         $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS, 'institution_id' => $institution->id]);
         $this->installAffordabilityEvidence($customer, 600000);
