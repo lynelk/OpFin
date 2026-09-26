@@ -105,7 +105,7 @@ class RegulatoryActivationGuard
         if (! is_string($institution->authority_reference) || trim($institution->authority_reference) === '') {
             $missing[] = 'authority_reference';
         }
-        if ($institution->authority_valid_until && $institution->authority_valid_until->isPast()) {
+        if ($institution->authority_valid_until && $institution->authority_valid_until->copy()->endOfDay()->isPast()) {
             $missing[] = 'authority_valid_until';
         }
         if ($basis === 'licensed') {
