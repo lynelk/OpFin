@@ -170,3 +170,71 @@ These requirements extend the existing backlog.
 - **CAP-E2E-002**: Blockchain/VASP/OEM outages cannot block ordinary repayment or servicing.
 - **CAP-E2E-003**: Identifier privacy, duplicate-finance, partner isolation, maker-checker, funding provenance and immutable records pass security/UAT.
 - **CAP-E2E-004**: Device-control consent, safety, warning, dispute, release and audit pass legal/security/UAT before activation.
+
+
+## Integrated programme control — 26 September 2026
+
+The cross-programme source of delivery sequencing is [OpFin Integrated Delivery Plan](../development/OPFIN_INTEGRATED_DELIVERY_PLAN_2026-09-26.md). The canonical continuity ledger is the [OpFin Delivery & Feature Register](../governance/OPFIN_DELIVERY_FEATURE_REGISTER.md).
+
+The integrated plan consolidates Essentials, financing-centric conventional/Islamic rails, Capital/assets, legal/contract intelligence, delivery continuity and the repository-owned public website. Existing identifiers in this backlog remain valid and are not deleted merely because the architecture has been generalised.
+
+### Financing foundation additions
+
+- **FIN-001**: Financial Intent and need-led discovery before product/amount selection.
+- **FIN-002**: Financial Principles preference: ALL_SUITABLE, SHARIA_ONLY or CONVENTIONAL_ONLY, without collecting or inferring religion.
+- **FIN-003**: Versioned FinancialProduct and FinancingArrangement abstractions with legacy Loan/Credit compatibility.
+- **FIN-004**: Generic Contract Engine with explicit, audited, fail-closed state transitions.
+- **FIN-005**: Legal Product Passport as a product activation hard stop.
+- **FIN-006**: FundingPool and capital-mandate segregation, provenance and allocation controls.
+- **FIN-007**: Contract-aware accounting/journal instructions with integer minor units, balanced entries and compensating reversals.
+- **FIN-008**: CPay settlement/control reconciliation for every money-moving financing path.
+- **FIN-009**: Maker-checker activation and exception controls for high-impact product, funding, accounting and governance changes.
+- **FIN-010**: Conventional credit remains operational during migration; universal customer entry migrates from Borrow to Finance only with route/API/client compatibility evidence.
+
+### Islamic finance additions
+
+- **ISL-001**: Sharia Governance Centre with authority, approvals, templates, exceptions, remediation, audit and expiry/suspension handling.
+- **ISL-002**: Murabaha state machine with supplier/asset verification and mandatory acquisition/possession evidence before sale.
+- **ISL-003**: Ijarah contract/lifecycle support.
+- **ISL-004**: Musharakah and Mudarabah economic-interest/profit/loss support.
+- **ISL-005**: Salam and Istisna contract/lifecycle support.
+- **ISL-006**: Qard Hasan and Wakalah support with genuine service-cost/agency treatment.
+- **ISL-007**: Islamic/conventional funding, accounting and reporting remain segregatable; Islamic products cannot call conventional interest-pricing logic.
+- **ISL-E2E-001**: SHARIA_ONLY never returns a conventional interest product and expired/missing approval blocks contracting.
+- **ISL-E2E-002**: Islamic funding cannot allocate to prohibited conventional products.
+- **ISL-E2E-003**: Sharia status is never established or overridden by AI or a developer flag.
+
+### Essentials additions
+
+- **ESS-001**: Bills registry, calendar, forecasts and reminders remain useful without borrowing.
+- **ESS-002**: Own-money bill payment through approved existing rails with provider fulfilment and reconciliation.
+- **ESS-003**: Optional contribution-plus-finance with atomic reservation and refund/release handling.
+- **ESS-004**: Term-wide recurring-affordability including future bills, overlapping advances and necessary expenses.
+- **ESS-005**: Separate lender eligibility, borrower authority, accepted drawdown and funding/provider finality.
+- **ESS-006**: Exact-Space partner access and provider-neutral consented business signals.
+- **ESS-007**: Rent-specific tenancy, beneficiary, period, duplicate-financing and dispute controls.
+- **ESS-008**: Customer fulfilment artefacts such as electricity tokens remain distinct from authentication/API secrets.
+- **ESS-009**: Commercial accounting excludes principal from revenue and flags unknown costs rather than inventing margin.
+- **ESS-010**: App/Web/assisted/API/help/manual/UAT parity for the complete Essentials lifecycle.
+
+### Legal and continuity additions
+
+- **LEGAL-001**: Canonical Legal Relationship Record.
+- **LEGAL-002**: Consent & Mandate Registry with runtime authority validation.
+- **LEGAL-003**: Contract Registry and controlled Clause Library.
+- **LEGAL-004**: Contract Intelligence Engine with protected hard stops and human approval routes.
+- **LEGAL-005**: Obligation Engine for post-execution duties, evidence, deadlines and remediation.
+- **TRACE-001**: Canonical Delivery & Feature Register and Change Impact assessment.
+- **TRACE-002**: Requirement -> Feature -> Code/PR -> Test -> Evidence -> Documentation -> Training -> Release -> Monitoring traceability.
+- **TRACE-003**: Documentation, API references, manuals, training and approved AI knowledge update in the same delivery lifecycle.
+
+### Public website additions
+
+- **SITE-001**: Confirm existing ChatGPT Site identity, ownership, editable source/linkage, saved-version and rollback capabilities.
+- **SITE-002**: Inventory/reconcile the ChatGPT-hosted site and application-hosted marketing implementation.
+- **SITE-003**: Establish canonical portable source under `sites/opfin-public/`.
+- **SITE-004**: Implement public claim/availability registry; configured/implemented does not mean publicly available.
+- **SITE-005**: Establish source commit -> build -> saved host version -> live verification traceability.
+- **SITE-006**: Preserve App onboarding and Web/Workspace authentication while consolidating public marketing.
+- **SITE-007**: Publish verified canonical site before retiring duplicate marketing code from `apps/web`.
+- **SITE-008**: WCAG 2.2 AA target, security/privacy, link, performance and recovery acceptance.
