@@ -143,6 +143,21 @@ Clients must:
 - keep the primary screen simple and reveal technical detail only on request.
 
 
+## Investment-club treasury cashbook retry contract
+
+For `POST /api/financial-spaces/{space}/treasury/accounts/{account}/transactions`, new clients **must** send an explicit `Idempotency-Key` header (or the compatibility `idempotency_key` body field) for each logical cashbook instruction.
+
+Older clients that do not yet send an explicit key are supported through a compatibility fingerprint derived from the complete canonical cashbook instruction: account context, transaction reference/type, direction, amount, currency, description, counterparty, transaction date and value date. A transaction reference **alone is not treated as unique**.
+
+The retry semantics are:
+
+- exact replay of the same canonical instruction returns the original transaction and does not apply the balance delta twice;
+- the same explicit idempotency key with any changed canonical financial instruction returns a conflict;
+- two legitimate transactions may share the same external/bank `transaction_reference` when other instruction fields differ;
+- callers must not generate a new idempotency key merely because the network outcome is uncertain. Recover/retry the original instruction first.
+
+The compatibility fingerprint exists only to preserve established clients during migration. It is not a substitute for explicit client-generated idempotency in new integrations.
+
 ## Financial-life space binding
 
 Financial-life summaries, asset lists/creation, obligation lists/creation and settlements use the `{space}` route parameter to resolve the existing financial space before checking active membership. Unknown spaces return 404; authenticated users without an active membership receive 403. Record lists and settlements stay scoped to that space, including when the same user belongs to more than one space. A settlement referencing another space's obligation returns 404 without changing it. These endpoints record financial-life obligations; they do not initiate provider payments.
