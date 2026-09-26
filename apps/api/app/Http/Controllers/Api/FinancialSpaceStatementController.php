@@ -94,15 +94,26 @@ class FinancialSpaceStatementController extends Controller
             ?: ($validated['idempotency_key'] ?? '')
         ));
         if ($idempotencyKey === '') {
-            // Backwards-compatible bridge for the established cashbook contract:
-            // a caller-supplied transaction reference is already a stable request identity.
-            // New clients should send Idempotency-Key explicitly.
-            $idempotencyKey = trim((string) ($validated['transaction_reference'] ?? ''));
-        }
-        if ($idempotencyKey === '') {
-            return ApiResponse::error('A treasury cashbook idempotency key or transaction reference is required.', 422, [
-                'idempotency_key' => ['Provide Idempotency-Key header, idempotency_key body field, or a stable transaction_reference.'],
-            ]);
+            // Compatibility bridge for clients that pre-date the explicit
+            // Idempotency-Key contract. A transaction reference alone is not
+            // unique, so bind the fallback to the complete canonical cashbook
+            // instruction. Exact replay is stable; a legitimate second entry
+            // sharing a bank/reference label receives a different identity.
+            $legacyInstruction = [
+                'transaction_reference' => trim((string) ($validated['transaction_reference'] ?? '')),
+                'transaction_type' => trim((string) ($validated['transaction_type'] ?? 'other')),
+                'direction' => (string) $validated['direction'],
+                'amount_minor' => (int) $validated['amount_minor'],
+                'currency' => strtoupper((string) ($validated['currency'] ?? $account->currency)),
+                'description' => trim((string) $validated['description']),
+                'counterparty_name' => trim((string) ($validated['counterparty_name'] ?? '')),
+                'transaction_date' => (string) $validated['transaction_date'],
+                'value_date' => (string) ($validated['value_date'] ?? ''),
+            ];
+            $idempotencyKey = 'legacy-cashbook-v1:'.hash(
+                'sha256',
+                json_encode($legacyInstruction, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            );
         }
 
         unset($validated['idempotency_key']);
