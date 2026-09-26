@@ -15,6 +15,7 @@ Language: English (United Kingdom)
 
 ## Required verification
 
+- GitHub Actions is the normal repository verification gate. Keep the configured workflows enabled; do not use `[skip ci]`, `[ci skip]` or equivalent bypasses unless the workspace owner explicitly suspends Actions again for a defined reason and period.
 - API changes: formatting, tests, dependency audit, PostgreSQL/migration evidence where applicable.
 - Web changes: dependency audit, typecheck, lint, tests and production build.
 - Client changes: Flutter analyse/tests plus Android and iOS release compile gates.
