@@ -29,6 +29,15 @@ function fail(spaceId: number, error: unknown, fallback: string): never {
 export async function createTreasuryAccountAction(formData: FormData) {
   const token = await getAccessToken();
   const spaceId = integer(formData, "space_id");
+  const openingBalanceMinor = integer(formData, "opening_balance_minor");
+  const balanceAsOf = value(formData, "balance_as_of");
+  if (openingBalanceMinor !== 0 && !balanceAsOf) {
+    destination(spaceId, {
+      error: "validation",
+      message: "Enter the date that the non-zero opening balance was valid."
+    });
+  }
+
   try {
     await financialSpaceStatementsApi.createAccount(
       spaceId,
@@ -38,8 +47,8 @@ export async function createTreasuryAccountAction(formData: FormData) {
         institution_name: value(formData, "institution_name") || undefined,
         account_reference: value(formData, "account_reference") || undefined,
         currency: value(formData, "currency") || "UGX",
-        opening_balance_minor: integer(formData, "opening_balance_minor"),
-        balance_as_of: value(formData, "balance_as_of") || undefined
+        opening_balance_minor: openingBalanceMinor,
+        balance_as_of: balanceAsOf || undefined
       },
       token
     );
@@ -65,7 +74,8 @@ export async function recordTreasuryTransactionAction(formData: FormData) {
         description: value(formData, "description"),
         counterparty_name: value(formData, "counterparty_name") || undefined,
         transaction_date: value(formData, "transaction_date"),
-        value_date: value(formData, "value_date") || undefined
+        value_date: value(formData, "value_date") || undefined,
+        idempotency_key: value(formData, "idempotency_key")
       },
       token
     );

@@ -26,6 +26,14 @@ class FinancialSpaceStatementService
         $this->assertTreasurySpace($space);
         $this->assertAdministrator($space, $actor);
 
+        $openingBalanceMinor = (int) ($data['opening_balance_minor'] ?? 0);
+        $openingBalanceAsOf = $data['balance_as_of'] ?? null;
+        if ($openingBalanceMinor !== 0 && ! $openingBalanceAsOf) {
+            throw ValidationException::withMessages([
+                'balance_as_of' => ['A non-zero opening balance requires the date that balance was valid.'],
+            ]);
+        }
+
         return FinancialSpaceTreasuryAccount::query()->create([
             'public_id' => (string) Str::uuid(),
             'financial_space_id' => $space->id,
@@ -34,9 +42,10 @@ class FinancialSpaceStatementService
             'institution_name' => $data['institution_name'] ?? null,
             'account_reference_masked' => $this->maskedReference($data['account_reference'] ?? null),
             'currency' => strtoupper($data['currency'] ?? $space->currency),
-            'opening_balance_minor' => (int) ($data['opening_balance_minor'] ?? 0),
-            'current_balance_minor' => (int) ($data['opening_balance_minor'] ?? 0),
-            'balance_as_of' => $data['balance_as_of'] ?? null,
+            'opening_balance_minor' => $openingBalanceMinor,
+            'current_balance_minor' => $openingBalanceMinor,
+            'balance_as_of' => $openingBalanceAsOf,
+            'current_balance_as_of' => $openingBalanceAsOf,
             'status' => 'active',
             'metadata' => $data['metadata'] ?? null,
         ]);
@@ -71,16 +80,45 @@ class FinancialSpaceStatementService
         }
 
         return DB::transaction(function () use ($space, $account, $actor, $data, $sourceType, $sourceReference) {
+            $lockedAccount = FinancialSpaceTreasuryAccount::query()
+                ->whereKey($account->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $this->assertAccount($space, $lockedAccount);
+
+            $existing = FinancialSpaceTransaction::query()
+                ->where('financial_space_id', $space->id)
+                ->where('source_type', $sourceType)
+                ->where('source_reference', $sourceReference)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                $sameInstruction = (int) $existing->treasury_account_id === (int) $lockedAccount->id
+                    && $existing->direction === $data['direction']
+                    && (int) $existing->amount_minor === (int) $data['amount_minor']
+                    && strtoupper((string) $existing->currency) === strtoupper((string) $lockedAccount->currency)
+                    && $existing->transaction_date?->toDateString() === CarbonImmutable::parse($data['transaction_date'])->toDateString();
+
+                if (! $sameInstruction) {
+                    throw new InvalidArgumentException(
+                        'Treasury source reference was already used for a different canonical cashbook instruction.'
+                    );
+                }
+
+                return $existing->fresh();
+            }
+
             $transaction = FinancialSpaceTransaction::query()->create([
                 'public_id' => (string) Str::uuid(),
                 'financial_space_id' => $space->id,
-                'treasury_account_id' => $account->id,
+                'treasury_account_id' => $lockedAccount->id,
                 'created_by_user_id' => $actor->id,
                 'transaction_reference' => $data['transaction_reference'] ?? null,
                 'transaction_type' => $data['transaction_type'] ?? 'other',
                 'direction' => $data['direction'],
                 'amount_minor' => (int) $data['amount_minor'],
-                'currency' => $account->currency,
+                'currency' => $lockedAccount->currency,
                 'description' => trim($data['description']),
                 'counterparty_name' => $data['counterparty_name'] ?? null,
                 'transaction_date' => $data['transaction_date'],
@@ -91,14 +129,16 @@ class FinancialSpaceStatementService
                 'metadata' => $data['metadata'] ?? null,
             ]);
 
-            $this->refreshAccountBalance($account);
+            $this->applyAccountBalanceDelta($lockedAccount, $transaction);
 
             $this->auditLogger->record('financial_space.treasury.transaction_recorded', $actor, $transaction, [
                 'financial_space_id' => $space->id,
-                'treasury_account_id' => $account->id,
+                'treasury_account_id' => $lockedAccount->id,
                 'direction' => $transaction->direction,
                 'amount_minor' => $transaction->amount_minor,
                 'currency' => $transaction->currency,
+                'source_type' => $sourceType,
+                'source_reference' => $sourceReference,
             ]);
 
             return $transaction->fresh();
@@ -258,13 +298,27 @@ class FinancialSpaceStatementService
         abort_if(in_array($import->confirmation_status, ['confirmed', 'confirmed_with_exceptions'], true), 409, 'A confirmed reconciliation cannot be re-run.');
 
         return DB::transaction(function () use ($space, $import, $actor) {
+            $lockedImport = FinancialSpaceStatementImport::query()
+                ->whereKey($import->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            abort_if(
+                in_array($lockedImport->confirmation_status, ['confirmed', 'confirmed_with_exceptions'], true),
+                409,
+                'A confirmed reconciliation cannot be re-run.'
+            );
+
             foreach (
-                $import->rows()
+                $lockedImport->rows()
                     ->whereNotIn('reconciliation_status', ['matched', 'resolved'])
                     ->orderBy('transaction_date')
                     ->orderBy('id')
-                    ->get() as $row
+                    ->get() as $candidateRow
             ) {
+                $row = FinancialSpaceStatementRow::query()
+                    ->whereKey($candidateRow->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
                 $ranked = $this->rankedCandidateTransactions($row);
                 $top = $ranked->first();
                 $second = $ranked->skip(1)->first();
@@ -273,25 +327,41 @@ class FinancialSpaceStatementService
                 $margin = $topScore - $secondScore;
 
                 if ($top && $topScore >= 95 && ($ranked->count() === 1 || $margin >= 10)) {
-                    $transaction = $top['transaction'];
-                    $row->update([
-                        'matched_transaction_id' => $transaction->id,
-                        'reconciliation_status' => 'matched',
-                        'exception_type' => null,
-                        'match_method' => $top['method'],
-                        'match_confidence_percent' => $topScore,
-                        'suggested_matches' => null,
-                        'user_resolution' => null,
-                        'resolved_by_user_id' => null,
-                        'resolved_at' => null,
-                        'notes' => 'Automatically matched by OpFin using high-confidence reconciliation evidence.',
-                    ]);
-                    $transaction->update([
-                        'reconciliation_status' => 'matched',
-                        'reconciled_at' => now(),
-                    ]);
+                    $transaction = FinancialSpaceTransaction::query()
+                        ->whereKey($top['transaction']->id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-                    continue;
+                    $alreadyUsed = FinancialSpaceStatementRow::query()
+                        ->where('matched_transaction_id', $transaction->id)
+                        ->where('reconciliation_status', 'matched')
+                        ->whereKeyNot($row->id)
+                        ->exists();
+
+                    if ($transaction->reconciliation_status === 'unreconciled' && ! $alreadyUsed) {
+                        $row->update([
+                            'matched_transaction_id' => $transaction->id,
+                            'reconciliation_status' => 'matched',
+                            'exception_type' => null,
+                            'match_method' => $top['method'],
+                            'match_confidence_percent' => $topScore,
+                            'suggested_matches' => null,
+                            'user_resolution' => null,
+                            'resolved_by_user_id' => null,
+                            'resolved_at' => null,
+                            'notes' => 'Automatically matched by OpFin using high-confidence reconciliation evidence.',
+                        ]);
+                        $transaction->update([
+                            'reconciliation_status' => 'matched',
+                            'reconciled_at' => now(),
+                        ]);
+
+                        continue;
+                    }
+
+                    $ranked = $this->rankedCandidateTransactions($row);
+                    $top = $ranked->first();
+                    $topScore = (int) ($top['score'] ?? 0);
                 }
 
                 $suggestions = $ranked
@@ -327,28 +397,42 @@ class FinancialSpaceStatementService
                 ]);
             }
 
-            $this->refreshImportState($import);
+            $this->refreshImportState($lockedImport);
 
-            if ($import->closing_balance_minor !== null) {
-                $account = $import->account;
-                $bookClosing = $this->bookBalanceAsOf($account, CarbonImmutable::parse($import->period_end));
-                $summary = $import->fresh()->summary ?? [];
-                $summary['book_closing_balance_minor'] = $bookClosing;
-                $summary['statement_closing_balance_minor'] = $import->closing_balance_minor;
-                $summary['closing_balance_variance_minor'] = $bookClosing - $import->closing_balance_minor;
-                $import->update(['summary' => $summary]);
+            $account = $lockedImport->account;
+            $summary = $lockedImport->fresh()->summary ?? [];
+
+            if ($lockedImport->opening_balance_minor !== null) {
+                $bookOpening = $this->bookBalanceBefore(
+                    $account,
+                    CarbonImmutable::parse($lockedImport->period_start),
+                );
+                $summary['book_opening_balance_minor'] = $bookOpening;
+                $summary['statement_opening_balance_minor'] = $lockedImport->opening_balance_minor;
+                $summary['opening_balance_variance_minor'] = $bookOpening - $lockedImport->opening_balance_minor;
             }
 
-            $this->refreshImportState($import);
+            if ($lockedImport->closing_balance_minor !== null) {
+                $bookClosing = $this->bookBalanceAsOf(
+                    $account,
+                    CarbonImmutable::parse($lockedImport->period_end),
+                );
+                $summary['book_closing_balance_minor'] = $bookClosing;
+                $summary['statement_closing_balance_minor'] = $lockedImport->closing_balance_minor;
+                $summary['closing_balance_variance_minor'] = $bookClosing - $lockedImport->closing_balance_minor;
+            }
 
-            $this->auditLogger->record('financial_space.statement_import.reconciled', $actor, $import, [
+            $lockedImport->update(['summary' => $summary]);
+            $this->refreshImportState($lockedImport);
+
+            $this->auditLogger->record('financial_space.statement_import.reconciled', $actor, $lockedImport, [
                 'financial_space_id' => $space->id,
-                'matched_count' => $import->fresh()->matched_count,
-                'exception_count' => $import->fresh()->exception_count,
-                'review_todo_count' => count($import->fresh()->review_todos ?? []),
+                'matched_count' => $lockedImport->fresh()->matched_count,
+                'exception_count' => $lockedImport->fresh()->exception_count,
+                'review_todo_count' => count($lockedImport->fresh()->review_todos ?? []),
             ]);
 
-            return $import->fresh(['rows.matchedTransaction', 'account']);
+            return $lockedImport->fresh(['rows.matchedTransaction', 'account']);
         });
     }
 
@@ -376,71 +460,83 @@ class FinancialSpaceStatementService
             return $this->matchStatementRow($space, $row, $transaction, $actor);
         }
 
-        if ($row->reconciliation_status === 'matched') {
-            throw ValidationException::withMessages([
-                'action' => ['This row is already reconciled.'],
-            ]);
-        }
-
-        if ($action === 'create_book_entry') {
-            return DB::transaction(function () use ($space, $row, $actor, $reason) {
-                $account = FinancialSpaceTreasuryAccount::query()->findOrFail($row->treasury_account_id);
-                $transaction = $this->recordTransaction($space, $account, $actor, [
-                    'transaction_reference' => $row->statement_reference,
-                    'transaction_type' => 'statement_import_adjustment',
-                    'direction' => $row->direction,
-                    'amount_minor' => (int) $row->amount_minor,
-                    'currency' => $row->currency,
-                    'description' => $row->description,
-                    'counterparty_name' => null,
-                    'transaction_date' => $row->transaction_date->toDateString(),
-                    'value_date' => $row->value_date?->toDateString(),
-                    'source_type' => 'statement_user_request',
-                    'source_reference' => 'statement-row:'.$row->id,
-                    'metadata' => [
-                        'statement_import_id' => $row->statement_import_id,
-                        'requested_reason' => $reason,
-                    ],
-                ]);
-
-                return $this->matchStatementRow($space, $row, $transaction, $actor);
-            });
-        }
-
-        if (! in_array($action, ['mark_external_only', 'mark_duplicate'], true)) {
+        if (! in_array($action, ['create_book_entry', 'mark_external_only', 'mark_duplicate'], true)) {
             throw ValidationException::withMessages([
                 'action' => ['Unsupported reconciliation action.'],
             ]);
         }
-        if (trim((string) $reason) === '') {
+        if (in_array($action, ['mark_external_only', 'mark_duplicate'], true) && trim((string) $reason) === '') {
             throw ValidationException::withMessages([
                 'reason' => ['Explain why this exception is being accepted.'],
             ]);
         }
 
-        $row->update([
-            'matched_transaction_id' => null,
-            'reconciliation_status' => 'resolved',
-            'exception_type' => $action === 'mark_duplicate' ? 'accepted_duplicate' : 'accepted_external_only',
-            'match_method' => 'user_resolution',
-            'match_confidence_percent' => null,
-            'user_resolution' => $action,
-            'resolved_by_user_id' => $actor->id,
-            'resolved_at' => now(),
-            'notes' => trim((string) $reason),
-        ]);
+        return DB::transaction(function () use ($space, $row, $actor, $action, $reason) {
+            $import = FinancialSpaceStatementImport::query()
+                ->whereKey($row->statement_import_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            abort_unless($import->financial_space_id === $space->id, 404);
+            abort_if($import->confirmed_at !== null, 409, 'A confirmed reconciliation is immutable.');
 
-        $import = FinancialSpaceStatementImport::query()->findOrFail($row->statement_import_id);
-        $this->refreshImportState($import);
+            $lockedRow = FinancialSpaceStatementRow::query()
+                ->whereKey($row->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            abort_unless($lockedRow->financial_space_id === $space->id, 404);
 
-        $this->auditLogger->record('financial_space.statement_row.resolved', $actor, $row, [
-            'financial_space_id' => $space->id,
-            'statement_import_id' => $import->id,
-            'action' => $action,
-            'reason' => trim((string) $reason),
-        ]);
+            if ($lockedRow->reconciliation_status === 'matched') {
+                throw ValidationException::withMessages([
+                    'action' => ['This row is already reconciled.'],
+                ]);
+            }
 
-        return $row->fresh('matchedTransaction');
+            if ($action === 'create_book_entry') {
+                $account = FinancialSpaceTreasuryAccount::query()->findOrFail($lockedRow->treasury_account_id);
+                $transaction = $this->recordTransaction($space, $account, $actor, [
+                    'transaction_reference' => $lockedRow->statement_reference,
+                    'transaction_type' => 'statement_import_adjustment',
+                    'direction' => $lockedRow->direction,
+                    'amount_minor' => (int) $lockedRow->amount_minor,
+                    'currency' => $lockedRow->currency,
+                    'description' => $lockedRow->description,
+                    'counterparty_name' => null,
+                    'transaction_date' => $lockedRow->transaction_date->toDateString(),
+                    'value_date' => $lockedRow->value_date?->toDateString(),
+                    'source_type' => 'statement_user_request',
+                    'source_reference' => 'statement-row:'.$lockedRow->id,
+                    'metadata' => [
+                        'statement_import_id' => $lockedRow->statement_import_id,
+                        'requested_reason' => $reason,
+                    ],
+                ]);
+
+                return $this->matchStatementRow($space, $lockedRow, $transaction, $actor);
+            }
+
+            $lockedRow->update([
+                'matched_transaction_id' => null,
+                'reconciliation_status' => 'resolved',
+                'exception_type' => $action === 'mark_duplicate' ? 'accepted_duplicate' : 'accepted_external_only',
+                'match_method' => 'user_resolution',
+                'match_confidence_percent' => null,
+                'user_resolution' => $action,
+                'resolved_by_user_id' => $actor->id,
+                'resolved_at' => now(),
+                'notes' => trim((string) $reason),
+            ]);
+
+            $this->refreshImportState($import);
+
+            $this->auditLogger->record('financial_space.statement_row.resolved', $actor, $lockedRow, [
+                'financial_space_id' => $space->id,
+                'statement_import_id' => $import->id,
+                'action' => $action,
+                'reason' => trim((string) $reason),
+            ]);
+
+            return $lockedRow->fresh('matchedTransaction');
+        });
     }
 
     public function resolveBookTransaction(
@@ -452,45 +548,63 @@ class FinancialSpaceStatementService
     ): FinancialSpaceTransaction {
         $this->assertTreasurySpace($space);
         $this->assertAdministrator($space, $actor);
-        abort_unless($import->financial_space_id === $space->id, 404);
-        abort_unless($transaction->financial_space_id === $space->id, 404);
-        abort_unless($transaction->treasury_account_id === $import->treasury_account_id, 422);
-        abort_unless(
-            $transaction->transaction_date->between(
-                CarbonImmutable::parse($import->period_start),
-                CarbonImmutable::parse($import->period_end)
-            ),
-            422
-        );
         if (trim($reason) === '') {
             throw ValidationException::withMessages([
                 'reason' => ['Explain why this book transaction is being accepted without an external statement match.'],
             ]);
         }
 
-        $metadata = $transaction->metadata ?? [];
-        $metadata['reconciliation_exception'] = [
-            'statement_import_id' => $import->id,
-            'resolution' => 'accepted_book_only',
-            'reason' => trim($reason),
-            'resolved_by_user_id' => $actor->id,
-            'resolved_at' => now()->toIso8601String(),
-        ];
-        $transaction->update([
-            'reconciliation_status' => 'accepted_exception',
-            'reconciled_at' => now(),
-            'metadata' => $metadata,
-        ]);
+        return DB::transaction(function () use ($space, $import, $transaction, $actor, $reason) {
+            $lockedImport = FinancialSpaceStatementImport::query()
+                ->whereKey($import->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            abort_unless($lockedImport->financial_space_id === $space->id, 404);
+            abort_if($lockedImport->confirmed_at !== null, 409, 'A confirmed reconciliation is immutable.');
 
-        $this->refreshImportState($import);
+            $lockedTransaction = FinancialSpaceTransaction::query()
+                ->whereKey($transaction->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            abort_unless($lockedTransaction->financial_space_id === $space->id, 404);
+            abort_unless($lockedTransaction->treasury_account_id === $lockedImport->treasury_account_id, 422);
+            abort_unless(
+                $lockedTransaction->transaction_date->between(
+                    CarbonImmutable::parse($lockedImport->period_start),
+                    CarbonImmutable::parse($lockedImport->period_end)
+                ),
+                422
+            );
+            if ($lockedTransaction->reconciliation_status === 'matched') {
+                throw ValidationException::withMessages([
+                    'transaction' => ['A matched cashbook transaction cannot be reclassified as a reconciliation exception.'],
+                ]);
+            }
 
-        $this->auditLogger->record('financial_space.book_transaction.accepted_exception', $actor, $transaction, [
-            'financial_space_id' => $space->id,
-            'statement_import_id' => $import->id,
-            'reason' => trim($reason),
-        ]);
+            $metadata = $lockedTransaction->metadata ?? [];
+            $metadata['reconciliation_exception'] = [
+                'statement_import_id' => $lockedImport->id,
+                'resolution' => 'accepted_book_only',
+                'reason' => trim($reason),
+                'resolved_by_user_id' => $actor->id,
+                'resolved_at' => now()->toIso8601String(),
+            ];
+            $lockedTransaction->update([
+                'reconciliation_status' => 'accepted_exception',
+                'reconciled_at' => now(),
+                'metadata' => $metadata,
+            ]);
 
-        return $transaction->fresh();
+            $this->refreshImportState($lockedImport);
+
+            $this->auditLogger->record('financial_space.book_transaction.accepted_exception', $actor, $lockedTransaction, [
+                'financial_space_id' => $space->id,
+                'statement_import_id' => $lockedImport->id,
+                'reason' => trim($reason),
+            ]);
+
+            return $lockedTransaction->fresh();
+        });
     }
 
     public function resolveBalanceVariance(
@@ -501,28 +615,58 @@ class FinancialSpaceStatementService
     ): FinancialSpaceStatementImport {
         $this->assertTreasurySpace($space);
         $this->assertAdministrator($space, $actor);
-        abort_unless($import->financial_space_id === $space->id, 404);
         if (trim($reason) === '') {
             throw ValidationException::withMessages([
                 'reason' => ['Explain why the closing-balance variance is being accepted.'],
             ]);
         }
 
-        $summary = $import->summary ?? [];
-        $variance = (int) ($summary['closing_balance_variance_minor'] ?? 0);
-        if ($variance === 0) {
-            return $import->fresh();
-        }
-        $summary['accepted_closing_balance_variance'] = [
-            'amount_minor' => $variance,
-            'reason' => trim($reason),
-            'resolved_by_user_id' => $actor->id,
-            'resolved_at' => now()->toIso8601String(),
-        ];
-        $import->update(['summary' => $summary]);
-        $this->refreshImportState($import);
+        return DB::transaction(function () use ($space, $import, $actor, $reason) {
+            $lockedImport = FinancialSpaceStatementImport::query()
+                ->whereKey($import->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            abort_unless($lockedImport->financial_space_id === $space->id, 404);
+            abort_if($lockedImport->confirmed_at !== null, 409, 'A confirmed reconciliation is immutable.');
 
-        return $import->fresh(['rows', 'account']);
+            $summary = $lockedImport->summary ?? [];
+            $openingVariance = (int) ($summary['opening_balance_variance_minor'] ?? 0);
+            $closingVariance = (int) ($summary['closing_balance_variance_minor'] ?? 0);
+            if ($openingVariance === 0 && $closingVariance === 0) {
+                return $lockedImport->fresh();
+            }
+
+            $resolution = [
+                'reason' => trim($reason),
+                'resolved_by_user_id' => $actor->id,
+                'resolved_at' => now()->toIso8601String(),
+            ];
+            if ($openingVariance !== 0) {
+                $summary['accepted_opening_balance_variance'] = [
+                    ...$resolution,
+                    'amount_minor' => $openingVariance,
+                ];
+            }
+            if ($closingVariance !== 0) {
+                $summary['accepted_closing_balance_variance'] = [
+                    ...$resolution,
+                    'amount_minor' => $closingVariance,
+                ];
+            }
+
+            $lockedImport->update(['summary' => $summary]);
+            $this->refreshImportState($lockedImport);
+
+            $this->auditLogger->record('financial_space.statement_balance_variance.accepted', $actor, $lockedImport, [
+                'financial_space_id' => $space->id,
+                'statement_import_id' => $lockedImport->id,
+                'opening_variance_minor' => $openingVariance,
+                'closing_variance_minor' => $closingVariance,
+                'reason' => trim($reason),
+            ]);
+
+            return $lockedImport->fresh(['rows', 'account']);
+        });
     }
 
     public function confirmReconciliation(
@@ -533,49 +677,94 @@ class FinancialSpaceStatementService
     ): FinancialSpaceStatementImport {
         $this->assertTreasurySpace($space);
         $this->assertAdministrator($space, $actor);
-        abort_unless($import->financial_space_id === $space->id, 404);
-        abort_if($import->confirmed_at !== null, 409, 'This reconciliation has already been confirmed.');
 
-        $this->refreshImportState($import);
-        $fresh = $import->fresh();
-        $todos = $fresh->review_todos ?? [];
-        if ($todos !== []) {
-            throw ValidationException::withMessages([
-                'reconciliation' => ['Complete or explicitly resolve the remaining reconciliation to-dos before confirmation.'],
-            ]);
-        }
+        return DB::transaction(function () use ($space, $import, $actor, $note) {
+            $lockedImport = FinancialSpaceStatementImport::query()
+                ->whereKey($import->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            abort_unless($lockedImport->financial_space_id === $space->id, 404);
+            abort_if($lockedImport->confirmed_at !== null, 409, 'This reconciliation has already been confirmed.');
 
-        $acceptedExceptions = FinancialSpaceStatementRow::query()
-            ->where('statement_import_id', $import->id)
-            ->where('reconciliation_status', 'resolved')
-            ->count()
-            + FinancialSpaceTransaction::query()
-                ->where('treasury_account_id', $import->treasury_account_id)
-                ->whereBetween('transaction_date', [$import->period_start, $import->period_end])
+            $this->refreshImportState($lockedImport);
+            $fresh = $lockedImport->fresh();
+            $todos = $fresh->review_todos ?? [];
+            if ($todos !== []) {
+                throw ValidationException::withMessages([
+                    'reconciliation' => ['Complete or explicitly resolve the remaining reconciliation to-dos before confirmation.'],
+                ]);
+            }
+
+            $resolvedRows = FinancialSpaceStatementRow::query()
+                ->where('statement_import_id', $lockedImport->id)
+                ->where('reconciliation_status', 'resolved')
+                ->get(['id', 'resolved_by_user_id']);
+            $bookExceptions = FinancialSpaceTransaction::query()
+                ->where('treasury_account_id', $lockedImport->treasury_account_id)
+                ->whereBetween('transaction_date', [$lockedImport->period_start, $lockedImport->period_end])
                 ->where('reconciliation_status', 'accepted_exception')
-                ->count();
+                ->get()
+                ->filter(function (FinancialSpaceTransaction $transaction) use ($lockedImport) {
+                    return (int) data_get($transaction->metadata, 'reconciliation_exception.statement_import_id')
+                        === (int) $lockedImport->id;
+                })
+                ->values();
 
-        $summary = $fresh->summary ?? [];
-        if (! empty($summary['accepted_closing_balance_variance'])) {
-            $acceptedExceptions++;
-        }
-        $summary['confirmation_note'] = $note;
+            $summary = $fresh->summary ?? [];
+            $acceptedVariances = collect([
+                $summary['accepted_opening_balance_variance'] ?? null,
+                $summary['accepted_closing_balance_variance'] ?? null,
+            ])->filter()->values();
+            $acceptedExceptions = $resolvedRows->count() + $bookExceptions->count() + $acceptedVariances->count();
 
-        $import->update([
-            'status' => 'reconciled',
-            'confirmation_status' => $acceptedExceptions > 0 ? 'confirmed_with_exceptions' : 'confirmed',
-            'confirmed_by_user_id' => $actor->id,
-            'confirmed_at' => now(),
-            'summary' => $summary,
-        ]);
+            $resolverIds = $resolvedRows
+                ->pluck('resolved_by_user_id')
+                ->merge($bookExceptions->map(
+                    fn (FinancialSpaceTransaction $transaction) => data_get(
+                        $transaction->metadata,
+                        'reconciliation_exception.resolved_by_user_id'
+                    )
+                ))
+                ->merge($acceptedVariances->pluck('resolved_by_user_id'))
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
 
-        $this->auditLogger->record('financial_space.statement_import.confirmed', $actor, $import, [
-            'financial_space_id' => $space->id,
-            'accepted_exception_count' => $acceptedExceptions,
-            'confirmation_status' => $import->fresh()->confirmation_status,
-        ]);
+            if ($acceptedExceptions > 0) {
+                if ($resolverIds->isEmpty()) {
+                    throw ValidationException::withMessages([
+                        'reconciliation' => ['Accepted exceptions require attributable resolver evidence before confirmation.'],
+                    ]);
+                }
+                if ($resolverIds->contains((int) $actor->id)) {
+                    throw ValidationException::withMessages([
+                        'reconciliation' => ['A different authorised finance officer must confirm a reconciliation containing exceptions you resolved.'],
+                    ]);
+                }
+            }
 
-        return $import->fresh(['rows.matchedTransaction', 'account']);
+            $summary['confirmation_note'] = $note;
+            $summary['accepted_exception_count'] = $acceptedExceptions;
+            $summary['exception_resolver_user_ids'] = $resolverIds->all();
+
+            $lockedImport->update([
+                'status' => 'reconciled',
+                'confirmation_status' => $acceptedExceptions > 0 ? 'confirmed_with_exceptions' : 'confirmed',
+                'confirmed_by_user_id' => $actor->id,
+                'confirmed_at' => now(),
+                'summary' => $summary,
+            ]);
+
+            $this->auditLogger->record('financial_space.statement_import.confirmed', $actor, $lockedImport, [
+                'financial_space_id' => $space->id,
+                'accepted_exception_count' => $acceptedExceptions,
+                'exception_resolver_user_ids' => $resolverIds->all(),
+                'confirmation_status' => $lockedImport->fresh()->confirmation_status,
+            ]);
+
+            return $lockedImport->fresh(['rows.matchedTransaction', 'account']);
+        });
     }
 
     public function matchStatementRow(
@@ -586,63 +775,99 @@ class FinancialSpaceStatementService
     ): FinancialSpaceStatementRow {
         $this->assertTreasurySpace($space);
         $this->assertAdministrator($space, $actor);
-        abort_unless($row->financial_space_id === $space->id, 404);
-        abort_unless($transaction->financial_space_id === $space->id, 404);
-        abort_unless($row->treasury_account_id === $transaction->treasury_account_id, 422);
-
-        if ($row->reconciliation_status === 'matched') {
-            if ((int) $row->matched_transaction_id === (int) $transaction->id) {
-                return $row->fresh('matchedTransaction');
-            }
-
-            throw ValidationException::withMessages([
-                'transaction_id' => ['This statement row is already reconciled to a different transaction.'],
-            ]);
-        }
-
-        if ($row->currency !== $transaction->currency
-            || $row->direction !== $transaction->direction
-            || (int) $row->amount_minor !== (int) $transaction->amount_minor) {
-            throw ValidationException::withMessages([
-                'transaction_id' => ['Manual reconciliation requires the same account, currency, direction and amount.'],
-            ]);
-        }
-
-        $alreadyUsed = FinancialSpaceStatementRow::query()
-            ->where('matched_transaction_id', $transaction->id)
-            ->where('reconciliation_status', 'matched')
-            ->whereKeyNot($row->id)
-            ->exists();
-        if ($alreadyUsed) {
-            throw ValidationException::withMessages([
-                'transaction_id' => ['That OpFin transaction is already matched to another statement row.'],
-            ]);
-        }
 
         return DB::transaction(function () use ($space, $row, $transaction, $actor) {
-            $row->update([
-                'matched_transaction_id' => $transaction->id,
+            $import = FinancialSpaceStatementImport::query()
+                ->whereKey($row->statement_import_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            abort_unless($import->financial_space_id === $space->id, 404);
+            abort_if($import->confirmed_at !== null, 409, 'A confirmed reconciliation is immutable.');
+
+            $lockedRow = FinancialSpaceStatementRow::query()
+                ->whereKey($row->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $lockedTransaction = FinancialSpaceTransaction::query()
+                ->whereKey($transaction->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            abort_unless($lockedRow->financial_space_id === $space->id, 404);
+            abort_unless($lockedTransaction->financial_space_id === $space->id, 404);
+            abort_unless($lockedRow->treasury_account_id === $lockedTransaction->treasury_account_id, 422);
+
+            if ($lockedRow->reconciliation_status === 'matched') {
+                if ((int) $lockedRow->matched_transaction_id === (int) $lockedTransaction->id) {
+                    return $lockedRow->fresh('matchedTransaction');
+                }
+
+                throw ValidationException::withMessages([
+                    'transaction_id' => ['This statement row is already reconciled to a different transaction.'],
+                ]);
+            }
+
+            if ($lockedTransaction->reconciliation_status !== 'unreconciled') {
+                throw ValidationException::withMessages([
+                    'transaction_id' => ['That OpFin transaction is no longer available for matching.'],
+                ]);
+            }
+
+            if ($lockedRow->currency !== $lockedTransaction->currency
+                || $lockedRow->direction !== $lockedTransaction->direction
+                || (int) $lockedRow->amount_minor !== (int) $lockedTransaction->amount_minor) {
+                throw ValidationException::withMessages([
+                    'transaction_id' => ['Manual reconciliation requires the same account, currency, direction and amount.'],
+                ]);
+            }
+
+            $daysApart = (int) abs(
+                CarbonImmutable::parse($lockedRow->transaction_date)
+                    ->diffInDays(CarbonImmutable::parse($lockedTransaction->transaction_date))
+            );
+            if ($daysApart > 7) {
+                throw ValidationException::withMessages([
+                    'transaction_id' => ['Manual reconciliation requires transaction dates within seven days of each other.'],
+                ]);
+            }
+
+            $alreadyUsed = FinancialSpaceStatementRow::query()
+                ->where('matched_transaction_id', $lockedTransaction->id)
+                ->where('reconciliation_status', 'matched')
+                ->whereKeyNot($lockedRow->id)
+                ->exists();
+            if ($alreadyUsed) {
+                throw ValidationException::withMessages([
+                    'transaction_id' => ['That OpFin transaction is already matched to another statement row.'],
+                ]);
+            }
+
+            $lockedRow->update([
+                'matched_transaction_id' => $lockedTransaction->id,
                 'reconciliation_status' => 'matched',
                 'exception_type' => null,
                 'match_method' => 'manual',
-                'match_confidence_percent' => 100,
+                'match_confidence_percent' => null,
+                'user_resolution' => 'match_transaction',
+                'resolved_by_user_id' => $actor->id,
+                'resolved_at' => now(),
                 'notes' => 'Manually matched by an authorised finance role.',
             ]);
-            $transaction->update([
+            $lockedTransaction->update([
                 'reconciliation_status' => 'matched',
                 'reconciled_at' => now(),
             ]);
 
-            $import = FinancialSpaceStatementImport::query()->findOrFail($row->statement_import_id);
             $this->refreshImportState($import);
 
-            $this->auditLogger->record('financial_space.statement_row.manually_matched', $actor, $row, [
+            $this->auditLogger->record('financial_space.statement_row.manually_matched', $actor, $lockedRow, [
                 'financial_space_id' => $space->id,
                 'statement_import_id' => $import->id,
-                'transaction_id' => $transaction->id,
+                'transaction_id' => $lockedTransaction->id,
+                'human_confirmed' => true,
             ]);
 
-            return $row->fresh('matchedTransaction');
+            return $lockedRow->fresh('matchedTransaction');
         });
     }
 
@@ -1315,6 +1540,11 @@ class FinancialSpaceStatementService
 
     private function refreshImportState(FinancialSpaceStatementImport $import): void
     {
+        $import->refresh();
+        if ($import->confirmed_at !== null) {
+            return;
+        }
+
         $matchedTotal = FinancialSpaceStatementRow::query()
             ->where('statement_import_id', $import->id)
             ->where('reconciliation_status', 'matched')
@@ -1402,11 +1632,16 @@ class FinancialSpaceStatementService
         }
 
         $summary = $import->summary ?? [];
-        $variance = (int) ($summary['closing_balance_variance_minor'] ?? 0);
-        if ($variance !== 0 && empty($summary['accepted_closing_balance_variance'])) {
+        $openingVariance = (int) ($summary['opening_balance_variance_minor'] ?? 0);
+        $closingVariance = (int) ($summary['closing_balance_variance_minor'] ?? 0);
+        $unacceptedOpening = $openingVariance !== 0 && empty($summary['accepted_opening_balance_variance']);
+        $unacceptedClosing = $closingVariance !== 0 && empty($summary['accepted_closing_balance_variance']);
+        if ($unacceptedOpening || $unacceptedClosing) {
             $todos[] = [
                 'type' => 'balance_variance',
-                'amount_minor' => $variance,
+                'amount_minor' => $unacceptedClosing ? $closingVariance : $openingVariance,
+                'opening_balance_variance_minor' => $unacceptedOpening ? $openingVariance : 0,
+                'closing_balance_variance_minor' => $unacceptedClosing ? $closingVariance : 0,
                 'allowed_actions' => ['accept_balance_variance'],
             ];
         }
@@ -1570,11 +1805,22 @@ class FinancialSpaceStatementService
         return $balance;
     }
 
-    private function refreshAccountBalance(FinancialSpaceTreasuryAccount $account): void
-    {
+    private function applyAccountBalanceDelta(
+        FinancialSpaceTreasuryAccount $account,
+        FinancialSpaceTransaction $transaction,
+    ): void {
+        $current = (int) $account->current_balance_minor;
+        $amount = (int) $transaction->amount_minor;
+        $delta = $transaction->direction === 'credit' ? $amount : -$amount;
+        $next = $current + $delta;
+
+        if ($next > 9000000000000000 || $next < -9000000000000000) {
+            throw new InvalidArgumentException('Treasury balance would exceed the supported monetary range.');
+        }
+
         $account->update([
-            'current_balance_minor' => $this->bookBalanceAsOf($account, CarbonImmutable::today()->addYears(100)),
-            'balance_as_of' => now()->toDateString(),
+            'current_balance_minor' => $next,
+            'current_balance_as_of' => now()->toDateString(),
         ]);
     }
 
@@ -1621,17 +1867,34 @@ class FinancialSpaceStatementService
         $amountRaw = $get('amount');
         $directionRaw = strtolower((string) $get('direction'));
 
-        if ($debitRaw !== null && $this->numericAmount($debitRaw) > 0) {
+        $debitMinor = $debitRaw !== null && trim($debitRaw) !== ''
+            ? $this->toMinor($debitRaw, $minorUnitExponent)
+            : 0;
+        $creditMinor = $creditRaw !== null && trim($creditRaw) !== ''
+            ? $this->toMinor($creditRaw, $minorUnitExponent)
+            : 0;
+
+        if ($debitMinor > 0 && $creditMinor > 0) {
+            throw new InvalidArgumentException(
+                "Statement row {$lineNumber} cannot contain both a non-zero debit and credit amount."
+            );
+        }
+
+        if ($debitMinor > 0) {
             $direction = 'debit';
-            $amount = $this->toMinor($debitRaw, $minorUnitExponent);
-        } elseif ($creditRaw !== null && $this->numericAmount($creditRaw) > 0) {
+            $amount = $debitMinor;
+        } elseif ($creditMinor > 0) {
             $direction = 'credit';
-            $amount = $this->toMinor($creditRaw, $minorUnitExponent);
-        } elseif ($amountRaw !== null && in_array($directionRaw, ['debit', 'credit'], true)) {
+            $amount = $creditMinor;
+        } elseif ($amountRaw !== null && trim($amountRaw) !== '' && in_array($directionRaw, ['debit', 'credit'], true)) {
             $direction = $directionRaw;
             $amount = $this->toMinor($amountRaw, $minorUnitExponent);
         } else {
             throw new InvalidArgumentException("Statement row {$lineNumber} requires debit/credit columns or amount plus direction.");
+        }
+
+        if ($amount <= 0) {
+            throw new InvalidArgumentException("Statement row {$lineNumber} requires a positive transaction amount.");
         }
 
         return [
@@ -1681,27 +1944,62 @@ class FinancialSpaceStatementService
         return collect($row)->every(fn ($value) => trim((string) $value) === '');
     }
 
-    private function numericAmount(string $value): float
-    {
-        $clean = preg_replace('/[^0-9.\-]/', '', str_replace(',', '', $value));
-
-        return is_numeric($clean) ? (float) $clean : 0.0;
-    }
-
     private function toMinor(string $value, int $exponent): int
     {
-        $amount = abs($this->numericAmount($value));
-        $factor = 10 ** max(0, min(4, $exponent));
-
-        return (int) round($amount * $factor);
+        return abs($this->parseMinorUnits($value, $exponent));
     }
 
     private function signedMinor(string $value, int $exponent): int
     {
-        $amount = $this->numericAmount($value);
-        $factor = 10 ** max(0, min(4, $exponent));
+        return $this->parseMinorUnits($value, $exponent);
+    }
 
-        return (int) round($amount * $factor);
+    private function parseMinorUnits(string $value, int $exponent): int
+    {
+        $exponent = max(0, min(4, $exponent));
+        $raw = trim(str_replace([',', ' '], '', $value));
+        if ($raw === '') {
+            return 0;
+        }
+
+        $parenthesisedNegative = str_starts_with($raw, '(') && str_ends_with($raw, ')');
+        if ($parenthesisedNegative) {
+            $raw = substr($raw, 1, -1);
+        }
+
+        $clean = preg_replace('/[^0-9.\-]/', '', $raw) ?? '';
+        if (! preg_match('/^-?\d+(?:\.\d+)?$/', $clean)) {
+            throw new InvalidArgumentException("Invalid monetary amount: {$value}");
+        }
+
+        $negative = $parenthesisedNegative || str_starts_with($clean, '-');
+        $unsigned = ltrim($clean, '-');
+        [$whole, $fraction] = array_pad(explode('.', $unsigned, 2), 2, '');
+
+        if (strlen($fraction) > $exponent) {
+            $discarded = substr($fraction, $exponent);
+            if (trim($discarded, '0') !== '') {
+                throw new InvalidArgumentException(
+                    "Monetary amount {$value} has more precision than the configured minor-unit exponent {$exponent}."
+                );
+            }
+            $fraction = substr($fraction, 0, $exponent);
+        }
+
+        $fraction = str_pad($fraction, $exponent, '0');
+        $digits = ltrim($whole.$fraction, '0');
+        $digits = $digits === '' ? '0' : $digits;
+
+        if (strlen($digits) > 16) {
+            throw new InvalidArgumentException('Monetary amount exceeds the supported treasury range.');
+        }
+
+        $minor = (int) $digits;
+        if ($minor > 9000000000000000) {
+            throw new InvalidArgumentException('Monetary amount exceeds the supported treasury range.');
+        }
+
+        return $negative ? -$minor : $minor;
     }
 
     private function assertStatementBaseline(

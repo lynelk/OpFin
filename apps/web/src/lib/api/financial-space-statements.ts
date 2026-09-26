@@ -49,6 +49,7 @@ export type TreasuryAccount = {
   opening_balance_minor: number;
   current_balance_minor: number;
   balance_as_of?: string | null;
+  current_balance_as_of?: string | null;
   status: string;
 };
 
@@ -75,6 +76,8 @@ export type ReconciliationTodo = {
   date?: string | null;
   description?: string | null;
   amount_minor?: number;
+  opening_balance_variance_minor?: number;
+  closing_balance_variance_minor?: number;
   direction?: string;
   suggested_matches?: Array<{
     transaction_id: number;

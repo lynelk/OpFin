@@ -90,12 +90,7 @@ class ProductionOperationsController extends Controller
     public function resolveReconciliationItem(ReconciliationItem $item, Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'status' => ['required', Rule::in([
-                ReconciliationItem::STATUS_MATCHED,
-                ReconciliationItem::STATUS_EXCEPTION,
-                ReconciliationItem::STATUS_WRITTEN_OFF,
-            ])],
-            'provider_amount_minor' => 'nullable|integer|min:0',
+            'status' => ['required', Rule::in([ReconciliationItem::STATUS_EXCEPTION])],
             'notes' => 'required|string|max:1000',
         ]);
 
@@ -103,20 +98,36 @@ class ProductionOperationsController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
-        $item->update([
-            ...$validator->validated(),
-            'resolved_by' => $request->user()->id,
-            'resolved_at' => now(),
-        ]);
-
-        if ($item->mobile_money_transaction_id && $request->input('status') === ReconciliationItem::STATUS_MATCHED) {
-            MobileMoneyTransaction::where('id', $item->mobile_money_transaction_id)
-                ->update(['reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED]);
+        if (in_array($item->status, [ReconciliationItem::STATUS_MATCHED, ReconciliationItem::STATUS_WRITTEN_OFF], true)) {
+            return ApiResponse::error('Matched or written-off reconciliation items cannot be changed through the support annotation endpoint.', 409);
         }
 
-        $this->auditLogger->record('reconciliation.item.resolved', $request->user(), $item, ['status' => $item->status], $request);
+        $item->update([
+            'status' => ReconciliationItem::STATUS_EXCEPTION,
+            'notes' => $validator->validated()['notes'],
+            'resolved_by' => null,
+            'resolved_at' => null,
+        ]);
 
-        return ApiResponse::success('Reconciliation item resolved.', ['item' => $item->fresh()]);
+        if ($item->mobile_money_transaction_id) {
+            MobileMoneyTransaction::where('id', $item->mobile_money_transaction_id)
+                ->where('statement_reconciliation_status', '!=', MobileMoneyTransaction::STATEMENT_MATCHED)
+                ->update([
+                    'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_EXCEPTION,
+                    'statement_reconciled_at' => null,
+                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
+                ]);
+        }
+
+        $this->auditLogger->record('reconciliation.item.exception_annotated', $request->user(), $item, [
+            'status' => $item->status,
+            'manual_match_prohibited' => true,
+            'write_off_requires_maker_checker' => true,
+        ], $request);
+
+        return ApiResponse::success('Reconciliation exception documented. Provider evidence or an approved maker-checker write-off is still required.', [
+            'item' => $item->fresh(),
+        ]);
     }
 
     public function supportCases(): JsonResponse

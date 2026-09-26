@@ -125,6 +125,33 @@ class FinancialIntegrityService
 
             $paymentExceptions = $paymentAccountingExceptions + $paymentStatementExceptions;
 
+            $ambiguousProviderSubmissions = MobileMoneyTransaction::query()
+                ->whereIn('status', [
+                    MobileMoneyTransaction::STATUS_PROCESSING,
+                    MobileMoneyTransaction::STATUS_PENDING,
+                ])
+                ->where('provider_submission_state', 'ambiguous')
+                ->count();
+            if ($ambiguousProviderSubmissions > 0) {
+                $findings[] = $this->alert($runId, 'high', 'ambiguous_provider_submission', null,
+                    'Money-movement intents have an ambiguous provider submission outcome and must be reconciled by canonical reference before retry.', [
+                        'count' => $ambiguousProviderSubmissions,
+                    ]);
+            }
+
+            $staleUnsubmittedIntents = MobileMoneyTransaction::query()
+                ->where('status', MobileMoneyTransaction::STATUS_PROCESSING)
+                ->whereIn('provider_submission_state', ['intent_persisted', 'submission_started'])
+                ->whereNull('provider_reference')
+                ->where('created_at', '<=', now()->subMinutes(2))
+                ->count();
+            if ($staleUnsubmittedIntents > 0) {
+                $findings[] = $this->alert($runId, 'high', 'stale_provider_submission_intent', null,
+                    'Durable money intents have no provider acknowledgement beyond the submission timeout and require provider lookup/reconciliation before retry.', [
+                        'count' => $staleUnsubmittedIntents,
+                    ]);
+            }
+
             $duplicateProviderRefs = MobileMoneyTransaction::query()
                 ->whereNotNull('provider_reference')->select('provider', 'provider_reference')
                 ->groupBy('provider', 'provider_reference')->havingRaw('count(*) > 1')->get();
@@ -143,6 +170,7 @@ class FinancialIntegrityService
         $this->scanImpairmentCoverage($runId, $findings);
         $this->scanProviderSettlementEvidence($runId, $findings);
         $this->scanRevenueTaxAndPartnerCompleteness($runId, $findings);
+        $this->scanTreasuryIntegrity($runId, $findings);
         $this->scanAssetEconomics($runId, $findings);
         $this->scanLongRangePaymentReconciliation($runId, $findings);
 
@@ -869,6 +897,176 @@ class FinancialIntegrityService
                 'resolved_at' => now(),
                 'updated_at' => now(),
             ]);
+        }
+    }
+
+    private function scanTreasuryIntegrity(int $runId, array &$findings): void
+    {
+        if (Schema::hasTable('financial_space_treasury_accounts')
+            && Schema::hasTable('financial_space_transactions')) {
+            $accounts = DB::table('financial_space_treasury_accounts as a')
+                ->leftJoin('financial_space_transactions as t', 't.treasury_account_id', '=', 'a.id')
+                ->whereNull('a.deleted_at')
+                ->select('a.id', 'a.financial_space_id', 'a.currency', 'a.opening_balance_minor', 'a.current_balance_minor')
+                ->selectRaw("COALESCE(SUM(CASE WHEN t.direction = 'credit' THEN t.amount_minor ELSE 0 END), 0) AS credits_minor")
+                ->selectRaw("COALESCE(SUM(CASE WHEN t.direction = 'debit' THEN t.amount_minor ELSE 0 END), 0) AS debits_minor")
+                ->groupBy(
+                    'a.id',
+                    'a.financial_space_id',
+                    'a.currency',
+                    'a.opening_balance_minor',
+                    'a.current_balance_minor',
+                )
+                ->get();
+
+            foreach ($accounts as $account) {
+                $expected = (int) $account->opening_balance_minor
+                    + (int) $account->credits_minor
+                    - (int) $account->debits_minor;
+                $actual = (int) $account->current_balance_minor;
+
+                if ($expected !== $actual) {
+                    $findings[] = $this->alert(
+                        $runId,
+                        'critical',
+                        'treasury_cached_balance_mismatch',
+                        (string) $account->id,
+                        'Treasury cached current balance does not reconcile to the immutable opening balance and cashbook entries.',
+                        [
+                            'treasury_account_id' => (int) $account->id,
+                            'financial_space_id' => (int) $account->financial_space_id,
+                            'currency' => (string) $account->currency,
+                            'opening_balance_minor' => (int) $account->opening_balance_minor,
+                            'credits_minor' => (int) $account->credits_minor,
+                            'debits_minor' => (int) $account->debits_minor,
+                            'expected_current_balance_minor' => $expected,
+                            'recorded_current_balance_minor' => $actual,
+                            'difference_minor' => $actual - $expected,
+                        ],
+                    );
+                }
+            }
+        }
+
+        if (Schema::hasTable('financial_space_statement_rows')) {
+            $duplicateMatches = DB::table('financial_space_statement_rows')
+                ->whereNotNull('matched_transaction_id')
+                ->where('reconciliation_status', 'matched')
+                ->select('matched_transaction_id')
+                ->groupBy('matched_transaction_id')
+                ->havingRaw('COUNT(*) > 1')
+                ->get();
+
+            foreach ($duplicateMatches as $duplicate) {
+                $findings[] = $this->alert(
+                    $runId,
+                    'critical',
+                    'treasury_duplicate_statement_match',
+                    (string) $duplicate->matched_transaction_id,
+                    'One treasury cashbook transaction is matched to more than one external statement row.',
+                    ['financial_space_transaction_id' => (int) $duplicate->matched_transaction_id],
+                );
+            }
+        }
+
+        if (! Schema::hasTable('financial_space_statement_imports')) {
+            return;
+        }
+
+        $confirmedImports = DB::table('financial_space_statement_imports')
+            ->whereNotNull('confirmed_at')
+            ->get();
+
+        foreach ($confirmedImports as $import) {
+            $todos = json_decode((string) ($import->review_todos ?? '[]'), true) ?: [];
+            if ($todos !== []) {
+                $findings[] = $this->alert(
+                    $runId,
+                    'critical',
+                    'treasury_confirmed_with_open_todos',
+                    (string) $import->id,
+                    'A confirmed treasury reconciliation still contains unresolved review to-dos.',
+                    [
+                        'statement_import_id' => (int) $import->id,
+                        'confirmation_status' => $import->confirmation_status,
+                        'todo_count' => count($todos),
+                    ],
+                );
+            }
+
+            if ((string) $import->confirmation_status !== 'confirmed_with_exceptions') {
+                continue;
+            }
+
+            $confirmedBy = (int) ($import->confirmed_by_user_id ?? 0);
+            if ($confirmedBy <= 0) {
+                $findings[] = $this->alert(
+                    $runId,
+                    'high',
+                    'treasury_exception_confirmation_missing_actor',
+                    (string) $import->id,
+                    'A treasury reconciliation with accepted exceptions lacks an attributable confirmer.',
+                    ['statement_import_id' => (int) $import->id],
+                );
+
+                continue;
+            }
+
+            $resolverIds = [];
+            if (Schema::hasTable('financial_space_statement_rows')) {
+                $resolverIds = array_merge(
+                    $resolverIds,
+                    DB::table('financial_space_statement_rows')
+                        ->where('statement_import_id', $import->id)
+                        ->where('reconciliation_status', 'resolved')
+                        ->whereNotNull('resolved_by_user_id')
+                        ->pluck('resolved_by_user_id')
+                        ->map(fn ($id) => (int) $id)
+                        ->all(),
+                );
+            }
+
+            if (Schema::hasTable('financial_space_transactions')) {
+                $bookExceptions = DB::table('financial_space_transactions')
+                    ->where('treasury_account_id', $import->treasury_account_id)
+                    ->where('reconciliation_status', 'accepted_exception')
+                    ->get(['metadata']);
+
+                foreach ($bookExceptions as $transaction) {
+                    $metadata = json_decode((string) ($transaction->metadata ?? '{}'), true) ?: [];
+                    if ((int) data_get($metadata, 'reconciliation_exception.statement_import_id') !== (int) $import->id) {
+                        continue;
+                    }
+                    $resolver = (int) data_get($metadata, 'reconciliation_exception.resolved_by_user_id', 0);
+                    if ($resolver > 0) {
+                        $resolverIds[] = $resolver;
+                    }
+                }
+            }
+
+            $summary = json_decode((string) ($import->summary ?? '{}'), true) ?: [];
+            foreach (['accepted_opening_balance_variance', 'accepted_closing_balance_variance'] as $key) {
+                $resolver = (int) data_get($summary, $key.'.resolved_by_user_id', 0);
+                if ($resolver > 0) {
+                    $resolverIds[] = $resolver;
+                }
+            }
+
+            $resolverIds = array_values(array_unique($resolverIds));
+            if (in_array($confirmedBy, $resolverIds, true)) {
+                $findings[] = $this->alert(
+                    $runId,
+                    'critical',
+                    'treasury_exception_self_confirmation',
+                    (string) $import->id,
+                    'The same user accepted a treasury reconciliation exception and confirmed the reconciliation.',
+                    [
+                        'statement_import_id' => (int) $import->id,
+                        'confirmed_by_user_id' => $confirmedBy,
+                        'exception_resolver_user_ids' => $resolverIds,
+                    ],
+                );
+            }
         }
     }
 

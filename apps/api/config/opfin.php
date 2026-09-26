@@ -15,6 +15,7 @@ return [
         'max_debt_service_ratio_percent' => (float) env('OPFIN_MAX_DSR_PERCENT', 35),
         'affordability_formula' => 'estimated_monthly_obligation_minor / verified_monthly_income_minor * 100',
         'legacy_origination_enabled' => (bool) env('OPFIN_ENABLE_LEGACY_LOAN_ORIGINATION', false),
+        'require_funding_pool_assignment' => (bool) env('OPFIN_REQUIRE_FUNDING_POOL_ASSIGNMENT', env('APP_ENV', 'production') === 'production'),
         'model_version' => env('OPFIN_CREDIT_MODEL_VERSION', 'composite-v1'),
         'auto_decision_policy_version' => env('OPFIN_AUTO_DECISION_POLICY_VERSION', 'credit-profile-v1'),
         'minimum_limit_coverage_percent' => (float) env('OPFIN_MIN_LIMIT_COVERAGE_PERCENT', 60),
@@ -63,12 +64,15 @@ return [
         'complaints_email' => env('OPFIN_COMPLAINTS_EMAIL'),
         'complaints_phone' => env('OPFIN_COMPLAINTS_PHONE'),
         'complaints_url' => env('OPFIN_COMPLAINTS_URL'),
+        'require_credit_disclosure' => (bool) env('OPFIN_REQUIRE_REGULATED_CREDIT_DISCLOSURE', env('APP_ENV', 'production') === 'production'),
     ],
 
     'accounting' => [
         'fee_recognition_policy_type' => env('OPFIN_FEE_RECOGNITION_POLICY_TYPE', 'credit_fee_recognition'),
         'tax_policy_type' => env('OPFIN_TAX_POLICY_TYPE', 'tax'),
         'efris_enabled' => (bool) env('OPFIN_EFRIS_ENABLED', false),
+        'efris_required' => env('OPFIN_EFRIS_REQUIRED'),
+        'efris_determination_reference' => env('OPFIN_EFRIS_DETERMINATION_REFERENCE'),
         'impairment_max_age_days' => (int) env('OPFIN_IMPAIRMENT_MAX_AGE_DAYS', 31),
     ],
 

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\CreditRepaymentScheduleItem;
-use App\Models\CustomerWallet;
 use App\Models\LedgerTransaction;
 use App\Models\Loan;
 use App\Models\MobileMoneyTransaction;
@@ -25,6 +24,7 @@ class ProductionRepaymentService
         private readonly AuditLogger $auditLogger,
         private readonly CreditReferenceReportingService $creditReporting,
         private readonly TransactionReceiptService $receipts,
+        private readonly VerifiedWalletService $wallets,
     ) {}
 
     public function initiate(
@@ -84,20 +84,9 @@ class ProductionRepaymentService
             return $locked;
         });
 
-        $walletQuery = CustomerWallet::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'active')
-            ->whereNotNull('verified_at');
-        $wallet = $walletId
-            ? (clone $walletQuery)->whereKey($walletId)->first()
-            : (clone $walletQuery)->where('is_default_repayment', true)->first();
-
-        if ($walletId && ! $wallet) {
-            throw new InvalidArgumentException('Choose a verified repayment wallet that belongs to your OpFin profile.');
-        }
-
-        $wallet ??= (clone $walletQuery)->orderByDesc('is_default_repayment')->first();
-        $collectionPhone = $wallet?->msisdn ?? $user->phone;
+        $repaymentTarget = $this->wallets->forRepayment($user, $walletId);
+        $wallet = $repaymentTarget['wallet'];
+        $collectionPhone = $repaymentTarget['phone'];
 
         $reference = $this->repaymentReference($idempotencyKey);
         $legacyTransaction = Transaction::query()->firstOrCreate(
