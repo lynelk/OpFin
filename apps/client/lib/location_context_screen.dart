@@ -65,7 +65,10 @@ class _LocationContextScreenState extends State<LocationContextScreen> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      final precision = widget.preciseRecommended ? 'precise' : 'approximate';
+      final precision = widget.preciseRecommended &&
+              PlatformLocationService.supportsPreciseDeviceLocation
+          ? 'precise'
+          : 'approximate';
       final device = await PlatformLocationService.currentLocation(
         precision: precision,
       );
@@ -273,11 +276,13 @@ class _LocationContextScreenState extends State<LocationContextScreen> {
                     Text(widget.description!),
                     const SizedBox(height: 16),
                   ],
-                  const Card(
+                  Card(
                     child: Padding(
-                      padding: EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(14),
                       child: Text(
-                        'OpFin requests location only for the task you choose. Background tracking is not used. Approximate location is preferred unless the financial task needs a precise asset or risk location.',
+                        PlatformLocationService.supportsPreciseDeviceLocation
+                            ? 'OpFin requests location only for the task you choose. Background tracking is not used. Approximate location is preferred unless the task needs a precise asset or risk location.'
+                            : 'Device location is approximate and optional. For an exact asset or risk location, search for a place or enter its address manually. Background tracking is not used.',
                       ),
                     ),
                   ),
@@ -321,7 +326,8 @@ class _LocationContextScreenState extends State<LocationContextScreen> {
                       onPressed: _saving ? null : () => _useDevice(status),
                       icon: const Icon(Icons.my_location),
                       label: Text(
-                        widget.preciseRecommended
+                        widget.preciseRecommended &&
+                                PlatformLocationService.supportsPreciseDeviceLocation
                             ? 'Use location for this asset / risk'
                             : 'Use my approximate location',
                       ),

@@ -4,17 +4,19 @@ namespace Tests\Feature;
 
 use App\Models\CreditDecision;
 use App\Models\CreditOffer;
-use App\Models\CreditScoreComponent;
 use App\Models\CreditRepaymentScheduleItem;
+use App\Models\CreditScoreComponent;
 use App\Models\Institution;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
 use App\Models\MobileMoneyTransaction;
 use App\Models\User;
+use App\Services\AppStoreCreditPolicy;
 use App\Services\ProductionCreditOfferService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -48,6 +50,7 @@ class ProductionCreditOfferLifecycleTest extends TestCase
             'disbursement_fee_minor' => 2000,
             'fee_treatment' => 'financed',
             'expires_in_minutes' => 60,
+            'funding_pool_id' => $this->fundingPoolId($operations),
         ]);
 
         $offerResponse->assertCreated()
@@ -81,6 +84,7 @@ class ProductionCreditOfferLifecycleTest extends TestCase
             'disbursement_fee_minor' => 2000,
             'fee_treatment' => 'deducted',
             'expires_in_minutes' => 60,
+            'funding_pool_id' => $this->fundingPoolId($operations),
         ])->assertCreated();
 
         $offerId = (int) $offerResponse->json('data.offer.id');
@@ -147,6 +151,7 @@ class ProductionCreditOfferLifecycleTest extends TestCase
             'disbursement_fee_minor' => 2000,
             'fee_treatment' => 'deducted',
             'expires_in_minutes' => 60,
+            'funding_pool_id' => $this->fundingPoolId($operations),
         ]);
         $accepted = app(ProductionCreditOfferService::class)->acceptOffer($offer, $customer, ['channel' => 'test']);
         $transaction = $accepted['mobile_money'];
@@ -179,6 +184,7 @@ class ProductionCreditOfferLifecycleTest extends TestCase
         $offerResponse = $this->postJson("/api/admin/credit/applications/{$application->id}/offer", [
             'fee_treatment' => 'financed',
             'expires_in_minutes' => 60,
+            'funding_pool_id' => $this->fundingPoolId($operations),
         ])->assertCreated();
 
         $offerId = (int) $offerResponse->json('data.offer.id');
@@ -193,6 +199,67 @@ class ProductionCreditOfferLifecycleTest extends TestCase
         ])->assertStatus(409);
         $this->assertDatabaseCount('mobile_money_transactions', 0);
         $this->assertDatabaseCount('loans', 0);
+    }
+
+    public function test_actual_lender_is_snapshotted_and_new_channel_restriction_blocks_acceptance_without_money_movement(): void
+    {
+        [$customer, $operations, $application] = $this->approvedApplication();
+        $lender = $application->institution;
+        $lender->update(['name' => 'Actual Test Lender', 'regulator_code' => 'TEST-AUTHORITY', 'authority_reference' => 'TEST-ONLY-REF']);
+        $application->update(['distribution_channel' => 'web']);
+        $offer = app(ProductionCreditOfferService::class)->createOffer($application->fresh(), $operations, ['funding_pool_id' => $this->fundingPoolId($operations)]);
+        $this->assertSame('Actual Test Lender', $offer->disclosure_snapshot['lender_of_record']['legal_name']);
+        $this->assertSame('TEST-ONLY-REF', $offer->disclosure_snapshot['lender_of_record']['authority_reference']);
+        $snapshot = $offer->disclosure_snapshot;
+        $lender->update(['name' => 'Changed Test Lender Name']);
+        $admin = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        Sanctum::actingAs($admin);
+        $this->postJson('/api/admin/lending-platform/distribution', ['channel' => 'web', 'country' => 'UG', 'product_category' => 'personal_loan', 'loan_product_id' => $application->loan_product_id, 'availability' => 'unavailable', 'reason' => 'Test channel restriction before acceptance', 'source_reference' => 'TEST-ONLY', 'effective_from' => now()->toISOString()])->assertCreated();
+        $this->assertSame($snapshot, $offer->fresh()->disclosure_snapshot);
+        try {
+            app(ProductionCreditOfferService::class)->acceptOffer($offer, $customer, []);
+            $this->fail('A newly unavailable route must not originate credit.');
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContainsString('Test channel restriction', $exception->getMessage());
+        }
+        $this->assertDatabaseCount('mobile_money_transactions', 0);
+        $this->assertNull($offer->fresh()->funding_reserved_at);
+    }
+
+    public function test_unlinked_pool_cannot_fund_an_independent_lenders_offer(): void
+    {
+        [, $operations, $application] = $this->approvedApplication();
+        $pool = $this->fundingPoolId($operations);
+        $partner = DB::table('capital_mandates')->where('id', $pool)->value('partner_id');
+        DB::table('partners')->where('id', $partner)->update(['institution_id' => null]);
+        Sanctum::actingAs($operations);
+        $this->postJson("/api/admin/credit/applications/{$application->id}/offer", ['funding_pool_id' => $pool])->assertStatus(409);
+        $this->assertDatabaseCount('credit_offers', 0);
+        $this->assertDatabaseHas('capital_mandates', ['id' => $pool, 'reserved_capital_minor' => 0]);
+    }
+
+    public function test_manual_offer_cannot_substitute_a_different_mandate_of_the_same_lender(): void
+    {
+        [, $operations, $application] = $this->approvedApplication();
+        $configured = $this->fundingPoolId($operations);
+        $other = $this->fundingPoolId($operations);
+        $application->loanProduct->update(['funding_pool_id' => $configured]);
+        Sanctum::actingAs($operations);
+        $this->postJson("/api/admin/credit/applications/{$application->id}/offer", ['funding_pool_id' => $other])->assertStatus(409);
+        $this->assertDatabaseCount('credit_offers', 0);
+        $this->postJson("/api/admin/credit/applications/{$application->id}/offer", ['funding_pool_id' => $configured])->assertCreated();
+        $this->assertDatabaseHas('credit_offers', ['loan_application_id' => $application->id, 'funding_pool_id' => $configured]);
+    }
+
+    public function test_offer_evaluates_and_snapshots_distribution_once(): void
+    {
+        [, $operations, $application] = $this->approvedApplication();
+        $policy = $this->mock(AppStoreCreditPolicy::class);
+        $policy->shouldReceive('validateOffer')->once()->andReturn(['mobile_store_policy_version' => 'single-evaluation']);
+        Sanctum::actingAs($operations);
+        $this->postJson("/api/admin/credit/applications/{$application->id}/offer", ['funding_pool_id' => $this->fundingPoolId($operations)])
+            ->assertCreated()->assertJsonPath('data.offer.pricing_snapshot.mobile_store_policy_version', 'single-evaluation')
+            ->assertJsonPath('data.offer.disclosure_snapshot.mobile_store_policy_version', 'single-evaluation');
     }
 
     private function approvedApplication(): array
@@ -212,6 +279,41 @@ class ProductionCreditOfferLifecycleTest extends TestCase
         $application->update(['status' => 'Approved', 'approved_at' => now()]);
 
         return [$customer, $operations, $application, $decision];
+    }
+
+    private function fundingPoolId(User $owner): int
+    {
+        $partnerId = DB::table('partners')->insertGetId([
+            'code' => 'TEST-LENDER-'.Str::upper(Str::random(8)),
+            'name' => 'Test Licensed Lender '.Str::random(6),
+            'partner_type' => 'financial_institution',
+            'institution_id' => $owner->institution_id,
+            'country' => 'UG',
+            'status' => 'active',
+            'regulatory_evidence' => json_encode([
+                'licence_number' => 'TEST-LIC-'.Str::upper(Str::random(8)),
+                'licence_authority' => 'Test Authority',
+            ], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return DB::table('capital_mandates')->insertGetId([
+            'reference' => (string) Str::uuid(),
+            'owner_user_id' => $owner->id,
+            'partner_id' => $partnerId,
+            'mandate_type' => 'institutional_credit',
+            'name' => 'Lifecycle Test Funding',
+            'committed_capital_minor' => 2000000,
+            'deployed_capital_minor' => 0,
+            'reserved_capital_minor' => 0,
+            'status' => 'active',
+            'investment_policy' => json_encode(['test' => true], JSON_THROW_ON_ERROR),
+            'approved_by' => $owner->id,
+            'approved_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function installPricingPolicy(): void
@@ -239,7 +341,7 @@ class ProductionCreditOfferLifecycleTest extends TestCase
 
     private function referredApplication(): array
     {
-        $institution = Institution::create([
+        $institution = Institution::create(['authority_basis' => 'licensed', 'authority_reference' => 'TEST-AUTHORITY-NOT-LIVE', 'regulator_code' => 'TEST',
             'name' => 'Offer Lifecycle Institution',
             'address' => 'Kampala',
             'phone' => '256700000601',

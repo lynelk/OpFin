@@ -1,7 +1,7 @@
 # Google Play Data Safety worksheet
 
 Status: Controlled internal Google Play verification worksheet  
-Updated: 23 September 2026  
+Updated: 24 September 2026
 Language: English (United Kingdom)
 
 This is a verification worksheet, not a completed legal declaration. The release owner must reconcile it against the exact production AAB, API, SDK inventory, privacy policy and provider contracts.
@@ -19,6 +19,8 @@ This is a verification worksheet, not a completed legal declaration. The release
 | Loan/repayment/transaction records | Service delivery, accounting, reconciliation, compliance | Regulated retention separated from active account state |
 | Device/security diagnostics | Security, fraud prevention, reliability | SDK/log payloads inventoried and minimised |
 | Support/accessibility requests | Customer support and assisted identity verification | Restricted access and retention documented |
+| Approximate device location | Optional foreground service discovery or customer-selected location context | Purpose-specific consent; never a credit-decision input; no background capture |
+| Selected place / manually entered address | Customer-selected group, asset, risk or claim context | Review exact coordinates/address collection, retention and provider sharing separately from device-permission scope |
 
 ## Android permission posture
 
@@ -26,8 +28,11 @@ The submitted launch source requests:
 
 - `INTERNET` – API/provider connectivity.
 - `CAMERA` – direct National ID and selfie-with-ID capture.
+- `ACCESS_COARSE_LOCATION` – optional approximate foreground device location.
 
-The launch app must **not** request broad access to contacts, precise location, call logs, SMS contents, photo/video libraries or external storage for personal-loan decisioning.
+The Android app must **not** request broad access to contacts, precise device location, call logs, SMS contents, photo/video libraries or external storage. This restriction applies across the app, including non-lending asset/protection screens. Place search and manual address entry do not grant access to precise device location; their collected data still require accurate disclosure.
+
+Source policy: https://support.google.com/googleplay/android-developer/answer/9876821 (reviewed 24 September 2026).
 
 OTP auto-fill uses Android SMS Retriever/app-signature support and therefore does not require `READ_SMS`.
 

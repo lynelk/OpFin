@@ -53,12 +53,18 @@ export default async function BorrowPage() {
 
         <section className="panel">
           <h2>Ways to fund your need</h2>
-          <div className="grid grid-2">
+          <div className="grid grid-3">
             <article className="case-card">
               <p className="eyebrow">CREDIT</p>
               <h3>Check my credit options</h3>
               <p className="muted">Tell us the amount and purpose. OpFin routes the request to an active eligible product; you compare the formal offer before accepting.</p>
               <Link className="button" href="/loans/apply">Start one request</Link>
+            </article>
+            <article className="case-card">
+              <p className="eyebrow">ESSENTIALS</p>
+              <h3>Keep an essential service running</h3>
+              <p className="muted">Finance a verified electricity, water, connectivity, energy or rental payment through an approved third-party lender. Funds go to the provider, not to your wallet.</p>
+              <Link className="button secondary" href="/essentials">Open Essentials</Link>
             </article>
             <article className="case-card">
               <p className="eyebrow">OPFIN MARKETPLACE</p>

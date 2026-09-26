@@ -269,7 +269,8 @@ class ProviderIndependenceReportingTest extends TestCase
         $this->assertSame(-50, (int) $second->gross_margin_minor);
         $this->assertSame('RECONCILED', $second->status);
         $this->assertDatabaseCount('service_economics_events', 1);
-    }    
+    }
+
     public function test_funding_pool_reservation_deployment_release_and_reversal_are_idempotent(): void
     {
         $user = User::factory()->create();
@@ -384,9 +385,24 @@ class ProviderIndependenceReportingTest extends TestCase
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+        $partnerId = DB::table('partners')->insertGetId([
+            'code' => 'TEST-LENDER-'.Str::upper(Str::random(6)),
+            'name' => 'Test Licensed Lender '.Str::random(6),
+            'partner_type' => 'financial_institution',
+            'institution_id' => $institutionId,
+            'country' => 'UG',
+            'status' => 'active',
+            'regulatory_evidence' => json_encode([
+                'licence_number' => 'TEST-LIC-'.Str::upper(Str::random(6)),
+                'licence_authority' => 'Test Authority',
+            ], JSON_THROW_ON_ERROR),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
         $pool = CapitalMandate::create([
             'reference' => (string) Str::uuid(),
             'owner_user_id' => $user->id,
+            'partner_id' => $partnerId,
             'mandate_type' => 'private_loan_book',
             'name' => 'Test Funding Pool '.Str::random(6),
             'committed_capital_minor' => $committedMinor,

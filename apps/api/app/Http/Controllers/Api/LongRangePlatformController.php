@@ -181,6 +181,7 @@ class LongRangePlatformController extends Controller
     public function capital(Request $request): JsonResponse
     {
         $data = $request->validate([
+            'partner_id' => 'required|integer|exists:partners,id',
             'mandate_type' => 'required|in:private_loan_book,managed_capital,co_lending,warehouse_line',
             'name' => 'required|string|max:160',
             'committed_capital_minor' => 'nullable|integer|min:0',

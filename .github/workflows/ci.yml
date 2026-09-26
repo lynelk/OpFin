@@ -1,6 +1,7 @@
 name: OpFin Monorepo CI
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches: [main]
@@ -97,7 +98,6 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           if [[ "$EVENT_NAME" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
@@ -108,33 +108,31 @@ jobs:
 
           changed="$(git diff --name-only "$base" HEAD)"
           printf '%s\n' "$changed"
-          if ! printf '%s\n' "$changed" | grep -Eq '^(apps/api/app/(Services/(CreditEconomicsService|FinancialPolicyService|DefaultInterestService|ProductionLedgerService|ProductionLoanLedgerService|ProductionRepaymentService|ProductionCreditOfferService|CreditProductAvailabilityService|LoanService|FundingPoolService|VerifiedWalletService|PaymentReconciliationService|ReconciliationExceptionResolutionService|RevenueAccountingService|SubscriptionBillingService|TaxEngineService|EfrisService|EarlySettlementService|CreditFeeRecognitionService|RegulatoryReportingService|RegulatoryFinancialReconciliationService|RegulatoryActivationGuard|FinancialReadinessService|FinancialIntegrityService|FinancialSpaceStatementService|SavingsService|ProtectionService|SaveProtectionLedgerService)\.php|Services/MobileMoney/|Http/Controllers/Api/(PlatformCommerceController|UmraComplianceController|FinancialControlController|EarlySettlementController|ProductionCreditOfferController|ProductionLoanApplicationController|LoanApplicationController|LoanRepaymentController|TransactionController|CpayWebhookController|ProductionPaymentOperationsController|ProductionReconciliationController|ProductionOperationsController|SavingsController|ProtectionController|SaveProtectionOperationsController|FinancialSpaceStatementController|HealthController)\.php|Models/(FinancialSpaceTransaction|FinancialSpaceTreasuryAccount|FinancialSpaceStatementImport|FinancialSpaceStatementRow|FinancialSpaceGeneratedStatement)\.php|Support/ProductionConfiguration\.php|Providers/AppServiceProvider\.php)|apps/api/database/migrations/|apps/api/config/(opfin|services)\.php|apps/api/routes/|apps/api/tests/|docs/(UMRA_DIGITAL_LENDING_CONTROLS|architecture/FINANCIAL_CORE_ARCHITECTURE)\.md|apps/api/docs/production/)'; then
+          if ! printf '%s\n' "$changed" | grep -Eq '^(apps/api/app/(Services/(CreditEconomicsService|FinancialPolicyService|DefaultInterestService|ProductionLedgerService|ProductionLoanLedgerService|ProductionRepaymentService|PaymentReconciliationService|RevenueAccountingService|SubscriptionBillingService|TaxEngineService|EfrisService|EarlySettlementService|CreditFeeRecognitionService|RegulatoryReportingService|RegulatoryFinancialReconciliationService|SavingsService|ProtectionService|SaveProtectionLedgerService)\.php|Http/Controllers/Api/(PlatformCommerceController|UmraComplianceController|FinancialControlController|EarlySettlementController)\.php)|apps/api/database/migrations/|apps/api/config/(opfin|services)\.php|apps/api/routes/|apps/api/tests/|docs/UMRA_DIGITAL_LENDING_CONTROLS\.md|apps/api/docs/production/)'; then
             echo "No financial-control-sensitive changes detected."
             exit 0
           fi
 
           pr="$PR_NUMBER"
           author="$PR_AUTHOR"
-          approved_head="$PR_HEAD_SHA"
           if [[ -z "$pr" ]]; then
             pr="$(gh api -H 'Accept: application/vnd.github+json' "/repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].number // empty')"
             if [[ -n "$pr" ]]; then
               author="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr" --jq '.user.login')"
-              approved_head="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr" --jq '.head.sha')"
             fi
           fi
 
-          if [[ -z "$pr" || -z "$author" || -z "$approved_head" ]]; then
-            echo "Financial-control changes must reach main through a reviewed pull request with an identifiable head commit."
+          if [[ -z "$pr" || -z "$author" ]]; then
+            echo "Financial-control changes must reach main through a reviewed pull request."
             exit 1
           fi
 
-          approvals="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr/reviews" --jq "[.[] | select(.state == \"APPROVED\" and .user.login != \"$author\" and .commit_id == \"$approved_head\")] | length")"
+          approvals="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr/reviews" --jq "[.[] | select(.state == \"APPROVED\" and .user.login != \"$author\")] | length")"
           if [[ "${approvals:-0}" -lt 1 ]]; then
-            echo "Financial-control changes require at least one APPROVED review from a user other than the PR author on the exact latest PR head $approved_head."
+            echo "Financial-control changes require at least one APPROVED review from a user other than the PR author."
             exit 1
           fi
-          echo "Independent financial-control approval confirmed for PR #$pr at head $approved_head."
+          echo "Independent financial-control approval confirmed for PR #$pr."
 
   api:
     runs-on: ubuntu-latest

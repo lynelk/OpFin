@@ -1,155 +1,87 @@
-# Canonical Programme Implementation Status
+# Canonical OpFin implementation status
 
-Status: Controlled internal implementation evidence index  
-Updated: 23 September 2026  
-Language: English (United Kingdom)
+Status: Current implementation evidence index  
+Reviewed: 24 September 2026  
+Language: English (United Kingdom)  
+Source baseline: `35abeeef57ff8b4a29d6bd5ba2d6575fa9e54c7f`
 
-This file is an implementation evidence index. A capability is only marked complete when code and automated acceptance evidence exist.
+## Current interpretation
 
-## Implemented code foundations
+This register identifies source capabilities and historical milestones. It does not label the entire platform accepted or fully deployed. The [concept/plan comparison](CONCEPT_AND_PLAN_COMPARISON.md) preserves the original requirements, and the [delivery evidence](../operations/DELIVERY_EVIDENCE_2026-09-24.md) records the current build failures and unresolved Essentials findings.
 
-- Financial Spaces, memberships, invitations and Space capabilities.
-- Personal-Space migration/backfill for existing financial-wellbeing records.
-- Space APIs for creation, membership, invitation and capability configuration.
-- Financial-life APIs for assets, obligations/receivables, net worth and safe-to-spend.
-- Plan/entitlement schema separated from roles/permissions.
-- Partner and Partner Product catalogue schema/API.
-- Commercial agreements and immutable/idempotent Revenue Events.
-- Universal Service Economics Events with provider/customer/partner/Cito/OpFin fee, tax, settlement and margin fields; known-zero vs unknown values remain distinct.
-- Admin reporting surfaces for service economics, capital/loan books, insurance, savings/investments, positive employment behaviour and financial-account behaviour.
-- Funding provenance foundation through `loans.funding_pool_id`; unassigned funding is surfaced as a control exception rather than inferred.
-- Revenue reconciliation fields for provider and reconciliation references.
-- Organisation onboarding cases for Business, SACCO, Investment/Fund and regulated Partner Spaces.
-- Employer activation as a Business capability, preserving the Personal Space privacy boundary.
-- Positive-only employment-behaviour enrichment: verified positive signals may add a capped benefit; missing or negative signals remain neutral.
-- Automated cross-Space isolation, invitation, employer and financial-life tests.
+The current API build executed 263 tests: 257 passed and six failed. Web compiled but failed TypeScript checking. Worker/scheduler deployment successes do not establish API/Web parity. Internal defects, missing acceptance evidence and external activation are separate categories.
 
-## Inclusive-finance foundations implemented 21 September 2026
+## Financial Space and commercial foundations
 
-- Voluntary inclusive-finance profile with explicit programme-measurement consent and automatic clearing of measurement attributes on withdrawal.
-- Measurement-only inclusion fields technically separated from credit-decision inputs.
-- Financial-capability guidance and intervention/outcome event evidence.
-- Financial-reputation pathway built from verified identity and actual repayment/reporting behaviour without creating a second credit score.
-- Alternative-data signal registry with provenance, verification, consent and risk-eligibility gates.
-- Configurable inclusive-finance programmes with customer enrolment, voluntary idempotent exit and deterministic enrolment-to-exit impact windows linked to existing Financial Spaces/partners.
-- Alternative credit-support evidence for salary undertakings, guarantees, savings pledges, receivables, warehouse receipts and related instruments.
-- Fair-treatment assessment evidence and customer-facing explanation of decision boundaries.
-- Aggregate impact reporting using system-of-record outcomes and five-person minimum cohort suppression.
-- Flutter Financial Resilience experience exposing capability, reputation, editable voluntary programme measurement, programme eligibility/enrolment and credit-support evidence.
-- High-contrast accessibility mode added alongside existing large-text, simple-language, reduced-motion and screen-reader support.
-- Operations programme configuration UI and privacy-suppressed impact dashboard.
-- Audit logging for sensitive inclusive-finance mutations without duplicating raw sensitive values into audit metadata.
-- Automated feature tests for measurement consent, protected-field exclusion, provider-signal consent, programme eligibility, Financial Space isolation, programme reporting privacy, enrolment idempotency and alternative-collateral verification.
+Implemented source foundations include:
 
-## Provider-independence and production reporting release — 23 September 2026
+- Financial Spaces, memberships, invitations, capability configuration and Personal Space backfill for existing wellbeing records;
+- financial-life assets, obligations/receivables, net worth and safe-to-spend;
+- plans/entitlements separated from roles and product eligibility;
+- Partner and Partner Product catalogue;
+- commercial agreements and idempotent revenue events;
+- Universal Service Economics Events with provider/customer/partner/Cito/OpFin fees, cost, tax, settlement and margin, preserving unknown versus known zero;
+- reports for service economics, capital/loan books, insurance, savings/investments, positive employment behaviour and financial-account behaviour;
+- funding provenance through `loans.funding_pool_id`, with unassigned sources surfaced as exceptions;
+- revenue/provider reconciliation references;
+- Business, SACCO, Investment/Fund and Partner onboarding cases;
+- Employer as a Business capability and positive-only employment enrichment;
+- cross-Space, invitation, employer and financial-life test suites.
 
-Merged to `main` and deployed to the existing Railway production topology:
+Existing identity, consent, credit, offers, repayments, savings, protection, investment suitability/orders, employer programmes, community/SACCO foundations, ledger/reconciliation, provider/webhook controls, USSD/WhatsApp and financial-wellbeing services remain part of the source. A newly added financial path must independently satisfy their controls.
 
-- Cito-preferred, direct-provider-backup architecture for external services;
-- gnuGrid/CRB and MNO credit-data routing through Cito where configured;
-- Cito-primary NIN and phone-ownership KYC checks, with separate direct biometric/document evidence only where Cito does not currently expose a certified binary-evidence contract;
-- no silent direct retry after an ambiguous Cito/provider request;
-- Positive-Only Employment Behaviour Enrichment with missing/negative information neutral and active credit-processing consent required;
-- Universal Service Economics Events and partner reports;
-- capital-mandate funding provenance with locked reserve/deploy/release/reverse lifecycle;
-- payment, insurance and savings economics attribution without treating principal, premium or investment capital as revenue;
-- canonical partner financial/compliance reporting standard including the Stolets Financial Passport.
+## Inclusive-finance foundation milestone: 21 September 2026
 
-Production evidence on commit `e8e11b1d348f252cae7c5ee3870145c8cb733e10`:
+The implemented foundation covers voluntary programme-measurement consent and withdrawal; protected-field separation from credit inputs; capability guidance and intervention/outcome evidence; a non-score financial-reputation pathway; alternative-data provenance, verification, consent and eligibility gates; configurable programmes and idempotent enrolment/exit with participation windows; support evidence such as salary undertakings, guarantees, savings pledges, receivables and warehouse receipts; fair-treatment explanations; five-person cohort suppression; mobile Financial Resilience; high contrast and other accessibility preferences; operations programme configuration; restricted audit metadata; and associated consent/privacy/isolation/verification tests.
 
-- API deployment: `SUCCESS`;
-- worker deployment: `SUCCESS`;
-- scheduler deployment: `SUCCESS`;
-- production schema: current / nothing pending;
-- readiness health check: passed on first attempt;
-- fatal runtime errors observed during release verification: none;
-- no new Railway services, databases or volumes were introduced.
+Programme measurement is not underwriting. Provider provenance or a risk-eligibility marker alone does not alter a credit decision, and support-instrument verification alone is not approval.
 
-External activation remains pending where genuine provider credentials/contracts/certification are not configured, including Cito/gnuGrid production credentials and real-provider KYC/credit-data exercises.
+## Impact framework milestone: 22 September 2026
 
-GitHub Actions did not produce PR or push workflow runs for this release. Therefore the repository-level monorepo CI gate must not be represented as passed until Actions are enabled/triggered and the configured API/web/mobile jobs complete. Production build/boot/migration/health evidence above is real but does not replace that CI evidence.
+Source includes a versioned indicator registry, programme theory of change, assignments/targets/frequency, staged observations, financial-health/resilience snapshots with reasons, optional livelihood/enterprise/dignified-work records, programme-only agency/empowerment measures, a non-risk community/VSLA evidence bridge, privacy-safe aggregation, suppression of small participant counts and values, dedicated programme-partner identities/grants, aggregate partner portal, operator Impact framework and mobile health check-ins.
 
-## Existing capabilities retained and integrated by contract
+Impact/programme data remains `credit_decision_eligible=false`; participant measurements require applicable consent and enrolment. Programme-specific terminology belongs in configuration. Stolets remains independent. Field validation, genuine agreements, approved translations and physical-device evidence are not fabricated by source implementation.
 
-The current product already contains production KYC/consent, credit, offers, repayments, savings, protection, investment suitability/orders, employer programmes, community-finance/SACCO foundations, ledger/reconciliation, CPay plus provider-adapter boundaries/webhook replay protection, USSD, WhatsApp, financial-wellbeing and Web surfaces. These are reused; this programme does not replace working financial truth with duplicate implementations.
+## Programme and commercial P0-P2 milestone: 23 September 2026
 
-## Mobile-completeness contract
+The implementation adds metadata-driven instruments/questions; staged follow-ups and hourly maintenance; reviewed localisation and explicit English fallback; App/Web/verified WhatsApp/USSD/assisted response capture with actor separation; five configurable programme templates; programme-delivery operations; dedicated partner invitation/OTP activation/list/revoke; aggregate CSV/XLSX/ZIP packs; acquisition attribution; governed costs; commercial funnel/portfolio/unit-economics views; programme-to-commercial graduation; recorded-data financial-health enrichment; and allow-listed provider-adapter evidence for gnuGrid/CRB, MNO, employer, VSLA, Stolets and future providers.
 
-The Flutter App remains the required complete channel for Individuals and Savings Groups. Existing mobile financial hubs and connected-financial-life surfaces must consume the canonical Space APIs as they are progressively switched from user-only ownership. No essential Individual or Savings Group action may be made Web-only or subscription-only.
+Observed programme/provider tests passed in the reviewed build. This does not establish complete commercial data, profitable operation, causal impact or activation of every adapter. Enriched/programme evidence remains non-credit unless it separately satisfies the approved non-protected risk-data pathway.
 
-## Institutional channel contract
+## Provider-independence milestone and historical production evidence
 
-Business/Employer, SACCO and regulated partners use Space-aware Workspaces for deeper operations. Institutional onboarding is progressive: profile → KYB → regulatory evidence → products → integration → certification. Enabling a capability never bypasses the applicable verification, partner or regulatory gate.
+The 23 September register records Cito-preferred routing and controlled direct backup; gnuGrid/CRB and MNO routing through Cito where configured; Cito-primary NIN/phone checks with a separate evidence-capable biometric provider when required; no silent direct retry after ambiguity; positive-only employer enrichment with credit-processing consent; service-economics reporting; capital-mandate reserve/deploy/release/reverse; and principal/premium/capital separation from revenue.
 
-## Commerce integrity
+The earlier register reported API, worker and scheduler success, current schema, first-attempt readiness, no observed fatal runtime errors and no new infrastructure for commit `e8e11b1d348f252cae7c5ee3870145c8cb733e10`. These are preserved as historical recorded assertions for that commit, not independently re-certified here and not evidence for the current head.
 
-Recommendation/financial-health calculations are upstream of commercial terms. Revenue events record the commercial consequence after a customer/product action; commission or revenue share is not a recommendation input.
+GitHub Actions remains disabled at the owner's direction. Do not interpret older wording about enabling Actions as permission to change that setting. Equivalent candidate-specific evidence remains required.
 
-## Acceptance gates
+## Subsequent treasury, location and Essentials work
 
-A release is not certified until:
-1. database migrations complete on a production-like database;
-2. API and client tests pass;
-3. cross-Space access is denied by default;
-4. financial operations are idempotent and reconciled;
-5. preferred-gateway and certified-direct-provider retry/failure/finality behaviour passes;
-6. Individual and Savings Group App journeys pass mobile-completeness UAT;
-7. accessibility/low-literacy and interrupted-connectivity journeys pass;
-8. Business/Employer/SACCO/Partner Workspaces pass role/permission UAT;
-9. revenue attribution and reconciliation balance;
-10. documentation drift checks pass.
+### Investment-club treasury and statements
 
-External partner credentials, licences/approvals, live commercial agreements and production-provider certification are operational dependencies, not code that can be invented in the repository.
+Implemented source provides account records, cashbook transactions, mapped CSV imports, source-hash reuse, suggested matching, explicit exception decisions, confirmation and frozen account/consolidated statements with currency separation and HTML/CSV representations.
 
-## Impact & Inclusive Finance extension — 22 September 2026
+Five current historical-date/baseline regression failures prevent acceptance. Treasury is not full capital-call/member-capital, NAV/unitisation, distributions or investment-performance accounting. Detailed import/reconciliation is a Web workflow; complete mobile administration is not established. See [treasury scope](INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md).
 
-Implemented on the Impact & Inclusive Finance feature branch:
+### Optional Location Context
 
-- configurable, versioned impact indicator registry;
-- programme theory-of-change model;
-- programme indicator assignments, targets and reporting frequency;
-- baseline/follow-up/exit/post-programme observation stages;
-- customer financial-health and resilience snapshots with transparent status reasons;
-- optional livelihood, enterprise and dignified-work snapshots;
-- voluntary programme-only economic-agency/empowerment snapshots;
-- community-finance/VSLA evidence bridge that remains non-risk-eligible;
-- privacy-safe programme outcome aggregation;
-- stronger suppression that hides small participant counts as well as values;
-- dedicated programme-partner role and explicit programme-level grants;
-- aggregate-only partner impact portal;
-- admin Impact framework workspace;
-- customer mobile financial-health check-in;
-- API, user, training, operational and UAT documentation.
+Registered location/service-discovery routes and current UAT cases cover purpose-specific capture, provider-backed places/maps/routes, manual fallback, Space authority and a non-credit boundary. Earlier successful API deployment `aa19a53481b2094530616340b8f54aaaabfc6172` records a correction preserving location authorisation errors and authorising before provider resolution. This is not certification of every location/provider/device path.
 
-Non-negotiable implementation boundary:
+### Essentials lender orchestration
 
-- impact/programme data is `credit_decision_eligible=false`;
-- programme-linked participant measurement requires active consent and active enrolment;
-- programme frameworks do not alter credit eligibility, pricing or limits;
-- Stolets remains a separate SME operating platform and may only provide data through explicitly consented, governed interfaces;
-- external credentials, programme agreements, regulatory approvals and physical-device accessibility certification remain external activation matters, not values to fabricate in source code.
+PR #105 introduced purpose-bound utilities/services/rent finance with a named third-party lender, Cito/CPay integration surfaces, customer platform permissions, quotes, provider settlement and repayment servicing. gnuGrid remains Cito-only for this capability.
 
-## Programme and commercial completion P0-P2 — 23 September 2026
+The merge explicitly retained unresolved findings. Current review covers required immutable accounting, exact-Space grants, concurrent repayment prevention, open-advance account deletion, pending lender-funding/reversal exposure and capital-mandate usability. Do not classify this work as waiting only for credentials or agreements. See [Essentials scope](OPFIN_ESSENTIALS.md), the [source contract](../../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) and [acceptance supplement](../manuals/CURRENT_CAPABILITY_SUPPLEMENT.md).
 
-Implemented code now includes:
+## Contracts that remain in force
 
-- metadata-driven programme instruments/questions;
-- staged follow-up scheduling and an hourly maintenance command;
-- reviewed localisation with explicit English fallback;
-- customer App and Web check-in experiences;
-- verified WhatsApp and feature-phone USSD check-ins;
-- staff-assisted capture with actor separation;
-- five reusable programme starting templates;
-- programme-delivery operations workspace;
-- dedicated programme-partner invitation, OTP activation, listing and revocation;
-- aggregate CSV/XLSX/ZIP partner/MEL exports;
-- canonical customer acquisition attribution;
-- governed commercial cost events;
-- commercial funnel, portfolio and unit-economics dashboard;
-- programme-to-commercial graduation evidence;
-- system-enriched financial-health snapshots from existing financial-life truth;
-- governed provider-adapter registry and allow-listed evidence ingestion for gnuGrid/CRB, MNO, employer, VSLA, Stolets and future providers.
+Individual and Savings Group essential journeys must be mobile-complete; a Web-only implementation does not fulfil that requirement by relabelling it. Institutions use deeper Space-aware Workspaces with progressive verification, and capabilities do not bypass roles, eligibility or approvals.
 
-All new programme responses, enrichment records and provider ingestions retain explicit non-credit boundaries. Provider evidence does not become underwriting merely because it has verified provenance.
+Recommendations and financial-health calculations remain upstream of commercial terms. Customer data and programme outcomes are not revenue-ranking inputs. Unknown commercial amounts remain unknown; principal/premium/capital are not platform revenue.
 
-Stolets remains a separate SME operating product. A Stolets adapter is an explicit minimum-necessary data interface, not an OpFin merchant-operations module.
+## Acceptance gates and next sequence
+
+R0 restores API/Web builds without weakening tests. R1 closes Essentials financial controls with independent review. R2 accepts treasury history and statements. R3 demonstrates channel/accessibility completeness. R4 activates genuinely contracted providers. R5 completes wider original phase-2/3 requirements. R6 demonstrates business outcomes and scale. These priorities are detailed in the [comparison](CONCEPT_AND_PLAN_COMPARISON.md).
+
+A release requires production-like migration evidence, applicable API/client tests, cross-Space denial, expected immutable accounting, replay/concurrency/reconciliation, provider failure/recovery, real customer/device acceptance, institutional role tests, commercial reconciliation and documentation alignment. A passing source build, publication label or previous deployment is not a substitute.

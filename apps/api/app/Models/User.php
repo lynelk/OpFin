@@ -21,6 +21,8 @@ class User extends Authenticatable
 
     public const ROLE_PROGRAMME_PARTNER = 'programme_partner';
 
+    public const ROLE_PARTNER_API = 'partner_api';
+
     public const ROLE_SUPPORT = 'support';
 
     public const ROLES = [
@@ -29,6 +31,7 @@ class User extends Authenticatable
         self::ROLE_CUSTOMER,
         self::ROLE_EMPLOYER_ADMIN,
         self::ROLE_PROGRAMME_PARTNER,
+        self::ROLE_PARTNER_API,
         self::ROLE_SUPPORT,
     ];
 
@@ -38,6 +41,7 @@ class User extends Authenticatable
         self::ROLE_CUSTOMER => ['profile.view', 'kyc.submit', 'consent.manage'],
         self::ROLE_EMPLOYER_ADMIN => ['profile.view', 'employer.view'],
         self::ROLE_PROGRAMME_PARTNER => ['profile.view', 'programme.view'],
+        self::ROLE_PARTNER_API => ['profile.view', 'partner.essentials'],
         self::ROLE_SUPPORT => ['profile.view', 'support.view', 'kyc.review', 'support.manage'],
     ];
 
@@ -76,6 +80,7 @@ class User extends Authenticatable
             'phone_verified_at' => 'datetime',
             'password' => 'hashed',
             'accessibility_preferences' => 'array',
+            'can_manage_platform_credit' => 'boolean',
         ];
     }
 

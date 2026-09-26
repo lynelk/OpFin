@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CreditOffer;
+use App\Models\Institution;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -13,6 +14,8 @@ class FundingPoolService
 
     private const BLOCKED_STATUSES = [
         'draft',
+        'awaiting_compliance_review',
+        'rejected',
         'paused',
         'closed',
         'cancelled',
@@ -27,25 +30,29 @@ class FundingPoolService
         }
 
         if (! $fundingPoolId) {
-            if ((bool) config('opfin.credit.require_funding_pool_assignment', false)) {
-                throw new InvalidArgumentException('A funding pool must be assigned before this credit offer can be generated.');
-            }
-
-            return;
+            throw new InvalidArgumentException('An approved third-party lender funding pool must be assigned before this credit offer can be generated.');
         }
 
         $pool = DB::table('capital_mandates')->where('id', $fundingPoolId)->first();
         $this->assertUsable($pool, $principalMinor);
     }
 
+    public function validateLender(?int $fundingPoolId, ?Institution $institution): void
+    {
+        if (! $fundingPoolId || ! $institution) {
+            throw new InvalidArgumentException('A funding pool and responsible lender are required.');
+        }
+        $pool = DB::table('capital_mandates')->where('id', $fundingPoolId)->first();
+        $owner = $pool?->partner_id ? DB::table('partners')->where('id', $pool->partner_id)->value('institution_id') : null;
+        if ($owner === null || (int) $owner !== (int) $institution->id) {
+            throw new InvalidArgumentException('The funding pool must belong to the responsible lender.');
+        }
+    }
+
     public function reserve(CreditOffer $offer): CreditOffer
     {
         if (! $offer->funding_pool_id) {
-            if ((bool) config('opfin.credit.require_funding_pool_assignment', false)) {
-                throw new InvalidArgumentException('A funding pool must be assigned before disbursement can be initiated.');
-            }
-
-            return $offer;
+            throw new InvalidArgumentException('An approved third-party lender funding pool must be assigned before disbursement can be initiated.');
         }
 
         return DB::transaction(function () use ($offer) {
@@ -59,6 +66,7 @@ class FundingPoolService
 
             $pool = DB::table('capital_mandates')->where('id', $lockedOffer->funding_pool_id)->lockForUpdate()->first();
             $this->assertUsable($pool, (int) $lockedOffer->principal_amount_minor);
+            $this->validateLender($lockedOffer->funding_pool_id, $lockedOffer->application->loanProduct->institution);
 
             DB::table('capital_mandates')->where('id', $pool->id)->update([
                 'reserved_capital_minor' => (int) $pool->reserved_capital_minor + (int) $lockedOffer->principal_amount_minor,
@@ -217,6 +225,23 @@ class FundingPoolService
         }
         if (! $pool->approved_by || ! $pool->approved_at) {
             throw new InvalidArgumentException('The selected funding pool has not completed approval.');
+        }
+        if (! $pool->partner_id) {
+            throw new InvalidArgumentException('The selected funding pool is not linked to an approved third-party lender.');
+        }
+        $partner = DB::table('partners')->where('id', $pool->partner_id)->first();
+        if (! $partner || strtolower((string) $partner->status) !== 'active') {
+            throw new InvalidArgumentException('The selected funding pool lender is not active.');
+        }
+        if (strcasecmp((string) $partner->code, 'OPFIN') === 0 || strcasecmp((string) $partner->name, 'OpFin') === 0) {
+            throw new InvalidArgumentException('OpFin cannot be the primary lender for production credit.');
+        }
+        if (! in_array(strtolower((string) $partner->partner_type), ['lender', 'bank', 'mfi', 'sacco', 'credit_provider', 'financial_institution'], true)) {
+            throw new InvalidArgumentException('The selected funding pool partner is not configured as a lending institution.');
+        }
+        $evidence = json_decode((string) ($partner->regulatory_evidence ?? '{}'), true);
+        if (! LenderAuthorityEvidence::complete(is_array($evidence) ? $evidence : null)) {
+            throw new InvalidArgumentException('The selected lender is missing the applicable authority or exemption evidence.');
         }
         if (in_array(strtolower((string) $pool->status), self::BLOCKED_STATUSES, true)) {
             throw new InvalidArgumentException('The selected funding pool is not available for new credit.');

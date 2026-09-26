@@ -24,6 +24,7 @@ export default async function LoanOfferPage({ searchParams }: { searchParams?: P
     const response = await opfinApi.creditOffer(offerId, token);
     const offer = response.data.offer;
     const disclosureHash = response.data.disclosure_hash;
+    const lender = offer.disclosure_snapshot?.lender_of_record as { legal_name?: string; authority_reference?: string; regulator?: string } | undefined;
     const canAccept = offer.status === "offered";
 
     return (
@@ -46,6 +47,9 @@ export default async function LoanOfferPage({ searchParams }: { searchParams?: P
             <span className="badge">Version {offer.version}</span>
           </div>
 
+          <p><strong>Lender:</strong> {lender?.legal_name ?? "See the lender details in your offer disclosures."}</p>
+          {lender?.authority_reference ? <p>{lender.regulator ?? "Authority"}: {lender.authority_reference}</p> : null}
+          <p className="muted">OpFin provides the platform and orchestration. Credit is provided by the named lender.</p>
           <table className="table">
             <tbody>
               <tr><th>Approved principal</th><td>{formatUgx(offer.principal_amount_minor)}</td></tr>

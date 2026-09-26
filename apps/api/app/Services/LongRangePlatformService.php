@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Institution;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -270,10 +271,13 @@ class LongRangePlatformService
 
     public function createCapitalMandate(User $user, array $data): object
     {
+        $institutionId = DB::table('partners')->where('id', $data['partner_id'])->value('institution_id');
+        app(PlatformCreditRoutingService::class)->assertManager($user, $institutionId ? Institution::find($institutionId) : null);
         $reference = (string) Str::uuid();
         $id = DB::table('capital_mandates')->insertGetId([
             'reference' => $reference,
             'owner_user_id' => $user->id,
+            'partner_id' => $data['partner_id'],
             'mandate_type' => $data['mandate_type'],
             'name' => $data['name'],
             'committed_capital_minor' => $data['committed_capital_minor'] ?? 0,

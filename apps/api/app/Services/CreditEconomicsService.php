@@ -36,7 +36,8 @@ class CreditEconomicsService
             throw new InvalidArgumentException('Credit interest rate must be a finite non-negative percentage.');
         }
 
-        $policy = $this->policies->active('regulatory_pricing', $productScope);
+        $product = $term->product;
+        $policy = $this->policies->active('regulatory_pricing', $productScope, $product?->institution?->licence_class ?? '', $product?->country);
         $rules = $this->policies->rules($policy);
         $cycleDays = $this->cycleDays((string) $term->interest_cycle, $rules);
         $feeTreatment = strtolower((string) ($pricing['fee_treatment'] ?? 'financed'));
@@ -244,7 +245,7 @@ class CreditEconomicsService
         return array_values(array_unique($offsets));
     }
 
-    private function equivalentAprPercent(int $netDisbursementMinor, array $schedule): float
+    public function equivalentAprPercent(int $netDisbursementMinor, array $schedule): float
     {
         if ($netDisbursementMinor <= 0 || $schedule === []) {
             throw new InvalidArgumentException('APR calculation requires positive net disbursement and repayment cash flows.');

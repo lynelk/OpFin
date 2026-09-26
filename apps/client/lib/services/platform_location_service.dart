@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 class PlatformLocationService {
   static const MethodChannel _channel = MethodChannel('co.opfin/location');
 
+  static bool get supportsPreciseDeviceLocation =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
   static Future<Map<String, dynamic>> currentLocation({
     String precision = 'approximate',
   }) async {
@@ -14,7 +17,7 @@ class PlatformLocationService {
     try {
       final result = await _channel.invokeMapMethod<String, dynamic>(
         'currentLocation',
-        {'precision': precision},
+        {'precision': supportsPreciseDeviceLocation ? precision : 'approximate'},
       );
       return result ?? <String, dynamic>{};
     } on PlatformException catch (error) {

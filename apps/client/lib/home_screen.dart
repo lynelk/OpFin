@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/credit_offers_screen.dart';
+import 'package:opfin/essentials_screen.dart';
 import 'package:opfin/financial_spaces_screen.dart';
 import 'package:opfin/financial_hubs.dart';
 import 'package:opfin/protection_screen.dart';
@@ -196,7 +197,7 @@ class _HomePageState extends State<_HomePage>{
           child:Padding(
             padding:const EdgeInsets.all(20),
             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              const Text('FINANCIAL COMPASS',
+              const Text('Financial Compass',
                 style:TextStyle(
                   color:OpFinColors.indigo,
                   fontSize:12,
@@ -279,6 +280,12 @@ class _HomePageState extends State<_HomePage>{
           onTap:()=>_open(const PersonalMoneyScreen()))),
 
         Card(child:ListTile(
+          leading:const Icon(Icons.home_work_outlined),
+          title:const Text('Keep essentials running',style:TextStyle(fontWeight:FontWeight.w700)),
+          subtitle:const Text('Electricity, water, internet, rent and other verified essentials with third-party financing when eligible.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>_open(const EssentialsScreen()))),
+        Card(child:ListTile(
           leading:const Icon(Icons.savings_outlined),
           title:const Text('Savings & goals',style:TextStyle(fontWeight:FontWeight.w700)),
           subtitle:Text(savings>0?'You have '+_ugx(savings)+' in partner-confirmed savings.':'Build an emergency fund or another goal at your pace.'),
@@ -323,6 +330,13 @@ class _HomePageState extends State<_HomePage>{
               :'Credit is one financial tool. Review affordability and every cost before borrowing.'),
           trailing:creditAvailable?const Icon(Icons.chevron_right):null,
           onTap:!creditAvailable?null:()=>_handleCredit(credit))),
+
+        if(creditAvailable&&profile['composite_score']!=null)
+          Card(child:ListTile(
+            leading:const Icon(Icons.insights_outlined),
+            title:Text('OpFin Score ${profile['composite_score']}'),
+            subtitle:Text('Band: ${profile['band']??'Not yet available'}'),
+            onTap:()=>_handleCredit(credit))),
 
         if(creditAvailable&&setup['kyc_status']!='verified')
           Card(child:ListTile(
@@ -393,6 +407,12 @@ class _BorrowPageState extends State<_BorrowPage>{
               child:Text(due>0?'Repay amount due':'Apply for a loan'))),
           ]))),
         Card(child:ListTile(
+          leading:const Icon(Icons.home_work_outlined),
+          title:const Text('Finance an essential'),
+          subtitle:const Text('Pay a verified provider directly through an approved third-party lender.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EssentialsScreen())))),
+        Card(child:ListTile(
           leading:const Icon(Icons.list_alt_outlined),
           title:const Text('My loan requests'),
           trailing:const Icon(Icons.chevron_right),
@@ -419,6 +439,11 @@ class _ActivityPage extends StatelessWidget{
         title:const Text('Credit offers'),subtitle:const Text('Review costs before accepting.'),
         trailing:const Icon(Icons.chevron_right),
         onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const CreditOffersScreen())))),
+      Card(child:ListTile(
+        leading:const Icon(Icons.home_work_outlined),
+        title:const Text('Essentials'),subtitle:const Text('Purpose-bound service financing and repayments.'),
+        trailing:const Icon(Icons.chevron_right),
+        onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const EssentialsScreen())))),
       Card(child:ListTile(
         leading:const Icon(Icons.receipt_long_outlined),
         title:const Text('Receipts'),subtitle:const Text('Completed disbursement and repayment acknowledgements.'),

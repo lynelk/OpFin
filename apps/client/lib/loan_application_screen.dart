@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:opfin/services/distribution_channel.dart';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -47,7 +47,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     'Other personal need',
   ];
 
-  String get _channel => Platform.isIOS ? 'app_store' : 'play_store';
+  String get _channel => resolveDistributionChannel();
 
   @override
   void initState() {
@@ -76,10 +76,14 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     };
   }
 
-  Future<Map<String, dynamic>> _loadData() async {
+  Future<Map<String, dynamic>> _loadData({int? amount, String? reason}) async {
     final profile = await CreditProfileApi.load();
     final response = await http.get(
-      Uri.parse('$apiUrl/credit/options?distribution_channel=$_channel'),
+      Uri.parse('$apiUrl/credit/options').replace(queryParameters: {
+        'distribution_channel': _channel,
+        if (amount != null) 'amount_minor': amount.toString(),
+        if (reason != null) 'reason': reason,
+      }),
       headers: await _headers(),
     );
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -127,7 +131,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         (profileState['profile'] as Map?)?.cast<String, dynamic>() ?? {};
     final available = _n(profile['available_to_borrow_minor']);
     final amount = int.tryParse(_amount.text.trim().replaceAll(',', '')) ?? 0;
-    final option = _selectedOption(options);
+    var option = _selectedOption(options);
 
     if (amount <= 0) {
       _message('Enter how much you want to borrow.');
@@ -141,10 +145,35 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       _message('Choose what the loan is for.');
       return;
     }
-    if (option == null) {
-      _message('No eligible repayment option is available right now.');
+    // Re-evaluate routing once the borrower's amount and purpose are known.
+    // Show a changed lender/term for review before submitting explicit IDs.
+    setState(() => _submitting = true);
+    try {
+      final refreshed = await _loadData(amount: amount, reason: _reason);
+      if (!mounted) return;
+      final freshOptions = (refreshed['options'] as List)
+          .cast<Map<String, dynamic>>();
+      final matches = freshOptions.where((item) =>
+          _n(item['loan_product_term_id']) == _selectedTermId);
+      setState(() => _load = Future.value(refreshed));
+      if (matches.isEmpty) {
+        setState(() => _selectedTermId = freshOptions.isEmpty
+            ? null
+            : _n(freshOptions.first['loan_product_term_id']));
+        _message(freshOptions.isEmpty
+            ? 'No eligible repayment option fits this amount and purpose.'
+            : 'Available lenders have changed. Review the repayment option and continue.');
+        return;
+      }
+      option = matches.first;
+    } catch (error) {
+      _message(error.toString().replaceFirst('Exception: ', ''));
       return;
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
+    if (option == null || !mounted) return;
+    final reviewedOption = option;
 
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
@@ -166,8 +195,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               const SizedBox(height: 16),
               _ReviewRow('Amount', _ugx(amount)),
               _ReviewRow(
-                  'Repayment period', '${_n(option['duration_days'])} days'),
+                  'Repayment period', '${_n(reviewedOption['duration_days'])} days'),
               _ReviewRow('Purpose', _reason!),
+              _ReviewRow('Lender', (reviewedOption['lender'] as Map?)?['legal_name']?.toString() ?? 'Named in your offer'),
+              const Text('OpFin provides the platform. The named lender provides your credit.'),
               const SizedBox(height: 12),
               const Text(
                 'This is a request, not yet a loan. If approved, OpFin will show the exact amount you receive, interest, fees, APR where required, total repayment and payment dates before you accept.',
@@ -199,9 +230,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         Uri.parse('$apiUrl/credit/applications'),
         headers: await _headers(),
         body: jsonEncode({
-          'loan_product_id': _n(option['loan_product_id']),
-          'loan_product_term_id': _n(option['loan_product_term_id']),
-          'institution_id': _n(option['institution_id']),
+          'loan_product_id': _n(reviewedOption['loan_product_id']),
+          'loan_product_term_id': _n(reviewedOption['loan_product_term_id']),
+          'institution_id': _n(reviewedOption['institution_id']),
           'amount_minor': amount,
           'reason': _reason,
           'distribution_channel': _channel,
@@ -366,7 +397,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       .map(
                         (option) => DropdownMenuItem(
                           value: _n(option['loan_product_term_id']),
-                          child: Text('${_n(option['duration_days'])} days'),
+                          child: Text('${_n(option['duration_days'])} days · ${(option['lender'] as Map?)?['legal_name'] ?? 'Lender'}', overflow: TextOverflow.ellipsis),
                         ),
                       )
                       .toList(),

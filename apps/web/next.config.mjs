@@ -12,6 +12,13 @@ if (production) {
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {
+    serverActions: {
+      // Retain the original limit unless the reviewed upload capability is enabled.
+      // API and action handlers independently enforce bounded file and metadata sizes.
+      bodySizeLimit: process.env.OPFIN_FINANCIAL_INTELLIGENCE_ENABLED === "true" ? "26mb" : "1mb"
+    }
+  },
   images: {
     remotePatterns: [],
     dangerouslyAllowSVG: false,

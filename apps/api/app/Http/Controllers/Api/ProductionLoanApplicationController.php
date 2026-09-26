@@ -11,9 +11,9 @@ use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
-use App\Services\AppStoreCreditPolicy;
 use App\Services\AuditLogger;
-use App\Services\CreditProductAvailabilityService;
+use App\Services\CreditDistributionService;
+use App\Services\PlatformCreditRoutingService;
 use App\Services\ProductionCreditDecisionService;
 use App\Services\ProductionCreditOfferService;
 use App\Support\ApiResponse;
@@ -30,8 +30,6 @@ class ProductionLoanApplicationController extends Controller
         private readonly AuditLogger $auditLogger,
         private readonly ProductionCreditDecisionService $decisionService,
         private readonly ProductionCreditOfferService $offerService,
-        private readonly AppStoreCreditPolicy $appStorePolicy,
-        private readonly CreditProductAvailabilityService $productAvailability,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -66,7 +64,8 @@ class ProductionLoanApplicationController extends Controller
             'amount_minor' => 'nullable|required_without:amount|integer|min:1',
             'amount' => 'nullable|required_without:amount_minor|integer|min:1',
             'reason' => 'required|string|max:255',
-            'distribution_channel' => ['nullable', Rule::in(['web', 'android', 'app_store', 'play_store', 'whatsapp', 'ussd'])],
+            'country' => ['nullable', 'regex:/^[A-Z]{2}$/'],
+            'distribution_channel' => ['nullable', Rule::in(app(CreditDistributionService::class)->channels())],
         ]);
 
         if ($validator->fails()) {
@@ -127,44 +126,15 @@ class ProductionLoanApplicationController extends Controller
             $term = LoanProductTerm::findOrFail($validated['loan_product_term_id']);
             $institutionId = (int) $validated['institution_id'];
         } else {
-            $storeChannel = in_array($distributionChannel, AppStoreCreditPolicy::STORE_CHANNELS, true);
-            $minimumDuration = $storeChannel ? AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS : 1;
-            $product = LoanProduct::query()
-                ->where('status', 'Active')
-                ->whereNotNull('institution_id')
-                ->with(['terms' => fn ($query) => $query
-                    ->where('status', 'Active')
-                    ->where('duration', '>=', $minimumDuration)
-                    ->when($storeChannel, fn ($termQuery) => $termQuery
-                        ->orderByRaw('CASE WHEN duration >= ? THEN 0 ELSE 1 END', [AppStoreCreditPolicy::PREFERRED_FULL_REPAYMENT_DAYS]))
-                    ->orderBy('duration')
-                    ->orderBy('id')])
-                ->orderBy('id')
-                ->get()
-                ->first(fn (LoanProduct $candidate) => $candidate->terms->isNotEmpty());
-
-            if (! $product) {
-                return ApiResponse::error(
-                    $storeChannel
-                        ? 'No mobile-store-compliant credit route is currently available.'
-                        : 'No active credit route is currently available for you.',
-                    409,
-                    ['code' => [$storeChannel ? 'NO_STORE_COMPLIANT_CREDIT_ROUTE' : 'NO_ELIGIBLE_CREDIT_ROUTE']],
-                );
+            $route = app(PlatformCreditRoutingService::class)->options(
+                $distributionChannel, $validated['country'] ?? config('opfin.default_country', 'UG'), $amountMinor, $validated['reason'],
+            )->first();
+            if (! $route) {
+                return ApiResponse::error('No eligible lender route is currently available for this request and channel.', 409, ['code' => ['NO_ELIGIBLE_CREDIT_ROUTE']]);
             }
-
-            $term = $product->terms->first();
+            $product = $route['product'];
+            $term = $route['term'];
             $institutionId = (int) $product->institution_id;
-        }
-
-        try {
-            $this->productAvailability->assertAvailable($product, $term, $institutionId);
-        } catch (InvalidArgumentException $exception) {
-            return ApiResponse::error($exception->getMessage(), 422, ['code' => ['CREDIT_PRODUCT_UNAVAILABLE']]);
-        }
-
-        if (in_array($distributionChannel, AppStoreCreditPolicy::STORE_CHANNELS, true) && (int) $term->duration < AppStoreCreditPolicy::MIN_FULL_REPAYMENT_DAYS) {
-            return ApiResponse::error('This term cannot be offered in the mobile app because full repayment would be due in 60 days or less.', 422, ['code' => ['STORE_TERM_TOO_SHORT']]);
         }
 
         if ((int) $term->loan_product_id !== (int) $product->id) {
@@ -173,6 +143,18 @@ class ProductionLoanApplicationController extends Controller
 
         if ($product->institution_id !== null && (int) $product->institution_id !== $institutionId) {
             return ApiResponse::error('The selected institution is not eligible for this credit product.', 422, ['institution_id' => ['PRODUCT_INSTITUTION_MISMATCH']]);
+        }
+
+        $routing = app(PlatformCreditRoutingService::class);
+        $distribution = app(CreditDistributionService::class)->assess($product, $term, $distributionChannel);
+        if (! $distribution['available']) {
+            return ApiResponse::error($distribution['reason'], 422, ['code' => [$distribution['code']]]);
+        }
+        $candidate = new LoanApplication(['loan_product_id' => $product->id, 'loan_product_term_id' => $term->id, 'institution_id' => $institutionId, 'amount' => $amountMinor, 'reason' => $validated['reason'], 'distribution_channel' => $distributionChannel]);
+        try {
+            $routing->assertOrigination($candidate);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), 409, ['code' => ['CREDIT_ROUTE_UNAVAILABLE']]);
         }
 
         if (Loan::query()->where('user_id', $user->id)->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])->exists()) {
@@ -193,6 +175,7 @@ class ProductionLoanApplicationController extends Controller
                 'status' => 'Pending',
                 'reason' => (string) $validated['reason'],
                 'distribution_channel' => $distributionChannel,
+                'routing_snapshot' => ['strategy' => app(PlatformCreditRoutingService::class)->strategy(), 'lender' => $product->institution->lenderDisclosure()],
             ]);
         });
 
@@ -222,6 +205,7 @@ class ProductionLoanApplicationController extends Controller
 
             if ($decision->status === CreditDecision::STATUS_APPROVED) {
                 $pricing = [
+                    'funding_pool_id' => $product->funding_pool_id,
                     'access_fee_minor' => (int) round($amountMinor * ((float) config('opfin.credit.default_pricing.access_fee_percent', 0) / 100)),
                     'disbursement_fee_minor' => (int) config('opfin.credit.default_pricing.disbursement_fee_minor', 0),
                     'fee_treatment' => (string) config('opfin.credit.default_pricing.fee_treatment', 'financed'),
@@ -229,15 +213,8 @@ class ProductionLoanApplicationController extends Controller
                 ];
 
                 try {
-                    $appStoreDisclosure = $this->appStorePolicy->validateOffer($application->fresh(), $pricing);
+
                     $offer = $this->offerService->createOffer($application->fresh(), $user, $pricing);
-                    if ($appStoreDisclosure !== []) {
-                        $offer->forceFill([
-                            'pricing_snapshot' => array_merge($offer->pricing_snapshot ?? [], $appStoreDisclosure),
-                            'disclosure_snapshot' => array_merge($offer->disclosure_snapshot ?? [], $appStoreDisclosure),
-                        ])->save();
-                        $offer = $offer->fresh();
-                    }
                     $nextState = 'offer_ready';
                 } catch (InvalidArgumentException $exception) {
                     $application->update(['status' => 'Referred']);

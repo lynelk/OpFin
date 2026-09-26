@@ -383,7 +383,7 @@ export async function ingestProviderEvidenceAction(formData: FormData) {
     const raw = line.slice(separator + 1).trim();
     if (!key) continue;
 
-    let parsed: unknown = raw;
+    let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
     } catch {

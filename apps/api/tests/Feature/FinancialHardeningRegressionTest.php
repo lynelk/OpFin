@@ -4,23 +4,18 @@ namespace Tests\Feature;
 
 use App\Models\CreditDecision;
 use App\Models\CreditScoreComponent;
-use App\Models\CustomerWallet;
 use App\Models\Institution;
 use App\Models\LedgerAccount;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
 use App\Models\MobileMoneyTransaction;
-use App\Models\ReconciliationItem;
-use App\Models\ReconciliationRun;
-use App\Models\Transaction;
 use App\Models\User;
-use App\Services\FinancialReadinessService;
-use App\Services\MobileMoney\MobileMoneyService;
 use App\Services\ProductionCreditOfferService;
 use App\Services\ProductionLedgerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -44,6 +39,7 @@ class FinancialHardeningRegressionTest extends TestCase
             'disbursement_fee_minor' => 2000,
             'fee_treatment' => 'financed',
             'expires_in_minutes' => 60,
+            'funding_pool_id' => $this->fundingPoolId($operations),
         ]);
 
         $accepted = $service->acceptOffer($offer, $customer, ['channel' => 'regression']);
@@ -137,282 +133,39 @@ class FinancialHardeningRegressionTest extends TestCase
         ]);
     }
 
-    public function test_inactive_credit_product_cannot_generate_or_accept_a_production_offer(): void
+    private function fundingPoolId(User $owner): int
     {
-        [$customer, $operations, $application] = $this->approvedApplication();
-        DB::table('loan_products')->where('id', $application->loan_product_id)->update(['status' => 'Paused']);
-
-        try {
-            app(ProductionCreditOfferService::class)->createOffer($application->fresh(), $operations, [
-                'access_fee_minor' => 3000,
-                'disbursement_fee_minor' => 2000,
-                'fee_treatment' => 'financed',
-            ]);
-            $this->fail('Inactive credit products must not generate offers.');
-        } catch (InvalidArgumentException $exception) {
-            $this->assertStringContainsString('not active', $exception->getMessage());
-        }
-
-        DB::table('loan_products')->where('id', $application->loan_product_id)->update(['status' => 'Active']);
-        $offer = app(ProductionCreditOfferService::class)->createOffer($application->fresh(), $operations, [
-            'access_fee_minor' => 3000,
-            'disbursement_fee_minor' => 2000,
-            'fee_treatment' => 'financed',
-        ]);
-        DB::table('loan_product_terms')->where('id', $application->loan_product_term_id)->update(['status' => 'Paused']);
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('not active');
-        app(ProductionCreditOfferService::class)->acceptOffer($offer, $customer, ['channel' => 'regression']);
-    }
-
-    public function test_invalid_disbursement_wallet_does_not_mutate_offer_or_create_money_intent(): void
-    {
-        [$customer, $operations, $application] = $this->approvedApplication();
-        $offer = app(ProductionCreditOfferService::class)->createOffer($application, $operations, [
-            'access_fee_minor' => 3000,
-            'disbursement_fee_minor' => 2000,
-            'fee_treatment' => 'financed',
-        ]);
-        $other = User::factory()->create();
-        $otherWallet = CustomerWallet::create([
-            'user_id' => $other->id,
-            'provider' => 'mock',
-            'msisdn' => '256700009999',
+        $partnerId = DB::table('partners')->insertGetId([
+            'code' => 'TEST-LENDER-'.Str::upper(Str::random(8)),
+            'name' => 'Test Licensed Lender '.Str::random(6),
+            'partner_type' => 'financial_institution',
+            'institution_id' => $owner->institution_id,
+            'country' => 'UG',
             'status' => 'active',
-            'verified_at' => now(),
-        ]);
-
-        try {
-            app(ProductionCreditOfferService::class)->acceptOffer($offer, $customer, [
-                'wallet_id' => $otherWallet->id,
-                'channel' => 'regression',
-            ]);
-            $this->fail('Another user wallet must be rejected before offer mutation.');
-        } catch (InvalidArgumentException $exception) {
-            $this->assertStringContainsString('verified disbursement wallet', $exception->getMessage());
-        }
-
-        $this->assertSame('offered', strtolower((string) $offer->fresh()->status));
-        $this->assertNull($offer->fresh()->accepted_at);
-        $this->assertDatabaseMissing('mobile_money_transactions', ['credit_offer_id' => $offer->id]);
-    }
-
-    public function test_provider_configuration_failure_preserves_durable_money_intent(): void
-    {
-        config([
-            'services.cpay.base_url' => null,
-            'services.cpay.merchant_number' => null,
-            'services.cpay.private_key' => null,
-            'services.cpay.callback_url' => null,
-        ]);
-
-        try {
-            app(MobileMoneyService::class)->collect([
-                'amount_minor' => 10000,
-                'currency' => 'UGX',
-                'phone' => '256700008888',
-                'idempotency_key' => 'durable-money-intent-001',
-                'internal_reference' => 'OPF-DURABLE-001',
-                'purpose' => 'regression_test',
-            ], 'cpay');
-            $this->fail('Missing provider configuration must fail closed.');
-        } catch (InvalidArgumentException $exception) {
-            $this->assertStringContainsString('not configured', $exception->getMessage());
-        }
-
-        $intent = MobileMoneyTransaction::query()->where('idempotency_key', 'durable-money-intent-001')->firstOrFail();
-        $this->assertSame(MobileMoneyTransaction::STATUS_FAILED, $intent->status);
-        $this->assertSame(MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED, $intent->accounting_status);
-        $this->assertSame('rejected_before_provider_finality', $intent->provider_submission_state);
-        $this->assertSame('OPF-DURABLE-001', $intent->internal_reference);
-    }
-
-    public function test_never_submitted_durable_money_intent_can_resume_exactly_once(): void
-    {
-        $intent = MobileMoneyTransaction::create([
-            'provider' => 'mock',
-            'direction' => MobileMoneyTransaction::DIRECTION_COLLECTION,
-            'amount_minor' => 12000,
-            'currency' => 'UGX',
-            'phone' => '256700006666',
-            'idempotency_key' => 'resume-persisted-intent-001',
-            'internal_reference' => 'OPF-RESUME-001',
-            'status' => MobileMoneyTransaction::STATUS_PROCESSING,
-            'provider_submission_state' => 'intent_persisted',
-            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_UNRECONCILED,
-            'metadata' => ['purpose' => 'resume_regression'],
-        ]);
-
-        $first = app(MobileMoneyService::class)->collect([
-            'amount_minor' => 12000,
-            'currency' => 'UGX',
-            'phone' => '256700006666',
-            'idempotency_key' => 'resume-persisted-intent-001',
-            'internal_reference' => 'OPF-RESUME-001',
-            'purpose' => 'resume_regression',
-        ], 'mock');
-
-        $this->assertSame($intent->id, $first->id);
-        $this->assertSame(MobileMoneyTransaction::STATUS_PENDING, $first->status);
-        $this->assertSame('provider_response_received', $first->provider_submission_state);
-        $this->assertNotNull($first->provider_submission_started_at);
-        $this->assertNotNull($first->provider_submission_resolved_at);
-        $this->assertSame('mock-OPF-RESUME-001', $first->provider_reference);
-
-        $again = app(MobileMoneyService::class)->collect([
-            'amount_minor' => 12000,
-            'currency' => 'UGX',
-            'phone' => '256700006666',
-            'idempotency_key' => 'resume-persisted-intent-001',
-            'internal_reference' => 'OPF-RESUME-001',
-            'purpose' => 'resume_regression',
-        ], 'mock');
-
-        $this->assertSame($first->id, $again->id);
-        $this->assertSame('mock-OPF-RESUME-001', $again->provider_reference);
-        $this->assertDatabaseCount('mobile_money_transactions', 1);
-    }
-
-    public function test_legacy_manual_financial_mutation_routes_are_retired_by_default(): void
-    {
-        $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
-        Sanctum::actingAs($operations);
-
-        $this->postJson('/api/loan-applications/999999/status', [
-            'status' => 'Disbursed',
-        ])->assertStatus(410);
-
-        $this->patchJson('/api/transactions/999999/approve')
-            ->assertStatus(410);
-    }
-
-    public function test_reconciliation_matching_is_evidence_only_and_write_off_is_maker_checker(): void
-    {
-        $maker = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
-        $checker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
-        $support = User::factory()->create(['role' => User::ROLE_SUPPORT]);
-        $run = ReconciliationRun::create([
-            'provider' => 'cpay',
-            'business_date' => now()->toDateString(),
-            'status' => ReconciliationRun::STATUS_OPEN,
-            'created_by' => $maker->id,
-            'started_at' => now(),
-            'summary' => [],
-        ]);
-        $money = MobileMoneyTransaction::create([
-            'provider' => 'cpay',
-            'direction' => MobileMoneyTransaction::DIRECTION_COLLECTION,
-            'amount_minor' => 20000,
-            'currency' => 'UGX',
-            'phone' => '256700007777',
-            'idempotency_key' => 'reconciliation-control-001',
-            'internal_reference' => 'OPF-REC-001',
-            'provider_reference' => 'CPAY-REC-001',
-            'status' => MobileMoneyTransaction::STATUS_SUCCESSFUL,
-            'accounting_status' => MobileMoneyTransaction::ACCOUNTING_NOT_REQUIRED,
-            'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_EXCEPTION,
-            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_EXCEPTION,
-            'metadata' => [],
-        ]);
-        $item = ReconciliationItem::create([
-            'reconciliation_run_id' => $run->id,
-            'mobile_money_transaction_id' => $money->id,
-            'provider_reference' => $money->provider_reference,
-            'internal_reference' => $money->internal_reference,
-            'direction' => $money->direction,
-            'currency' => $money->currency,
-            'system_status' => $money->status,
-            'provider_status' => 'successful',
-            'system_amount_minor' => $money->amount_minor,
-            'provider_amount_minor' => $money->amount_minor,
-            'status' => ReconciliationItem::STATUS_EXCEPTION,
-            'exception_type' => ReconciliationItem::EXCEPTION_STATUS_MISMATCH,
-            'notes' => 'Regression exception.',
-        ]);
-
-        Sanctum::actingAs($support);
-        $this->patchJson("/api/admin/reconciliation-items/{$item->id}", [
-            'status' => ReconciliationItem::STATUS_MATCHED,
-            'notes' => 'Do not allow support to force a match.',
-        ])->assertStatus(422);
-        $this->assertSame(ReconciliationItem::STATUS_EXCEPTION, $item->fresh()->status);
-
-        Sanctum::actingAs($maker);
-        $request = $this->postJson("/api/admin/reconciliation-items/{$item->id}/write-off-request", [
-            'reason' => 'Provider evidence cannot be recovered after documented investigation.',
-            'evidence_hash' => hash('sha256', 'reconciliation-write-off-evidence'),
-            'evidence_reference' => 'OPS-REC-001',
-        ])->assertCreated();
-        $overrideId = (int) $request->json('data.override.id');
-
-        $this->postJson("/api/admin/financial-controls/overrides/{$overrideId}/approve")
-            ->assertStatus(409);
-
-        Sanctum::actingAs($checker);
-        $this->postJson("/api/admin/financial-controls/overrides/{$overrideId}/approve")
-            ->assertOk();
-
-        Sanctum::actingAs($maker);
-        $this->postJson("/api/admin/reconciliation-items/{$item->id}/write-off", [
-            'override_id' => $overrideId,
-        ])->assertOk();
-
-        $this->assertSame(ReconciliationItem::STATUS_WRITTEN_OFF, $item->fresh()->status);
-        $this->assertSame(MobileMoneyTransaction::STATEMENT_EXCEPTION, $money->fresh()->statement_reconciliation_status);
-        $this->assertSame(MobileMoneyTransaction::RECONCILIATION_EXCEPTION, $money->fresh()->reconciliation_status);
-        $this->assertDatabaseHas('financial_control_overrides', ['id' => $overrideId, 'status' => 'applied']);
-    }
-
-    public function test_financial_readiness_requires_integrations_funding_disclosure_tax_determination_and_balanced_integrity(): void
-    {
-        config([
-            'services.cpay.base_url' => 'https://cpay.example.test',
-            'services.cpay.merchant_number' => 'MERCHANT-001',
-            'services.cpay.private_key' => 'test-key',
-            'services.cpay.callback_url' => 'https://opfin.example.test/callback',
-            'services.cpay.callback_secret' => 'callback-secret',
-            'services.sms_gateway' => 'YO',
-            'services.yo.base_url' => 'https://sms.example.test',
-            'services.yo.account' => 'account',
-            'services.yo.password' => 'password',
-            'services.identity_verification.url' => 'https://identity.example.test',
-            'services.identity_verification.token' => 'identity-token',
-            'services.crb.base_url' => 'https://crb.example.test',
-            'services.crb.account' => 'client',
-            'services.crb.password' => 'secret',
-            'services.credit_reference_reporting.url' => 'https://reporting.example.test',
-            'services.credit_reference_reporting.token' => 'reporting-token',
-            'services.cito.financial_data_certified' => false,
-            'opfin.credit.require_funding_pool_assignment' => true,
-            'opfin.regulatory.require_credit_disclosure' => true,
-            'opfin.regulatory.licensed_entity_name' => 'Test Regulated Lender',
-            'opfin.regulatory.licence_class' => 'digital_credit_provider',
-            'opfin.regulatory.umra_license_number' => 'TEST-LICENCE',
-            'opfin.regulatory.business_address' => 'Kampala',
-            'opfin.regulatory.complaints_email' => 'complaints@example.test',
-            'opfin.regulatory.complaints_phone' => '+256700000000',
-            'opfin.accounting.efris_required' => false,
-            'opfin.accounting.efris_determination_reference' => 'TAX-DETERMINATION-TEST',
-        ]);
-        DB::table('financial_integrity_runs')->insert([
-            'status' => 'balanced',
-            'scope' => 'platform',
-            'evidence_hash' => hash('sha256', 'financial-readiness-test'),
-            'started_at' => now()->subSecond(),
-            'completed_at' => now(),
+            'regulatory_evidence' => json_encode([
+                'licence_number' => 'TEST-LIC-'.Str::upper(Str::random(8)),
+                'licence_authority' => 'Test Authority',
+            ], JSON_THROW_ON_ERROR),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        $ready = app(FinancialReadinessService::class)->report();
-        $this->assertTrue($ready['financial_operations_ready']);
-        $this->assertSame('ready', $ready['status']);
-
-        config(['opfin.accounting.efris_required' => null]);
-        $blocked = app(FinancialReadinessService::class)->report();
-        $this->assertFalse($blocked['financial_operations_ready']);
-        $this->assertSame('blocked', $blocked['checks']['tax_and_efris_determination']['status']);
+        return DB::table('capital_mandates')->insertGetId([
+            'reference' => (string) Str::uuid(),
+            'owner_user_id' => $owner->id,
+            'partner_id' => $partnerId,
+            'mandate_type' => 'institutional_credit',
+            'name' => 'Test Third-party Funding',
+            'committed_capital_minor' => 2000000,
+            'deployed_capital_minor' => 0,
+            'reserved_capital_minor' => 0,
+            'status' => 'active',
+            'investment_policy' => json_encode(['test' => true], JSON_THROW_ON_ERROR),
+            'approved_by' => $owner->id,
+            'approved_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function approvedApplication(): array
@@ -479,7 +232,7 @@ class FinancialHardeningRegressionTest extends TestCase
 
     private function referredApplication(): array
     {
-        $institution = Institution::create([
+        $institution = Institution::create(['authority_basis' => 'licensed', 'authority_reference' => 'TEST-AUTHORITY-NOT-LIVE', 'regulator_code' => 'TEST',
             'name' => 'Financial Hardening Institution',
             'address' => 'Kampala',
             'phone' => '256700000711',

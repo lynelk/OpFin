@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CreditDecision;
 use App\Models\CreditOffer;
 use App\Models\CreditRepaymentScheduleItem;
+use App\Models\CustomerWallet;
 use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\MobileMoneyTransaction;
@@ -26,16 +27,16 @@ class ProductionCreditOfferService
         private readonly CreditReferenceReportingService $creditReporting,
         private readonly TransactionReceiptService $receipts,
         private readonly FundingPoolService $fundingPools,
-        private readonly CreditProductAvailabilityService $productAvailability,
-        private readonly VerifiedWalletService $wallets,
-        private readonly RegulatoryActivationGuard $regulatoryGuard,
     ) {}
 
     public function createOffer(LoanApplication $application, User $actor, array $pricing): CreditOffer
     {
-        $this->regulatoryGuard->assertCreditDisclosuresReady();
-        $this->productAvailability->assertApplicationAvailable($application);
-        $application->loadMissing(['loanProductTerm', 'creditDecision']);
+        $application->loadMissing(['loanProduct.institution', 'institution', 'loanProductTerm', 'creditDecision']);
+        app(PlatformCreditRoutingService::class)->assertOrigination($application);
+        if ($actor->id !== $application->user_id) {
+            app(PlatformCreditRoutingService::class)->assertManager($actor, $application->institution);
+        }
+        $distributionSnapshot = app(AppStoreCreditPolicy::class)->validateOffer($application, $pricing);
         $decision = $application->creditDecision;
         if (! $decision || $decision->status !== CreditDecision::STATUS_APPROVED) {
             throw new InvalidArgumentException('An approved production credit decision is required before an offer can be generated.');
@@ -79,21 +80,20 @@ class ProductionCreditOfferService
             'phone' => config('opfin.regulatory.complaints_phone'),
             'url' => config('opfin.regulatory.complaints_url'),
         ];
-        $regulatedIdentity = [
-            'licensed_entity_name' => config('opfin.regulatory.licensed_entity_name'),
-            'trading_name' => config('opfin.regulatory.licensed_trading_name', 'OpFin'),
-            'umra_license_number' => config('opfin.regulatory.umra_license_number'),
-            'business_address' => config('opfin.regulatory.business_address'),
-        ];
+        $regulatedIdentity = $application->institution->lenderDisclosure();
         $expiresInMinutes = max(5, min((int) ($pricing['expires_in_minutes'] ?? 1440), 10080));
         $fundingPoolId = isset($pricing['funding_pool_id']) ? (int) $pricing['funding_pool_id'] : null;
+        if ($application->loanProduct->funding_pool_id !== null && $fundingPoolId !== (int) $application->loanProduct->funding_pool_id) {
+            throw new InvalidArgumentException('The offer must use the funding pool configured for this lender product.');
+        }
         $this->fundingPools->validateSelection($fundingPoolId, $principalMinor);
+        $this->fundingPools->validateLender($fundingPoolId, $application->loanProduct->institution);
 
         return DB::transaction(function () use (
             $application, $actor, $decision, $term, $principalMinor, $interestMinor, $feesMinor,
             $accessFeeMinor, $disbursementFeeMinor, $netDisbursementMinor, $totalRepaymentMinor,
             $durationDays, $ratePercent, $feeTreatment, $expiresInMinutes, $quote, $fundingPoolId,
-            $totalCostOfCreditMinor, $defaultInterestRate, $defaultInterestCapMinor, $defaultInterestRules, $complaintsProcedure, $regulatedIdentity,
+            $totalCostOfCreditMinor, $defaultInterestRate, $defaultInterestCapMinor, $defaultInterestRules, $complaintsProcedure, $regulatedIdentity, $distributionSnapshot,
         ) {
             CreditOffer::query()->where('loan_application_id', $application->id)
                 ->where('status', CreditOffer::STATUS_OFFERED)->where('expires_at', '<=', now())
@@ -118,7 +118,7 @@ class ProductionCreditOfferService
                 'offer_reference' => 'OPF-OFR-'.Str::upper(Str::random(16)),
                 'version' => $version,
                 'status' => CreditOffer::STATUS_OFFERED,
-                'currency' => (string) config('services.mobile_money.currency', 'UGX'),
+                'currency' => (string) $application->loanProduct->currency,
                 'principal_amount_minor' => $principalMinor,
                 'interest_amount_minor' => $interestMinor,
                 'fees_minor' => $feesMinor,
@@ -132,6 +132,7 @@ class ProductionCreditOfferService
                 'fee_treatment' => $feeTreatment,
                 'policy_version' => (string) $decision->policy_version,
                 'pricing_snapshot' => [
+                    ...$distributionSnapshot,
                     'algorithm_version' => $quote['algorithm_version'],
                     'product_term_id' => $term->id,
                     'funding_pool_id' => $fundingPoolId,
@@ -152,7 +153,10 @@ class ProductionCreditOfferService
                     'default_interest_rules' => $defaultInterestRules,
                 ],
                 'disclosure_snapshot' => [
-                    'currency' => (string) config('services.mobile_money.currency', 'UGX'),
+                    ...$distributionSnapshot,
+                    'lender_of_record' => $regulatedIdentity,
+                    'opfin_role' => 'infrastructure_and_orchestration',
+                    'currency' => (string) $application->loanProduct->currency,
                     'principal_amount_minor' => $principalMinor,
                     'interest_amount_minor' => $interestMinor,
                     'fees_minor' => $feesMinor,
@@ -196,7 +200,8 @@ class ProductionCreditOfferService
                     'regulated_provider' => $regulatedIdentity,
                     'variation_control' => [
                         'accepted_offer_is_immutable' => true,
-                        'interest_rate_change_requires_umra_approval' => true,
+                        'interest_rate_change_requires_regulatory_approval' => $term->requiresRateApproval(),
+                        'regulator' => $application->institution->regulator_code,
                         'customer_consent_required_for_credit_term_variation' => true,
                     ],
                     'credit_information_reporting' => [
@@ -224,11 +229,6 @@ class ProductionCreditOfferService
 
     public function acceptOffer(CreditOffer $offer, User $user, array $acceptanceMetadata = []): array
     {
-        $walletId = isset($acceptanceMetadata['wallet_id']) ? (int) $acceptanceMetadata['wallet_id'] : null;
-        $disbursementTarget = $this->wallets->forDisbursement($user, $walletId);
-        $wallet = $disbursementTarget['wallet'];
-        $disbursementPhone = $disbursementTarget['phone'];
-
         $offer = DB::transaction(function () use ($offer, $user, $acceptanceMetadata) {
             $locked = CreditOffer::query()->lockForUpdate()->findOrFail($offer->id);
             if ($locked->user_id !== $user->id) {
@@ -240,11 +240,23 @@ class ProductionCreditOfferService
             if ($locked->status !== CreditOffer::STATUS_OFFERED) {
                 throw new InvalidArgumentException('This offer is no longer available for acceptance.');
             }
-            $this->productAvailability->assertApplicationAvailable(LoanApplication::query()->findOrFail($locked->loan_application_id));
             if ($locked->expires_at->isPast()) {
                 $locked->update(['status' => CreditOffer::STATUS_EXPIRED]);
                 throw new InvalidArgumentException('This offer has expired.');
             }
+            // Re-evaluate publication and deployment before a new commitment. Existing
+            // pending/disbursed acceptance replays above keep their original semantics.
+            app(PlatformCreditRoutingService::class)->assertOrigination($locked->application);
+            $acceptedTerm = clone $locked->application->loanProductTerm;
+            $acceptedTerm->duration = $locked->duration_days;
+            if (! isset($locked->disclosure_snapshot['equivalent_apr_percent'])) {
+                throw new InvalidArgumentException('Regenerate this offer with its complete APR disclosure before acceptance.');
+            }
+            app(CreditDistributionService::class)->requireAvailable(
+                $locked->application->loanProduct, $acceptedTerm,
+                $locked->application->distribution_channel ?? 'web',
+                (float) ($locked->disclosure_snapshot['equivalent_apr_percent'] ?? 0),
+            );
             $locked = $this->fundingPools->reserve($locked);
             $locked->update(['status' => CreditOffer::STATUS_DISBURSEMENT_PENDING, 'accepted_at' => now(), 'acceptance_metadata' => $acceptanceMetadata]);
             $locked->application()->update(['status' => 'Accepted']);
@@ -256,6 +268,22 @@ class ProductionCreditOfferService
             return $locked->fresh();
         });
 
+        $walletId = isset($acceptanceMetadata['wallet_id']) ? (int) $acceptanceMetadata['wallet_id'] : null;
+        $walletQuery = CustomerWallet::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->whereNotNull('verified_at');
+
+        $wallet = $walletId
+            ? (clone $walletQuery)->whereKey($walletId)->first()
+            : (clone $walletQuery)->where('is_default_disbursement', true)->first();
+
+        if ($walletId && ! $wallet) {
+            throw new InvalidArgumentException('Choose a verified wallet that belongs to your OpFin profile.');
+        }
+
+        $wallet ??= (clone $walletQuery)->orderByDesc('is_default_disbursement')->first();
+        $disbursementPhone = $wallet?->msisdn ?? $user->phone;
 
         $existing = MobileMoneyTransaction::query()->where('credit_offer_id', $offer->id)
             ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)->latest()->first();
@@ -373,10 +401,10 @@ class ProductionCreditOfferService
             $offer->update(['status' => CreditOffer::STATUS_DISBURSED]);
             $application->update(['status' => 'Disbursed', 'disbursed_at' => $disbursedAt]);
             $lockedTransaction->update([
-                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
-                    'accounting_posted_at' => now(),
-                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
-                ]);
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                'accounting_posted_at' => now(),
+                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+            ]);
 
             $this->auditLogger->record('credit.disbursement.fulfilled', null, $loan, [
                 'offer_reference' => $offer->offer_reference,
@@ -460,10 +488,10 @@ class ProductionCreditOfferService
             $loan->update(['status' => 'Reversed']);
             LoanApplication::query()->whereKey($offer->loan_application_id)->update(['status' => 'Disbursement Reversed']);
             $lockedTransaction->update([
-                    'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
-                    'accounting_posted_at' => now(),
-                    'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
-                ]);
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                'accounting_posted_at' => now(),
+                'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_PENDING,
+            ]);
 
             $this->auditLogger->record('credit.disbursement.reversed', null, $loan, [
                 'credit_offer_id' => $offer->id,
@@ -513,5 +541,4 @@ class ProductionCreditOfferService
             ]);
         }
     }
-
 }

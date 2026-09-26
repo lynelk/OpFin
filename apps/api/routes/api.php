@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\AdminEssentialsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CapabilityController;
 use App\Http\Controllers\Api\CpayWebhookController;
@@ -9,26 +10,31 @@ use App\Http\Controllers\Api\CustomerPhoneController;
 use App\Http\Controllers\Api\CustomerSupportController;
 use App\Http\Controllers\Api\CustomerWalletController;
 use App\Http\Controllers\Api\EarlySettlementController;
+use App\Http\Controllers\Api\EssentialsController;
 use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\FinancialSpaceController;
 use App\Http\Controllers\Api\FinancialSpaceCredentialController;
 use App\Http\Controllers\Api\FinancialSpaceStatementController;
 use App\Http\Controllers\Api\FinancialWellbeingController;
+use App\Http\Controllers\Api\FinancingController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\GuarantorController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\InclusiveFinanceController;
 use App\Http\Controllers\Api\InclusiveImpactController;
 use App\Http\Controllers\Api\InvestorDemoController;
+use App\Http\Controllers\Api\LendingPlatformController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
 use App\Http\Controllers\Api\LocationContextController;
+use App\Http\Controllers\Api\LongRangeGovernanceController;
+use App\Http\Controllers\Api\LongRangePlatformController;
 use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\OrganisationJourneyController;
+use App\Http\Controllers\Api\PartnerEssentialsController;
 use App\Http\Controllers\Api\PartnerReportingController;
 use App\Http\Controllers\Api\PlatformCommerceController;
-use App\Http\Controllers\Api\ProgrammeCompletionController;
 use App\Http\Controllers\Api\ProductionConsentController;
 use App\Http\Controllers\Api\ProductionCreditController;
 use App\Http\Controllers\Api\ProductionCreditOfferController;
@@ -38,6 +44,7 @@ use App\Http\Controllers\Api\ProductionOperationsController;
 use App\Http\Controllers\Api\ProductionPaymentOperationsController;
 use App\Http\Controllers\Api\ProductionReconciliationController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\ProgrammeCompletionController;
 use App\Http\Controllers\Api\ProtectionController;
 use App\Http\Controllers\Api\ReceiptController;
 use App\Http\Controllers\Api\SaveProtectionOperationsController;
@@ -131,6 +138,26 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/credit/profile/refresh', [CustomerCreditProfileController::class, 'refresh']);
     Route::get('/credit/options', [CustomerCreditProfileController::class, 'options']);
     Route::patch('/accessibility-preferences', [CustomerCreditProfileController::class, 'accessibility']);
+
+    Route::get('/financial-intents', [FinancingController::class, 'intents']);
+    Route::post('/financial-intents', [FinancingController::class, 'createIntent']);
+    Route::post('/product-matches', [FinancingController::class, 'matches']);
+    Route::post('/financing-applications', [FinancingController::class, 'apply']);
+
+    Route::get('/essentials', [EssentialsController::class, 'summary']);
+    Route::get('/essentials/catalogue', [EssentialsController::class, 'catalogue']);
+    Route::get('/essentials/partner-authorisations', [EssentialsController::class, 'partnerAuthorisations']);
+    Route::post('/essentials/partner-authorisations', [EssentialsController::class, 'authorisePartnerPlatform']);
+    Route::delete('/essentials/partner-authorisations/{authorisation}', [EssentialsController::class, 'revokePartnerPlatform']);
+    Route::post('/essentials/accounts', [EssentialsController::class, 'storeAccount']);
+    Route::post('/essentials/accounts/{account}/verify', [EssentialsController::class, 'verifyAccount']);
+    Route::post('/essentials/eligibility', [EssentialsController::class, 'eligibility']);
+    Route::get('/essentials/quotes', [EssentialsController::class, 'quotes']);
+    Route::post('/essentials/quotes', [EssentialsController::class, 'createQuote']);
+    Route::post('/essentials/quotes/{quote}/authorise-partner', [EssentialsController::class, 'authorisePartner']);
+    Route::post('/essentials/quotes/{quote}/accept', [EssentialsController::class, 'accept']);
+    Route::get('/essentials/advances', [EssentialsController::class, 'advances']);
+    Route::post('/essentials/advances/{advance}/repay', [EssentialsController::class, 'repay']);
 
     Route::get('/inclusive-finance/profile', [InclusiveFinanceController::class, 'profile']);
     Route::patch('/inclusive-finance/profile', [InclusiveFinanceController::class, 'updateProfile']);
@@ -249,6 +276,14 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::get('/admin/lending-platform', [LendingPlatformController::class, 'index']);
+    Route::post('/admin/lending-platform/institutions', [LendingPlatformController::class, 'institution']);
+    Route::post('/admin/lending-platform/products', [LendingPlatformController::class, 'product']);
+    Route::post('/admin/lending-platform/products/{product}/terms', [LendingPlatformController::class, 'term']);
+    Route::post('/admin/lending-platform/strategy', [LendingPlatformController::class, 'strategy']);
+    Route::post('/admin/lending-platform/distribution', [LendingPlatformController::class, 'distribution']);
+    Route::patch('/admin/lending-platform/access/{user}', [LendingPlatformController::class, 'delegate']);
+
     Route::get('/admin/location-insights', [LocationContextController::class, 'insights']);
     Route::patch('/admin/financial-space-credentials/{credential}/verification', [FinancialSpaceCredentialController::class, 'verify']);
     Route::post('/admin/hardship/{case}/approve', [V5P0PlatformController::class, 'approveHardship']);
@@ -263,6 +298,8 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/workflow-runs/{run}/transition', [V5P0PlatformController::class, 'transitionWorkflow']);
 
     Route::post('/admin/credit-decisions/{decision}/approve', [ProductionCreditController::class, 'approve']);
+    Route::post('/admin/capital-mandates', [LongRangePlatformController::class, 'capital']);
+    Route::post('/admin/capital-mandates/{id}/review', [LongRangeGovernanceController::class, 'capital']);
 
     Route::get('/admin/inclusive-finance/programmes', [InclusiveFinanceController::class, 'adminProgrammes']);
     Route::get('/admin/inclusive-finance/impact', [InclusiveFinanceController::class, 'adminImpact']);
@@ -319,8 +356,6 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/umra/loans/{loan}/default-interest', [UmraComplianceController::class, 'accrueDefaultInterest']);
     Route::patch('/admin/umra/loans/{loan}/npl-enforcement', [UmraComplianceController::class, 'setNplEnforcement']);
     Route::post('/admin/financial-controls/loans/{loan}/overrides', [FinancialControlController::class, 'requestLoanOverride']);
-    Route::post('/admin/reconciliation-items/{item}/write-off-request', [FinancialControlController::class, 'requestReconciliationWriteOff']);
-    Route::post('/admin/reconciliation-items/{item}/write-off', [FinancialControlController::class, 'applyReconciliationWriteOff']);
     Route::post('/admin/financial-controls/overrides/{override}/approve', [FinancialControlController::class, 'approve']);
     Route::get('/admin/umra/term-changes', [UmraComplianceController::class, 'termChanges']);
     Route::post('/admin/umra/product-terms/{term}/changes', [UmraComplianceController::class, 'termChange']);
@@ -348,6 +383,25 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/protection-premiums/{payment}/confirm', [SaveProtectionOperationsController::class, 'confirmPremium']);
     Route::post('/admin/protection-policies/{policy}/issue', [SaveProtectionOperationsController::class, 'issuePolicy']);
     Route::patch('/admin/protection-claims/{claim}', [SaveProtectionOperationsController::class, 'updateClaim']);
+});
+
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:partner_api,platform_admin,operations'])->group(function () {
+    Route::post('/partner/essentials/customers/{customer}/eligibility', [PartnerEssentialsController::class, 'eligibility']);
+    Route::post('/partner/essentials/customers/{customer}/accounts', [PartnerEssentialsController::class, 'storeAccount']);
+    Route::post('/partner/essentials/customers/{customer}/quotes', [PartnerEssentialsController::class, 'createQuote']);
+    Route::get('/partner/essentials/customers/{customer}/status', [PartnerEssentialsController::class, 'status']);
+    Route::post('/partner/essentials/quotes/{quote}/complete', [PartnerEssentialsController::class, 'complete']);
+});
+
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::get('/admin/essentials/portfolio', [AdminEssentialsController::class, 'portfolio']);
+    Route::get('/admin/essentials/work-queue', [AdminEssentialsController::class, 'workQueue']);
+    Route::post('/admin/essentials/billers', [AdminEssentialsController::class, 'storeBiller']);
+    Route::patch('/admin/essentials/billers/{biller}', [AdminEssentialsController::class, 'updateBiller']);
+    Route::post('/admin/essentials/accounts/{account}/verify', [AdminEssentialsController::class, 'verifyAccount']);
+    Route::post('/admin/essentials/lenders', [AdminEssentialsController::class, 'storeLender']);
+    Route::post('/admin/essentials/advances/{advance}/reconcile', [AdminEssentialsController::class, 'reconcile']);
+    Route::post('/admin/essentials/repayments/{repayment}/reconcile', [AdminEssentialsController::class, 'reconcileRepayment']);
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:programme_partner'])->group(function () {
