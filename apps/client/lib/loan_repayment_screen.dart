@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/credit_profile_api.dart';
@@ -76,7 +77,7 @@ class _LoanRepaymentScreenState extends State<LoanRepaymentScreen> {
 
     try {
       final token = await UserSession.getAccessToken();
-      final response = await http.post(
+      final response = await OpFinHttp.post(
         Uri.parse('$apiUrl/loans/${widget.loanId}/repay'),
         headers: {
           'Authorization': 'Bearer $token',
