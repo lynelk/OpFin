@@ -145,8 +145,8 @@ class OpFinMeteredClient extends http.BaseClient {
 class OpFinHttp {
   static final http.Client _inner = http.Client();
 
-  static OpFinMeteredClient _client(String feature) => OpFinMeteredClient(
-        feature: feature,
+  static OpFinMeteredClient _client(String? feature, Uri uri) => OpFinMeteredClient(
+        feature: feature ?? _featureFromUri(uri),
         inner: _inner,
         closeInner: false,
       );
@@ -154,10 +154,10 @@ class OpFinHttp {
   static Future<http.Response> get(
     Uri url, {
     Map<String, String>? headers,
-    required String feature,
+    String? feature,
     String? operation,
   }) =>
-      _client(feature).get(
+      _client(feature, url).get(
         url,
         headers: _headers(headers, operation),
       );
@@ -167,10 +167,10 @@ class OpFinHttp {
     Map<String, String>? headers,
     Object? body,
     Encoding? encoding,
-    required String feature,
+    String? feature,
     String? operation,
   }) =>
-      _client(feature).post(
+      _client(feature, url).post(
         url,
         headers: _headers(headers, operation),
         body: body,
@@ -182,10 +182,10 @@ class OpFinHttp {
     Map<String, String>? headers,
     Object? body,
     Encoding? encoding,
-    required String feature,
+    String? feature,
     String? operation,
   }) =>
-      _client(feature).put(
+      _client(feature, url).put(
         url,
         headers: _headers(headers, operation),
         body: body,
@@ -197,10 +197,10 @@ class OpFinHttp {
     Map<String, String>? headers,
     Object? body,
     Encoding? encoding,
-    required String feature,
+    String? feature,
     String? operation,
   }) =>
-      _client(feature).patch(
+      _client(feature, url).patch(
         url,
         headers: _headers(headers, operation),
         body: body,
@@ -212,10 +212,10 @@ class OpFinHttp {
     Map<String, String>? headers,
     Object? body,
     Encoding? encoding,
-    required String feature,
+    String? feature,
     String? operation,
   }) =>
-      _client(feature).delete(
+      _client(feature, url).delete(
         url,
         headers: _headers(headers, operation),
         body: body,
@@ -224,13 +224,25 @@ class OpFinHttp {
 
   static Future<http.StreamedResponse> send(
     http.BaseRequest request, {
-    required String feature,
+    String? feature,
     String? operation,
   }) {
     if (operation != null && operation.isNotEmpty) {
       request.headers['X-OpFin-Operation'] = operation;
     }
-    return _client(feature).send(request);
+    return _client(feature, request.url).send(request);
+  }
+
+  static String _featureFromUri(Uri uri) {
+    final segments = uri.pathSegments
+        .where((segment) => segment.isNotEmpty && segment.toLowerCase() != 'api')
+        .toList();
+    if (segments.isEmpty) return 'core';
+    final first = segments.first.toLowerCase().replaceAll(
+          RegExp(r'[^a-z0-9_.-]+'),
+          '_',
+        );
+    return first.isEmpty ? 'core' : first;
   }
 
   static Map<String, String>? _headers(
