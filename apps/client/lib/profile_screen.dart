@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/accessibility_screen.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/kyc_setup_screen.dart';
@@ -20,7 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen>{
   @override void initState(){super.initState();_data=_load();}
   Future<Map<String,dynamic>> _load() async{
     final token=await UserSession.getAccessToken();
-    final profile=await http.get(Uri.parse('$apiUrl/profile'),headers:{
+    final profile=await OpFinHttp.get(Uri.parse('$apiUrl/profile'),headers:{
       'Authorization':'Bearer $token','Accept':'application/json'});
     final body=jsonDecode(profile.body) as Map<String,dynamic>;
     if(profile.statusCode!=200||body['success']!=true)throw Exception(body['message']??'Unable to load profile.');
@@ -34,7 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen>{
   Future<void> _logout() async{
     try{
       final token=await UserSession.getAccessToken();
-      await http.post(Uri.parse('$apiUrl/logout'),headers:{
+      await OpFinHttp.post(Uri.parse('$apiUrl/logout'),headers:{
         'Authorization':'Bearer $token','Accept':'application/json'});
     }catch(_){}
     await UserSession.clear();
