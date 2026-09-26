@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\CreditDecision;
 use App\Models\CreditOffer;
 use App\Models\CreditRepaymentScheduleItem;
-use App\Models\CustomerWallet;
 use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\MobileMoneyTransaction;
@@ -27,11 +26,16 @@ class ProductionCreditOfferService
         private readonly CreditReferenceReportingService $creditReporting,
         private readonly TransactionReceiptService $receipts,
         private readonly FundingPoolService $fundingPools,
+        private readonly CreditProductAvailabilityService $productAvailability,
+        private readonly VerifiedWalletService $wallets,
+        private readonly RegulatoryActivationGuard $regulatoryGuard,
     ) {}
 
     public function createOffer(LoanApplication $application, User $actor, array $pricing): CreditOffer
     {
         $application->loadMissing(['loanProduct.institution', 'institution', 'loanProductTerm', 'creditDecision']);
+        $this->productAvailability->assertApplicationAvailable($application);
+        $this->regulatoryGuard->assertCreditDisclosuresReady($application->institution);
         app(PlatformCreditRoutingService::class)->assertOrigination($application);
         if ($actor->id !== $application->user_id) {
             app(PlatformCreditRoutingService::class)->assertManager($actor, $application->institution);
@@ -229,8 +233,30 @@ class ProductionCreditOfferService
 
     public function acceptOffer(CreditOffer $offer, User $user, array $acceptanceMetadata = []): array
     {
+        $preflight = CreditOffer::query()
+            ->with(['application.loanProduct.institution', 'application.loanProductTerm', 'application.institution'])
+            ->findOrFail($offer->id);
+
+        if ((int) $preflight->user_id !== (int) $user->id) {
+            throw new InvalidArgumentException('This offer does not belong to the authenticated customer.');
+        }
+
+        $walletId = isset($acceptanceMetadata['wallet_id']) ? (int) $acceptanceMetadata['wallet_id'] : null;
+        if ($preflight->status === CreditOffer::STATUS_OFFERED) {
+            $this->productAvailability->assertApplicationAvailable($preflight->application);
+            $this->regulatoryGuard->assertCreditDisclosuresReady($preflight->application->institution);
+            $target = $this->wallets->forDisbursement($user, $walletId);
+            $acceptanceMetadata = array_merge($acceptanceMetadata, [
+                'resolved_wallet_id' => $target['wallet']?->id,
+                'resolved_disbursement_phone' => $target['phone'],
+            ]);
+        }
+
         $offer = DB::transaction(function () use ($offer, $user, $acceptanceMetadata) {
-            $locked = CreditOffer::query()->lockForUpdate()->findOrFail($offer->id);
+            $locked = CreditOffer::query()
+                ->with(['application.loanProduct.institution', 'application.loanProductTerm', 'application.institution'])
+                ->lockForUpdate()
+                ->findOrFail($offer->id);
             if ($locked->user_id !== $user->id) {
                 throw new InvalidArgumentException('This offer does not belong to the authenticated customer.');
             }
@@ -240,6 +266,10 @@ class ProductionCreditOfferService
             if ($locked->status !== CreditOffer::STATUS_OFFERED) {
                 throw new InvalidArgumentException('This offer is no longer available for acceptance.');
             }
+
+            $this->productAvailability->assertApplicationAvailable($locked->application);
+            $this->regulatoryGuard->assertCreditDisclosuresReady($locked->application->institution);
+
             if ($locked->expires_at->isPast()) {
                 $locked->update(['status' => CreditOffer::STATUS_EXPIRED]);
                 throw new InvalidArgumentException('This offer has expired.');
@@ -258,32 +288,30 @@ class ProductionCreditOfferService
                 (float) ($locked->disclosure_snapshot['equivalent_apr_percent'] ?? 0),
             );
             $locked = $this->fundingPools->reserve($locked);
-            $locked->update(['status' => CreditOffer::STATUS_DISBURSEMENT_PENDING, 'accepted_at' => now(), 'acceptance_metadata' => $acceptanceMetadata]);
+            $locked->update([
+                'status' => CreditOffer::STATUS_DISBURSEMENT_PENDING,
+                'accepted_at' => now(),
+                'acceptance_metadata' => $acceptanceMetadata,
+            ]);
             $locked->application()->update(['status' => 'Accepted']);
             $this->auditLogger->record('credit.offer.accepted', $user, $locked, [
                 'offer_reference' => $locked->offer_reference,
                 'disclosed_total_repayment_minor' => $locked->total_repayment_minor,
+                'resolved_wallet_id' => $acceptanceMetadata['resolved_wallet_id'] ?? null,
             ]);
 
             return $locked->fresh();
         });
 
-        $walletId = isset($acceptanceMetadata['wallet_id']) ? (int) $acceptanceMetadata['wallet_id'] : null;
-        $walletQuery = CustomerWallet::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'active')
-            ->whereNotNull('verified_at');
-
-        $wallet = $walletId
-            ? (clone $walletQuery)->whereKey($walletId)->first()
-            : (clone $walletQuery)->where('is_default_disbursement', true)->first();
-
-        if ($walletId && ! $wallet) {
-            throw new InvalidArgumentException('Choose a verified wallet that belongs to your OpFin profile.');
+        $storedAcceptance = is_array($offer->acceptance_metadata) ? $offer->acceptance_metadata : [];
+        $resolvedWalletId = isset($storedAcceptance['resolved_wallet_id'])
+            ? (int) $storedAcceptance['resolved_wallet_id']
+            : $walletId;
+        $disbursementPhone = trim((string) ($storedAcceptance['resolved_disbursement_phone'] ?? ''));
+        if ($disbursementPhone === '') {
+            $target = $this->wallets->forDisbursement($user, $resolvedWalletId ?: null);
+            $disbursementPhone = $target['phone'];
         }
-
-        $wallet ??= (clone $walletQuery)->orderByDesc('is_default_disbursement')->first();
-        $disbursementPhone = $wallet?->msisdn ?? $user->phone;
 
         $existing = MobileMoneyTransaction::query()->where('credit_offer_id', $offer->id)
             ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)->latest()->first();
@@ -302,6 +330,29 @@ class ProductionCreditOfferService
                 'purpose' => 'credit_offer_disbursement',
             ]);
         } catch (\Throwable $exception) {
+            $movement = MobileMoneyTransaction::query()
+                ->where('credit_offer_id', $offer->id)
+                ->where('direction', MobileMoneyTransaction::DIRECTION_DISBURSEMENT)
+                ->latest('id')
+                ->first();
+
+            $providerOutcomeUnresolved = $movement
+                && in_array((string) $movement->provider_submission_state, [
+                    'intent_persisted',
+                    'submission_started',
+                    'ambiguous',
+                    'provider_response_received',
+                    'legacy_unknown',
+                ], true)
+                && $movement->status !== MobileMoneyTransaction::STATUS_FAILED;
+
+            if ($providerOutcomeUnresolved) {
+                CreditOffer::query()->whereKey($offer->id)->update([
+                    'status' => CreditOffer::STATUS_DISBURSEMENT_PENDING,
+                ]);
+                throw $exception;
+            }
+
             $this->fundingPools->release($offer);
             CreditOffer::query()->whereKey($offer->id)->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
             throw $exception;
