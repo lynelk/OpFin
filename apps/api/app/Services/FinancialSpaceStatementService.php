@@ -98,7 +98,16 @@ class FinancialSpaceStatementService
                     && $existing->direction === $data['direction']
                     && (int) $existing->amount_minor === (int) $data['amount_minor']
                     && strtoupper((string) $existing->currency) === strtoupper((string) $lockedAccount->currency)
-                    && $existing->transaction_date?->toDateString() === CarbonImmutable::parse($data['transaction_date'])->toDateString();
+                    && $existing->transaction_date?->toDateString() === CarbonImmutable::parse($data['transaction_date'])->toDateString()
+                    && ($existing->value_date?->toDateString() ?? null) === (
+                        isset($data['value_date']) && $data['value_date'] !== null && $data['value_date'] !== ''
+                            ? CarbonImmutable::parse($data['value_date'])->toDateString()
+                            : null
+                    )
+                    && trim((string) ($existing->transaction_reference ?? '')) === trim((string) ($data['transaction_reference'] ?? ''))
+                    && trim((string) ($existing->transaction_type ?? 'other')) === trim((string) ($data['transaction_type'] ?? 'other'))
+                    && trim((string) ($existing->description ?? '')) === trim((string) ($data['description'] ?? ''))
+                    && trim((string) ($existing->counterparty_name ?? '')) === trim((string) ($data['counterparty_name'] ?? ''));
 
                 if (! $sameInstruction) {
                     throw new InvalidArgumentException(
