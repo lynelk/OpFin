@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\FinancialSpaceController;
 use App\Http\Controllers\Api\FinancialSpaceCredentialController;
 use App\Http\Controllers\Api\FinancialSpaceStatementController;
 use App\Http\Controllers\Api\FinancialWellbeingController;
+use App\Http\Controllers\Api\FinancingController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\GuarantorController;
 use App\Http\Controllers\Api\HealthController;
@@ -135,6 +136,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/credit/profile/refresh', [CustomerCreditProfileController::class, 'refresh']);
     Route::get('/credit/options', [CustomerCreditProfileController::class, 'options']);
     Route::patch('/accessibility-preferences', [CustomerCreditProfileController::class, 'accessibility']);
+
+    Route::get('/financial-intents', [FinancingController::class, 'intents']);
+    Route::post('/financial-intents', [FinancingController::class, 'createIntent']);
+    Route::post('/product-matches', [FinancingController::class, 'matches']);
+    Route::post('/financing-applications', [FinancingController::class, 'apply']);
 
     Route::get('/essentials', [EssentialsController::class, 'summary']);
     Route::get('/essentials/catalogue', [EssentialsController::class, 'catalogue']);

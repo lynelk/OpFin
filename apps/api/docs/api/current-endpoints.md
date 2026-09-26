@@ -119,6 +119,23 @@ The running catalogue reads registered routes and checked-in guides. `api:catalo
 
 Source discovery is not automatic semantic completion or proof that production equals remote main. Update fields, examples, permissions, errors, financial recovery and training tasks with the implementation. Historical evidence keeps its original date; unresolved financial and security requirements remain separate.
 
+
+## Integrated financing foundation
+
+Authenticated customer endpoints:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/financial-intents` | List the authenticated customer's financial intents |
+| POST | `/api/financial-intents` | Create a need-led financial intent within an authorised Financial Space |
+| POST | `/api/product-matches` | Return only activated products compatible with the intent's financial-principles preference |
+| POST | `/api/financing-applications` | Apply for a matched, activated FinancialProduct version |
+
+`principles_preference` accepts `ALL_SUITABLE`, `SHARIA_ONLY` or `CONVENTIONAL_ONLY`. It is a product preference and must not be interpreted or stored as the customer's religion.
+
+Product matching fails closed: a product must be `live`, have an approved/effective Legal Product Passport, and an Islamic product must additionally have an approved, unexpired Sharia approval. These endpoints establish the compatibility layer; existing `/api/credit/**` and Essentials endpoints remain operational during migration.
+
+
 ## Financial Intelligence candidate (26 September 2026)
 
 Read the [Financial Intelligence contract](FINANCIAL_INTELLIGENCE_CONTRACT.md), [source-scope register](../../../../docs/product/FINANCIAL_INTELLIGENCE.md) and [acceptance runbook](../../../../docs/operations/FINANCIAL_INTELLIGENCE_RUNBOOK.md). These are disabled-by-default candidate routes, not a completed or deployed product. Existing domain and Developer Centre contracts above remain in force.
