@@ -70,6 +70,13 @@ class LoanApplicationController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
+        if (! (bool) config('opfin.credit.legacy_manual_application_status_enabled', false)) {
+            return ApiResponse::error(
+                'Legacy manual loan-application status mutation is retired. Use governed decision, offer and provider-finality workflows.',
+                410
+            );
+        }
+
         if (! $this->canManageLoans($request)) {
             return ApiResponse::error('Unauthorized.', 403);
         }
@@ -131,7 +138,7 @@ class LoanApplicationController extends Controller
     {
         try {
             $user = Auth::user();
-            $products = LoanProduct::with('institution')->where(function ($query) use ($user) {
+            $products = LoanProduct::with('institution')->where('status', 'Active')->where(function ($query) use ($user) {
                 $query->where('institution_id', $user->institution_id)
                     ->orWhere('institution_id', null);
             })->get();
@@ -145,7 +152,7 @@ class LoanApplicationController extends Controller
     public function getProductTerms($id, Request $request)
     {
         $data = $request->validate(['distribution_channel' => ['nullable', Rule::in(app(CreditDistributionService::class)->channels())]]);
-        $product = LoanProduct::findOrFail($id);
+        $product = LoanProduct::where('status', 'Active')->findOrFail($id);
         $allowed = app(PlatformCreditRoutingService::class)->options($data['distribution_channel'] ?? 'play_store', $product->country)
             ->filter(fn ($row) => $row['product']->id === $product->id)->pluck('term.id');
         $terms = LoanProductTerm::with('product.institution')->whereIn('id', $allowed)->get();
