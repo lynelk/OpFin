@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/constants.dart';
@@ -19,9 +20,27 @@ class _KycSetupScreenState extends State<KycSetupScreen> {
   XFile? _front,_back,_selfie;
   bool _consent=false,_loading=false;
 
-  Future<XFile?> _camera({bool selfie=false})=>_picker.pickImage(
-    source:ImageSource.camera,imageQuality:88,
-    preferredCameraDevice:selfie?CameraDevice.front:CameraDevice.rear);
+  static const int _maxPhotoBytes = 512 * 1024;
+  static const int _maxKycUploadBytes = 1536 * 1024;
+
+  Future<XFile?> _camera({bool selfie=false}) async {
+    final image = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 68,
+      maxWidth: 1440,
+      maxHeight: 1440,
+      preferredCameraDevice:
+          selfie ? CameraDevice.front : CameraDevice.rear,
+    );
+    if (image == null) return null;
+    if (await image.length() > _maxPhotoBytes) {
+      _message(
+        'That photo is too large for a low-data upload. Retake it in good light and keep only the ID and face in frame.',
+      );
+      return null;
+    }
+    return image;
+  }
 
   Future<Map<String,String>> _headers() async {
     final token=await UserSession.getAccessToken();
@@ -41,7 +60,7 @@ class _KycSetupScreenState extends State<KycSetupScreen> {
     setState(()=>_loading=true);
     try{
       final token=await UserSession.getAccessToken();
-      final consent=await http.post(Uri.parse('$apiUrl/consents'),headers:{
+      final consent=await OpFinHttp.post(Uri.parse('$apiUrl/consents'),headers:{
         'Authorization':'Bearer $token','Accept':'application/json',
         'Content-Type':'application/json',
       },body:jsonEncode({
@@ -52,6 +71,14 @@ class _KycSetupScreenState extends State<KycSetupScreen> {
       if(consent.statusCode<200||consent.statusCode>=300||consentBody['success']!=true){
         throw Exception(consentBody['message']?.toString()??'Unable to record consent.');
       }
+      final photoBytes =
+          await _front!.length() + await _back!.length() + await _selfie!.length();
+      if (photoBytes > _maxKycUploadBytes) {
+        throw Exception(
+          'The three identity photos exceed the 1.5 MB mobile-data budget. Retake the largest photo.',
+        );
+      }
+
       final request=http.MultipartRequest('POST',Uri.parse('$apiUrl/kyc/cases'));
       request.headers.addAll(await _headers());
       request.fields['national_id']=nin;
@@ -59,7 +86,7 @@ class _KycSetupScreenState extends State<KycSetupScreen> {
       request.files.add(await http.MultipartFile.fromPath('national_id_front',_front!.path));
       request.files.add(await http.MultipartFile.fromPath('national_id_back',_back!.path));
       request.files.add(await http.MultipartFile.fromPath('selfie_with_id',_selfie!.path));
-      final response=await http.Response.fromStream(await request.send());
+      final response=await http.Response.fromStream(await OpFinHttp.send(request, feature: 'kyc', operation: 'kyc_evidence_upload'));
       final decoded=jsonDecode(response.body) as Map<String,dynamic>;
       if(response.statusCode<200||response.statusCode>=300||decoded['success']!=true){
         throw Exception(decoded['message']?.toString()??'Unable to verify identity.');
@@ -77,7 +104,7 @@ class _KycSetupScreenState extends State<KycSetupScreen> {
 
   Future<void> _requestAssistance() async {
     final token = await UserSession.getAccessToken();
-    final response = await http.post(
+    final response = await OpFinHttp.post(
       Uri.parse('$apiUrl/support-cases'),
       headers: {
         'Authorization': 'Bearer $token',
