@@ -94,8 +94,14 @@ class FinancialSpaceStatementController extends Controller
             ?: ($validated['idempotency_key'] ?? '')
         ));
         if ($idempotencyKey === '') {
-            return ApiResponse::error('A treasury cashbook idempotency key is required.', 422, [
-                'idempotency_key' => ['Provide Idempotency-Key header or idempotency_key body field.'],
+            // Backwards-compatible bridge for the established cashbook contract:
+            // a caller-supplied transaction reference is already a stable request identity.
+            // New clients should send Idempotency-Key explicitly.
+            $idempotencyKey = trim((string) ($validated['transaction_reference'] ?? ''));
+        }
+        if ($idempotencyKey === '') {
+            return ApiResponse::error('A treasury cashbook idempotency key or transaction reference is required.', 422, [
+                'idempotency_key' => ['Provide Idempotency-Key header, idempotency_key body field, or a stable transaction_reference.'],
             ]);
         }
 
