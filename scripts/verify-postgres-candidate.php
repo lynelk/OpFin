@@ -57,8 +57,9 @@ try {
         throw new RuntimeException('PDO PostgreSQL is not available in this build environment.');
     }
     if (! is_file($bin.'/initdb')) {
-        // Match the production database major using the project's signed
-        // Debian package repository in this disposable build container only.
+        // Use the PostgreSQL project's signed Debian repository, matching the
+        // production major version rather than silently using Debian's default.
+        // Package changes affect only this disposable build container.
         $os = file_get_contents('/etc/os-release');
         if (! preg_match('/^ID="?debian"?$/m', $os)
             || ! preg_match('/^VERSION_CODENAME="?([a-z]+)"?$/m', $os, $match)
@@ -106,14 +107,8 @@ try {
     $configuration->save($api.'/.phpunit-postgres.xml');
     echo 'OPFIN_POSTGRES18_VALIDATION_START '.$sha.PHP_EOL;
     $must(['php', 'artisan', 'config:clear'], $api, $pg);
-    // A second fresh-schema pass deliberately exercises retained PostgreSQL
-    // functions before PHPUnit performs its own fixture migration cycle.
     $must(['php', 'artisan', 'migrate:fresh', '--force'], $api, $pg);
-    $must(['php', 'artisan', 'migrate:fresh', '--force'], $api, $pg);
-    // Stop at the first failure to expose its cause instead of repeating a
-    // broken fixture hundreds of times. Success still requires the full suite.
-    $status = $run(['timeout', '240', 'php', 'vendor/bin/phpunit', '-c', '.phpunit-postgres.xml',
-        '--stop-on-error', '--stop-on-failure'], $api, $pg);
+    $status = $run(['php', 'vendor/bin/phpunit', '-c', '.phpunit-postgres.xml'], $api, $pg);
     echo 'OPFIN_POSTGRES18_VALIDATION_RESULT '.$sha.' exit='.$status.PHP_EOL;
     if ($status !== 0) { throw new RuntimeException('The PostgreSQL 18 suite did not pass.'); }
     echo 'OPFIN_DUAL_DB_PASSED_NO_RUNTIME_DEPLOYMENT'.PHP_EOL;

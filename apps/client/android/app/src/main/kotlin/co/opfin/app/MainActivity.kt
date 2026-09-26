@@ -19,7 +19,6 @@ class MainActivity : FlutterActivity() {
     private val locationChannel = "co.opfin/location"
     private val locationRequestCode = 7401
     private var pendingLocationResult: MethodChannel.Result? = null
-    private var pendingPrecise = false
     private var statementExports: ClubStatementExports? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -27,28 +26,24 @@ class MainActivity : FlutterActivity() {
         statementExports = ClubStatementExports(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "co.opfin/club_statement_export")
             .setMethodCallHandler { call, result ->
-                if (call.method == "export") statementExports?.handle(call.arguments, result)
-                else result.notImplemented()
+                if (call.method == "export") statementExports?.handle(call.arguments, result) else result.notImplemented()
             }
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, locationChannel)
-            .setMethodCallHandler { call, result ->
-                when (call.method) {
-                    "currentLocation" -> {
-                        if (pendingLocationResult != null) {
-                            result.error("location_busy", "A location request is already in progress.", null)
-                            return@setMethodCallHandler
-                        }
-                        val precision = call.argument<String>("precision") ?: "approximate"
-                        requestCurrentLocation(result, precision == "precise")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, locationChannel).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "currentLocation" -> {
+                    if (pendingLocationResult != null) {
+                        result.error("location_busy", "A location request is already in progress.", null)
+                        return@setMethodCallHandler
                     }
-                    "openMaps" -> {
-                        val url = call.argument<String>("url")
-                        if (url.isNullOrBlank()) result.error("invalid_url", "A map URL is required.", null)
-                        else openMaps(url, result)
-                    }
-                    else -> result.notImplemented()
+                    requestCurrentLocation(result)
                 }
+                "openMaps" -> {
+                    val url = call.argument<String>("url")
+                    if (url.isNullOrBlank()) result.error("invalid_url", "A map URL is required.", null) else openMaps(url, result)
+                }
+                else -> result.notImplemented()
             }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -62,18 +57,14 @@ class MainActivity : FlutterActivity() {
         super.onDestroy()
     }
 
-    private fun requestCurrentLocation(result: MethodChannel.Result, precise: Boolean) {
-        val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (!coarseGranted || (precise && !fineGranted)) {
+    private fun requestCurrentLocation(result: MethodChannel.Result) {
+        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
             pendingLocationResult = result
-            pendingPrecise = precise
-            val permissions = if (precise) arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
-                else arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION)
-            ActivityCompat.requestPermissions(this, permissions, locationRequestCode)
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), locationRequestCode)
             return
         }
-        deliverLocation(result, precise)
+        deliverLocation(result)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -81,50 +72,36 @@ class MainActivity : FlutterActivity() {
         if (requestCode != locationRequestCode) return
         val result = pendingLocationResult ?: return
         pendingLocationResult = null
-        val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (!coarseGranted || (pendingPrecise && !fineGranted)) {
-            result.error("location_permission_denied", "Location permission was not granted.", null)
-            return
-        }
-        deliverLocation(result, pendingPrecise)
+        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!granted) result.error("location_permission_denied", "Location permission was not granted.", null) else deliverLocation(result)
     }
 
     @Suppress("MissingPermission")
-    private fun deliverLocation(result: MethodChannel.Result, precise: Boolean) {
+    private fun deliverLocation(result: MethodChannel.Result) {
         val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val allowedProviders = buildList {
-            if (precise && fineGranted && manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) add(LocationManager.GPS_PROVIDER)
-            if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) add(LocationManager.NETWORK_PROVIDER)
-            if (!precise && fineGranted && manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) add(LocationManager.GPS_PROVIDER)
-        }
-        if (allowedProviders.isEmpty()) {
+        if (!manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
             result.error("location_disabled", "Device location services are turned off.", null)
             return
         }
-        val best = allowedProviders.mapNotNull { manager.getLastKnownLocation(it) }.maxByOrNull { it.time }
+        val best = manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
         if (best != null && System.currentTimeMillis() - best.time <= 10 * 60 * 1000) {
-            result.success(locationPayload(best, precise))
+            result.success(locationPayload(best))
             return
         }
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
                 manager.removeUpdates(this)
-                result.success(locationPayload(location, precise))
+                result.success(locationPayload(location))
             }
         }
-        try { manager.requestSingleUpdate(allowedProviders.first(), listener, Looper.getMainLooper()) }
+        try { manager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, listener, Looper.getMainLooper()) }
         catch (_: Exception) { result.error("location_unavailable", "Current location is unavailable.", null) }
     }
 
-    private fun locationPayload(location: Location, requestedPrecise: Boolean): Map<String, Any> = mapOf(
-        "latitude" to location.latitude,
-        "longitude" to location.longitude,
-        "accuracy_metres" to location.accuracy.toInt().coerceAtLeast(0),
-        "captured_at" to location.time,
-        "requested_precision" to if (requestedPrecise) "precise" else "approximate",
-        "actual_precision" to if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) "precise" else "approximate"
+    private fun locationPayload(location: Location): Map<String, Any> = mapOf(
+        "latitude" to location.latitude, "longitude" to location.longitude,
+        "accuracy_metres" to location.accuracy.toInt().coerceAtLeast(0), "captured_at" to location.time,
+        "requested_precision" to "approximate", "actual_precision" to "approximate"
     )
 
     private fun openMaps(url: String, result: MethodChannel.Result) {

@@ -1,7 +1,7 @@
 # Current API endpoints
 
 Status: Current endpoint navigation and contract index  
-Reviewed: 26 September 2026  
+Reviewed: 25 September 2026  
 Language: English (United Kingdom)
 
 The complete domain reference from main `3924a26913f85067a3ac900c78fa80125ca589fc` is preserved without content loss in [Domain endpoints](domain-endpoints.md), including the lender-orchestration additions. This index joins that detailed reference with the [Developer Centre contract](DEVELOPER_INTERFACE.md). Registration, reviewed schema, authorisation, provider activation and financial acceptance are separate states.
@@ -85,6 +85,7 @@ Read [Location Context](domain-endpoints.md#16c-location-context-and-lightweight
 
 Read [treasury contracts](domain-endpoints.md#16d-financial-space-treasury-statement-import-and-reconciliation). Fixed opening baselines, reviewed imports and frozen statements do not alone complete member-capital and investment accounting.
 
+
 ## 16E. Club accounting, saved requests and retained history
 
 Read [book and instruction contracts](CLUB_ACCOUNTING.md) and [client recovery and native export](CLUB_CLIENT_RECOVERY.md). These are implementation candidates, not a claim of production acceptance.
@@ -135,3 +136,28 @@ The accepted `/api/admin/lending-platform` routes and scope are retained in [Dom
 The running catalogue reads registered routes and checked-in guides. `api:catalogue --check` checks definition consistency; `--require-complete` fails for missing reviewed schemas. `--baseline` also detects operation-ID changes and contract-status regressions. The offline export includes all reviewed role-specific contracts; the authenticated HTTP export remains role-filtered.
 
 Source discovery is not automatic semantic completion or proof that production equals remote main. Update fields, examples, permissions, errors, financial recovery and training tasks with the implementation. Historical evidence keeps its original date; unresolved financial and security requirements remain separate.
+
+
+## Integrated financing foundation
+
+Authenticated customer endpoints:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/financial-intents` | List the authenticated customer's financial intents |
+| POST | `/api/financial-intents` | Create a need-led financial intent within an authorised Financial Space |
+| POST | `/api/product-matches` | Return only activated products compatible with the intent's financial-principles preference |
+| POST | `/api/financing-applications` | Apply for a matched, activated FinancialProduct version |
+
+`principles_preference` accepts `ALL_SUITABLE`, `SHARIA_ONLY` or `CONVENTIONAL_ONLY`. It is a product preference and must not be interpreted or stored as the customer's religion.
+
+Product matching fails closed: a product must be `live`, have an approved/effective Legal Product Passport, and an Islamic product must additionally have an approved, unexpired Sharia approval. These endpoints establish the compatibility layer; existing `/api/credit/**` and Essentials endpoints remain operational during migration.
+
+
+## Financial Intelligence candidate (26 September 2026)
+
+Read the [Financial Intelligence contract](FINANCIAL_INTELLIGENCE_CONTRACT.md), [source-scope register](../../../../docs/product/FINANCIAL_INTELLIGENCE.md) and [acceptance runbook](../../../../docs/operations/FINANCIAL_INTELLIGENCE_RUNBOOK.md). These are disabled-by-default candidate routes, not a completed or deployed product. Existing domain and Developer Centre contracts above remain in force.
+
+The institutional namespace is `/api/financial-spaces/{space}/intelligence`. It includes role-aware context, source registration, staged JSON/CSV imports, independent publication, source-reconciled portfolio analysis, comparison and sensitivity analysis, assigned cases, expiring access grants, frozen reports and explicit report-sharing mandates. Personal owners receive statement permissions only. Imports and statement evidence do not post payments, alter core accounting or become credit decisions.
+
+The candidate also includes jurisdiction-specific issuer-version administration under `/api/intelligence/admin/issuers` and purpose-bound statement evidence under the scoped namespace. Original PDFs remain quarantined until an accepted scanner/parser pipeline exists. Arithmetic consistency is not issuer authentication. The actual application, database, browser and mobile build gates remain outstanding; discoverable routes or written tests do not establish acceptance.
