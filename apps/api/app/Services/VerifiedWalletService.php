@@ -13,7 +13,7 @@ class VerifiedWalletService
      */
     public function forDisbursement(User $user, ?int $walletId = null): array
     {
-        return $this->resolve($user, $walletId, 'is_default_disbursement', 'disbursement');
+        return $this->resolve($user, $walletId, 'is_default_disbursement', 'disbursement', true);
     }
 
     /**
@@ -21,13 +21,13 @@ class VerifiedWalletService
      */
     public function forRepayment(User $user, ?int $walletId = null): array
     {
-        return $this->resolve($user, $walletId, 'is_default_repayment', 'repayment');
+        return $this->resolve($user, $walletId, 'is_default_repayment', 'repayment', false);
     }
 
     /**
      * @return array{wallet:?CustomerWallet,phone:string}
      */
-    private function resolve(User $user, ?int $walletId, string $defaultColumn, string $purpose): array
+    private function resolve(User $user, ?int $walletId, string $defaultColumn, string $purpose, bool $requireVerifiedWallet): array
     {
         if (! in_array($defaultColumn, ['is_default_disbursement', 'is_default_repayment'], true)) {
             throw new InvalidArgumentException('Unsupported verified-wallet purpose.');
@@ -49,6 +49,13 @@ class VerifiedWalletService
         }
 
         $wallet ??= (clone $query)->orderByDesc($defaultColumn)->orderBy('id')->first();
+
+        if ($requireVerifiedWallet && ! $wallet) {
+            throw new InvalidArgumentException(
+                "A verified {$purpose} wallet is required before money can be sent from OpFin."
+            );
+        }
+
         $phone = trim((string) ($wallet?->msisdn ?: $user->phone));
 
         if ($phone === '') {
