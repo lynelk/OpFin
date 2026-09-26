@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\FinancialIntent;
 use App\Models\FinancialProduct;
 use App\Models\FinancingApplication;
-use App\Models\FinancingArrangement;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -18,7 +17,7 @@ class FinancingService
     public function createIntent(User $user, array $data): FinancialIntent
     {
         $preference = strtoupper((string) ($data['principles_preference'] ?? 'ALL_SUITABLE'));
-        if (! in_array($preference, self::PREFERENCES, true)) {
+        if (!in_array($preference, self::PREFERENCES, true)) {
             throw new InvalidArgumentException('Unsupported financial principles preference.');
         }
         $spaceId = (int) $data['financial_space_id'];
@@ -84,7 +83,7 @@ class FinancingService
         }
         $this->assertSpaceAuthority($user, (int) $intent->financial_space_id);
         $matches = $this->matchingProducts($intent);
-        if (! $matches->contains('id', $product->id)) {
+        if (!$matches->contains('id', $product->id)) {
             throw new InvalidArgumentException('This product is not suitable for the selected financial principles or is not activated.');
         }
 
@@ -110,7 +109,7 @@ class FinancingService
             ->where('user_id', $user->id)
             ->where('status', 'active')
             ->exists();
-        if (! $allowed) {
+        if (!$allowed) {
             throw new InvalidArgumentException('You do not have active authority in that Financial Space.');
         }
     }
