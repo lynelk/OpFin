@@ -11,13 +11,100 @@ class MobileMoneyProviderManager
 {
     public function provider(?string $name = null): MobileMoneyProviderInterface
     {
-        $name ??= config('services.mobile_money.default_provider', 'cpay');
+        $name = strtolower(trim((string) ($name ?? config('services.mobile_money.default_provider', 'cpay'))));
 
         return match ($name) {
             'cpay' => app(CpayV2Adapter::class),
             'mock' => $this->mockProvider(),
             default => $this->configuredDirectProvider($name),
         };
+    }
+
+    public function assertReadyForSubmission(?string $name = null): void
+    {
+        $name = strtolower(trim((string) ($name ?? config('services.mobile_money.default_provider', 'cpay'))));
+
+        if ($name === 'cpay') {
+            $missing = collect([
+                'base_url' => config('services.cpay.base_url'),
+                'merchant_number' => config('services.cpay.merchant_number'),
+                'private_key' => config('services.cpay.private_key'),
+                'callback_url' => config('services.cpay.callback_url'),
+            ])->filter(fn ($value) => ! is_string($value) || trim($value) === '')
+                ->keys()
+                ->values()
+                ->all();
+
+            if ($missing !== []) {
+                throw new InvalidArgumentException(
+                    'CPay submission is not configured: '.implode(', ', $missing).'.'
+                );
+            }
+
+            return;
+        }
+
+        if ($name === 'mock') {
+            $this->mockProvider();
+
+            return;
+        }
+
+        $this->configuredDirectProvider($name);
+    }
+
+    public function readiness(?string $name = null): array
+    {
+        $name = strtolower(trim((string) ($name ?? config('services.mobile_money.default_provider', 'cpay'))));
+
+        if ($name === 'cpay') {
+            $fields = [
+                'base_url' => config('services.cpay.base_url'),
+                'merchant_number' => config('services.cpay.merchant_number'),
+                'private_key' => config('services.cpay.private_key'),
+                'callback_url' => config('services.cpay.callback_url'),
+                'callback_secret' => config('services.cpay.callback_secret'),
+            ];
+            $missing = collect($fields)
+                ->filter(fn ($value) => ! is_string($value) || trim($value) === '')
+                ->keys()
+                ->values()
+                ->all();
+            $certified = (bool) config('services.mobile_money.providers.cpay.production_certified', false);
+
+            return [
+                'provider' => 'cpay',
+                'status' => $missing === [] && $certified ? 'ready' : 'blocked',
+                'certified' => $certified,
+                'missing' => $missing,
+                'configured_fields' => collect($fields)->keys()->diff($missing)->values()->all(),
+            ];
+        }
+
+        if ($name === 'mock') {
+            return [
+                'provider' => 'mock',
+                'status' => 'blocked',
+                'certified' => false,
+                'missing' => [],
+                'reason' => 'The mock provider is not production-equivalent financial readiness evidence.',
+            ];
+        }
+
+        $class = trim((string) config("services.mobile_money.providers.{$name}.adapter"));
+        $certified = (bool) config("services.mobile_money.providers.{$name}.production_certified", false);
+        $classValid = $class !== ''
+            && class_exists($class)
+            && is_a($class, MobileMoneyProviderInterface::class, true);
+
+        return [
+            'provider' => $name,
+            'status' => $classValid && $certified ? 'ready' : 'blocked',
+            'certified' => $certified,
+            'adapter_class_configured' => $class !== '',
+            'adapter_class_valid' => $classValid,
+            'missing' => $class === '' ? ['adapter'] : [],
+        ];
     }
 
     private function mockProvider(): MobileMoneyProviderInterface
