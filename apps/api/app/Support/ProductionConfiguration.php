@@ -34,6 +34,27 @@ class ProductionConfiguration
             throw new RuntimeException('OPFIN_ENABLE_DEMO_ROUTES=true is not allowed in production.');
         }
 
+        if (($config['legacy_origination_enabled'] ?? false) === true) {
+            throw new RuntimeException('Legacy loan origination must remain disabled in production.');
+        }
+
+        if (($config['legacy_manual_application_status_enabled'] ?? false) === true) {
+            throw new RuntimeException('Legacy manual loan-application status mutation must remain disabled in production.');
+        }
+
+        if (($config['legacy_manual_transaction_approval_enabled'] ?? false) === true) {
+            throw new RuntimeException('Legacy manual transaction approval must remain disabled in production.');
+        }
+
+        if (($config['require_funding_pool_assignment'] ?? false) !== true) {
+            throw new RuntimeException('Production credit requires OPFIN_REQUIRE_FUNDING_POOL_ASSIGNMENT=true.');
+        }
+
+        if (($config['require_regulated_credit_disclosure'] ?? false) !== true) {
+            throw new RuntimeException('Production credit requires regulated lender and complaints disclosures to remain fail-closed.');
+        }
+
+
         $communityFinanceMode = strtolower(trim((string) ($config['community_finance_mode'] ?? 'dormant')));
         if ($communityFinanceMode === 'live') {
             throw new RuntimeException(
