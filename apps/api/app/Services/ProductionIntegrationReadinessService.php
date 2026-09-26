@@ -2,18 +2,27 @@
 
 namespace App\Services;
 
+use App\Services\MobileMoney\MobileMoneyProviderManager;
+
 class ProductionIntegrationReadinessService
 {
+    public function __construct(private readonly MobileMoneyProviderManager $moneyProviders) {}
+
     public function report(): array
     {
+        $selectedMoney = $this->moneyProviders->readiness();
+        $selectedMoney['required'] = true;
+        $selectedMoney['purpose'] = 'Selected money-movement and provider-finality route';
+
         $integrations = [
+            'money_movement' => $selectedMoney,
             'cpay' => $this->check([
                 'base_url' => config('services.cpay.base_url'),
                 'merchant_number' => config('services.cpay.merchant_number'),
                 'private_key' => config('services.cpay.private_key'),
                 'callback_url' => config('services.cpay.callback_url'),
                 'callback_secret' => config('services.cpay.callback_secret'),
-            ], true, 'Money movement and provider-finality reconciliation'),
+            ], false, 'Preferred CPay money-movement route when selected'),
             'sms' => $this->sms(),
             'whatsapp' => $this->check([
                 'phone_number_id' => config('services.whatsapp.phone_number_id'),
