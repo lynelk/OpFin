@@ -172,7 +172,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
-    if (option == null || !mounted) return;
+    if (!mounted) return;
     final reviewedOption = option;
 
     final confirmed = await showModalBottomSheet<bool>(

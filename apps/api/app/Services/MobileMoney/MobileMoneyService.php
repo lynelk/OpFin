@@ -183,6 +183,12 @@ class MobileMoneyService
                 'metadata' => $metadata,
             ]);
 
+            // Keep the established audit event for downstream consumers while
+            // retaining the more precise durable-intent event.
+            $this->audit("mobile_money.{$direction}.requested", $transaction, [
+                'idempotency_key' => $idempotencyKey,
+                'internal_reference' => $transaction->internal_reference,
+            ]);
             $this->audit("mobile_money.{$direction}.intent_persisted", $transaction, [
                 'idempotency_key' => $idempotencyKey,
                 'internal_reference' => $transaction->internal_reference,

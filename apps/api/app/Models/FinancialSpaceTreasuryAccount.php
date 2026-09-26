@@ -34,6 +34,15 @@ class FinancialSpaceTreasuryAccount extends Model
      * remains observable through updated_at. Rebaselining requires a separate
      * reviewed accounting correction, not mass assignment to this attribute.
      */
+    public function setOpeningBalanceMinorAttribute(mixed $value): void
+    {
+        if ($this->exists && $this->transactions()->exists()) {
+            throw new \LogicException('Opening balance is locked after the first cashbook transaction.');
+        }
+
+        $this->attributes['opening_balance_minor'] = (int) $value;
+    }
+
     public function setBalanceAsOfAttribute(mixed $value): void
     {
         if ($this->exists) {

@@ -161,3 +161,8 @@ Read the [Financial Intelligence contract](FINANCIAL_INTELLIGENCE_CONTRACT.md), 
 The institutional namespace is `/api/financial-spaces/{space}/intelligence`. It includes role-aware context, source registration, staged JSON/CSV imports, independent publication, source-reconciled portfolio analysis, comparison and sensitivity analysis, assigned cases, expiring access grants, frozen reports and explicit report-sharing mandates. Personal owners receive statement permissions only. Imports and statement evidence do not post payments, alter core accounting or become credit decisions.
 
 The candidate also includes jurisdiction-specific issuer-version administration under `/api/intelligence/admin/issuers` and purpose-bound statement evidence under the scoped namespace. Original PDFs remain quarantined until an accepted scanner/parser pipeline exists. Arithmetic consistency is not issuer authentication. The actual application, database, browser and mobile build gates remain outstanding; discoverable routes or written tests do not establish acceptance.
+
+
+## Post-merge compatibility hardening — 26 September 2026
+
+Treasury cashbook writes remain idempotent. New clients should send `Idempotency-Key`; established clients that already supply a stable `transaction_reference` may use that reference as the compatibility request identity. Opening-balance baselines are immutable after the first cashbook transaction. Mobile-money durable intent events retain the established `mobile_money.<direction>.requested` audit event alongside the newer intent/provider-response events. Automated tests explicitly disable production funding/disclosure/EFRIS/Cito-certification activation flags.
