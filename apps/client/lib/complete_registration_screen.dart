@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/home_screen.dart';
@@ -46,7 +47,7 @@ class _CompleteRegistrationScreenState
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      final response = await http.post(
+      final response = await OpFinHttp.post(
         Uri.parse('$apiUrl/register'),
         body: {
           'phone': widget.phone,
