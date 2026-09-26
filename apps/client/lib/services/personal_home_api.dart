@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
 
@@ -20,7 +21,7 @@ class PersonalHomeApi {
   static Future<Map<String, dynamic>> load() async {
     final headers = await _headers();
 
-    final compassResponse = await http.get(
+    final compassResponse = await OpFinHttp.get(
       Uri.parse('$apiUrl/financial-compass'),
       headers: headers,
     );
@@ -53,7 +54,7 @@ class PersonalHomeApi {
     Map<String, String> headers,
   ) async {
     try {
-      final response = await http.get(
+      final response = await OpFinHttp.get(
         Uri.parse('$apiUrl$path'),
         headers: headers,
       );
