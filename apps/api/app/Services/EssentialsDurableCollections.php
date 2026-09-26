@@ -20,11 +20,8 @@ use Throwable;
 /** No database transaction spans a provider request. */
 class EssentialsDurableCollections
 {
-    public function __construct(
-        private readonly EssentialsCustomerMutex $mutex,
-        private readonly CpayEssentialsClient $cpay,
-        private readonly AuditLogger $audit,
-    ) {}
+    public function __construct(private readonly EssentialsCustomerMutex $mutex,
+        private readonly CpayEssentialsClient $cpay, private readonly AuditLogger $audit) {}
 
     public function request(User $user, int $advanceId, int $amount, string $key, ?int $walletId): EssentialsRepayment
     {
@@ -51,18 +48,15 @@ class EssentialsDurableCollections
                 if (EssentialsCollectionInstruction::where('advance_id', $advanceId)->where('status', 'exception')->exists()) {
                     throw new InvalidArgumentException('Resolve the existing financial exception before requesting another collection.');
                 }
-                if (EssentialsRepayment::where('advance_id', $advanceId)
-                    ->whereIn('status', ['pending', 'pending_provider_confirmation'])
+                if (EssentialsRepayment::where('advance_id', $advanceId)->whereIn('status', ['pending', 'pending_provider_confirmation'])
                     ->whereNotIn('id', EssentialsCollectionInstruction::select('repayment_id'))->exists()) {
                     throw new InvalidArgumentException('An earlier collection requires reconciliation before another request.');
                 }
                 $reservations = EssentialsCollectionInstruction::where('advance_id', $advanceId)->get()
-                    ->map(static fn ($row): array => ['reference' => (string) $row->id,
-                        'status' => $row->status, 'amount_minor' => $row->amount_minor])->all();
+                    ->map(static fn ($row): array => ['reference' => (string) $row->id, 'status' => $row->status, 'amount_minor' => $row->amount_minor])->all();
                 Rules::assertCanCollect($amount, $advance->outstanding_minor, $reservations);
                 $wallets = CustomerWallet::where('user_id', $current->id)->where('status', 'active')->whereNotNull('verified_at');
-                $wallet = $walletId !== null ? $wallets->whereKey($walletId)->first()
-                    : $wallets->where('is_default_repayment', true)->first();
+                $wallet = $walletId !== null ? $wallets->whereKey($walletId)->first() : $wallets->where('is_default_repayment', true)->first();
                 if (! $wallet || trim((string) $wallet->msisdn) === '') {
                     throw new InvalidArgumentException('Select an active verified repayment wallet. An unverified profile phone is not a substitute.');
                 }
@@ -90,9 +84,7 @@ class EssentialsDurableCollections
                     ['instruction_id' => $instruction->id, 'instruction_hash' => $instruction->instruction_hash]);
                 return $instruction;
             });
-            if ($instruction->status === 'prepared') {
-                $this->dispatch($instruction);
-            }
+            if ($instruction->status === 'prepared') { $this->dispatch($instruction); }
             $this->applyObserved($instruction->fresh());
             return EssentialsRepayment::findOrFail($instruction->repayment_id);
         });
@@ -100,14 +92,12 @@ class EssentialsDurableCollections
 
     public function reconcile(EssentialsRepayment $repayment): EssentialsRepayment
     {
-        return $this->mutex->run($repayment->user_id, function () use ($repayment): EssentialsRepayment {
+        return $this->mutex->runRetainedServicing($repayment->user_id, function () use ($repayment): EssentialsRepayment {
             $instruction = EssentialsCollectionInstruction::where('repayment_id', $repayment->id)->first();
             if (! $instruction) {
                 throw new InvalidArgumentException('This older repayment has no durable instruction. Reconcile its original provider and allocation evidence; do not resubmit it.');
             }
-            if (in_array($instruction->status, ['prepared', 'exception'], true)) {
-                return $repayment->fresh();
-            }
+            if (in_array($instruction->status, ['prepared', 'exception'], true)) { return $repayment->fresh(); }
             if ($instruction->status === 'confirmed_unapplied') {
                 $this->applyObserved($instruction);
                 return $repayment->fresh();
@@ -150,8 +140,7 @@ class EssentialsDurableCollections
         try {
             $response = $this->cpay->collectRepayment($advance, $repayment, $snapshot['payer'], $snapshot['payer_provider']);
         } catch (Throwable) {
-            EssentialsCollectionInstruction::whereKey($instruction->id)->where('status', 'submitting')
-                ->update(['status' => 'pending', 'updated_at' => now()]);
+            EssentialsCollectionInstruction::whereKey($instruction->id)->where('status', 'submitting')->update(['status' => 'pending', 'updated_at' => now()]);
             EssentialsRepayment::whereKey($instruction->repayment_id)->update(['status' => 'pending_provider_confirmation']);
             return;
         }
@@ -165,40 +154,20 @@ class EssentialsDurableCollections
             $state = Rules::providerState('collection', (string) ($response['status'] ?? ''));
             $reference = trim((string) ($response['providerReference'] ?? $response['reference'] ?? ''));
             $error = null;
-            if (strlen($reference) > 160 || preg_match('/[\x00-\x1F]/', $reference)) {
-                $error = 'invalid_provider_reference';
-            }
-            if (in_array($state, ['success', 'reversed'], true) && $reference === '') {
-                $error = 'unattributed_provider_finality';
-            }
-            if ($row->provider_reference && $reference !== '' && ! hash_equals($row->provider_reference, $reference)) {
-                $error = 'provider_reference_changed';
-            }
-            if (isset($response['currency']) && (string) $response['currency'] !== $row->currency) {
-                $error = 'provider_currency_mismatch';
-            }
-            if (isset($response['amountMinor']) && (! is_int($response['amountMinor']) || $response['amountMinor'] !== $row->amount_minor)) {
-                $error = 'provider_amount_mismatch';
-            }
-            if (isset($response['requestReference']) && (string) $response['requestReference'] !== $row->snapshot['request_reference']) {
-                $error = 'provider_request_mismatch';
-            }
-            $previous = match ($row->status) {
-                'applied', 'confirmed_unapplied' => 'success', default => $row->status,
-            };
+            if (strlen($reference) > 160 || preg_match('/[\x00-\x1F]/', $reference)) { $error = 'invalid_provider_reference'; }
+            if (in_array($state, ['success', 'reversed'], true) && $reference === '') { $error = 'unattributed_provider_finality'; }
+            if ($row->provider_reference && $reference !== '' && ! hash_equals($row->provider_reference, $reference)) { $error = 'provider_reference_changed'; }
+            if (isset($response['currency']) && (string) $response['currency'] !== $row->currency) { $error = 'provider_currency_mismatch'; }
+            if (isset($response['amountMinor']) && (! is_int($response['amountMinor']) || $response['amountMinor'] !== $row->amount_minor)) { $error = 'provider_amount_mismatch'; }
+            if (isset($response['requestReference']) && (string) $response['requestReference'] !== $row->snapshot['request_reference']) { $error = 'provider_request_mismatch'; }
+            $previous = match ($row->status) { 'applied', 'confirmed_unapplied' => 'success', default => $row->status };
             $state = $error ? 'exception' : Rules::transition($previous, $state);
             if ($reference !== '' && $state !== 'exception') {
                 try {
-                    DB::transaction(function () use ($row, $reference): void {
-                        $row->update(['provider_reference' => $reference]);
-                    });
+                    DB::transaction(function () use ($row, $reference): void { $row->update(['provider_reference' => $reference]); });
                 } catch (\Illuminate\Database\QueryException $exception) {
-                    if (! in_array((string) $exception->getCode(), ['23000', '23505'], true)) {
-                        throw $exception;
-                    }
-                    $state = 'exception';
-                    $error = 'provider_reference_reused';
-                    $row->refresh();
+                    if (! in_array((string) $exception->getCode(), ['23000', '23505'], true)) { throw $exception; }
+                    $state = 'exception'; $error = 'provider_reference_reused'; $row->refresh();
                 }
             }
             $evidence = ['status' => $state, 'provider_reference' => $row->provider_reference,
@@ -206,8 +175,8 @@ class EssentialsDurableCollections
             DB::table('essentials_collection_observations')->insertOrIgnore(['instruction_id' => $row->id,
                 'evidence_hash' => hash('sha256', Rules::canonical($evidence)), 'evidence' => Rules::canonical($evidence), 'observed_at' => now()]);
             $storedState = $state === 'success' ? ($row->status === 'applied' ? 'applied' : 'confirmed_unapplied') : $state;
-            $row->update(['status' => $storedState, 'exception_code' => $state === 'exception' ? ($error ?? 'contradictory_terminal_state') : null,
-                'observed_at' => now()]);
+            $row->update(['status' => $storedState,
+                'exception_code' => $state === 'exception' ? ($error ?? 'contradictory_terminal_state') : null, 'observed_at' => now()]);
             if ($state === 'exception') {
                 $this->audit->record('essentials.collection.exception', null, $row, ['code' => $row->exception_code]);
             }
@@ -216,20 +185,14 @@ class EssentialsDurableCollections
 
     private function applyObserved(EssentialsCollectionInstruction $instruction): void
     {
-        if (in_array($instruction->status, ['prepared', 'submitting', 'pending', 'exception'], true)) {
-            return;
-        }
+        if (in_array($instruction->status, ['prepared', 'submitting', 'pending', 'exception'], true)) { return; }
         DB::transaction(function () use ($instruction): void {
             $advance = EssentialsAdvance::lockForUpdate()->findOrFail($instruction->advance_id);
             $repayment = EssentialsRepayment::lockForUpdate()->findOrFail($instruction->repayment_id);
             $row = EssentialsCollectionInstruction::lockForUpdate()->findOrFail($instruction->id);
-            if ($row->status === 'applied' || ($row->status === 'reversed' && $repayment->status === 'reversed')) {
-                return;
-            }
+            if ($row->status === 'applied' || ($row->status === 'reversed' && $repayment->status === 'reversed')) { return; }
             if ($row->status === 'failed') {
-                if ($repayment->status === 'successful') {
-                    throw new RuntimeException('A settled collection cannot become failed without reversal evidence.');
-                }
+                if ($repayment->status === 'successful') { throw new RuntimeException('A settled collection cannot become failed without reversal evidence.'); }
                 $repayment->update(['status' => 'failed', 'provider_reference' => $row->provider_reference]);
                 return;
             }
@@ -255,10 +218,8 @@ class EssentialsDurableCollections
                     throw new RuntimeException('The advance and schedule disagree; no partial collection application is allowed.');
                 }
                 $allocation = Rules::allocate($schedule, $row->amount_minor, $row->snapshot['allocation_policy']);
-                $updated = $allocation['rows'];
-                $principal = $allocation['principal_minor'];
-                $interest = $allocation['interest_minor'];
-                $fees = $allocation['fees_minor'];
+                $updated = $allocation['rows']; $principal = $allocation['principal_minor'];
+                $interest = $allocation['interest_minor']; $fees = $allocation['fees_minor'];
                 foreach ($allocation['allocations'] as $item) {
                     DB::table('essentials_collection_allocations')->insert($item + ['instruction_id' => $row->id,
                         'policy_version' => $allocation['policy'], 'created_at' => now()]);
@@ -302,9 +263,7 @@ class EssentialsDurableCollections
             $dueRows = array_values(array_filter($updated, static fn ($item): bool => $item['total_outstanding_minor'] > 0));
             $nextDue = $dueRows[0]['due_date'] ?? null;
             $newRepaid = $reversal ? $advance->repaid_minor - $row->amount_minor : Rules::add($advance->repaid_minor, $row->amount_minor);
-            if ($newRepaid < 0 || $newRepaid > $advance->total_repayment_minor) {
-                throw new RuntimeException('The cumulative repayment amount does not reconcile.');
-            }
+            if ($newRepaid < 0 || $newRepaid > $advance->total_repayment_minor) { throw new RuntimeException('The cumulative repayment amount does not reconcile.'); }
             $advance->update(['outstanding_minor' => $newTotal, 'principal_outstanding_minor' => $newPrincipal,
                 'repaid_minor' => $newRepaid, 'next_due_date' => $nextDue,
                 'status' => $newTotal === 0 ? 'settled' : ($nextDue < now()->toDateString() ? 'overdue' : 'active'),
@@ -316,9 +275,7 @@ class EssentialsDurableCollections
             $quote = EssentialsQuote::findOrFail($advance->quote_id);
             $line = EssentialsCreditLine::lockForUpdate()->findOrFail($quote->credit_line_id);
             $lineOutstanding = $reversal ? Rules::add($line->outstanding_minor, $principal) : $line->outstanding_minor - $principal;
-            if ($lineOutstanding < 0) {
-                throw new RuntimeException('The lender line and principal allocation disagree.');
-            }
+            if ($lineOutstanding < 0) { throw new RuntimeException('The lender line and principal allocation disagree.'); }
             $valid = $line->status === 'active' && (! $line->expires_at || $line->expires_at->isFuture());
             $available = ! $valid ? 0 : ($reversal ? max(0, $line->available_limit_minor - $principal)
                 : min($line->approved_limit_minor - $lineOutstanding, Rules::add($line->available_limit_minor, $principal)));
@@ -356,9 +313,7 @@ class EssentialsDurableCollections
     private function environment(): string
     {
         $environment = strtoupper((string) config('services.cpay.environment', 'sandbox'));
-        if (! in_array($environment, ['SANDBOX', 'LIVE'], true)) {
-            throw new InvalidArgumentException('The configured CPay environment is invalid.');
-        }
+        if (! in_array($environment, ['SANDBOX', 'LIVE'], true)) { throw new InvalidArgumentException('The configured CPay environment is invalid.'); }
         if (app()->environment('production') && ($environment !== 'LIVE'
             || parse_url((string) config('services.cpay.base_url'), PHP_URL_SCHEME) !== 'https')) {
             throw new InvalidArgumentException('Production collection requires the approved live HTTPS route.');
@@ -370,8 +325,7 @@ class EssentialsDurableCollections
     {
         return hash('sha256', Rules::canonical(['environment' => $this->environment(),
             'origin' => rtrim((string) config('services.cpay.base_url'), '/'), 'merchant' => (string) config('services.cpay.merchant_number'),
-            'collection_path' => (string) config('services.cpay.lender_repayment_path'),
-            'status_path' => (string) config('services.cpay.transaction_status_path')]));
+            'collection_path' => (string) config('services.cpay.lender_repayment_path'), 'status_path' => (string) config('services.cpay.transaction_status_path')]));
     }
 
     private function assertRoute(EssentialsCollectionInstruction $instruction): void

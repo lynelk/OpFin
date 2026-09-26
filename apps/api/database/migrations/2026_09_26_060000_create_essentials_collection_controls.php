@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('repayment_id')->unique()->constrained('essentials_repayments');
             $table->foreignId('advance_id')->constrained('essentials_advances');
             $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('wallet_id')->constrained('customer_wallets');
+            $table->foreignId('wallet_id')->nullable()->constrained('customer_wallets')->nullOnDelete();
             $table->bigInteger('amount_minor');
             $table->char('currency', 3);
             $table->string('environment', 16);
@@ -66,6 +66,9 @@ return new class extends Migration
             $table->json('evidence');
             $table->timestamp('created_at');
         });
+        if (in_array(DB::getDriverName(), ['pgsql', 'sqlite'], true)) {
+            DB::statement("CREATE UNIQUE INDEX ess_coll_one_inflight ON essentials_collection_instructions (advance_id) WHERE status IN ('prepared', 'submitting', 'pending', 'confirmed_unapplied')");
+        }
         $tables = ['essentials_collection_observations', 'essentials_collection_allocations', 'essentials_servicing_journals'];
         if (DB::getDriverName() === 'pgsql') {
             DB::unprepared("CREATE OR REPLACE FUNCTION opfin_collection_evidence_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Collection evidence is immutable; append a correcting event' USING ERRCODE = '23514'; END; $$");

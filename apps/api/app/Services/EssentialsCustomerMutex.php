@@ -9,31 +9,35 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
 
-/**
- * Serialise Essentials mutations and account closure without moving the
- * existing database commit boundary across an external provider request.
- * PostgreSQL must use a direct or session-affine writer connection.
- */
+/** Serialise financial changes without holding a database transaction across provider calls. */
 class EssentialsCustomerMutex
 {
     private array $held = [];
 
     public function run(int $userId, callable $operation): mixed
     {
+        return $this->exclusive($userId, $operation, false);
+    }
+
+    /** Internal servicing only; this does not reopen customer login or authorise new credit. */
+    public function runRetainedServicing(int $userId, callable $operation): mixed
+    {
+        return $this->exclusive($userId, $operation, true);
+    }
+
+    private function exclusive(int $userId, callable $operation, bool $includeClosed): mixed
+    {
         if ($userId <= 0) {
             throw new RuntimeException('An existing customer is required.');
         }
         if (isset($this->held[$userId])) {
-            return $operation($this->activeCustomer($userId));
+            return $operation($this->customer($userId, $includeClosed));
         }
         $connection = DB::connection();
         $name = 'opfin:essentials:customer:'.$userId;
         $cacheLock = null;
         $postgres = $connection->getDriverName() === 'pgsql';
         if ($postgres) {
-            // Session-level, not transaction-level: the native service can
-            // commit its reservation before submitting a provider request.
-            // Use the writer PDO for both lock and unlock, never a read replica.
             $result = $connection->selectOne('SELECT pg_try_advisory_lock(hashtextextended(?, 0)) AS acquired', [$name], false);
             if (! in_array($result->acquired, [true, 1, '1', 't', 'true'], true)) {
                 throw new EssentialsCustomerBusy('Another financial operation is in progress for this customer. Refresh its status before retrying.');
@@ -49,15 +53,13 @@ class EssentialsCustomerMutex
         }
         $this->held[$userId] = true;
         try {
-            return $operation($this->activeCustomer($userId));
+            return $operation($this->customer($userId, $includeClosed));
         } finally {
             unset($this->held[$userId]);
             if ($postgres) {
                 try {
                     $connection->selectOne('SELECT pg_advisory_unlock(hashtextextended(?, 0)) AS released', [$name], false);
                 } catch (Throwable) {
-                    // Closing the session releases its advisory locks. Never
-                    // retry the financial callback because unlocking failed.
                     $connection->disconnect();
                 }
             } else {
@@ -66,8 +68,10 @@ class EssentialsCustomerMutex
         }
     }
 
-    private function activeCustomer(int $userId): User
+    private function customer(int $userId, bool $includeClosed): User
     {
-        return User::withoutGlobalScopes()->whereNull('deleted_at')->findOrFail($userId);
+        $query = User::withoutGlobalScopes();
+        if (! $includeClosed) { $query->whereNull('deleted_at'); }
+        return $query->findOrFail($userId);
     }
 }
