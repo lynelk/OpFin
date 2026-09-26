@@ -55,7 +55,7 @@ def main():
     parser.feed(body.decode('utf8'))
     assert parser.scripts, 'No framework scripts were rendered'
     assert all(script.get('nonce') == nonce for script in parser.scripts), 'CSP nonce was not propagated to rendered scripts'
-    assert b'Your next step, clearer.' in body, 'Missing current brand headline'
+    assert b'Understand, manage, plan and improve your money.' in body, 'Missing current brand headline'
     assert b'/brand/opfin-symbol.png' in body, 'Missing actual OpFin symbol'
     _, second_headers, _ = fetch(base, '/')
     assert second_headers.get('Content-Security-Policy') != policy, 'CSP nonce was reused'
