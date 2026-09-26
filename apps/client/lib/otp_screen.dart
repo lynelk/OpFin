@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/complete_registration_screen.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/login_screen.dart';
@@ -75,7 +76,7 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
     setState(() => _loading = true);
 
     try {
-      final response = await http.post(
+      final response = await OpFinHttp.post(
         Uri.parse('$apiUrl/verify-otp'),
         body: {'phone': widget.phone, 'otp': otp},
       );
@@ -110,7 +111,7 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
       }
 
       if (widget.resetPin != null) {
-        final reset = await http.post(
+        final reset = await OpFinHttp.post(
           Uri.parse('$apiUrl/reset-password'),
           body: {
             'phone': widget.phone,
@@ -159,7 +160,7 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
     setState(() => _loading = true);
 
     try {
-      final response = await http.post(
+      final response = await OpFinHttp.post(
         Uri.parse('$apiUrl/generate-otp'),
         body: {'phone': widget.phone},
       );
