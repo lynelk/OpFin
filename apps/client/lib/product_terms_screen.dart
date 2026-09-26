@@ -1,3 +1,4 @@
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 import 'package:opfin/services/distribution_channel.dart';
@@ -226,7 +227,7 @@ class ProductTermsPageState extends State<ProductTermsPage> {
   Future<List<ProductTerm>> fetchProductTerms(int productId) async {
     final token = await UserSession.getAccessToken();
 
-    final response = await http.get(
+    final response = await OpFinHttp.get(
       Uri.parse("$apiUrl/product-terms/$productId?distribution_channel=${resolveDistributionChannel()}"),
       headers: {
         'Authorization': 'Bearer $token',
