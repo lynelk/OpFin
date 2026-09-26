@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/connected_financial_life_screen.dart';
 import 'package:opfin/faq_screen.dart';
@@ -74,7 +75,7 @@ class _SaveMobileScreenState extends State<SaveMobileScreen> {
   Future<List<Map<String, dynamic>>> _load() async {
     final token = await UserSession.getAccessToken();
     if (token == null || token.isEmpty) throw Exception('Secure session is required.');
-    final response = await http.get(Uri.parse('$apiUrl/savings/goals'), headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'});
+    final response = await OpFinHttp.get(Uri.parse('$apiUrl/savings/goals'), headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'});
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300 || decoded['success'] != true) {
       throw Exception(decoded['message']?.toString() ?? 'Unable to load savings.');
@@ -147,7 +148,7 @@ class _GrowMobileScreenState extends State<GrowMobileScreen> {
   Future<Map<String, dynamic>> _load() async {
     final token = await UserSession.getAccessToken();
     if (token == null || token.isEmpty) throw Exception('Secure session is required.');
-    final response = await http.get(Uri.parse('$apiUrl/investments/workspace'), headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'});
+    final response = await OpFinHttp.get(Uri.parse('$apiUrl/investments/workspace'), headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'});
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300 || decoded['success'] != true) {
       throw Exception(decoded['message']?.toString() ?? 'Unable to load investment workspace.');
