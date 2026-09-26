@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/services/distribution_channel.dart';
 
 import 'package:http/http.dart' as http;
@@ -26,13 +27,13 @@ class EssentialsApi {
     late http.Response response;
     switch (method) {
       case 'POST':
-        response = await http.post(uri, headers: headers, body: jsonEncode(body ?? const {}));
+        response = await OpFinHttp.post(uri, headers: headers, body: jsonEncode(body ?? const {}));
         break;
       case 'DELETE':
-        response = await http.delete(uri, headers: headers);
+        response = await OpFinHttp.delete(uri, headers: headers);
         break;
       default:
-        response = await http.get(uri, headers: headers);
+        response = await OpFinHttp.get(uri, headers: headers);
     }
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 ||
