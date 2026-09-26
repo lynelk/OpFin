@@ -8,7 +8,7 @@ Language: English (United Kingdom)
 
 - `apps/api` owns identity, consent, eligibility, credit profiles, financial decisions, obligations, ledger postings, provider finality and reconciliation.
 - `apps/web` and `apps/client` consume authenticated API contracts and never connect directly to PostgreSQL.
-- CPay is the preferred production money-movement adapter. OpFin must remain independently operable and may use an explicitly configured, production-certified direct provider adapter as a controlled fallback. Never enable a direct provider without a real contract, credentials, certification and reconciliation path.
+- CPay is the preferred production money-movement adapter. OpFin must remain independently operable and may use an explicitly configured, production-certified direct provider adapter as a controlled fallback. Never enable a direct provider without a real contract, credentials, certification and reconciliation path.\n- All OpFin access to gnuGrid services must route through Cito. A generic direct-provider fallback rule does not authorise direct gnuGrid access.
 - A provider acknowledgement is not accounting finality.
 - Secrets remain service-scoped and are never exposed to web or client builds.
 - External KYC, CRB, MNO and third-party scoring results must be attributable to their source. Missing provider data must never be replaced with invented scores.
@@ -25,7 +25,7 @@ Language: English (United Kingdom)
 
 ## Launch customer-experience rules
 
-- Keep the public launch navigation focused on `Home | Borrow | Activity | More`.
+- Migrate the universal financing entry from `Borrow` to `Finance` as part of FIN-010. Until App/Web/API compatibility is proven, preserve existing Borrow routes as compatibility paths rather than breaking current conventional-credit journeys. The target primary navigation is `Home | Finance | Activity | More`.
 - Home must prioritise the customer's current state: setup task, amount due, available-to-borrow amount and next action.
 - The sign-up sequence is `Phone → OTP → First/Other/Last names → 6-digit PIN → authenticated Home`. Do not reintroduce a mandatory long password for new mobile customers.
 - A second phone is optional. It may improve profile confidence or add a wallet, but it must not be a condition for baseline scoring.
@@ -69,3 +69,21 @@ Documentation is part of the implementation, not a post-release chore.
 Railway infrastructure is controlled by `ops/railway/topology-policy.json`. Do **not** create a new Railway project, environment, service, database, volume, bucket, persistent validation workload, or increase replica counts unless the workspace owner has explicitly approved that specific infrastructure change. A request to build, test, validate, fix, deploy, synchronise or release software is not infrastructure-creation consent.
 
 Use the existing approved services first. Run build, browser, migration, compatibility and release validation in ephemeral CI unless the owner has explicitly authorised a persistent Railway resource. Never use Railway Agent to work around this rule. Keep the workspace Railway Agent hard limit at USD 0 and respect the current compute hard limit. If an approved topology change is required, update the allow-list, cost impact and governance documentation in the same reviewed change before provisioning it.
+
+
+## Integrated financing and delivery controls — 26 September 2026
+
+- Read `docs/development/OPFIN_INTEGRATED_DELIVERY_PLAN_2026-09-26.md` before implementing financing, Essentials, Capital/assets, Islamic finance, Participatory Finance, protection/investment, legal/contract intelligence or public-site changes.
+- Link material work to `docs/governance/OPFIN_DELIVERY_FEATURE_REGISTER.md` and the canonical `docs/product/IMPLEMENTATION_BACKLOG.md`.
+- Treat `FinancialProduct` and `FinancingArrangement` as the target financing abstractions. Preserve legacy credit/loan contracts through compatibility adapters until migration acceptance proves they can be retired.
+- Conventional and Islamic rails reuse Identity, KYC, Consent, Financial Passport, affordability, risk, payments, servicing, support and reporting, while contract, pricing/profit, funding, accounting, delinquency, disclosure and governance remain rail-aware.
+- Never infer religion. A financial-principles preference is a product preference, not a religious identity field.
+- Islamic products must not call conventional interest-pricing logic. Sharia status requires approved governance and cannot be created or overridden by AI, code flags or administrators.
+- Every regulated product requires a valid Legal Product Passport and all required transaction-specific consents/mandates before activation.
+- State-changing financial commands require idempotency, correlation and audit context. Reversals use compensating financial entries; never destructively rewrite posted financial history.
+- The OpFin ledger remains the financial source of truth. Blockchain proofs, tokenisation or digital-asset rails never replace accounting entries and must remain optional/fail-closed until separately approved.
+- Essentials is a bills-management/payment capability with optional responsible partner finance. It must remain useful without borrowing and must account for recurring future bills when assessing affordability.
+- Durable assets belong to the shared Capital/Asset Registry architecture rather than Essentials.
+- Remote device controls, public tokenisation, secondary transfer, stablecoin/virtual-asset settlement and crypto-backed finance remain disabled until their specific legal, security, finance and operational gates are approved.
+- The public marketing site has one canonical source under `sites/opfin-public/` once host/source compatibility is proven. Do not create or maintain a second independently authored marketing website.
+- A source merge, deployment, configured provider, saved Site version or successful HTTP response is never by itself production acceptance.
