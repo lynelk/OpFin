@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/login_screen.dart';
 import 'package:opfin/otp_screen.dart';
@@ -40,7 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       String signature = '';
       if (Platform.isAndroid) signature = await SmsAutoFill().getAppSignature;
-      final response = await http.post(
+      final response = await OpFinHttp.post(
         Uri.parse('$apiUrl/generate-otp'),
         body: {
           'phone': _normalise(_phone.text),
