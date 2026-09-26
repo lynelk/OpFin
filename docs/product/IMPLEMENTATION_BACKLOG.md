@@ -143,3 +143,30 @@ Programme activation needs real theory-of-change/KPI/target agreements, lawful p
 - E2E-006: Documentation/API consistency and production operations.
 
 Use the existing UAT cases and new `DEL-` cases in the [manual supplement](../manuals/CURRENT_CAPABILITY_SUPPLEMENT.md). A slice is accepted only when implementation, permissions, audit, failure states, tests, documentation and applicable production evidence agree. Do not delete an outstanding requirement merely because later source work is extensive.
+
+
+## OpFin Capital programme backlog — 26 September 2026
+
+These requirements extend the existing backlog.
+
+- **CAP-001**: OpFin Capital reuses Financial Spaces, ledger, lender orchestration and partner controls.
+- **CAP-002**: Universal Asset Registry/Asset Passport with shared lifecycle and class-specific evidence.
+- **CAP-003**: Capital mandates, funding provenance, allocation/concentration controls and portfolio reporting.
+- **AUTO-001**: Vehicle/motorcycle/EV/fleet identity, dealer, valuation, inspection, protection/security and end-to-end servicing/recovery/release.
+- **AST-001**: Extend shared asset contracts to solar, machinery, agricultural/productive equipment and approved future classes.
+- **DEV-001**: Phone/tablet/laptop passport with validated IMEI/serial/SKU, merchant, purchase and activation evidence.
+- **DEV-002**: Merchant/SKU eligibility, supplier settlement and duplicate-finance/stolen-device/merchant-collusion controls.
+- **DEV-003**: Device affordability, deposit/LTV, tenor, pricing, funding and partner policy configuration.
+- **DEV-004**: Warranty/protection, loss/theft, repair/replacement, trade-in/resale, recovery, settlement and release lifecycle.
+- **DEV-005**: Optional lawful OEM/enterprise device-management integration with explicit consent, warning/grace/dispute/release, full audit and no surveillance/OS-security bypass.
+- **DEV-006**: SACCO/FI/employer/merchant/API/white-label reuse with strict Space/tenant isolation.
+- **PF-001**: Versioned partner Product Factory for asset/device finance; actual lender/funder/principal and disclosures remain explicit.
+- **PF-002**: Partner APIs/webhooks for quote, application, decision, evidence, supplier settlement, servicing, repayment and status.
+- **DGT-001**: Provider-neutral cryptographic anchoring of selected agreements and lifecycle events; no customer PII on public chain.
+- **DGT-002**: Approved digital investment interests reconcile to enforceable legal records and the OpFin ledger.
+- **DGT-003**: Stablecoin funding/settlement only through approved jurisdiction, VASP/custodian, AML, custody, FX and accounting controls.
+- **DGT-004**: Secondary transfer, public tokenisation and crypto-backed finance remain separately activated later-phase capabilities.
+- **CAP-E2E-001**: Person/Organisation ↔ Asset ↔ Finance ↔ Capital reconciles end-to-end.
+- **CAP-E2E-002**: Blockchain/VASP/OEM outages cannot block ordinary repayment or servicing.
+- **CAP-E2E-003**: Identifier privacy, duplicate-finance, partner isolation, maker-checker, funding provenance and immutable records pass security/UAT.
+- **CAP-E2E-004**: Device-control consent, safety, warning, dispute, release and audit pass legal/security/UAT before activation.
