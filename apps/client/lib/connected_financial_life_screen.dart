@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/offline_sync_service.dart';
 import 'package:opfin/services/user_session.dart';
@@ -32,7 +33,7 @@ class _ConnectedFinancialLifeScreenState extends State<ConnectedFinancialLifeScr
   Future<Map<String, dynamic>> _load() async {
     final token = await UserSession.getAccessToken();
     if (token == null || token.isEmpty) throw Exception('Secure session is required.');
-    final response = await http.get(
+    final response = await OpFinHttp.get(
       Uri.parse('$apiUrl/long-range/overview'),
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
