@@ -13,6 +13,7 @@ use App\Models\LoanProduct;
 use App\Models\LoanProductTerm;
 use App\Services\AuditLogger;
 use App\Services\CreditDistributionService;
+use App\Services\CreditProductAvailabilityService;
 use App\Services\PlatformCreditRoutingService;
 use App\Services\ProductionCreditDecisionService;
 use App\Services\ProductionCreditOfferService;
@@ -30,6 +31,7 @@ class ProductionLoanApplicationController extends Controller
         private readonly AuditLogger $auditLogger,
         private readonly ProductionCreditDecisionService $decisionService,
         private readonly ProductionCreditOfferService $offerService,
+        private readonly CreditProductAvailabilityService $productAvailability,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -137,12 +139,10 @@ class ProductionLoanApplicationController extends Controller
             $institutionId = (int) $product->institution_id;
         }
 
-        if ((int) $term->loan_product_id !== (int) $product->id) {
-            return ApiResponse::error('The selected product term does not belong to the selected credit product.', 422, ['loan_product_term_id' => ['PRODUCT_TERM_MISMATCH']]);
-        }
-
-        if ($product->institution_id !== null && (int) $product->institution_id !== $institutionId) {
-            return ApiResponse::error('The selected institution is not eligible for this credit product.', 422, ['institution_id' => ['PRODUCT_INSTITUTION_MISMATCH']]);
+        try {
+            $this->productAvailability->assertAvailable($product, $term, $institutionId);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), 422, ['code' => ['CREDIT_PRODUCT_UNAVAILABLE']]);
         }
 
         $routing = app(PlatformCreditRoutingService::class);
