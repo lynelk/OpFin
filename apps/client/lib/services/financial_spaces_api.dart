@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
 
@@ -12,9 +13,9 @@ class FinancialSpacesApi {
   static Future<dynamic> _request(String path,{String method='GET',Map<String,dynamic>? body}) async {
     final h=await _headers(); final uri=Uri.parse('$apiUrl$path');
     late http.Response r;
-    if(method=='POST') { r=await http.post(uri,headers:h,body:jsonEncode(body??{})); }
-    else if(method=='PUT') { r=await http.put(uri,headers:h,body:jsonEncode(body??{})); }
-    else { r=await http.get(uri,headers:h); }
+    if(method=='POST') { r=await OpFinHttp.post(uri,headers:h,body:jsonEncode(body??{})); }
+    else if(method=='PUT') { r=await OpFinHttp.put(uri,headers:h,body:jsonEncode(body??{})); }
+    else { r=await OpFinHttp.get(uri,headers:h); }
     final decoded=jsonDecode(r.body) as Map<String,dynamic>;
     if(r.statusCode<200||r.statusCode>=300) { throw Exception(decoded['message']?.toString()??'Unable to complete request.'); }
     return decoded['data'];
