@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/loan_application_screen.dart';
 import 'package:opfin/models/product_term.dart';
-import 'package:http/http.dart' as http;
 import 'package:opfin/services/user_session.dart';
 
 class ProductTermsPage extends StatefulWidget {
