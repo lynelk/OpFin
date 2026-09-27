@@ -1,11 +1,16 @@
 <?php
 
 use App\Http\Controllers\Api\FinancingController;
+use App\Http\Controllers\Api\PartnerFinancialIntentController;
 use App\Http\Controllers\Api\PayrollDeductionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/financing-applications', [FinancingController::class, 'applications']);
+    Route::get('/partner-financial-intents', [PartnerFinancialIntentController::class, 'customerIndex']);
+    Route::post('/partner-financial-intents/{partnerRequest}/confirm', [PartnerFinancialIntentController::class, 'confirm']);
+    Route::post('/partner-financial-intents/{partnerRequest}/decline', [PartnerFinancialIntentController::class, 'decline']);
+
     Route::get('/payroll-deduction/provider-capability', [PayrollDeductionController::class, 'providerCapability']);
     Route::get('/payroll-deduction/cases', [PayrollDeductionController::class, 'index']);
     Route::post('/payroll-deduction/cases', [PayrollDeductionController::class, 'store']);
@@ -13,6 +18,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/payroll-deduction/cases/{case}/reservation', [PayrollDeductionController::class, 'requestReservation']);
     Route::post('/payroll-deduction/cases/{case}/cancel', [PayrollDeductionController::class, 'cancel']);
 });
+
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:partner_api,platform_admin,operations'])
+    ->prefix('partner')
+    ->group(function () {
+        Route::post('/financial-intents/{customer}', [PartnerFinancialIntentController::class, 'store']);
+    });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])
     ->prefix('operations/payroll-deduction')
