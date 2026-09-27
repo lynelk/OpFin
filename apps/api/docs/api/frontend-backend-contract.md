@@ -304,6 +304,14 @@ Personal protection uses the existing approved-product and policy lifecycle. Cli
 For a non-Personal Financial Space, `GET /api/financial-spaces/{space}/protection/products` returns only products approved for group use (or both personal and group audiences) to active members. This endpoint is catalogue/readiness only. Clients must not invent group enrolment, premium collection or member coverage allocation until dedicated server contracts and activation controls are published.
 
 
+### Mobile Home transport contract
+
+The Flutter Home should normally use `GET /api/mobile/home` rather than independently loading Financial Compass, credit profile, protection policies and Financial Spaces. The aggregate response is transport/orchestration only: those underlying server domains remain authoritative.
+
+Clients retain the returned private `ETag` only in memory for the signed-in session and may send it as `If-None-Match` on refresh. HTTP `304` means the client may reuse its in-memory snapshot. Do not persist the complete Home financial payload merely to obtain cache hits across sign-in sessions.
+
+During a controlled rolling migration only, the mobile client may fall back to the established individual endpoints when `/api/mobile/home` returns `404` or `405`. The compatibility path must remain metered and should be removed after all supported API environments expose the aggregate contract.
+
 ## Location Context contract
 
 Clients treat location as task-specific context rather than a persistent tracking feed.
