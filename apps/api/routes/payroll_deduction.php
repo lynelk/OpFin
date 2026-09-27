@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\FinancingController;
 use App\Http\Controllers\Api\PayrollDeductionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    Route::get('/financing-applications', [FinancingController::class, 'applications']);
     Route::get('/payroll-deduction/provider-capability', [PayrollDeductionController::class, 'providerCapability']);
     Route::get('/payroll-deduction/cases', [PayrollDeductionController::class, 'index']);
     Route::post('/payroll-deduction/cases', [PayrollDeductionController::class, 'store']);
