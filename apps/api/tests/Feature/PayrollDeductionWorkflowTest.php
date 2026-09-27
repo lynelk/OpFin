@@ -7,6 +7,7 @@ use App\Models\FinancialIntent;
 use App\Models\FinancialProduct;
 use App\Models\FinancingApplication;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -108,7 +109,6 @@ class PayrollDeductionWorkflowTest extends TestCase
 
         $this->postJson('/api/operations/payroll-deduction/cases/'.$case['id'].'/reconcile', [
             'payroll_period' => '2026-10',
-            'expected_minor' => 350000,
             'recovered_minor' => 350000,
             'provider_reference' => 'BANK-SETTLEMENT-1',
         ], $this->headers('reconcile-1'))
@@ -131,6 +131,46 @@ class PayrollDeductionWorkflowTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.case.status', 'amendment_required')
             ->assertJsonPath('data.case.reconciliations.0.result_category', 'off_payroll_lt_3_months');
+    }
+
+    public function test_reconciliation_cannot_be_forced_by_operator_expected_amount(): void
+    {
+        [$caseId, $operations] = $this->caseAtPayrollSubmission();
+        Sanctum::actingAs($operations);
+
+        $this->postJson('/api/operations/payroll-deduction/cases/'.$caseId.'/payroll-result', [
+            'payroll_period' => '2026-10',
+            'result_category' => 'success',
+            'recovered_minor' => 340000,
+            'provider_reference' => 'PDMS-RESULT-MISMATCH',
+        ], $this->headers('mismatch-result'))
+            ->assertOk()
+            ->assertJsonPath('data.case.status', 'reconciliation_pending');
+
+        $this->postJson('/api/operations/payroll-deduction/cases/'.$caseId.'/reconcile', [
+            'payroll_period' => '2026-10',
+            'expected_minor' => 340000,
+            'recovered_minor' => 340000,
+            'provider_reference' => 'BANK-SETTLEMENT-MISMATCH',
+        ], $this->headers('mismatch-reconcile'))
+            ->assertOk()
+            ->assertJsonPath('data.case.status', 'reconciliation_exception')
+            ->assertJsonPath('data.case.reconciliations.0.expected_minor', 350000)
+            ->assertJsonPath('data.case.reconciliations.0.variance_minor', -10000);
+    }
+
+    public function test_payroll_event_evidence_is_database_immutable(): void
+    {
+        [$caseId] = $this->caseAtPayrollSubmission();
+        $eventId = DB::table('payroll_deduction_events')
+            ->where('payroll_deduction_case_id', $caseId)
+            ->value('id');
+
+        $this->expectException(QueryException::class);
+
+        DB::table('payroll_deduction_events')
+            ->where('id', $eventId)
+            ->update(['event_type' => 'tampered']);
     }
 
     public function test_state_changes_require_idempotency_key(): void
@@ -238,12 +278,14 @@ class PayrollDeductionWorkflowTest extends TestCase
         $this->postJson('/api/payroll-deduction/cases/'.$caseId.'/reservation', [
             'requested_deduction_minor' => 350000,
             'undertaking_consent_record_id' => $consent->id,
+            'provider_agreement_reference' => 'SETUP-AGR',
         ], $this->headers('setup-reserve-request'));
 
         Sanctum::actingAs($operations);
         $this->postJson('/api/operations/payroll-deduction/cases/'.$caseId.'/reservation', [
             'reserved' => true,
             'reservation_reference' => 'SETUP-RES',
+            'provider_agreement_reference' => 'SETUP-AGR',
         ], $this->headers('setup-reserve'));
         $this->postJson('/api/operations/payroll-deduction/cases/'.$caseId.'/key-facts', [
             'key_facts' => ['version' => 'v1'],
