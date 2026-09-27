@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/data_usage_ledger.dart';
+import 'package:opfin/services/offline_sync_service.dart';
 import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/services/sponsored_data_policy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -55,4 +56,33 @@ void main() {
     expect(encoded, isNot(contains('secret')));
     client.close();
   });
+  test('offline queue rejects sensitive operational payloads', () async {
+    expect(
+      () => OfflineSyncService.queueEvent(
+        'profile_note',
+        {'nin': 'CM123456789012'},
+      ),
+      throwsA(isA<Exception>()),
+    );
+  });
+
+  test('offline queue enforces event and summary budgets', () async {
+    await OfflineSyncService.queueEvent(
+      'small_event',
+      {'note': 'saved offline'},
+    );
+
+    final summary = await OfflineSyncService.pendingSummary();
+    expect(summary['event_count'], 1);
+    expect((summary['queued_bytes'] as num).toInt(), greaterThan(0));
+
+    expect(
+      () => OfflineSyncService.queueEvent(
+        'oversized_event',
+        {'note': 'x' * (OfflineSyncService.maxEventBytes + 1024)},
+      ),
+      throwsA(isA<Exception>()),
+    );
+  });
+
 }
