@@ -81,7 +81,7 @@ return new class extends Migration
     private function protectEventEvidence(): void
     {
         if (DB::getDriverName() === 'pgsql') {
-            DB::unprepared("CREATE OR REPLACE FUNCTION opfin_payroll_event_immutable() RETURNS trigger LANGUAGE plpgsql AS $ BEGIN RAISE EXCEPTION 'Payroll deduction event evidence is immutable'; END; $");
+            DB::unprepared('CREATE OR REPLACE FUNCTION opfin_payroll_event_immutable() RETURNS trigger LANGUAGE plpgsql AS $opfin$ BEGIN RAISE EXCEPTION \'Payroll deduction event evidence is immutable\'; END; $opfin$');
             DB::unprepared('CREATE TRIGGER payroll_deduction_events_immutable BEFORE UPDATE OR DELETE ON payroll_deduction_events FOR EACH ROW EXECUTE FUNCTION opfin_payroll_event_immutable()');
         } elseif (DB::getDriverName() === 'sqlite') {
             DB::unprepared("CREATE TRIGGER payroll_deduction_events_immutable_update BEFORE UPDATE ON payroll_deduction_events BEGIN SELECT RAISE(ABORT, 'Payroll deduction event evidence is immutable'); END");
