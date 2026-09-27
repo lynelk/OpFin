@@ -47,7 +47,7 @@ class PersonalHomeApi {
       }
 
       if (response.statusCode == 404 || response.statusCode == 405) {
-        return _legacyLoad(headers);
+        return await _legacyLoad(headers);
       }
 
       final snapshot = _decode(
