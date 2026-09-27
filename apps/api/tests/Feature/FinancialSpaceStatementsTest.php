@@ -770,6 +770,52 @@ class FinancialSpaceStatementsTest extends TestCase
         );
     }
 
+    public function test_legacy_cashbook_retry_normalises_equivalent_date_representations(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($owner);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'investment_club',
+            'name' => 'Canonical Date Retry Club',
+        ])->assertCreated()->json('data.space.id');
+
+        $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'Canonical Date Account',
+            'account_type' => 'bank',
+            'currency' => 'UGX',
+        ])->assertCreated()->json('data.account.id');
+
+        $payload = [
+            'transaction_reference' => 'DATE-RETRY-001',
+            'direction' => 'credit',
+            'amount_minor' => 10000,
+            'description' => 'Equivalent date retry',
+            'transaction_date' => '2026-09-04',
+            'value_date' => '2026-09-05',
+        ];
+
+        $first = $this->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
+            $payload,
+        )->assertCreated();
+
+        $payload['transaction_date'] = '2026-09-04T00:00:00Z';
+        $payload['value_date'] = '2026-09-05T00:00:00Z';
+
+        $replay = $this->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
+            $payload,
+        )->assertCreated();
+
+        $this->assertSame($first->json('data.transaction.id'), $replay->json('data.transaction.id'));
+        $this->assertDatabaseCount('financial_space_transactions', 1);
+        $this->assertSame(
+            10000,
+            (int) FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->current_balance_minor,
+        );
+    }
+
     public function test_opening_balance_is_immutable_immediately_after_account_creation(): void
     {
         $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
