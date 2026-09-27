@@ -12,7 +12,7 @@ The implemented workflow follows the supplied Uganda payroll-deduction originati
 
 ## Activation boundary
 
-The OpFin state machine, customer workflow, operations workflow and reconciliation evidence are implemented independently of the external payroll provider. The PDMS adapter is fail-closed by default with `PDMS_MODE=manual_evidence`. No live PDMS machine call is made until an approved interface contract, credentials, callback/security rules and production certification are configured.
+The OpFin state machine, customer workflow, operations workflow and reconciliation evidence are implemented independently of the external payroll provider. Payroll event evidence is append-only at both the application and supported database layers. Reconciliation derives the expected amount from the recorded payroll-result obligation; an operator cannot override the expected amount to force a match. The PDMS adapter is fail-closed by default with `PDMS_MODE=manual_evidence`. No live PDMS machine call is made until an approved interface contract, credentials, callback/security rules and production certification are configured.
 
 The Flutter navigation entry is also disabled by default. It is exposed only when the client is built with `--dart-define=OPFIN_PAYROLL_DEDUCTION_ENABLED=true` after the associated product/provider activation decision.
 
