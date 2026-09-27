@@ -38,7 +38,7 @@ class FinancialSpaceTreasuryAccount extends Model
     {
         if ($this->exists) {
             throw new \LogicException(
-                'Opening balance is fixed at treasury-account creation. Use a reviewed accounting correction instead of rebaselining.'
+                'Opening balance is locked and fixed at treasury-account creation. Use a reviewed accounting correction instead of rebaselining.'
             );
         }
 
