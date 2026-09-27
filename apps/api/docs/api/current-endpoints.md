@@ -161,3 +161,11 @@ Read the [Financial Intelligence contract](FINANCIAL_INTELLIGENCE_CONTRACT.md), 
 The institutional namespace is `/api/financial-spaces/{space}/intelligence`. It includes role-aware context, source registration, staged JSON/CSV imports, independent publication, source-reconciled portfolio analysis, comparison and sensitivity analysis, assigned cases, expiring access grants, frozen reports and explicit report-sharing mandates. Personal owners receive statement permissions only. Imports and statement evidence do not post payments, alter core accounting or become credit decisions.
 
 The candidate also includes jurisdiction-specific issuer-version administration under `/api/intelligence/admin/issuers` and purpose-bound statement evidence under the scoped namespace. Original PDFs remain quarantined until an accepted scanner/parser pipeline exists. Arithmetic consistency is not issuer authentication. The actual application, database, browser and mobile build gates remain outstanding; discoverable routes or written tests do not establish acceptance.
+
+## Mobile Home aggregate — 27 September 2026
+
+- `GET /api/mobile/home` — authenticated mobile Home snapshot combining Financial Compass, customer credit-profile state, personal protection policies and authorised Financial Spaces.
+- Optional query: `currency` (three-letter code, default `UGX`).
+- Response includes `freshness.observed_at`, `freshness.window_seconds=300` and `freshness.server_authoritative=true`.
+- The endpoint returns a private `ETag`. A matching `If-None-Match` returns HTTP `304` with no replacement financial payload.
+- This is a read-orchestration endpoint only. It does not create a second financial source of truth; underlying domain services and Space permissions remain authoritative.
