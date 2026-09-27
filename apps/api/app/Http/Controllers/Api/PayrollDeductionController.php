@@ -183,7 +183,7 @@ class PayrollDeductionController extends Controller
         $data = $request->validate([
             'payroll_period' => ['required', 'date_format:Y-m'],
             'submission_file_reference' => ['nullable', 'string', 'max:180'],
-            'submission_code' => ['nullable', 'string', 'max:40'],
+            'submission_code' => ['nullable', 'in:482'],
             'provider_reference' => ['nullable', 'string', 'max:180'],
         ]);
 
@@ -223,9 +223,7 @@ class PayrollDeductionController extends Controller
     {
         $data = $request->validate([
             'payroll_period' => ['required', 'date_format:Y-m'],
-            'expected_minor' => ['required', 'integer', 'min:0'],
             'recovered_minor' => ['required', 'integer', 'min:0'],
-            'result_category' => ['nullable', 'string', 'max:80'],
             'provider_reference' => ['nullable', 'string', 'max:180'],
             'evidence' => ['nullable', 'array'],
         ]);
