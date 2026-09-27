@@ -38,7 +38,7 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['event' => 'account.deletion.completed', 'actor_id' => $user->id]);
     }
 
-    public function test_pin_deletion_purges_active_phone_wallet_and_credit_profile_context(): void
+    public function test_pin_deletion_purges_active_phone_and_wallet_context_but_retains_credit_reporting_evidence(): void
     {
         $user = User::factory()->create([
             'role' => User::ROLE_CUSTOMER,
@@ -90,7 +90,7 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
 
         $this->assertDatabaseMissing('customer_phone_numbers', ['user_id' => $user->id]);
         $this->assertDatabaseMissing('customer_wallets', ['user_id' => $user->id]);
-        $this->assertDatabaseMissing('credit_profiles', ['user_id' => $user->id]);
+        $this->assertDatabaseHas('credit_profiles', ['user_id' => $user->id]);
 
         $deleted = User::withTrashed()->findOrFail($user->id);
         $this->assertNull($deleted->first_name);
@@ -152,9 +152,12 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         ])->assertOk()
             ->assertJsonPath('data.deletion_status', 'completed');
 
-        $this->assertDatabaseMissing('financial_obligations', ['financial_space_id' => $spaceId]);
-        $this->assertDatabaseMissing('financial_assets', ['financial_space_id' => $spaceId]);
-        $this->assertDatabaseMissing('financial_spaces', ['id' => $spaceId]);
+        $this->assertDatabaseHas('financial_obligations', [
+            'financial_space_id' => $spaceId,
+            'status' => 'settled',
+        ]);
+        $this->assertDatabaseHas('financial_assets', ['financial_space_id' => $spaceId]);
+        $this->assertDatabaseHas('financial_spaces', ['id' => $spaceId]);
     }
 
     public function test_account_deletion_is_immediately_rejected_when_peer_finance_obligations_exist(): void
@@ -221,6 +224,27 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         $fresh = User::findOrFail($user->id);
         $this->assertSame('en', $fresh->preferred_language);
         $this->assertNull($fresh->accessibility_preferences);
+    }
+
+    public function test_server_offline_sync_evidence_is_not_exposed_as_optional_deletion_data(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_CUSTOMER,
+            'password' => Hash::make('DeleteMe!123'),
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/account/deletion-readiness')
+            ->assertOk()
+            ->assertJsonMissing(['code' => 'offline_sync']);
+
+        $this->deleteJson('/api/account/data', [
+            'password' => 'DeleteMe!123',
+            'confirmation' => 'DELETE_DATA',
+            'data_categories' => ['offline_sync'],
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
     }
 
     public function test_wrong_password_cannot_delete_account(): void
