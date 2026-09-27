@@ -57,8 +57,8 @@ void main() {
     client.close();
   });
   test('offline queue rejects sensitive operational payloads', () async {
-    expect(
-      () => OfflineSyncService.queueEvent(
+    await expectLater(
+      OfflineSyncService.queueEvent(
         'profile_note',
         {'nin': 'CM123456789012'},
       ),
@@ -76,10 +76,16 @@ void main() {
     expect(summary['event_count'], 1);
     expect((summary['queued_bytes'] as num).toInt(), greaterThan(0));
 
-    expect(
-      () => OfflineSyncService.queueEvent(
+    final oversizedText = List<String>.filled(
+      OfflineSyncService.maxEventBytes + 1024,
+      'x',
+      growable: false,
+    ).join();
+
+    await expectLater(
+      OfflineSyncService.queueEvent(
         'oversized_event',
-        {'note': 'x' * (OfflineSyncService.maxEventBytes + 1024)},
+        {'note': oversizedText},
       ),
       throwsA(isA<Exception>()),
     );
