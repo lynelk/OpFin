@@ -40,7 +40,7 @@ class OpFinMeteredClient extends http.BaseClient {
         _safeDistributionChannel();
 
     final requestBytes =
-        max(0, request.contentLength) + _headerBytes(request.headers);
+        max(0, request.contentLength ?? 0) + _headerBytes(request.headers);
 
     try {
       final response = await _inner.send(request);
