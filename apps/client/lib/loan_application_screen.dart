@@ -3,7 +3,6 @@ import 'package:opfin/services/distribution_channel.dart';
 import 'package:opfin/services/opfin_http.dart';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/constants.dart';
@@ -173,7 +172,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
-    if (option == null || !mounted) return;
+    if (!mounted) return;
     final reviewedOption = option;
 
     final confirmed = await showModalBottomSheet<bool>(
