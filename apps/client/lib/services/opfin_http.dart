@@ -27,6 +27,10 @@ class OpFinMeteredClient extends http.BaseClient {
     final correlationId = request.headers['X-OpFin-Correlation-Id'] ??
         _correlationId();
 
+    // Sponsored eligibility is tied to the exact requested host. Never allow
+    // the HTTP stack to silently follow that request onto another host.
+    request.followRedirects = false;
+
     request.headers['X-OpFin-Correlation-Id'] = correlationId;
     request.headers['X-OpFin-Feature'] = _safeHeader(feature);
     request.headers['X-OpFin-Operation'] = _safeHeader(operation);
@@ -35,37 +39,65 @@ class OpFinMeteredClient extends http.BaseClient {
     request.headers['X-OpFin-Distribution-Channel'] =
         _safeDistributionChannel();
 
-    final requestBytes = max(0, request.contentLength) +
-        _headerBytes(request.headers);
+    final requestBytes =
+        max(0, request.contentLength) + _headerBytes(request.headers);
 
     try {
       final response = await _inner.send(request);
       var responseBytes = 0;
-      final counted = response.stream.transform(
-        StreamTransformer<List<int>, List<int>>.fromHandlers(
-          handleData: (chunk, sink) {
+      var recorded = false;
+
+      Future<void> recordOnce({required bool completedNormally}) async {
+        if (recorded) return;
+        recorded = true;
+        try {
+          await DataUsageLedger.record(
+            feature: feature,
+            operation: operation,
+            requestBytes: requestBytes,
+            responseBytes: responseBytes,
+            duration: DateTime.now().difference(started),
+            success: completedNormally &&
+                _successfulStatus(response.statusCode),
+            sponsorship: sponsorship,
+            statusCode: response.statusCode,
+          );
+        } catch (_) {
+          // Usage telemetry is non-authoritative and must never break the
+          // customer's network request or change its financial outcome.
+        }
+      }
+
+      late StreamSubscription<List<int>> subscription;
+      final controller = StreamController<List<int>>(sync: true);
+
+      controller.onListen = () {
+        subscription = response.stream.listen(
+          (chunk) {
             responseBytes += chunk.length;
-            sink.add(chunk);
+            controller.add(chunk);
           },
-          handleDone: (sink) {
-            unawaited(DataUsageLedger.record(
-              feature: feature,
-              operation: operation,
-              requestBytes: requestBytes,
-              responseBytes: responseBytes,
-              duration: DateTime.now().difference(started),
-              success:
-                  response.statusCode >= 200 && response.statusCode < 400,
-              sponsorship: sponsorship,
-              statusCode: response.statusCode,
-            ));
-            sink.close();
+          onError: (Object error, StackTrace stackTrace) {
+            unawaited(recordOnce(completedNormally: false));
+            controller.addError(error, stackTrace);
+            unawaited(controller.close());
           },
-        ),
-      );
+          onDone: () {
+            unawaited(recordOnce(completedNormally: true));
+            unawaited(controller.close());
+          },
+          cancelOnError: true,
+        );
+      };
+      controller.onPause = () => subscription.pause();
+      controller.onResume = () => subscription.resume();
+      controller.onCancel = () async {
+        await subscription.cancel();
+        await recordOnce(completedNormally: false);
+      };
 
       return http.StreamedResponse(
-        counted,
+        controller.stream,
         response.statusCode,
         contentLength: response.contentLength,
         request: response.request,
@@ -75,15 +107,19 @@ class OpFinMeteredClient extends http.BaseClient {
         reasonPhrase: response.reasonPhrase,
       );
     } catch (_) {
-      await DataUsageLedger.record(
-        feature: feature,
-        operation: operation,
-        requestBytes: requestBytes,
-        responseBytes: 0,
-        duration: DateTime.now().difference(started),
-        success: false,
-        sponsorship: sponsorship,
-      );
+      try {
+        await DataUsageLedger.record(
+          feature: feature,
+          operation: operation,
+          requestBytes: requestBytes,
+          responseBytes: 0,
+          duration: DateTime.now().difference(started),
+          success: false,
+          sponsorship: sponsorship,
+        );
+      } catch (_) {
+        // Measurement failure must not mask the network failure.
+      }
       rethrow;
     }
   }
@@ -92,6 +128,9 @@ class OpFinMeteredClient extends http.BaseClient {
   void close() {
     if (closeInner) _inner.close();
   }
+
+  static bool _successfulStatus(int statusCode) =>
+      (statusCode >= 200 && statusCode < 300) || statusCode == 304;
 
   static int _headerBytes(Map<String, String> headers) {
     var total = 0;
