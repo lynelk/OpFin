@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -73,10 +74,31 @@ return new class extends Migration
             $table->timestamps();
             $table->unique(['payroll_deduction_case_id', 'payroll_period'], 'payroll_deduction_period_unique');
         });
+
+        $this->protectEventEvidence();
+    }
+
+    private function protectEventEvidence(): void
+    {
+        if (DB::getDriverName() === 'pgsql') {
+            DB::unprepared("CREATE OR REPLACE FUNCTION opfin_payroll_event_immutable() RETURNS trigger LANGUAGE plpgsql AS $ BEGIN RAISE EXCEPTION 'Payroll deduction event evidence is immutable'; END; $");
+            DB::unprepared('CREATE TRIGGER payroll_deduction_events_immutable BEFORE UPDATE OR DELETE ON payroll_deduction_events FOR EACH ROW EXECUTE FUNCTION opfin_payroll_event_immutable()');
+        } elseif (DB::getDriverName() === 'sqlite') {
+            DB::unprepared("CREATE TRIGGER payroll_deduction_events_immutable_update BEFORE UPDATE ON payroll_deduction_events BEGIN SELECT RAISE(ABORT, 'Payroll deduction event evidence is immutable'); END");
+            DB::unprepared("CREATE TRIGGER payroll_deduction_events_immutable_delete BEFORE DELETE ON payroll_deduction_events BEGIN SELECT RAISE(ABORT, 'Payroll deduction event evidence cannot be deleted'); END");
+        }
     }
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'pgsql') {
+            DB::unprepared('DROP TRIGGER IF EXISTS payroll_deduction_events_immutable ON payroll_deduction_events');
+            DB::unprepared('DROP FUNCTION IF EXISTS opfin_payroll_event_immutable()');
+        } elseif (DB::getDriverName() === 'sqlite') {
+            DB::unprepared('DROP TRIGGER IF EXISTS payroll_deduction_events_immutable_update');
+            DB::unprepared('DROP TRIGGER IF EXISTS payroll_deduction_events_immutable_delete');
+        }
+
         Schema::dropIfExists('payroll_deduction_reconciliations');
         Schema::dropIfExists('payroll_deduction_events');
         Schema::dropIfExists('payroll_deduction_cases');
