@@ -25,6 +25,8 @@ One person may access authorised Personal, Household, Savings Group, Investment 
 
 Home is personal-finance first. It uses the server-authoritative Financial Compass to show recorded available money/safe-to-spend, savings, debt, upcoming obligations, cash-flow context and one useful next action before presenting product choices.
 
+For routine refresh, the App uses the authenticated aggregate `/api/mobile/home` contract so Financial Compass, credit-profile state, protection policies and Financial Spaces arrive in one measured request. A private in-memory ETag allows unchanged refreshes to return `304` without retransmitting the financial payload. The former multi-request sequence remains a temporary compatibility fallback only for older API deployments.
+
 **My Money** supports current cash/mobile-money/bank balances and personal debt planning. A debt recorded in the person's Personal Space contributes to the Financial Compass and, when it has a due date, the upcoming commitment view. OpFin-originated loan schedules remain server-derived; customers do not have to re-enter them manually.
 
 Protection is available as a normal personal-finance destination. The App distinguishes premium initiation, partner settlement, insurer issuance and active cover, and routes claim decisions to the disclosed insurer/underwriter.
