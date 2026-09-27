@@ -10,6 +10,7 @@ class OfflineSyncService {
   static const _queueKey = 'opfin_offline_event_queue_v2';
   static const _legacyQueueKey = 'opfin_offline_event_queue_v1';
   static const _deviceKey = 'opfin_device_reference_v1';
+  static const _lastSyncKey = 'opfin_offline_last_successful_sync_v1';
 
   static const int maxEventBytes = 64 * 1024;
   static const int maxBatchBytes = 256 * 1024;
@@ -98,6 +99,17 @@ class OfflineSyncService {
     }
   }
 
+  static Future<Map<String, dynamic>> pendingSummary() async {
+    final prefs = await SharedPreferences.getInstance();
+    final events = await pendingEvents();
+    final encoded = jsonEncode(events);
+    return <String, dynamic>{
+      'event_count': events.length,
+      'queued_bytes': utf8.encode(encoded).length,
+      'last_successful_sync': prefs.getString(_lastSyncKey),
+    };
+  }
+
   static Future<Map<String, dynamic>?> sync() async {
     final events = await pendingEvents();
     if (events.isEmpty) return null;
@@ -162,6 +174,10 @@ class OfflineSyncService {
         await prefs.setString(_queueKey, jsonEncode(remaining));
       }
       batch['remaining_event_count'] = remaining.length;
+      await prefs.setString(
+        _lastSyncKey,
+        DateTime.now().toUtc().toIso8601String(),
+      );
     }
 
     batch['sent_event_count'] = selected.length;
