@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class PartnerFinancialIntentController extends Controller
 {
@@ -52,27 +53,50 @@ class PartnerFinancialIntentController extends Controller
                 })
                 ->lockForUpdate()
                 ->first();
+
+            $requestPayload = [
+                'customer_user_id' => $customerModel->id,
+                'source_platform' => (string) $validated['source_platform'],
+                'external_reference' => (string) $validated['external_reference'],
+                'need_type' => (string) $validated['need_type'],
+                'amount_minor' => isset($validated['amount_minor']) ? (int) $validated['amount_minor'] : null,
+                'currency' => strtoupper((string) ($validated['currency'] ?? 'UGX')),
+                'purpose' => $validated['purpose'] ?? null,
+                'customer_consent_reference' => (string) $validated['customer_consent_reference'],
+                'metadata' => array_merge((array) ($validated['metadata'] ?? []), [
+                    'customer_confirmation_required' => true,
+                ]),
+            ];
+
             if ($existing) {
+                $existingPayload = [
+                    'customer_user_id' => (int) $existing->customer_user_id,
+                    'source_platform' => $existing->source_platform,
+                    'external_reference' => $existing->external_reference,
+                    'need_type' => $existing->need_type,
+                    'amount_minor' => $existing->amount_minor !== null ? (int) $existing->amount_minor : null,
+                    'currency' => $existing->currency,
+                    'purpose' => $existing->purpose,
+                    'customer_consent_reference' => $existing->customer_consent_reference,
+                    'metadata' => $existing->metadata,
+                ];
+
+                if ($this->normalisePayload($existingPayload) !== $this->normalisePayload($requestPayload)) {
+                    throw new ConflictHttpException(
+                        'The Idempotency-Key or external reference is already bound to a different financial-intent request.'
+                    );
+                }
+
                 return $existing;
             }
 
             return PartnerFinancialIntentRequest::create([
                 'reference' => (string) Str::uuid(),
                 'partner_account_id' => (int) $validated['partner_account_id'],
-                'customer_user_id' => $customerModel->id,
-                'source_platform' => (string) $validated['source_platform'],
-                'external_reference' => (string) $validated['external_reference'],
                 'idempotency_key' => $idempotency,
-                'need_type' => (string) $validated['need_type'],
-                'amount_minor' => $validated['amount_minor'] ?? null,
-                'currency' => strtoupper((string) ($validated['currency'] ?? 'UGX')),
-                'purpose' => $validated['purpose'] ?? null,
-                'customer_consent_reference' => (string) $validated['customer_consent_reference'],
                 'status' => 'customer_confirmation_pending',
                 'expires_at' => now()->addDays(7),
-                'metadata' => array_merge((array) ($validated['metadata'] ?? []), [
-                    'customer_confirmation_required' => true,
-                ]),
+                ...$requestPayload,
             ]);
         });
 
@@ -113,7 +137,8 @@ class PartnerFinancialIntentController extends Controller
                 }
                 if ($locked->expires_at && $locked->expires_at->isPast()) {
                     $locked->update(['status' => 'expired']);
-                    throw new InvalidArgumentException('This partner financial intent request has expired.');
+
+                    return null;
                 }
 
                 $purpose = array_merge((array) ($locked->purpose ?? []), [
@@ -143,6 +168,10 @@ class PartnerFinancialIntentController extends Controller
             });
         } catch (InvalidArgumentException $e) {
             return ApiResponse::error($e->getMessage(), 422);
+        }
+
+        if ($intent === null) {
+            return ApiResponse::error('This partner financial intent request has expired.', 422);
         }
 
         return ApiResponse::success('Financial intent confirmed. Product matching remains customer-controlled in OpFin.', [
@@ -189,6 +218,23 @@ class PartnerFinancialIntentController extends Controller
         $values = array_map('strtolower', array_filter((array) $allowed, 'is_string'));
 
         return count(array_intersect($values, ['finance', 'credit', 'financial_intents'])) > 0;
+    }
+
+    private function normalisePayload(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (! array_is_list($value)) {
+            ksort($value);
+        }
+
+        foreach ($value as $key => $item) {
+            $value[$key] = $this->normalisePayload($item);
+        }
+
+        return $value;
     }
 
     private function assertCustomer(Request $request, PartnerFinancialIntentRequest $partnerRequest): void
