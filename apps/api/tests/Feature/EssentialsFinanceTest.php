@@ -10,6 +10,7 @@ use App\Models\EssentialsBiller;
 use App\Models\Institution;
 use App\Models\User;
 use App\Services\CitoEssentialsLendingClient;
+use App\Services\CustomerCreditProfileService;
 use App\Services\ExternalScoringService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -574,6 +575,7 @@ class EssentialsFinanceTest extends TestCase
         ]);
         $space = ['id' => $spaceId, 'type' => 'personal', 'name' => 'My money'];
         Sanctum::actingAs($customer);
+        app(CustomerCreditProfileService::class)->ensurePrimaryPhone($customer->fresh());
 
         CreditProfile::create([
             'user_id' => $customer->id,
