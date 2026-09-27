@@ -143,6 +143,7 @@ class CustomerCreditProfileService
         $currentExposure = $this->totalCreditExposure($user);
         $hasActiveLoan = Loan::withoutGlobalScopes()
             ->where('user_id', $user->id)
+            ->whereNull('deleted_at')
             ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])
             ->exists();
         $available = $hasActiveLoan ? 0 : max(0, $limit - $currentExposure);
@@ -220,6 +221,7 @@ class CustomerCreditProfileService
 
         $activeLoan = Loan::withoutGlobalScopes()
             ->where('user_id', $user->id)
+            ->whereNull('deleted_at')
             ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])
             ->latest()
             ->first();
@@ -521,6 +523,7 @@ class CustomerCreditProfileService
         }
         $activeLoan = Loan::withoutGlobalScopes()
             ->where('user_id', $user->id)
+            ->whereNull('deleted_at')
             ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])
             ->exists();
 
