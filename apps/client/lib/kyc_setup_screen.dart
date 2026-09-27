@@ -71,8 +71,10 @@ class _KycSetupScreenState extends State<KycSetupScreen> {
       if(consent.statusCode<200||consent.statusCode>=300||consentBody['success']!=true){
         throw Exception(consentBody['message']?.toString()??'Unable to record consent.');
       }
-      final photoBytes =
-          await _front!.length() + await _back!.length() + await _selfie!.length();
+      final frontBytes = await _front!.length();
+      final backBytes = await _back!.length();
+      final selfieBytes = await _selfie!.length();
+      final photoBytes = frontBytes + backBytes + selfieBytes;
       if (photoBytes > _maxKycUploadBytes) {
         throw Exception(
           'The three identity photos exceed the 1.5 MB mobile-data budget. Retake the largest photo.',
