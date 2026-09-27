@@ -130,3 +130,8 @@ Run `make publication-check` before externally publishing product/developer docu
 Credit options, applications and Essentials send the actual channel through `lib/services/distribution_channel.dart`. iOS infers `app_store`, Android infers `play_store`, and web infers `web`. Build Huawei Android with `--dart-define=OPFIN_DISTRIBUTION_CHANNEL=huawei_appgallery`; configure actual store policy before publication. Invalid channel/platform combinations are rejected. The channel flag does not replace Huawei device/service integration testing or store approval.
 
 Repayment terms come from the server's configurable lender/channel rules. The client no longer hides terms using a universal 61-day filter or prefers a universal 90-day product. Options/review/offers identify the actual lender; OpFin is the orchestration platform. Home displays an OpFin Score only when the server supplies one. Flutter analysis/tests, Android/iOS release compilation and device UAT remain required. See [the lender contract](../../docs/architecture/LENDER_ORCHESTRATION.md).
+
+
+## Club accounting client recovery and export
+
+Investment Club members can recover saved accounting requests and retain access to their own historical member statements after leaving a club. Native statement export supports controlled save/share and HTML print flows; exports contain document bytes rather than authentication credentials. Android combines this with the approximate-location-only Play policy, while iOS uses the native print/share bridge. Financial mutations remain server-authoritative and maker-checker controls are not bypassed by the client.
