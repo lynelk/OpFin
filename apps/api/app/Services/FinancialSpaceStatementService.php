@@ -97,11 +97,10 @@ class FinancialSpaceStatementService
                 $transactionDate = CarbonImmutable::parse(
                     $data['transaction_date']
                 )->toDateString();
-                $valueDate = isset($data['value_date'])
-                    && $data['value_date'] !== null
-                    && $data['value_date'] !== ''
-                        ? CarbonImmutable::parse($data['value_date'])->toDateString()
-                        : null;
+                $valueDate = null;
+                if (isset($data['value_date']) && $data['value_date'] !== '') {
+                    $valueDate = CarbonImmutable::parse($data['value_date'])->toDateString();
+                }
 
                 $sameInstruction = (int) $existing->treasury_account_id === (int) $lockedAccount->id
                     && $existing->direction === $data['direction']
@@ -114,7 +113,7 @@ class FinancialSpaceStatementService
                     && trim((string) ($existing->description ?? '')) === trim((string) ($data['description'] ?? ''))
                     && trim((string) ($existing->counterparty_name ?? '')) === trim((string) ($data['counterparty_name'] ?? ''));
 
-                if (! $sameInstruction) {
+                if ($sameInstruction === false) {
                     throw new InvalidArgumentException(
                         'Treasury source reference was already used for a different canonical cashbook instruction.'
                     );
