@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\InvestorDemoController;
 use App\Http\Controllers\Api\LendingPlatformController;
 use App\Http\Controllers\Api\LoanApplicationController;
 use App\Http\Controllers\Api\LoanRepaymentController;
+use App\Http\Controllers\Api\MobileHomeController;
 use App\Http\Controllers\Api\LocationContextController;
 use App\Http\Controllers\Api\LongRangeGovernanceController;
 use App\Http\Controllers\Api\LongRangePlatformController;
@@ -80,6 +81,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::delete('/account', [AccountController::class, 'destroy']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
+    Route::get('/mobile/home', [MobileHomeController::class, 'show']);
     Route::get('/capabilities', [CapabilityController::class, 'index']);
     Route::get('/location/status', [LocationContextController::class, 'status']);
     Route::get('/location-contexts', [LocationContextController::class, 'index']);
