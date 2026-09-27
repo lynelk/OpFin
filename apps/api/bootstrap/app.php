@@ -24,7 +24,6 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')->prefix('api')->group(base_path('routes/governance.php'));
             Route::middleware('api')->prefix('api')->group(base_path('routes/long_range.php'));
             Route::middleware('api')->prefix('api')->group(base_path('routes/payroll_deduction.php'));
-            Route::middleware('api')->prefix('api')->group(base_path('routes/account_deletion.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
