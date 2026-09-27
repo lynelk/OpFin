@@ -64,6 +64,14 @@ The mobile camera path resizes/compresses images before upload, caps each image,
 
 ## Release gates
 
+Package gates currently enforce these initial engineering ceilings:
+
+- Android App Bundle: 30 MiB;
+- universal Android APK: 60 MiB;
+- uncompressed iOS `Runner.app`: 120 MiB.
+
+The iOS figure is an engineering artefact ceiling, not a claim about App Store cellular download size. Store-reported/device download measurements remain acceptance evidence.
+
 Each signed candidate records:
 
 - AAB/APK/IPA relevant binary/download size;
