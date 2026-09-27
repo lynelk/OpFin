@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:opfin/services/data_usage_ledger.dart';
+import 'package:opfin/services/offline_sync_service.dart';
 import 'package:opfin/services/sponsored_data_policy.dart';
 
 class DataUsageScreen extends StatefulWidget {
@@ -11,6 +12,7 @@ class DataUsageScreen extends StatefulWidget {
 
 class _DataUsageScreenState extends State<DataUsageScreen> {
   Map<String, dynamic>? _summary;
+  Map<String, dynamic>? _offline;
 
   @override
   void initState() {
@@ -19,8 +21,16 @@ class _DataUsageScreenState extends State<DataUsageScreen> {
   }
 
   Future<void> _load() async {
-    final summary = await DataUsageLedger.currentMonthSummary();
-    if (mounted) setState(() => _summary = summary);
+    final results = await Future.wait([
+      DataUsageLedger.currentMonthSummary(),
+      OfflineSyncService.pendingSummary(),
+    ]);
+    if (mounted) {
+      setState(() {
+        _summary = results[0];
+        _offline = results[1];
+      });
+    }
   }
 
   @override
@@ -33,6 +43,11 @@ class _DataUsageScreenState extends State<DataUsageScreen> {
     final unknown = (summary?['unknown_bytes'] as num?)?.toInt() ?? 0;
     final requests = (summary?['request_count'] as num?)?.toInt() ?? 0;
     final failures = (summary?['failure_count'] as num?)?.toInt() ?? 0;
+    final pendingEvents =
+        (_offline?['event_count'] as num?)?.toInt() ?? 0;
+    final pendingBytes =
+        (_offline?['queued_bytes'] as num?)?.toInt() ?? 0;
+    final lastSync = _offline?['last_successful_sync']?.toString();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Data & storage')),
@@ -65,6 +80,18 @@ class _DataUsageScreenState extends State<DataUsageScreen> {
               value: _formatBytes(requestBytes),
               subtitle: 'Requests sent by OpFin',
             ),
+            _MetricCard(
+              title: 'Pending offline sync',
+              value: _formatBytes(pendingBytes),
+              subtitle: pendingEvents == 0
+                  ? 'Nothing waiting to sync'
+                  : '$pendingEvents saved action${pendingEvents == 1 ? '' : 's'} waiting to sync',
+            ),
+            if (lastSync != null && lastSync.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text('Last successful offline sync: $lastSync'),
+              ),
             const SizedBox(height: 10),
             const Text(
               'Sponsorship classification',
