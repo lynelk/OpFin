@@ -8,6 +8,7 @@ import 'package:opfin/constants.dart';
 import 'package:opfin/connected_financial_life_screen.dart';
 import 'package:opfin/faq_screen.dart';
 import 'package:opfin/loan_applications_screen.dart';
+import 'package:opfin/payroll_deduction_screen.dart';
 import 'package:opfin/peer_lending_screen.dart';
 import 'package:opfin/products_screen.dart';
 import 'package:opfin/profile_screen.dart';
@@ -34,6 +35,14 @@ class BorrowMobileScreen extends StatelessWidget {
           action: 'Start request',
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductsScreen())),
         ),
+        if (payrollDeductionEnabled)
+          _ActionCard(
+            icon: Icons.badge_outlined,
+            title: 'Payroll deduction',
+            description: 'Track salary-linked affordability, reservation, vote approval, payroll submission and reconciliation.',
+            action: 'Open payroll status',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PayrollDeductionScreen())),
+          ),
         if (appStorePeerLendingEnabled)
           _ActionCard(
             icon: Icons.handshake_outlined,
