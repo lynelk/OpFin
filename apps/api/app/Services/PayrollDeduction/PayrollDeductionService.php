@@ -153,11 +153,19 @@ class PayrollDeductionService
             $this->requireStatus($locked, ['reservation_pending']);
             $accepted = (bool) $data['reserved'];
             $to = $accepted ? 'reserved' : 'reservation_failed';
+            $reservationReference = trim((string) ($data['reservation_reference'] ?? $locked->reservation_reference ?? ''));
+            $agreementReference = trim((string) ($data['provider_agreement_reference'] ?? $locked->provider_agreement_reference ?? ''));
+
+            if ($accepted && ($reservationReference === '' || $agreementReference === '')) {
+                throw new InvalidArgumentException(
+                    'Confirmed payroll reservation requires both the reservation reference and agreement reference.'
+                );
+            }
 
             $locked->fill([
                 'status' => $to,
-                'reservation_reference' => $data['reservation_reference'] ?? $locked->reservation_reference,
-                'provider_agreement_reference' => $data['provider_agreement_reference'] ?? $locked->provider_agreement_reference,
+                'reservation_reference' => $reservationReference !== '' ? $reservationReference : null,
+                'provider_agreement_reference' => $agreementReference !== '' ? $agreementReference : null,
                 'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
                 'rejection_code' => $accepted ? null : ($data['rejection_code'] ?? 'RESERVATION_FAILED'),
                 'rejection_reason' => $accepted ? null : ($data['rejection_reason'] ?? 'Payroll reservation was not confirmed.'),
@@ -193,6 +201,7 @@ class PayrollDeductionService
             return ['event' => 'key_facts_submitted', 'to' => 'vote_approval_pending', 'evidence' => [
                 'provider_reference' => $data['provider_reference'] ?? null,
                 'key_facts_version' => $data['key_facts']['version'] ?? null,
+                'key_facts_snapshot' => $data['key_facts'],
             ]];
         });
     }
@@ -234,6 +243,10 @@ class PayrollDeductionService
     ): PayrollDeductionCase {
         return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
             $this->requireStatus($locked, ['deduction_approved']);
+            $submissionCode = (string) ($data['submission_code'] ?? '482');
+            if ($locked->scheme === 'government_pdms' && $submissionCode !== '482') {
+                throw new InvalidArgumentException('Government payroll deduction submissions must use Code 482.');
+            }
 
             $locked->fill([
                 'status' => 'payroll_submitted',
@@ -242,14 +255,14 @@ class PayrollDeductionService
                 'provider_state' => array_merge($locked->provider_state ?? [], [
                     'payroll_period' => $data['payroll_period'],
                     'submission_file_reference' => $data['submission_file_reference'] ?? null,
-                    'submission_code' => $data['submission_code'] ?? '482',
+                    'submission_code' => $submissionCode,
                 ]),
             ])->save();
 
             return ['event' => 'payroll_submitted', 'to' => 'payroll_submitted', 'evidence' => [
                 'payroll_period' => $data['payroll_period'],
                 'submission_file_reference' => $data['submission_file_reference'] ?? null,
-                'submission_code' => $data['submission_code'] ?? '482',
+                'submission_code' => $submissionCode,
             ]];
         });
     }
@@ -263,6 +276,11 @@ class PayrollDeductionService
     ): PayrollDeductionCase {
         return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
             $this->requireStatus($locked, ['payroll_submitted']);
+            $submittedPeriod = (string) (($locked->provider_state ?? [])['payroll_period'] ?? '');
+            if ($submittedPeriod !== '' && $submittedPeriod !== (string) $data['payroll_period']) {
+                throw new InvalidArgumentException('Payroll result period must match the submitted payroll period.');
+            }
+
             $category = (string) $data['result_category'];
             $allowed = ['success', 'rejected', 'off_payroll_lt_3_months', 'off_payroll_ge_3_months'];
             if (! in_array($category, $allowed, true)) {
@@ -305,6 +323,8 @@ class PayrollDeductionService
                 'expected_minor' => $expected,
                 'recovered_minor' => $recovered,
                 'variance_minor' => $variance,
+                'provider_reference' => $data['provider_reference'] ?? null,
+                'provider_evidence' => $data['evidence'] ?? null,
             ]];
         });
     }
@@ -352,29 +372,47 @@ class PayrollDeductionService
     ): PayrollDeductionCase {
         return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
             $this->requireStatus($locked, ['reconciliation_pending', 'reconciliation_exception']);
-            $expected = (int) $data['expected_minor'];
+
+            $reconciliation = PayrollDeductionReconciliation::query()
+                ->where('payroll_deduction_case_id', $locked->id)
+                ->where('payroll_period', (string) $data['payroll_period'])
+                ->lockForUpdate()
+                ->first();
+
+            if (! $reconciliation) {
+                throw new InvalidArgumentException(
+                    'Recorded payroll-result evidence is required before payment reconciliation.'
+                );
+            }
+            if ($reconciliation->result_category !== 'success') {
+                throw new InvalidArgumentException(
+                    'Only a successful payroll result can proceed to payment reconciliation.'
+                );
+            }
+
+            $expected = (int) $reconciliation->expected_minor;
             $recovered = (int) $data['recovered_minor'];
+            if ($recovered < 0) {
+                throw new InvalidArgumentException('Recovered payroll amount cannot be negative.');
+            }
+
             $variance = $recovered - $expected;
             $matched = $variance === 0;
             $to = $matched ? 'reconciled' : 'reconciliation_exception';
+            $existingEvidence = is_array($reconciliation->evidence) ? $reconciliation->evidence : [];
+            $settlementEvidence = [
+                'provider_reference' => $data['provider_reference'] ?? null,
+                'evidence' => $data['evidence'] ?? null,
+                'recorded_at' => now()->toIso8601String(),
+            ];
 
-            PayrollDeductionReconciliation::updateOrCreate(
-                [
-                    'payroll_deduction_case_id' => $locked->id,
-                    'payroll_period' => $data['payroll_period'],
-                ],
-                [
-                    'expected_minor' => $expected,
-                    'recovered_minor' => $recovered,
-                    'variance_minor' => $variance,
-                    'currency' => $locked->currency,
-                    'status' => $matched ? 'reconciled' : 'exception',
-                    'result_category' => $data['result_category'] ?? 'success',
-                    'provider_reference' => $data['provider_reference'] ?? null,
-                    'evidence' => $data['evidence'] ?? null,
-                    'reconciled_at' => $matched ? now() : null,
-                ],
-            );
+            $reconciliation->fill([
+                'recovered_minor' => $recovered,
+                'variance_minor' => $variance,
+                'status' => $matched ? 'reconciled' : 'exception',
+                'evidence' => array_merge($existingEvidence, ['settlement' => $settlementEvidence]),
+                'reconciled_at' => $matched ? now() : null,
+            ])->save();
 
             $locked->fill([
                 'status' => $to,
@@ -387,6 +425,8 @@ class PayrollDeductionService
                 'expected_minor' => $expected,
                 'recovered_minor' => $recovered,
                 'variance_minor' => $variance,
+                'settlement_provider_reference' => $data['provider_reference'] ?? null,
+                'settlement_evidence' => $data['evidence'] ?? null,
             ]];
         });
     }
