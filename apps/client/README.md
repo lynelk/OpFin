@@ -54,6 +54,16 @@ Current App entry points include:
 
 Android requests ACCESS_COARSE_LOCATION first and ACCESS_FINE_LOCATION only for precise tasks. iOS requests When In Use access. Background location is not configured.
 
+## Data, storage and low-connectivity behaviour
+
+All ordinary OpFin API traffic is routed through the metered mobile network layer. The App records aggregate application-layer bytes by feature and operation without storing request or response payloads, identity numbers, PINs, OTPs, tokens or raw financial content.
+
+Under **More → Data & storage**, customers can see this month's OpFin application traffic and whether each measured byte falls inside an operator-confirmed sponsored boundary, outside that boundary, or has billing treatment that is not yet confirmed. OpFin does not describe traffic as free merely because it used an OpFin hostname; the mobile operator remains authoritative for billing/zero-rating.
+
+Offline actions use bounded queues and bounded sync batches. Oversized or sensitive actions are not silently stored in the generic offline queue. KYC capture resizes/compresses mobile images and applies a total mobile upload budget while preserving the requirement for legible evidence.
+
+Client-facing hosts are controlled by `distribution/sponsored-data/whitelist-manifest.json`. New SDKs, media sources, direct provider hosts, polling loops or background traffic require a data-impact and whitelist review before release. See `../../docs/architecture/LIGHTWEIGHT_SPONSORED_DATA.md`.
+
 ## Identity verification
 
 Where a selected service requires identity evidence, the App follows the configured KYC contract, including NIN and required document/selfie evidence.
