@@ -305,7 +305,7 @@ class FinancialSpaceStatementsTest extends TestCase
             'direction' => 'credit',
             'amount_minor' => 90000,
             'description' => 'Contribution recorded earlier',
-            'transaction_date' => '2026-09-01',
+            'transaction_date' => '2026-09-15',
         ])->assertCreated()->json('data.transaction.id');
 
         $csv = "Date,Description,Reference,Debit,Credit\n2026-09-20,Contribution,BANK-XYZ,,90000\n";
