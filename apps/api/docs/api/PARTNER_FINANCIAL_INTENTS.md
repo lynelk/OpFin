@@ -20,10 +20,10 @@ Required controls:
 - an active/approved partner distribution account owned by the caller unless the caller is a platform administrator or operations user;
 - the partner distribution account must explicitly allow `finance`, `credit` or `financial_intents`;
 - `source_platform` is currently one of `stolets`, `shamba` or `coreworks`;
-- `Idempotency-Key` is mandatory;
-- `external_reference` is unique per partner account;
+- `Idempotency-Key` is mandatory and is bound to the original customer and request payload;
+- `external_reference` is unique per partner account; exact replays return the existing request, while a reused key/reference with a different customer or financial payload is rejected with HTTP 409;
 - a `customer_consent_reference` from the originating platform is required;
-- the referral expires after seven days if the customer does not confirm it.
+- the referral expires after seven days if the customer does not confirm it; an attempted confirmation after expiry persists the request as `expired` and creates no financial intent.
 
 The partner response exposes referral state only. It does not return the customer's Financial Space membership, credit profile, product matches or lender decision.
 
