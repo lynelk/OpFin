@@ -1,0 +1,116 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
+
+class AccountDataDeletionService
+{
+    private const CATEGORIES = [
+        'location_context' => ['label'=>'Saved location context','description'=>'Optional saved places and task-specific location context.'],
+        'financial_planning' => ['label'=>'Personal planning data','description'=>'Optional budgets, planning accounts, entries and calendar items.'],
+        'linked_accounts' => ['label'=>'Linked account connections','description'=>'Optional external account links and synchronisation context.'],
+        'household_and_microbusiness' => ['label'=>'Household and microbusiness profile data','description'=>'Optional household and microbusiness planning profiles.'],
+        'offline_sync' => ['label'=>'Offline synchronisation data','description'=>'Completed offline synchronisation batches that are not required as financial evidence.'],
+        'profile_preferences' => ['label'=>'Profile preferences','description'=>'Optional accessibility and language preferences. Language resets to English.'],
+    ];
+
+    public const RETAINED = [
+        'financial transaction and settlement evidence where legally required',
+        'loan, repayment, accounting and reconciliation records where legally required',
+        'KYC/AML, credit-reporting and regulatory evidence where legally required',
+        'security, consent and audit evidence required to demonstrate lawful processing and account closure',
+    ];
+
+    public function options(): array
+    {
+        return collect(self::CATEGORIES)
+            ->map(fn (array $definition,string $code)=>['code'=>$code,...$definition])
+            ->values()->all();
+    }
+
+    public function delete(User $user,array $categories): array
+    {
+        $categories=array_values(array_unique(array_map('strval',$categories)));
+        $unknown=array_values(array_diff($categories,array_keys(self::CATEGORIES)));
+        if ($categories===[] || $unknown!==[]) {
+            throw ValidationException::withMessages([
+                'data_categories'=>[$unknown===[]?'Select at least one supported data category.':'One or more selected data categories are not supported.'],
+            ]);
+        }
+
+        $deleted=[];
+        if (in_array('location_context',$categories,true)) $deleted['location_context']=$this->deleteLocation($user->id);
+        if (in_array('financial_planning',$categories,true)) {
+            $deleted['financial_planning']=$this->deleteUserRows('financial_budgets',$user->id)
+                +$this->deleteUserRows('financial_entries',$user->id)
+                +$this->deleteUserRows('financial_calendar_events',$user->id)
+                +$this->deleteUserRows('financial_accounts',$user->id);
+        }
+        if (in_array('linked_accounts',$categories,true))
+            $deleted['linked_accounts']=$this->deleteUserRows('linked_financial_accounts',$user->id);
+        if (in_array('household_and_microbusiness',$categories,true))
+            $deleted['household_and_microbusiness']=$this->deleteUserRows('household_finance_profiles',$user->id)
+                +$this->deleteUserRows('microbusiness_profiles',$user->id);
+        if (in_array('offline_sync',$categories,true))
+            $deleted['offline_sync']=$this->deleteUserRows('offline_sync_batches',$user->id);
+        if (in_array('profile_preferences',$categories,true)) {
+            User::withoutGlobalScopes()->whereKey($user->id)->update([
+                'preferred_language'=>'en','accessibility_preferences'=>null,'updated_at'=>now(),
+            ]);
+            $deleted['profile_preferences']=1;
+        }
+
+        return $deleted;
+    }
+
+    public function purgeForClosedAccount(int $userId): void
+    {
+        $personalSpaceIds=$this->personalSpaceIds($userId);
+        foreach ([
+            'financial_accounts','financial_budgets','financial_entries','financial_calendar_events',
+            'linked_financial_accounts','household_finance_profiles','microbusiness_profiles',
+            'community_finance_memberships','offline_sync_batches','customer_wallets',
+            'customer_phone_numbers','credit_profiles',
+        ] as $table) $this->deleteUserRows($table,$userId);
+
+        $this->deleteLocation($userId);
+
+        if ($personalSpaceIds!==[]) {
+            foreach (['financial_obligations','financial_assets'] as $table) {
+                if (Schema::hasTable($table) && Schema::hasColumn($table,'financial_space_id'))
+                    DB::table($table)->whereIn('financial_space_id',$personalSpaceIds)->delete();
+            }
+            DB::table('financial_space_memberships')->where('user_id',$userId)
+                ->whereIn('financial_space_id',$personalSpaceIds)->delete();
+            DB::table('financial_spaces')->whereIn('id',$personalSpaceIds)->delete();
+        }
+    }
+
+    private function deleteUserRows(string $table,int $userId): int
+    {
+        if (! Schema::hasTable($table) || ! Schema::hasColumn($table,'user_id')) return 0;
+        return DB::table($table)->where('user_id',$userId)->delete();
+    }
+
+    private function deleteLocation(int $userId): int
+    {
+        if (! Schema::hasTable('location_contexts')) return 0;
+        $spaces=$this->personalSpaceIds($userId);
+        return DB::table('location_contexts')->where(function($q)use($userId,$spaces){
+            $q->where(fn($p)=>$p->where('subject_type','user')->where('subject_id',$userId));
+            if ($spaces!==[]) $q->orWhereIn('financial_space_id',$spaces);
+        })->delete();
+    }
+
+    private function personalSpaceIds(int $userId): array
+    {
+        if (! Schema::hasTable('financial_spaces') || ! Schema::hasTable('financial_space_memberships')) return [];
+        return DB::table('financial_spaces as s')->join('financial_space_memberships as m','m.financial_space_id','=','s.id')
+            ->where('m.user_id',$userId)->where('s.type','personal')->pluck('s.id')
+            ->map(fn($id)=>(int)$id)->all();
+    }
+}
