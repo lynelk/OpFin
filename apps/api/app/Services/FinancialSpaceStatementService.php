@@ -1752,6 +1752,7 @@ class FinancialSpaceStatementService
     {
         $tokens = function (string $value): array {
             $normalised = strtolower(preg_replace('/[^a-z0-9 ]+/i', ' ', $value) ?? '');
+
             return array_values(array_unique(array_filter(
                 preg_split('/\s+/', $normalised) ?: [],
                 fn ($token) => strlen($token) >= 3
@@ -2090,7 +2091,7 @@ class FinancialSpaceStatementService
             ->value('role');
 
         abort_unless(
-            in_array($role, ['owner','administrator','admin','chairperson','treasurer','secretary','director','manager'], true),
+            in_array($role, ['owner', 'administrator', 'admin', 'chairperson', 'treasurer', 'secretary', 'director', 'manager'], true),
             403
         );
     }
