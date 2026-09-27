@@ -11,6 +11,16 @@ class PayrollDeductionEvent extends Model
         'to_status', 'actor_user_id', 'channel', 'evidence', 'occurred_at',
     ];
 
+    protected static function booted(): void
+    {
+        static::updating(fn () => throw new \LogicException(
+            'Payroll deduction event evidence is immutable.'
+        ));
+        static::deleting(fn () => throw new \LogicException(
+            'Payroll deduction event evidence cannot be deleted.'
+        ));
+    }
+
     protected function casts(): array
     {
         return [
