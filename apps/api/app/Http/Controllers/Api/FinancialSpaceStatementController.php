@@ -480,5 +480,4 @@ class FinancialSpaceStatementController extends Controller
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }
-
 }
