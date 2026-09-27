@@ -36,6 +36,10 @@ All endpoints require auth:sanctum and normal API throttling.
 
 Selective deletion keeps the account active and preserves required financial evidence. Whole-account deletion revokes active consents, removes optional active customer context, revokes access tokens, de-identifies the active user profile and then soft-deletes the user record while retaining only evidence that must remain for a legitimate legal, regulatory, accounting, security or fraud-prevention purpose.
 
+## Release verification
+
+This contract is validated with the same API, Flutter, Android, Huawei AppGallery-build and iOS release-candidate gates used for the rest of OpFin. Store signing, external credentials and provider certification remain separate activation requirements.
+
 ## Customer experience
 
 The mobile account-deletion screen performs a readiness check before destructive action. When deletion is blocked, it shows the obligation, provider/counterparty, reference, status, amount/date where known and recorded phone/email/address where available. Direct provider contact is never invented. If OpFin does not hold a direct contact field, the UI states that clearly and preserves the obligation reference for support and closure.
