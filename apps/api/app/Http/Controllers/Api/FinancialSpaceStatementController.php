@@ -19,7 +19,9 @@ use InvalidArgumentException;
 
 class FinancialSpaceStatementController extends Controller
 {
-    public function __construct(private readonly FinancialSpaceStatementService $statements) {}
+    public function __construct(
+        private readonly FinancialSpaceStatementService $statements,
+    ) {}
 
     public function accounts(FinancialSpace $space, Request $request): JsonResponse
     {
