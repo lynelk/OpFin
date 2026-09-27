@@ -308,6 +308,9 @@ jobs:
           flutter test
           flutter build apk --release --no-pub
           flutter build appbundle --release --no-pub
+          python3 ../../scripts/check-mobile-release-size.py \
+            --android-apk build/app/outputs/flutter-apk/app-release.apk \
+            --android-aab build/app/outputs/bundle/release/app-release.aab
 
   client-ios:
     runs-on: macos-15
@@ -345,6 +348,8 @@ jobs:
           flutter build ios --release --no-codesign --no-pub \
             --dart-define=OPFIN_API_BASE_URL=https://opfin-production.up.railway.app/api \
             --dart-define=OPFIN_APP_STORE_P2P_BORROWING_ENABLED=false
+          python3 ../../scripts/check-mobile-release-size.py \
+            --ios-app build/ios/iphoneos/Runner.app
 
   release-gate:
     if: always()
