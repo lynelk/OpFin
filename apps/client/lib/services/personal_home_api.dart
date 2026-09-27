@@ -8,6 +8,7 @@ import 'package:opfin/services/user_session.dart';
 class PersonalHomeApi {
   static Map<String, dynamic>? _cachedSnapshot;
   static String? _etag;
+  static int? _cachedUserId;
 
   static Future<Map<String, String>> _headers() async {
     final token = await UserSession.getAccessToken();
@@ -23,6 +24,12 @@ class PersonalHomeApi {
 
   static Future<Map<String, dynamic>> load() async {
     final headers = await _headers();
+    final currentUserId = await UserSession.getUserId();
+    if (_cachedUserId != null && _cachedUserId != currentUserId) {
+      clearSessionCache();
+    }
+    _cachedUserId = currentUserId;
+
     if (_etag != null && _cachedSnapshot != null) {
       headers['If-None-Match'] = _etag!;
     }
@@ -144,5 +151,6 @@ class PersonalHomeApi {
   static void clearSessionCache() {
     _etag = null;
     _cachedSnapshot = null;
+    _cachedUserId = null;
   }
 }
