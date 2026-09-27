@@ -31,10 +31,11 @@ All endpoints require auth:sanctum and normal API throttling.
 - financial_planning
 - linked_accounts
 - household_and_microbusiness
-- offline_sync
 - profile_preferences
 
-Selective deletion keeps the account active and preserves required financial evidence. Whole-account deletion revokes active consents, removes optional active customer context, revokes access tokens, de-identifies the active user profile and then soft-deletes the user record while retaining only evidence that must remain for a legitimate legal, regulatory, accounting, security or fraud-prevention purpose.
+Selective deletion keeps the account active and preserves required financial evidence. Server-side offline synchronisation batches are not offered as an optional deletion category because they can contain financial-action or dispute evidence and the current schema does not classify individual events strongly enough to prove that deletion is safe.
+
+Whole-account deletion revokes active consents, removes optional active customer context, revokes access tokens, de-identifies the active user profile and then soft-deletes the user record. It deliberately preserves financial-space context, settled obligation history, credit-reporting evidence, community-finance evidence and other regulated/auditable records where deletion would break accounting, settlement, credit, security, dispute or regulatory traceability. Those retained records do not keep an active customer session or usable customer profile.
 
 ## Release verification
 
