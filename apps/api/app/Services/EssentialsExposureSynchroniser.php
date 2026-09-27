@@ -151,7 +151,7 @@ class EssentialsExposureSynchroniser
                 true,
             ) && $profile->expires_at?->isFuture();
 
-            $profile->update([
+            $profile->fill([
                 'current_exposure_minor' => $exposure,
                 'total_outstanding_minor' => $debt,
                 'amount_due_minor' => $due,
@@ -163,6 +163,10 @@ class EssentialsExposureSynchroniser
                     )
                     : 0,
             ]);
+
+            if ($profile->isDirty()) {
+                $profile->save();
+            }
         }
 
         return [
