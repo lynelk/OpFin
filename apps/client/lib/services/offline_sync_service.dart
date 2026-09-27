@@ -254,26 +254,7 @@ class OfflineSyncService {
     return separated
         .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
         .replaceAll(RegExp(r'_+'), '_')
-        .replaceAll(RegExp(r'^_|_    String device,
-    List<Map<String, dynamic>> events,
-  ) {
-    final source =
-        '$device|${events.map((e) => e['event_id']).join('|')}';
-    final bytes = utf8.encode(source);
-    int a = 0x811c9dc5;
-    int b = 0x01000193;
-    for (final byte in bytes) {
-      a = ((a ^ byte) * 0x01000193) & 0xffffffff;
-      b = ((b + byte) * 0x45d9f3b) & 0xffffffff;
-    }
-    final h1 = a.toRadixString(16).padLeft(8, '0');
-    final h2 = b.toRadixString(16).padLeft(8, '0');
-    final tail = (a ^ b).toRadixString(16).padLeft(8, '0') +
-        a.toRadixString(16).padLeft(8, '0');
-    return '$h1-${h2.substring(0, 4)}-${h2.substring(4, 8)}-${tail.substring(0, 4)}-${tail.substring(4, 16)}';
-  }
-}
-), '');
+        .replaceAll(RegExp(r'^_|_$'), '');
   }
 
   static String _stableBatchReference(
