@@ -2,6 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\RecordNetworkUsage;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 
 class NetworkUsageGovernanceTest extends TestCase
@@ -17,11 +23,16 @@ class NetworkUsageGovernanceTest extends TestCase
         )->getJson('/api/health');
 
         $response->assertOk();
-        $response->assertHeader('X-OpFin-Correlation-Id', 'app-test-correlation-001');
+        $response->assertHeader(
+            'X-OpFin-Correlation-Id',
+            'app-test-correlation-001'
+        );
         $response->assertHeader('X-OpFin-Sponsorship-Class', 'unknown');
         $this->assertMatchesRegularExpression(
             '/^\d+$/',
-            (string) $response->headers->get('X-OpFin-Application-Bytes-Out')
+            (string) $response->headers->get(
+                'X-OpFin-Application-Bytes-Out'
+            )
         );
     }
 
@@ -35,8 +46,73 @@ class NetworkUsageGovernanceTest extends TestCase
         )->getJson('/api/health');
 
         $response->assertOk();
-        $correlation = (string) $response->headers->get('X-OpFin-Correlation-Id');
+        $correlation = (string) $response->headers->get(
+            'X-OpFin-Correlation-Id'
+        );
         $this->assertStringStartsWith('api-', $correlation);
         $this->assertNotSame('unsafe correlation with spaces', $correlation);
+    }
+
+    public function test_usage_logging_failure_cannot_change_api_outcome(): void
+    {
+        config()->set('opfin.data.network_usage_logging', true);
+        Log::shouldReceive('info')
+            ->once()
+            ->andThrow(new RuntimeException('log sink unavailable'));
+
+        $middleware = app(RecordNetworkUsage::class);
+        $request = Request::create(
+            '/api/test-network-usage',
+            'POST',
+            [],
+            [],
+            [],
+            ['CONTENT_LENGTH' => '3']
+        );
+
+        $response = $middleware->handle(
+            $request,
+            static fn (): Response => response('ok', 200)
+        );
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('ok', $response->getContent());
+    }
+
+    public function test_streamed_response_bytes_are_counted_after_emission(): void
+    {
+        config()->set('opfin.data.network_usage_logging', true);
+
+        Log::shouldReceive('info')
+            ->once()
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'opfin.network_usage'
+                    && ($context['bytes_out'] ?? null) === 10
+                    && ($context['streamed'] ?? null) === true
+                    && ($context['stream_completed'] ?? null) === true;
+            });
+
+        $middleware = app(RecordNetworkUsage::class);
+        $request = Request::create('/api/test-stream', 'GET');
+
+        $response = $middleware->handle(
+            $request,
+            static fn (): StreamedResponse => new StreamedResponse(
+                static function (): void {
+                    echo 'hello';
+                    echo 'world';
+                },
+                200
+            )
+        );
+
+        ob_start();
+        $response->sendContent();
+        $content = ob_get_clean();
+
+        $this->assertSame('helloworld', $content);
+        $this->assertNull(
+            $response->headers->get('X-OpFin-Application-Bytes-Out')
+        );
     }
 }
