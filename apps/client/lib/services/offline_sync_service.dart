@@ -30,6 +30,14 @@ class OfflineSyncService {
     await prefs.setString(_queueKey, jsonEncode(queue));
   }
 
+  static Future<void> clearLocalData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await Future.wait([
+      prefs.remove(_queueKey),
+      prefs.remove(_deviceKey),
+    ]);
+  }
+
   static Future<List<Map<String, dynamic>>> pendingEvents() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_queueKey);
