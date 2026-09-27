@@ -34,6 +34,17 @@ class OfflineSyncService {
     'provider_payload',
   };
 
+  static const _forbiddenKeyTokens = <String>{
+    'pin',
+    'password',
+    'otp',
+    'token',
+    'nin',
+    'selfie',
+    'image',
+    'photo',
+  };
+
   static Future<String> deviceReference() async {
     final prefs = await SharedPreferences.getInstance();
     final existing = prefs.getString(_deviceKey);
@@ -207,10 +218,16 @@ class OfflineSyncService {
   static void _assertSafePayload(Object? value, [String path = 'payload']) {
     if (value is Map) {
       for (final entry in value.entries) {
-        final key = entry.key.toString().trim().toLowerCase();
-        if (_forbiddenKeys.contains(key)) {
+        final rawKey = entry.key.toString();
+        final key = _normaliseKey(rawKey);
+        final keyTokens = key
+            .split('_')
+            .where((token) => token.isNotEmpty)
+            .toSet();
+        if (_forbiddenKeys.contains(key) ||
+            keyTokens.any(_forbiddenKeyTokens.contains)) {
           throw Exception(
-            'Sensitive field "$key" cannot be stored in the offline queue.',
+            'Sensitive field "$rawKey" cannot be stored in the offline queue.',
           );
         }
         _assertSafePayload(entry.value, '$path.$key');
@@ -224,6 +241,39 @@ class OfflineSyncService {
         index++;
       }
     }
+  }
+
+  static String _normaliseKey(String raw) {
+    final separated = raw
+        .trim()
+        .replaceAllMapped(
+          RegExp(r'([a-z0-9])([A-Z])'),
+          (match) => '${match.group(1)}_${match.group(2)}',
+        )
+        .toLowerCase();
+    return separated
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_    String device,
+    List<Map<String, dynamic>> events,
+  ) {
+    final source =
+        '$device|${events.map((e) => e['event_id']).join('|')}';
+    final bytes = utf8.encode(source);
+    int a = 0x811c9dc5;
+    int b = 0x01000193;
+    for (final byte in bytes) {
+      a = ((a ^ byte) * 0x01000193) & 0xffffffff;
+      b = ((b + byte) * 0x45d9f3b) & 0xffffffff;
+    }
+    final h1 = a.toRadixString(16).padLeft(8, '0');
+    final h2 = b.toRadixString(16).padLeft(8, '0');
+    final tail = (a ^ b).toRadixString(16).padLeft(8, '0') +
+        a.toRadixString(16).padLeft(8, '0');
+    return '$h1-${h2.substring(0, 4)}-${h2.substring(4, 8)}-${tail.substring(0, 4)}-${tail.substring(4, 16)}';
+  }
+}
+), '');
   }
 
   static String _stableBatchReference(
