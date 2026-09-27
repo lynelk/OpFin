@@ -22,14 +22,18 @@ class RecordNetworkUsage
         $bytesOut = $this->responseBytes($response);
         $route = $request->route();
         $routeTemplate = $route?->uri() ?? ltrim($request->path(), '/');
-        $feature = $this->dimension((string) $request->header(
-            'X-OpFin-Feature',
-            explode('/', trim($routeTemplate, '/'))[1] ?? explode('/', trim($routeTemplate, '/'))[0] ?? 'core'
+        $routeSegments = array_values(array_filter(
+            explode('/', trim($routeTemplate, '/')),
+            static fn (string $segment): bool => $segment !== ''
         ));
-        $operation = $this->dimension((string) $request->header(
-            'X-OpFin-Operation',
-            $request->method().' '.$routeTemplate
-        ));
+        $feature = $this->dimension((string) ($routeSegments[0] ?? 'core'));
+        $operation = $this->dimension($request->method().' '.$routeTemplate);
+        $clientFeature = $this->dimension(
+            (string) $request->header('X-OpFin-Feature', 'unknown')
+        );
+        $clientOperation = $this->dimension(
+            (string) $request->header('X-OpFin-Operation', 'unknown')
+        );
 
         $sponsorship = (bool) config('opfin.data.sponsorship_confirmed', false)
             ? 'sponsored'
@@ -45,6 +49,8 @@ class RecordNetworkUsage
                 'correlation_id' => $correlationId,
                 'feature' => $feature,
                 'operation' => $operation,
+                'client_feature' => $clientFeature,
+                'client_operation' => $clientOperation,
                 'route' => $routeTemplate,
                 'method' => $request->method(),
                 'status' => $response->getStatusCode(),
