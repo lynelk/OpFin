@@ -30,6 +30,7 @@ class LaunchSafetyRegressionTest extends TestCase
         foreach ([['credit', 250000, '2026-09-05'], ['debit', 100000, '2026-09-10']] as $index => [$direction, $amount, $date]) {
             $this->postJson("/api/financial-spaces/{$space}/treasury/accounts/{$account}/transactions", [
                 'direction' => $direction, 'amount_minor' => $amount,
+                'idempotency_key' => 'launch-baseline-'.$index,
                 'description' => 'Synthetic historical entry', 'transaction_date' => $date,
                 'transaction_reference' => 'LAUNCH-BASELINE-'.$index,
             ])->assertCreated();
@@ -38,6 +39,7 @@ class LaunchSafetyRegressionTest extends TestCase
         $this->assertSame(1150000, FinancialSpaceTreasuryAccount::findOrFail($account)->current_balance_minor);
         $this->postJson("/api/financial-spaces/{$space}/treasury/accounts/{$account}/transactions", [
             'direction' => 'credit', 'amount_minor' => 1,
+            'idempotency_key' => 'launch-before-baseline',
             'description' => 'Before baseline must remain invalid', 'transaction_date' => '2026-08-31',
         ])->assertUnprocessable();
         $this->assertSame(1150000, FinancialSpaceTreasuryAccount::findOrFail($account)->current_balance_minor);

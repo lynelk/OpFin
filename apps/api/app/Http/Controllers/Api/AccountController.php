@@ -22,40 +22,49 @@ class AccountController extends Controller
 
     public function destroy(Request $request): JsonResponse
     {
-        $data=$request->validate([
-            'pin'=>['nullable','required_without:password','string'],
-            'password'=>['nullable','required_without:pin','string'],
-            'confirmation'=>['required','in:DELETE'],
+        $data = $request->validate([
+            'pin' => ['nullable', 'required_without:password', 'string'],
+            'password' => ['nullable', 'required_without:pin', 'string'],
+            'confirmation' => ['required', 'in:DELETE'],
         ]);
 
-        $credential=(string)($data['pin']??$data['password']);
-        $result=$this->deletion->deleteOrRequest($request->user(),$credential,$request);
+        $credential = (string) ($data['pin'] ?? $data['password']);
+        $result = $this->deletion->deleteOrRequest(
+            $request->user(),
+            $credential,
+            $request,
+        );
 
-        if ($result['deletion_status']==='blocked_obligations') {
-            return ApiResponse::error($result['message'],409,[],['data'=>$result]);
+        if ($result['deletion_status'] === 'blocked_obligations') {
+            return ApiResponse::error(
+                $result['message'],
+                409,
+                [],
+                ['data' => $result],
+            );
         }
 
-        return ApiResponse::success($result['message'],$result,200);
+        return ApiResponse::success($result['message'], $result);
     }
 
     public function deleteData(Request $request): JsonResponse
     {
-        $data=$request->validate([
-            'pin'=>['nullable','required_without:password','string'],
-            'password'=>['nullable','required_without:pin','string'],
-            'confirmation'=>['required','in:DELETE_DATA'],
-            'data_categories'=>['required','array','min:1','max:20'],
-            'data_categories.*'=>['required','string','max:80'],
+        $data = $request->validate([
+            'pin' => ['nullable', 'required_without:password', 'string'],
+            'password' => ['nullable', 'required_without:pin', 'string'],
+            'confirmation' => ['required', 'in:DELETE_DATA'],
+            'data_categories' => ['required', 'array', 'min:1', 'max:20'],
+            'data_categories.*' => ['required', 'string', 'max:80'],
         ]);
 
-        $credential=(string)($data['pin']??$data['password']);
-        $result=$this->deletion->deleteSelectedData(
+        $credential = (string) ($data['pin'] ?? $data['password']);
+        $result = $this->deletion->deleteSelectedData(
             $request->user(),
             $credential,
             $data['data_categories'],
             $request,
         );
 
-        return ApiResponse::success($result['message'],$result,200);
+        return ApiResponse::success($result['message'], $result);
     }
 }

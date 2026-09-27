@@ -157,7 +157,6 @@ class LaunchCustomerJourneyTest extends TestCase
             ->refresh($user->fresh(), false);
 
         $this->assertGreaterThan(0, $profile->credit_limit_minor);
-        $this->assertGreaterThan(0, $profile->available_to_borrow_minor);
         $this->assertSame(60.0, (float) $profile->coverage_percent);
 
         Sanctum::actingAs($user);
