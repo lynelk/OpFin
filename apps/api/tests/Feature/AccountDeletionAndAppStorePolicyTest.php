@@ -98,7 +98,7 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         $this->assertNull($deleted->accessibility_preferences);
     }
 
-    public function test_account_deletion_purges_personal_space_planning_records(): void
+    public function test_recorded_outstanding_obligation_blocks_deletion_until_resolved(): void
     {
         $user = User::factory()->create([
             'role' => User::ROLE_CUSTOMER,
@@ -123,28 +123,41 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
             'value_minor' => 250000,
         ])->assertCreated();
 
+        $this->getJson('/api/account/deletion-readiness')
+            ->assertOk()
+            ->assertJsonPath('data.can_delete_account', false)
+            ->assertJsonPath('data.active_obligations.0.code', 'personal_obligation')
+            ->assertJsonPath('data.active_obligations.0.provider.name', 'Informal lender');
+
+        $this->deleteJson('/api/account', [
+            'password' => 'DeleteMe!123',
+            'confirmation' => 'DELETE',
+        ])->assertStatus(409)
+            ->assertJsonPath('data.deletion_status', 'blocked_obligations')
+            ->assertJsonPath('data.active_obligations.0.code', 'personal_obligation');
+
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
+
+        DB::table('financial_obligations')
+            ->where('financial_space_id', $spaceId)
+            ->update([
+                'outstanding_amount_minor' => 0,
+                'status' => 'settled',
+                'updated_at' => now(),
+            ]);
+
         $this->deleteJson('/api/account', [
             'password' => 'DeleteMe!123',
             'confirmation' => 'DELETE',
         ])->assertOk()
             ->assertJsonPath('data.deletion_status', 'completed');
 
-        $this->assertDatabaseMissing('financial_obligations', [
-            'financial_space_id' => $spaceId,
-        ]);
-        $this->assertDatabaseMissing('financial_assets', [
-            'financial_space_id' => $spaceId,
-        ]);
-        $this->assertDatabaseMissing('financial_space_memberships', [
-            'financial_space_id' => $spaceId,
-            'user_id' => $user->id,
-        ]);
-        $this->assertDatabaseMissing('financial_spaces', [
-            'id' => $spaceId,
-        ]);
+        $this->assertDatabaseMissing('financial_obligations', ['financial_space_id' => $spaceId]);
+        $this->assertDatabaseMissing('financial_assets', ['financial_space_id' => $spaceId]);
+        $this->assertDatabaseMissing('financial_spaces', ['id' => $spaceId]);
     }
 
-    public function test_deletion_request_stays_open_when_peer_finance_obligations_exist(): void
+    public function test_account_deletion_is_immediately_rejected_when_peer_finance_obligations_exist(): void
     {
         $user = User::factory()->create([
             'role' => User::ROLE_CUSTOMER,
@@ -168,11 +181,46 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         $this->deleteJson('/api/account', [
             'password' => 'DeleteMe!123',
             'confirmation' => 'DELETE',
-        ])->assertStatus(202)
-            ->assertJsonPath('data.deletion_status', 'pending_obligations');
+        ])->assertStatus(409)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('data.deletion_status', 'blocked_obligations')
+            ->assertJsonPath('data.active_obligations.0.code', 'peer_borrowing')
+            ->assertJsonPath('data.active_obligations.0.provider.name', 'Licensed Lender');
 
-        $this->assertDatabaseMissing('users', ['id' => $user->id, 'deleted_at' => now()]);
-        $this->assertDatabaseHas('support_cases', ['customer_id' => $user->id, 'category' => 'account_deletion']);
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
+        $this->assertDatabaseMissing('support_cases', ['customer_id' => $user->id, 'category' => 'account_deletion']);
+        $this->assertDatabaseHas('audit_logs', ['event' => 'account.deletion.rejected_obligations', 'actor_id' => $user->id]);
+    }
+
+    public function test_customer_can_delete_selected_optional_data_without_deleting_account(): void
+    {
+        $user = User::factory()->create([
+            'role' => User::ROLE_CUSTOMER,
+            'password' => Hash::make('DeleteMe!123'),
+            'preferred_language' => 'lg',
+            'accessibility_preferences' => ['large_text' => true],
+        ]);
+        DB::table('household_finance_profiles')->insert([
+            'user_id' => $user->id,
+            'household_size' => 3,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->deleteJson('/api/account/data', [
+            'password' => 'DeleteMe!123',
+            'confirmation' => 'DELETE_DATA',
+            'data_categories' => ['household_and_microbusiness', 'profile_preferences'],
+        ])->assertOk()
+            ->assertJsonPath('data.deletion_status', 'data_deleted');
+
+        $this->assertDatabaseMissing('household_finance_profiles', ['user_id' => $user->id]);
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
+
+        $fresh = User::findOrFail($user->id);
+        $this->assertSame('en', $fresh->preferred_language);
+        $this->assertNull($fresh->accessibility_preferences);
     }
 
     public function test_wrong_password_cannot_delete_account(): void
