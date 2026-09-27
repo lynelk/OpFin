@@ -107,8 +107,16 @@ class FinancialSpaceStatementController extends Controller
                 'currency' => strtoupper((string) ($validated['currency'] ?? $account->currency)),
                 'description' => trim((string) $validated['description']),
                 'counterparty_name' => trim((string) ($validated['counterparty_name'] ?? '')),
-                'transaction_date' => (string) $validated['transaction_date'],
-                'value_date' => (string) ($validated['value_date'] ?? ''),
+                'transaction_date' => \Carbon\CarbonImmutable::parse(
+                    (string) $validated['transaction_date']
+                )->toDateString(),
+                'value_date' => isset($validated['value_date'])
+                    && $validated['value_date'] !== null
+                    && $validated['value_date'] !== ''
+                        ? \Carbon\CarbonImmutable::parse(
+                            (string) $validated['value_date']
+                        )->toDateString()
+                        : '',
             ];
             $idempotencyKey = 'legacy-cashbook-v1:'.hash(
                 'sha256',
