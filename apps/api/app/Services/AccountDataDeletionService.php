@@ -26,10 +26,6 @@ class AccountDataDeletionService
             'label' => 'Household and microbusiness profile data',
             'description' => 'Optional household and microbusiness planning profiles.',
         ],
-        'offline_sync' => [
-            'label' => 'Offline synchronisation data',
-            'description' => 'Completed offline synchronisation batches that are not required as financial evidence.',
-        ],
         'profile_preferences' => [
             'label' => 'Profile preferences',
             'description' => 'Optional accessibility and language preferences. Language resets to English.',
@@ -41,6 +37,7 @@ class AccountDataDeletionService
         'loan, repayment, accounting and reconciliation records where legally required',
         'KYC/AML, credit-reporting and regulatory evidence where legally required',
         'security, consent and audit evidence required to demonstrate lawful processing and account closure',
+        'financial-space, community-finance and offline-sync evidence where needed for financial, security or dispute traceability',
     ];
 
     public function options(): array
@@ -93,10 +90,6 @@ class AccountDataDeletionService
                 + $this->deleteUserRows('microbusiness_profiles', $user->id);
         }
 
-        if (in_array('offline_sync', $categories, true)) {
-            $deleted['offline_sync'] = $this->deleteUserRows('offline_sync_batches', $user->id);
-        }
-
         if (in_array('profile_preferences', $categories, true)) {
             User::withoutGlobalScopes()
                 ->whereKey($user->id)
@@ -114,8 +107,11 @@ class AccountDataDeletionService
 
     public function purgeForClosedAccount(int $userId): void
     {
-        $personalSpaceIds = $this->personalSpaceIds($userId);
-
+        // Closing an account must not erase regulated or auditable financial evidence.
+        // The user record is de-identified and soft-deleted by AccountDeletionService,
+        // so retained records remain inaccessible to the former customer session while
+        // preserving the evidence chain required for accounting, credit, settlement,
+        // security, disputes and regulatory reporting.
         foreach ([
             'financial_accounts',
             'financial_budgets',
@@ -124,35 +120,13 @@ class AccountDataDeletionService
             'linked_financial_accounts',
             'household_finance_profiles',
             'microbusiness_profiles',
-            'community_finance_memberships',
-            'offline_sync_batches',
             'customer_wallets',
             'customer_phone_numbers',
-            'credit_profiles',
         ] as $table) {
             $this->deleteUserRows($table, $userId);
         }
 
         $this->deleteLocation($userId);
-
-        if ($personalSpaceIds === []) {
-            return;
-        }
-
-        foreach (['financial_obligations', 'financial_assets'] as $table) {
-            if (Schema::hasTable($table) && Schema::hasColumn($table, 'financial_space_id')) {
-                DB::table($table)->whereIn('financial_space_id', $personalSpaceIds)->delete();
-            }
-        }
-
-        DB::table('financial_space_memberships')
-            ->where('user_id', $userId)
-            ->whereIn('financial_space_id', $personalSpaceIds)
-            ->delete();
-
-        DB::table('financial_spaces')
-            ->whereIn('id', $personalSpaceIds)
-            ->delete();
     }
 
     private function deleteUserRows(string $table, int $userId): int
