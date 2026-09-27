@@ -35,6 +35,12 @@ class MobileHomeSnapshotTest extends TestCase
                 ],
             ]);
 
+        $this->assertLessThanOrEqual(
+            100 * 1024,
+            strlen((string) $first->getContent()),
+            'The baseline mobile Home payload exceeds the 100 KB application-layer budget.'
+        );
+
         $etag = (string) $first->headers->get('ETag');
         $this->assertNotSame('', $etag);
 
