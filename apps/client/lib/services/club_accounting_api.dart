@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:opfin/constants.dart';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/services/user_session.dart';
 
 class ClubApiException implements Exception {
@@ -19,7 +20,11 @@ abstract class ClubAccountingGateway {
 
 class ClubAccountingApi implements ClubAccountingGateway {
   ClubAccountingApi({http.Client? client, Future<String?> Function()? token})
-      : _client = client ?? http.Client(), _token = token ?? UserSession.getAccessToken;
+      : _client = OpFinMeteredClient(
+          feature: 'club_accounting',
+          inner: client ?? http.Client(),
+        ),
+        _token = token ?? UserSession.getAccessToken;
   final http.Client _client;
   final Future<String?> Function() _token;
 

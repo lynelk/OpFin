@@ -48,14 +48,28 @@ class ProductionKycController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'national_id' => ['required', 'string', 'size:14', 'regex:/^[A-Za-z0-9]+$/'],
-            'national_id_front' => 'required|file|image|mimes:jpeg,jpg,png,webp|max:8192',
-            'national_id_back' => 'required|file|image|mimes:jpeg,jpg,png,webp|max:8192',
-            'selfie_with_id' => 'required|file|image|mimes:jpeg,jpg,png,webp|max:8192',
+            'national_id_front' => 'required|file|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'national_id_back' => 'required|file|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'selfie_with_id' => 'required|file|image|mimes:jpeg,jpg,png,webp|max:2048',
             'capture_channel' => ['nullable', Rule::in(['app', 'whatsapp', 'mobile_web'])],
         ]);
 
         if ($validator->fails()) {
             return ApiResponse::error('Please provide your NIN, both sides of your National ID, and a photo of you holding the ID.', 422, $validator->errors()->toArray());
+        }
+
+        if ($request->input('capture_channel', 'app') === 'app') {
+            $mobileUploadBytes =
+                (int) $request->file('national_id_front')->getSize()
+                + (int) $request->file('national_id_back')->getSize()
+                + (int) $request->file('selfie_with_id')->getSize();
+            if ($mobileUploadBytes > 1536 * 1024) {
+                return ApiResponse::error(
+                    'Mobile identity evidence exceeds the 1.5 MB low-data upload budget. Retake or compress the largest photo.',
+                    422,
+                    ['identity_evidence' => ['Keep the three mobile photos within 1.5 MB total.']]
+                );
+            }
         }
 
         $user = $request->user();

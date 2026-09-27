@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/login_screen.dart';
 import 'package:opfin/services/user_session.dart';
@@ -35,7 +35,7 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
     try {
       final token = await UserSession.getAccessToken();
       if (token == null || token.isEmpty) throw Exception('Secure session is required.');
-      final response = await http.delete(
+      final response = await OpFinHttp.delete(
         Uri.parse('$apiUrl/account'),
         headers: {
           'Authorization': 'Bearer $token',

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
 
@@ -27,16 +28,16 @@ class InclusiveFinanceApi {
     late http.Response response;
     switch (method) {
       case 'POST':
-        response = await http.post(uri, headers: headers, body: jsonEncode(body ?? {}));
+        response = await OpFinHttp.post(uri, headers: headers, body: jsonEncode(body ?? {}));
         break;
       case 'PATCH':
-        response = await http.patch(uri, headers: headers, body: jsonEncode(body ?? {}));
+        response = await OpFinHttp.patch(uri, headers: headers, body: jsonEncode(body ?? {}));
         break;
       case 'DELETE':
-        response = await http.delete(uri, headers: headers, body: jsonEncode(body ?? {}));
+        response = await OpFinHttp.delete(uri, headers: headers, body: jsonEncode(body ?? {}));
         break;
       default:
-        response = await http.get(uri, headers: headers);
+        response = await OpFinHttp.get(uri, headers: headers);
     }
 
     final decoded = response.body.isEmpty
