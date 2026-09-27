@@ -33,7 +33,9 @@ class _ClubHistoryScreenState extends State<ClubHistoryScreen> {
     try {
       final profile=await api.call('profile',1);
       final response=await api.call(widget.spaceId==null?'my-books':'books',widget.spaceId??1);
-      if(!mounted)return;
+      if(!mounted) {
+        return;
+      }
       setState(() {
         userId=clubInteger((profile['user'] as Map)['id'],1);
         books=clubRows(response['books']).map((row)=>{...row,
@@ -44,12 +46,17 @@ class _ClubHistoryScreenState extends State<ClubHistoryScreen> {
     }catch(error){if(mounted)setState(()=>message=error.toString());}
   }
   Future<void> run(Future<void> Function() operation) async {
-    if(busy)return;setState(()=>busy=true);
+    if(busy) {
+      return;
+    }
+    setState(()=>busy=true);
     try{await operation();}catch(error){if(mounted)setState(()=>message=error.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
   Future<void> records(String kind,[int nextPage=1]) async {
-    if(selected==null||userId==null)return;
+    if(selected==null||userId==null) {
+      return;
+    }
     final input=<String,dynamic>{
       if(kind=='statements')'page':nextPage,
       if(kind!='statements')'period_start':clubIsoDate(from.text),
@@ -59,23 +66,32 @@ class _ClubHistoryScreenState extends State<ClubHistoryScreen> {
     };
     final response=await api.call(kind,clubInteger(selected!['financial_space_id'],1),
       bookId:clubInteger(selected!['id'],1),input:input);
-    if(!mounted)return;
+    if(!mounted) {
+      return;
+    }
     setState((){
-      if(kind=='statements'){statements=clubRows(response['statements']);page=nextPage;more=response['has_more']==true;}
-      else report=response;
+      if(kind=='statements') {
+        statements=clubRows(response['statements']);page=nextPage;more=response['has_more']==true;
+      } else {
+        report=response;
+      }
       message=kind=='issue-statement'?'Statement recorded. Read and acknowledge its saved request before issuing another.':'Loaded authorised financial records.';
     });
   }
   Future<void> exportStatement(Map<String,dynamic> statement,String format,String mode) async {
-    if(selected==null)return;
+    if(selected==null) {
+      return;
+    }
     final status=await exporter.open(spaceId:clubInteger(selected!['financial_space_id'],1),
       bookId:clubInteger(selected!['id'],1),statementId:clubInteger(statement['id'],1),format:format,mode:mode);
-    if(mounted)setState(()=>message={
-      'saved':'The statement was saved to your chosen destination.',
-      'completed':'The device reported the export complete.',
-      'cancelled':'Export cancelled. No financial record was changed.',
-      'presented':'The device share or print dialogue is open. Complete the operation there.',
-    }[status]??'Check the export destination.');
+    if(mounted) {
+      setState(()=>message={
+        'saved':'The statement was saved to your chosen destination.',
+        'completed':'The device reported the export complete.',
+        'cancelled':'Export cancelled. No financial record was changed.',
+        'presented':'The device share or print dialogue is open. Complete the operation there.',
+      }[status]??'Check the export destination.');
+    }
   }
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Club records and exports')),
     body:ListView(padding:const EdgeInsets.all(20),children:[
