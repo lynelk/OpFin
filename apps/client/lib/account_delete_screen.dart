@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/login_screen.dart';
+import 'package:opfin/services/offline_sync_service.dart';
 import 'package:opfin/services/user_session.dart';
 
 class AccountDeleteScreen extends StatefulWidget {
@@ -114,6 +115,7 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
         throw Exception(decoded['message']?.toString() ?? 'Unable to delete your account.');
       }
 
+      await OfflineSyncService.clearLocalData();
       await UserSession.clear();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
