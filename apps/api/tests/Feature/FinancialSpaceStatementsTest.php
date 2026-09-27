@@ -360,7 +360,8 @@ class FinancialSpaceStatementsTest extends TestCase
 
         $this->postJson("/api/financial-spaces/{$spaceId}/statement-rows/{$rowId}/match", [
             'transaction_id' => $wrongTransactionId,
-        ])->assertUnprocessable();
+        ])->assertStatus(409)
+            ->assertJsonPath('message', 'A confirmed reconciliation is immutable.');
     }
 
     public function test_smart_reconciliation_auto_matches_high_confidence_and_returns_only_review_todos(): void
