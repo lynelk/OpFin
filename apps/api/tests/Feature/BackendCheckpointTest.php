@@ -40,7 +40,7 @@ class BackendCheckpointTest extends TestCase
         ]);
     }
 
-    public function test_operations_user_can_approve_pending_transaction(): void
+    public function test_legacy_manual_transaction_approval_is_retired_for_operations(): void
     {
         $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
         Sanctum::actingAs($operations);
@@ -62,15 +62,12 @@ class BackendCheckpointTest extends TestCase
             'status' => 'Pending',
         ]);
 
-        $this->mock(LoanService::class)
-            ->shouldReceive('processSuccessfulTransaction')
-            ->once();
-
         $this->patchJson("/api/transactions/{$transaction->id}/approve")
-            ->assertOk()
-            ->assertJsonPath('success', true);
+            ->assertStatus(410)
+            ->assertJsonPath('success', false);
 
-        $this->assertDatabaseHas('audit_logs', [
+        $this->assertSame('Pending', $transaction->fresh()->status);
+        $this->assertDatabaseMissing('audit_logs', [
             'event' => 'transaction.approved',
             'actor_id' => $operations->id,
         ]);
