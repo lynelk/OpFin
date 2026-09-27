@@ -55,7 +55,7 @@ class OpFinMeteredClient extends http.BaseClient {
               responseBytes: responseBytes,
               duration: DateTime.now().difference(started),
               success:
-                  response.statusCode >= 200 && response.statusCode < 500,
+                  response.statusCode >= 200 && response.statusCode < 400,
               sponsorship: sponsorship,
               statusCode: response.statusCode,
             ));
