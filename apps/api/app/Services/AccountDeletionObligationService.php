@@ -226,10 +226,12 @@ class AccountDeletionObligationService
                     'Peer-finance borrowing',
                     $listing->reference,
                     $listing->status,
-                    max(
-                        0,
-                        (int) $listing->target_amount_minor - (int) ($listing->funded_amount_minor ?? 0),
-                    ),
+                    $listing->status === 'funded'
+                        ? max(0, (int) ($listing->funded_amount_minor ?? $listing->target_amount_minor))
+                        : max(
+                            0,
+                            (int) $listing->target_amount_minor - (int) ($listing->funded_amount_minor ?? 0),
+                        ),
                     'UGX',
                     null,
                     $this->namedInstitution($listing->lender_of_record ?? null),
