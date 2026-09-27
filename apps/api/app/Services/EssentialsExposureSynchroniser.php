@@ -79,10 +79,14 @@ class EssentialsExposureSynchroniser
         if ($profile) {
             // Reconciliation can cap headroom, never independently grant credit
             // or override a zero limit established by the existing risk policy.
-            $ready = $profile->status === CreditProfile::STATUS_READY && $profile->expires_at?->isFuture();
+            $headroomEligible = in_array(
+                $profile->status,
+                [CreditProfile::STATUS_READY, CreditProfile::STATUS_PROVISIONAL],
+                true,
+            ) && $profile->expires_at?->isFuture();
             $profile->update(['current_exposure_minor' => $exposure, 'total_outstanding_minor' => $debt,
                 'amount_due_minor' => $due, 'next_due_date' => $next,
-                'available_to_borrow_minor' => $ready
+                'available_to_borrow_minor' => $headroomEligible
                     ? min(max(0, $profile->available_to_borrow_minor), max(0, $profile->credit_limit_minor - $exposure)) : 0]);
         }
         return ['exposure_minor' => $exposure, 'total_outstanding_minor' => $debt, 'amount_due_minor' => $due,
