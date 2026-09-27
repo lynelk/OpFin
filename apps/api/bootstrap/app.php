@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Middleware\EnsureUserHasRole;
-use App\Http\Middleware\RecordSensitiveAction;
 use App\Http\Middleware\RecordNetworkUsage;
+use App\Http\Middleware\RecordSensitiveAction;
 use App\Support\ApiResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
