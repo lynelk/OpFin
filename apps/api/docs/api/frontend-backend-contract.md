@@ -58,6 +58,14 @@ Second phone is explicitly optional.
 
 Mobile submits multipart KYC to `POST /api/kyc/cases`. Required evidence is NIN + National ID front/back + selfie holding ID.
 
+Current upload limits are part of the API contract:
+
+- each image file is limited to **2 MiB**;
+- for `capture_channel=app`, the three-image package is limited to **1.5 MiB total** after client-side resize/compression;
+- other channels still inherit the 2 MiB per-image server limit unless a separately published channel contract states otherwise.
+
+Clients should resize/compress before upload rather than relying on a 422 response after spending the customer's data. Evidence must remain legible; the data budget is not permission to accept unreadable identity material. Older clients that previously sent 2–8 MiB files must migrate to the current limits.
+
 The client may display sanitised check states returned by `/api/kyc/status`, but must not expect raw evidence paths/provider payloads.
 
 If disability or another access need prevents ordinary camera completion, create a support case for assisted identity verification. Do not lower identity controls and do not ask a helper to handle PIN/OTP.
