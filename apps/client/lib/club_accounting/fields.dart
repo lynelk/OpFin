@@ -68,19 +68,25 @@ class ClubDataView extends StatelessWidget {
   final dynamic value;
   final String label;
   @override Widget build(BuildContext context) {
-    if (value == null) return const Text('Not recorded');
+    if (value == null) {
+      return const Text('Not recorded');
+    }
     if (value is List) {
       final list = value as List;
-      if (list.isEmpty) return const Text('No records for this selection.');
+      if (list.isEmpty) {
+        return const Text('No records for this selection.');
+      }
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [for (var i = 0; i < list.length; i++)
         ExpansionTile(title: Text('$label ${i + 1}'), childrenPadding: const EdgeInsets.all(12),
           children: [ClubDataView(value: list[i], label: label)])]);
     }
-    if (value is Map) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: (value as Map).entries.map((entry) =>
-      Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(clubLabel(entry.key.toString()), style: const TextStyle(fontWeight: FontWeight.w700)),
-        ClubDataView(value: entry.value, label: clubLabel(entry.key.toString())),
-      ]))).toList());
+    if (value is Map) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: (value as Map).entries.map((entry) =>
+        Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(clubLabel(entry.key.toString()), style: const TextStyle(fontWeight: FontWeight.w700)),
+          ClubDataView(value: entry.value, label: clubLabel(entry.key.toString())),
+        ]))).toList());
+    }
     return SelectableText(value is bool ? ((value as bool) ? 'Yes' : 'No') : value.toString());
   }
 }
