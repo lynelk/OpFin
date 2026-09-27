@@ -17,7 +17,6 @@ DB_DATABASE=':memory:' \
 DB_HOST='' \
 DB_PORT='' \
 DB_USERNAME='' \
-DB_PASSWORD='' \
 CACHE_STORE=array \
 QUEUE_CONNECTION=sync \
 SESSION_DRIVER=array \
