@@ -94,16 +94,21 @@ class FinancialSpaceStatementService
                 ->first();
 
             if ($existing) {
+                $transactionDate = CarbonImmutable::parse(
+                    $data['transaction_date']
+                )->toDateString();
+                $valueDate = isset($data['value_date'])
+                    && $data['value_date'] !== null
+                    && $data['value_date'] !== ''
+                        ? CarbonImmutable::parse($data['value_date'])->toDateString()
+                        : null;
+
                 $sameInstruction = (int) $existing->treasury_account_id === (int) $lockedAccount->id
                     && $existing->direction === $data['direction']
                     && (int) $existing->amount_minor === (int) $data['amount_minor']
                     && strtoupper((string) $existing->currency) === strtoupper((string) $lockedAccount->currency)
-                    && $existing->transaction_date?->toDateString() === CarbonImmutable::parse($data['transaction_date'])->toDateString()
-                    && ($existing->value_date?->toDateString() ?? null) === (
-                        isset($data['value_date']) && $data['value_date'] !== null && $data['value_date'] !== ''
-                            ? CarbonImmutable::parse($data['value_date'])->toDateString()
-                            : null
-                    )
+                    && $existing->transaction_date?->toDateString() === $transactionDate
+                    && $existing->value_date?->toDateString() === $valueDate
                     && trim((string) ($existing->transaction_reference ?? '')) === trim((string) ($data['transaction_reference'] ?? ''))
                     && trim((string) ($existing->transaction_type ?? 'other')) === trim((string) ($data['transaction_type'] ?? 'other'))
                     && trim((string) ($existing->description ?? '')) === trim((string) ($data['description'] ?? ''))
