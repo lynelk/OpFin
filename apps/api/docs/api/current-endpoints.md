@@ -1,7 +1,7 @@
 # Current API endpoints
 
 Status: Current endpoint navigation and contract index  
-Reviewed: 25 September 2026  
+Reviewed: 27 September 2026  
 Language: English (United Kingdom)
 
 The complete domain reference from main `3924a26913f85067a3ac900c78fa80125ca589fc` is preserved without content loss in [Domain endpoints](domain-endpoints.md), including the lender-orchestration additions. This index joins that detailed reference with the [Developer Centre contract](DEVELOPER_INTERFACE.md). Registration, reviewed schema, authorisation, provider activation and financial acceptance are separate states.
@@ -85,7 +85,6 @@ Read [Location Context](domain-endpoints.md#16c-location-context-and-lightweight
 
 Read [treasury contracts](domain-endpoints.md#16d-financial-space-treasury-statement-import-and-reconciliation). Fixed opening baselines, reviewed imports and frozen statements do not alone complete member-capital and investment accounting.
 
-
 ## 16E. Club accounting, saved requests and retained history
 
 Read [book and instruction contracts](CLUB_ACCOUNTING.md) and [client recovery and native export](CLUB_CLIENT_RECOVERY.md). These are implementation candidates, not a claim of production acceptance.
@@ -137,7 +136,6 @@ The running catalogue reads registered routes and checked-in guides. `api:catalo
 
 Source discovery is not automatic semantic completion or proof that production equals remote main. Update fields, examples, permissions, errors, financial recovery and training tasks with the implementation. Historical evidence keeps its original date; unresolved financial and security requirements remain separate.
 
-
 ## Integrated financing foundation
 
 Authenticated customer endpoints:
@@ -153,6 +151,13 @@ Authenticated customer endpoints:
 
 Product matching fails closed: a product must be `live`, have an approved/effective Legal Product Passport, and an Islamic product must additionally have an approved, unexpired Sharia approval. These endpoints establish the compatibility layer; existing `/api/credit/**` and Essentials endpoints remain operational during migration.
 
+## Embedded payroll deduction capability (27 September 2026)
+
+Read [Embedded payroll deduction capability](PAYROLL_DEDUCTION.md) for the controlled state model, activation boundary and reconciliation rules.
+
+Customer endpoints add `/api/financing-applications`, `/api/payroll-deduction/provider-capability` and the `/api/payroll-deduction/cases/**` namespace. Authorised operations use `/api/operations/payroll-deduction/cases/**` to record affordability, reservation, Key Facts submission, vote decision, payroll submission, payroll result, amendment and reconciliation evidence.
+
+The PDMS adapter is fail-closed by default. The business workflow may be operated using verified evidence while the official machine interface is unavailable, but no live external endpoint or credential is invented. Payroll submission success is not accounting finality; a successful result still enters `reconciliation_pending` until expected and recovered amounts are matched.
 
 ## Financial Intelligence candidate (26 September 2026)
 
