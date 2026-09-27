@@ -306,6 +306,8 @@ jobs:
           flutter test
           flutter build apk --release --no-pub
           flutter build appbundle --release --no-pub
+          flutter build apk --release --no-pub \
+            --dart-define=OPFIN_DISTRIBUTION_CHANNEL=huawei_appgallery
 
   client-ios:
     runs-on: macos-15
