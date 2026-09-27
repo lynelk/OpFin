@@ -1,7 +1,7 @@
 # OpFin mobile application
 
 Status: Controlled external developer/product reference  
-Updated: 24 September 2026  
+Updated: 27 September 2026  
 Language: English (United Kingdom)
 
 The Flutter application is OpFin's primary customer mobile experience. It presents a mobile-complete financial journey while the API remains authoritative for identity, permissions, eligibility, money, credit, provider finality, programme state, ledger and reconciliation.
@@ -68,6 +68,16 @@ The App reads server-authoritative credit profile, available-to-borrow amount, a
 
 A profile limit is not guaranteed approval. Pending provider requests are not completed payments or disbursements. Completed provider-finality-backed events may create auditable receipts under **Activity**.
 
+### Salary-linked payroll deduction
+
+Android and iOS share one Flutter payroll-deduction journey and the same API state. The experience covers affordability, customer undertaking, reservation, Key Facts/vote approval, payroll submission, rejection/amendment and payment reconciliation.
+
+The navigation entry is gated by `OPFIN_PAYROLL_DEDUCTION_ENABLED` and is off by default. It must be enabled only after the salary-finance product and operating route are approved. The customer can still see that a live provider machine connection is inactive when the screen is opened in a controlled test build; the client never contains PDMS credentials or invents provider endpoints.
+
+For an eligible `salary_finance` application, the customer may start a payroll case, review the verified affordable deduction, explicitly authorise the payroll undertaking and request a reservation. The requested deduction cannot exceed the verified affordable amount. Vote approval and payroll feedback remain server/operations-controlled. A successful payroll result is displayed as reconciliation pending until the expected and recovered amounts match.
+
+The shared client version for this change is `1.0.2+20`. Android and iOS release builds must both pass the monorepo CI gates before distribution.
+
 ## Financial resilience and inclusive finance
 
 The App supports financial-health guidance, a financial-reputation stage that is not a second credit score, optional programme-measurement consent, due programme check-ins, reviewed translations with explicit English fallback, voluntary programme exit, alternative credit-support evidence and optional recorded-data health enrichment.
@@ -109,7 +119,7 @@ Never place provider secrets in Flutter.
 
 ## Documentation
 
-Start with `../../docs/CURRENT_STATE.md`, `../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`, `../../docs/manuals/OPFIN_USER_MANUAL.md`, `../../docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md`, `../api/docs/api/API_QUICK_REFERENCE.md` and `../../SECURITY.md`.
+Start with `../../docs/CURRENT_STATE.md`, `../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`, `../../docs/manuals/OPFIN_USER_MANUAL.md`, `../../docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md`, `../api/docs/api/API_QUICK_REFERENCE.md`, `../api/docs/api/PAYROLL_DEDUCTION.md` and `../../SECURITY.md`.
 
 Run `make publication-check` before externally publishing product/developer documentation.
 
