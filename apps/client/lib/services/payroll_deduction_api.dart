@@ -18,7 +18,6 @@ class PayrollDeductionApi {
     if (stateChange) {
       final now = DateTime.now().toUtc().microsecondsSinceEpoch;
       headers['Idempotency-Key'] = 'mobile-$now';
-      headers['X-Correlation-ID'] = 'mobile-$now';
     }
     return headers;
   }
