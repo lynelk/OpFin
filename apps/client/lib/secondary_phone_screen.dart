@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
