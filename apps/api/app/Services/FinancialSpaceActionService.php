@@ -16,6 +16,7 @@ class FinancialSpaceActionService
         private readonly MobileMoneyService $money,
         private readonly RevenueAccountingService $revenue,
         private readonly AuditLogger $audit,
+        private readonly CommunityFinanceReadinessService $communityFinance,
     ) {}
 
     public function create(FinancialSpace $space, User $actor, array $data): object
@@ -91,6 +92,7 @@ class FinancialSpaceActionService
 
     private function assertSupportedSpace(FinancialSpace $space): void {
         if (! in_array($space->type, ['investment_club','sacco','savings_group'], true)) throw new InvalidArgumentException('This action layer is limited to governed community Financial Spaces.');
+        if ($space->type === 'sacco') $this->communityFinance->assertCanActivate();
     }
     private function assertMember(FinancialSpace $space, User $user): void {
         if (! DB::table('financial_space_memberships')->where('financial_space_id',$space->id)->where('user_id',$user->id)->where('status','active')->whereNull('deleted_at')->exists()) throw new InvalidArgumentException('Active Space membership is required.');
