@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\FinancialSpace;
 use App\Models\User;
 use App\Services\MobileMoney\MobileMoneyService;
+use App\Services\CommunityFinance\CommunityFinanceReadinessService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -14,7 +15,6 @@ class FinancialSpaceActionService
     public function __construct(
         private readonly CommercialPricingService $pricing,
         private readonly MobileMoneyService $money,
-        private readonly RevenueAccountingService $revenue,
         private readonly AuditLogger $audit,
         private readonly CommunityFinanceReadinessService $communityFinance,
     ) {}
