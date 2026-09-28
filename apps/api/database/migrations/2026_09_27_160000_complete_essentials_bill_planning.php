@@ -88,14 +88,14 @@ return new class extends Migration
         });
 
         if (DB::getDriverName() === 'pgsql') {
-            DB::unprepared(
-                "CREATE OR REPLACE FUNCTION opfin_essentials_payment_event_immutable()
-                RETURNS trigger LANGUAGE plpgsql AS $$
+            DB::unprepared(<<<'SQL'
+                CREATE OR REPLACE FUNCTION opfin_essentials_payment_event_immutable()
+                RETURNS trigger LANGUAGE plpgsql AS $
                 BEGIN
                     RAISE EXCEPTION 'Essentials payment evidence is immutable; append a correcting event'
                         USING ERRCODE = '23514';
-                END; $$"
-            );
+                END; $
+                SQL);
             DB::unprepared(
                 'CREATE TRIGGER essentials_payment_events_immutable
                 BEFORE UPDATE OR DELETE ON essentials_payment_events
@@ -103,11 +103,8 @@ return new class extends Migration
             );
         } elseif (DB::getDriverName() === 'sqlite') {
             foreach (['UPDATE', 'DELETE'] as $operation) {
-                DB::unprepared(
-                    "CREATE TRIGGER essentials_payment_events_immutable_".strtolower($operation)."
-                    BEFORE {$operation} ON essentials_payment_events
-                    BEGIN SELECT RAISE(ABORT, 'Essentials payment evidence is immutable'); END"
-                );
+                $name = 'essentials_payment_events_immutable_'.strtolower($operation);
+                DB::unprepared("CREATE TRIGGER {$name} BEFORE {$operation} ON essentials_payment_events BEGIN SELECT RAISE(ABORT, 'Essentials payment evidence is immutable'); END");
             }
         }
     }
