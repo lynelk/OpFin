@@ -143,7 +143,7 @@ class EssentialsBillPlanningController extends Controller
             'financial_space_id' => ['nullable', 'integer', 'exists:financial_spaces,id'],
             'essentials_account_id' => ['required', 'integer', 'exists:essentials_accounts,id'],
             'affordability_assessment_id' => ['required', 'integer', 'exists:essentials_affordability_assessments,id'],
-            'wallet_id' => ['required', 'integer', 'exists:customer_wallets,id'],
+            'wallet_id' => ['nullable', 'integer', 'exists:customer_wallets,id'],
             'amount_minor' => ['required', 'integer', 'min:1'],
             'idempotency_key' => ['required', 'string', 'max:160'],
         ]);
