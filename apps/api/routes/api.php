@@ -429,3 +429,4 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
 });
 
 require __DIR__.'/financial_space_operations.php';
+require __DIR__.'/sacco_core.php';
