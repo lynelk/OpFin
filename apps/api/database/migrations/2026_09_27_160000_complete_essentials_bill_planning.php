@@ -90,11 +90,11 @@ return new class extends Migration
         if (DB::getDriverName() === 'pgsql') {
             DB::unprepared(<<<'SQL'
                 CREATE OR REPLACE FUNCTION opfin_essentials_payment_event_immutable()
-                RETURNS trigger LANGUAGE plpgsql AS $
+                RETURNS trigger LANGUAGE plpgsql AS $opfin$
                 BEGIN
                     RAISE EXCEPTION 'Essentials payment evidence is immutable; append a correcting event'
                         USING ERRCODE = '23514';
-                END; $
+                END; $opfin$
                 SQL);
             DB::unprepared(
                 'CREATE TRIGGER essentials_payment_events_immutable
