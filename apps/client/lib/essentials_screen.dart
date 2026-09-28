@@ -25,11 +25,15 @@ class _EssentialsScreenState extends State<EssentialsScreen> {
       EssentialsApi.summary(),
       EssentialsApi.catalogue(),
       EssentialsApi.partnerAuthorisations(),
+      EssentialsApi.billPlans(),
+      EssentialsApi.ownMoneyPayments(),
     ]);
     return {
       'summary': values[0],
       'catalogue': values[1],
       'authorisations': values[2],
+      'bill_plans': values[3],
+      'own_money_payments': values[4],
     };
   }
 
@@ -180,6 +184,159 @@ class _EssentialsScreenState extends State<EssentialsScreen> {
       _message(status == 'pending_manual_review'
           ? 'This account is waiting for manual beneficiary verification.'
           : 'Verification status: $status');
+      await _refresh();
+    } catch (e) {
+      _message(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  Future<void> _planBill(Map<String, dynamic> account) async {
+    final amount = TextEditingController();
+    var frequency = 'monthly';
+    final details = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Plan this bill'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amount,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Expected amount (UGX)'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: frequency,
+                decoration: const InputDecoration(labelText: 'How often?'),
+                items: const [
+                  DropdownMenuItem(value: 'once', child: Text('Once')),
+                  DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                  DropdownMenuItem(value: 'fortnightly', child: Text('Every 2 weeks')),
+                  DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                  DropdownMenuItem(value: 'quarterly', child: Text('Every 3 months')),
+                  DropdownMenuItem(value: 'annually', child: Text('Yearly')),
+                ],
+                onChanged: (value) => setDialogState(() => frequency = value ?? frequency),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                final value = int.tryParse(amount.text.replaceAll(',', '').trim());
+                if (value != null && value > 0) {
+                  Navigator.pop(dialogContext, {'amount': value, 'frequency': frequency});
+                }
+              },
+              child: const Text('Next'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (details == null || !mounted) return;
+
+    final dueDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 7)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 3660)),
+      helpText: 'When is the next bill due?',
+    );
+    if (dueDate == null) return;
+
+    try {
+      await EssentialsApi.createBillPlan(
+        accountId: _n(account['id']),
+        expectedAmountMinor: _n(details['amount']),
+        frequency: details['frequency'].toString(),
+        nextDueDate: DateFormat('yyyy-MM-dd').format(dueDate),
+        financialSpaceId: _n(account['financial_space_id']) > 0 ? _n(account['financial_space_id']) : null,
+      );
+      _message('Bill plan saved. OpFin will include it in affordability checks.');
+      await _refresh();
+    } catch (e) {
+      _message(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  Future<void> _payFromOwnMoney(Map<String, dynamic> account) async {
+    final amount = TextEditingController();
+    final requested = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Pay this bill'),
+        content: TextField(
+          controller: amount,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Bill amount (UGX)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              final value = int.tryParse(amount.text.replaceAll(',', '').trim());
+              if (value != null && value > 0) Navigator.pop(dialogContext, value);
+            },
+            child: const Text('Check'),
+          ),
+        ],
+      ),
+    );
+    if (requested == null || !mounted) return;
+
+    final dueDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 366)),
+      helpText: 'When is this bill due?',
+    );
+    if (dueDate == null) return;
+
+    try {
+      final data = await EssentialsApi.assessBill(
+        accountId: _n(account['id']),
+        amountMinor: requested,
+        dueDate: DateFormat('yyyy-MM-dd').format(dueDate),
+        financialSpaceId: _n(account['financial_space_id']) > 0 ? _n(account['financial_space_id']) : null,
+      );
+      final assessment = (data['assessment'] as Map?)?.cast<String, dynamic>() ?? {};
+      final ownMoney = _n(assessment['own_money_capacity_minor']);
+      final gap = _n(assessment['financing_gap_minor']);
+
+      if (!mounted) return;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(gap == 0 ? 'Ready to pay' : 'There is a funding gap'),
+          content: Text(
+            gap == 0
+                ? 'Your recorded plan can cover this bill from your own money. OpFin will collect ' + _ugx(requested) + ' from your verified repayment wallet and pay the service provider.'
+                : 'Your recorded plan can safely allocate ' + _ugx(ownMoney) + ' to this bill, leaving a gap of ' + _ugx(gap) + '. No payment has been started. You can adjust the bill or use the separate Finance option if appropriate.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Not now')),
+            if (gap == 0)
+              FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Pay bill')),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+
+      final payment = await EssentialsApi.payBillFromOwnMoney(
+        accountId: _n(account['id']),
+        assessmentId: _n(assessment['id']),
+        amountMinor: requested,
+        financialSpaceId: _n(account['financial_space_id']) > 0 ? _n(account['financial_space_id']) : null,
+      );
+      final saved = (payment['payment'] as Map?)?.cast<String, dynamic>() ?? {};
+      _message(saved['status'] == 'successful'
+          ? 'Bill paid successfully.'
+          : 'Payment started. OpFin will keep the status safe until the provider confirms.');
       await _refresh();
     } catch (e) {
       _message(e.toString().replaceFirst('Exception: ', ''));
