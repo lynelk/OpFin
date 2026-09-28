@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\CustomerPhoneController;
 use App\Http\Controllers\Api\CustomerSupportController;
 use App\Http\Controllers\Api\CustomerWalletController;
 use App\Http\Controllers\Api\EarlySettlementController;
+use App\Http\Controllers\Api\EssentialsBillPlanningController;
 use App\Http\Controllers\Api\EssentialsController;
 use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
@@ -147,6 +148,15 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/financing-applications', [FinancingController::class, 'apply']);
 
     Route::get('/essentials', [EssentialsController::class, 'summary']);
+    Route::get('/essentials/bill-plans', [EssentialsBillPlanningController::class, 'plans']);
+    Route::post('/essentials/bill-plans', [EssentialsBillPlanningController::class, 'createPlan']);
+    Route::patch('/essentials/bill-plans/{plan}', [EssentialsBillPlanningController::class, 'updatePlan']);
+    Route::delete('/essentials/bill-plans/{plan}', [EssentialsBillPlanningController::class, 'deletePlan']);
+    Route::post('/essentials/affordability', [EssentialsBillPlanningController::class, 'assess']);
+    Route::get('/essentials/own-money-payments', [EssentialsBillPlanningController::class, 'payments']);
+    Route::post('/essentials/own-money-payments', [EssentialsBillPlanningController::class, 'pay']);
+    Route::post('/essentials/own-money-payments/{payment}/reconcile', [EssentialsBillPlanningController::class, 'reconcile']);
+
     Route::get('/essentials/catalogue', [EssentialsController::class, 'catalogue']);
     Route::get('/essentials/partner-authorisations', [EssentialsController::class, 'partnerAuthorisations']);
     Route::post('/essentials/partner-authorisations', [EssentialsController::class, 'authorisePartnerPlatform']);
