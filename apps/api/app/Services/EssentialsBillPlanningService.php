@@ -313,7 +313,7 @@ class EssentialsBillPlanningService
             ->where('status', 'active')
             ->whereNotNull('verified_at')
             ->find((int) $data['wallet_id']);
-        if (! $wallet) {
+        if (! $wallet || trim((string) $wallet->msisdn) === '') {
             throw new InvalidArgumentException('Choose a verified wallet that belongs to your OpFin profile.');
         }
 
@@ -598,7 +598,7 @@ class EssentialsBillPlanningService
             ->where('financial_space_id', $spaceId)
             ->where('currency', $currency)
             ->where('active', true)
-            ->when($excludePlanId, fn ($query) => $query->whereKeyNot($excludePlanId))
+            ->when($excludePlanId, fn ($query) => $query->where('id', '!=', $excludePlanId))
             ->get()
             ->sum(fn (EssentialsBillPlan $plan) => $this->occurrenceTotal($plan, $from, $to));
     }
