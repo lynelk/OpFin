@@ -308,13 +308,17 @@ class EssentialsBillPlanningService
             throw new InvalidArgumentException('The payment amount exceeds the own-money capacity in the current affordability check.');
         }
 
-        $wallet = CustomerWallet::query()
+        $walletQuery = CustomerWallet::query()
             ->where('user_id', $user->id)
             ->where('status', 'active')
-            ->whereNotNull('verified_at')
-            ->find((int) $data['wallet_id']);
+            ->whereNotNull('verified_at');
+        $wallet = isset($data['wallet_id'])
+            ? (clone $walletQuery)->find((int) $data['wallet_id'])
+            : (clone $walletQuery)->where('is_default_repayment', true)->first();
+        $wallet ??= (clone $walletQuery)->orderByDesc('is_default_repayment')->first();
+
         if (! $wallet || trim((string) $wallet->msisdn) === '') {
-            throw new InvalidArgumentException('Choose a verified wallet that belongs to your OpFin profile.');
+            throw new InvalidArgumentException('Add or verify a repayment wallet before paying this bill.');
         }
 
         $key = trim((string) $data['idempotency_key']);
