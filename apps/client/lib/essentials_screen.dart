@@ -600,6 +600,14 @@ class _EssentialsScreenState extends State<EssentialsScreen> {
                   .whereType<Map>()
                   .map((e) => e.cast<String, dynamic>())
                   .toList();
+              final billPlans = (root['bill_plans'] as List? ?? const [])
+                  .whereType<Map>()
+                  .map((e) => e.cast<String, dynamic>())
+                  .toList();
+              final ownMoneyPayments = (root['own_money_payments'] as List? ?? const [])
+                  .whereType<Map>()
+                  .map((e) => e.cast<String, dynamic>())
+                  .toList();
 
               return ListView(
                 padding: const EdgeInsets.all(20),
@@ -683,6 +691,14 @@ class _EssentialsScreenState extends State<EssentialsScreen> {
                                       : () => _verifyAccount(account),
                                   child: Text(status == 'pending_manual_review' ? 'Under review' : 'Verify'),
                                 ),
+                              OutlinedButton(
+                                onPressed: () => _planBill(account),
+                                child: const Text('Plan bill'),
+                              ),
+                              OutlinedButton(
+                                onPressed: status == 'verified' ? () => _payFromOwnMoney(account) : null,
+                                child: const Text('Pay'),
+                              ),
                               FilledButton(
                                 onPressed: status == 'verified' ? () => _finance(account) : null,
                                 child: const Text('Finance'),
@@ -692,6 +708,58 @@ class _EssentialsScreenState extends State<EssentialsScreen> {
                         ),
                       );
                     }),
+                  const SizedBox(height: 18),
+                  const Text('Bills & own-money payments',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 8),
+                  if (billPlans.isEmpty && ownMoneyPayments.isEmpty)
+                    const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text('Plan recurring bills to keep future commitments visible before you borrow or pay.'),
+                      ),
+                    )
+                  else ...[
+                    ...billPlans.take(5).map((plan) => Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.event_repeat),
+                            title: Text(_ugx(plan['expected_amount_minor']),
+                                style: const TextStyle(fontWeight: FontWeight.w800)),
+                            subtitle: Text(
+                              (plan['frequency']?.toString() ?? 'planned') +
+                                  ' · next due ' +
+                                  (plan['next_due_date']?.toString() ?? ''),
+                            ),
+                          ),
+                        )),
+                    ...ownMoneyPayments.take(5).map((payment) => Card(
+                          child: ListTile(
+                            leading: Icon(payment['status'] == 'successful'
+                                ? Icons.check_circle_outline
+                                : Icons.schedule_outlined),
+                            title: Text(_ugx(payment['amount_minor']),
+                                style: const TextStyle(fontWeight: FontWeight.w800)),
+                            subtitle: Text(
+                              'Own money · ' +
+                                  (payment['status']?.toString().replaceAll('_', ' ') ?? 'processing'),
+                            ),
+                            trailing: ['collection_pending', 'collection_unknown', 'fulfilment_pending', 'refund_pending']
+                                    .contains(payment['status'])
+                                ? TextButton(
+                                    onPressed: () async {
+                                      try {
+                                        await EssentialsApi.reconcileOwnMoneyPayment(_n(payment['id']));
+                                        await _refresh();
+                                      } catch (e) {
+                                        _message(e.toString().replaceFirst('Exception: ', ''));
+                                      }
+                                    },
+                                    child: const Text('Refresh'),
+                                  )
+                                : null,
+                          ),
+                        )),
+                  ],
                   const SizedBox(height: 18),
                   const Text('Financing activity',
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
