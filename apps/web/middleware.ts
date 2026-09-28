@@ -8,6 +8,9 @@ export function middleware(request: NextRequest) {
   const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
   const policy = contentSecurityPolicy(nonce, production, process.env.NEXT_PUBLIC_OPFIN_API_URL);
   const requestHeaders = new Headers(request.headers);
+  const host = request.headers.get("host")?.split(":")[0]?.toLowerCase() ?? "";
+  const canonicalHosts = new Set((process.env.OPFIN_CANONICAL_HOSTS ?? "opfin.co.ug,www.opfin.co.ug").split(",").map(v => v.trim().toLowerCase()).filter(Boolean));
+  if (host && !canonicalHosts.has(host)) requestHeaders.set("x-opfin-space-host", host);
 
   // Never trust a nonce or policy supplied by a caller.
   requestHeaders.set("x-nonce", nonce);
