@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:opfin/location_context_screen.dart';
 import 'package:opfin/financial_space_statements_screen.dart';
 import 'package:opfin/services/financial_spaces_api.dart';
+import 'package:opfin/sacco_workspace_screen.dart';
+import 'package:opfin/club_accounting/workspace.dart';
 
 class FinancialSpacesScreen extends StatefulWidget {
   const FinancialSpacesScreen({super.key});
@@ -61,6 +63,9 @@ class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>
     Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Financial position'),Text(ugx(d['net_worth_minor']),style:const TextStyle(fontSize:30,fontWeight:FontWeight.w800)),const SizedBox(height:8),Text('Safe to spend ${ugx(d['safe_to_spend_minor'])}')] ))),
     Row(children:[Expanded(child:_tile('I own',ugx(d['assets_minor']),()=>quick('asset'))),const SizedBox(width:8),Expanded(child:_tile('I owe',ugx(d['debt_minor']),()=>quick('owe')))]),
     _tile('Owed to me',ugx(d['receivables_minor']),()=>quick('receivable')),
+    if(widget.space['type']=='sacco')Card(child:ListTile(leading:const Icon(Icons.account_balance_outlined),title:const Text('SACCO member workspace'),subtitle:const Text('Shares, savings, guarantees, contributions, repayments and cooperative analytics.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SaccoWorkspaceScreen(space:widget.space))))),
+    if(widget.space['type']=='investment_club')Card(child:ListTile(leading:const Icon(Icons.candlestick_chart_outlined),title:const Text('Investment club portfolio'),subtitle:const Text('Capital, units, investments, NAV, returns, distributions, approvals and statements.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ClubAccountingScreen(space:widget.space))))),
+    if(groupLike)Card(child:ListTile(leading:const Icon(Icons.insights_outlined),title:const Text('Space operations & analytics'),subtitle:const Text('Collections, disbursements, obligations, fees and operating position.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SpaceOperationsScreen(space:widget.space))))),
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.group_add_outlined),title:const Text('Members & invitations'),subtitle:const Text('Manage membership and roles from the same OpFin identity.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupMembersScreen(spaceId:id))))),
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.verified_outlined),title:const Text('Registration & verification'),subtitle:const Text('Attach government or authority identifiers without changing the OpFin group identity.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupCredentialsScreen(space:widget.space))))),
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.health_and_safety_outlined),title:const Text('Group protection'),subtitle:const Text('See approved group-capable insurance products. Enrolment remains controlled.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupProtectionCatalogueScreen(space:widget.space))))),
