@@ -355,7 +355,7 @@ jobs:
 
   release-gate:
     if: always()
-    needs: [layout, repo-security, financial-control-review, api, api-assets, web, client-android, client-ios]
+    needs: [publication-readiness, layout, repo-security, financial-control-review, api, api-assets, web, client-android, client-ios]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
