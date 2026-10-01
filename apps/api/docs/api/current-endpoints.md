@@ -165,7 +165,7 @@ The candidate also includes jurisdiction-specific issuer-version administration 
 
 ## Post-merge compatibility hardening — 26 September 2026
 
-Treasury cashbook writes remain idempotent. New clients should send `Idempotency-Key`. Established clients that do not yet send an explicit key use a compatibility fingerprint derived from the full canonical cashbook instruction: transaction reference/type, direction, amount, currency, description, counterparty, transaction date and value date. Dates are normalised before fingerprinting, and `transaction_reference` alone is not unique. Exact replay returns the original entry; a changed instruction receives a different compatibility identity.
+Treasury cashbook writes remain idempotent and require an explicit `Idempotency-Key` header or the compatibility `idempotency_key` body field. Keyless cashbook writes return HTTP `422`: OpFin does not derive retry identity from transaction content because two legitimate postings can otherwise be identical in every financial field. Exact replay with the same key returns the original entry; reusing that key with a changed canonical instruction returns a conflict.
 
 The opening-balance baseline is fixed and immutable from treasury-account creation; rebaselining requires a separately reviewed accounting correction. Mobile-money durable intent events retain the established `mobile_money.<direction>.requested` audit event alongside the newer intent/provider-response events. Automated tests explicitly disable production funding/disclosure/EFRIS/Cito-certification activation flags.
 
