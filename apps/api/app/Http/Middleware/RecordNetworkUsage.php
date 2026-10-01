@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -18,7 +19,13 @@ class RecordNetworkUsage
         $correlationId = $this->correlationId($request);
         $request->headers->set('X-OpFin-Correlation-Id', $correlationId);
 
-        $response = $next($request);
+        try {
+            $response = $next($request);
+        } catch (Throwable $exception) {
+            $handler = app(ExceptionHandler::class);
+            $handler->report($exception);
+            $response = $handler->render($request, $exception);
+        }
 
         $bytesIn = max(0, (int) ($request->server('CONTENT_LENGTH') ?? 0));
         $route = $request->route();
@@ -27,6 +34,9 @@ class RecordNetworkUsage
             explode('/', trim($routeTemplate, '/')),
             static fn (string $segment): bool => $segment !== ''
         ));
+        if (($routeSegments[0] ?? null) === 'api') {
+            array_shift($routeSegments);
+        }
         $feature = $this->dimension((string) ($routeSegments[0] ?? 'core'));
         $operation = $this->dimension($request->method().' '.$routeTemplate);
         $clientFeature = $this->dimension(
