@@ -48,7 +48,8 @@ class CpayEssentialsClient
         EssentialsAccount $account,
         EssentialsBiller $biller,
         string $collectionReference,
-    ): array {
+    ): array
+    {
         $path = $this->path($biller->route === 'manual_verification' ? 'beneficiary_payment_path' : 'bill_payment_path');
         $metadata = (array) $account->metadata;
 
