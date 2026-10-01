@@ -224,34 +224,63 @@ class PayrollDeductionService
         string $idempotencyKey,
         ?string $correlationId = null,
     ): PayrollDeductionCase {
-        return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
-            $this->requireStatus($locked, ['reservation_pending']);
-            $accepted = (bool) $data['reserved'];
-            $to = $accepted ? 'reserved' : 'reservation_failed';
-            $reservationReference = trim((string) ($data['reservation_reference'] ?? $locked->reservation_reference ?? ''));
-            $agreementReference = trim((string) ($data['provider_agreement_reference'] ?? $locked->provider_agreement_reference ?? ''));
-
-            if ($accepted && ($reservationReference === '' || $agreementReference === '')) {
-                throw new InvalidArgumentException(
-                    'Confirmed payroll reservation requires both the reservation reference and agreement reference.'
+        return $this->mutate(
+            $case,
+            $actor,
+            $idempotencyKey,
+            $correlationId,
+            'record_reservation',
+            $data,
+            function (PayrollDeductionCase $locked) use ($data) {
+                $this->requireStatus($locked, ['reservation_pending']);
+                $accepted = (bool) $data['reserved'];
+                $to = $accepted ? 'reserved' : 'reservation_failed';
+                $reservationReference = trim(
+                    (string) ($data['reservation_reference'] ?? $locked->reservation_reference ?? '')
                 );
-            }
+                $agreementReference = trim(
+                    (string) ($data['provider_agreement_reference'] ?? $locked->provider_agreement_reference ?? '')
+                );
 
-            $locked->fill([
-                'status' => $to,
-                'reservation_reference' => $reservationReference !== '' ? $reservationReference : null,
-                'provider_agreement_reference' => $agreementReference !== '' ? $agreementReference : null,
-                'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
-                'rejection_code' => $accepted ? null : ($data['rejection_code'] ?? 'RESERVATION_FAILED'),
-                'rejection_reason' => $accepted ? null : ($data['rejection_reason'] ?? 'Payroll reservation was not confirmed.'),
-            ])->save();
+                if ($accepted && ! $locked->undertaking_consent_record_id) {
+                    throw new InvalidArgumentException(
+                        'Confirmed payroll reservation requires a current undertaking consent.'
+                    );
+                }
+                if ($accepted && $locked->reservation_expires_at && $locked->reservation_expires_at->isPast()) {
+                    throw new InvalidArgumentException(
+                        'The payroll reservation request has expired and must be authorised again.'
+                    );
+                }
+                if ($accepted && ($reservationReference === '' || $agreementReference === '')) {
+                    throw new InvalidArgumentException(
+                        'Confirmed payroll reservation requires both the reservation reference and agreement reference.'
+                    );
+                }
 
-            return ['event' => $accepted ? 'reservation_confirmed' : 'reservation_failed', 'to' => $to, 'evidence' => [
-                'reservation_reference' => $locked->reservation_reference,
-                'provider_reference' => $data['provider_reference'] ?? null,
-                'rejection_code' => $locked->rejection_code,
-            ]];
-        });
+                $locked->fill([
+                    'status' => $to,
+                    'reservation_reference' => $reservationReference !== '' ? $reservationReference : null,
+                    'provider_agreement_reference' => $agreementReference !== '' ? $agreementReference : null,
+                    'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
+                    'rejection_code' => $accepted ? null : ($data['rejection_code'] ?? 'RESERVATION_FAILED'),
+                    'rejection_reason' => $accepted
+                        ? null
+                        : ($data['rejection_reason'] ?? 'Payroll reservation was not confirmed.'),
+                ])->save();
+
+                return [
+                    'event' => $accepted ? 'reservation_confirmed' : 'reservation_failed',
+                    'to' => $to,
+                    'evidence' => [
+                        'reservation_reference' => $locked->reservation_reference,
+                        'provider_agreement_reference' => $locked->provider_agreement_reference,
+                        'provider_reference' => $data['provider_reference'] ?? null,
+                        'rejection_code' => $locked->rejection_code,
+                    ],
+                ];
+            },
+        );
     }
 
     public function submitKeyFacts(
