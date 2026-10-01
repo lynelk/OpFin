@@ -116,7 +116,14 @@ class PayrollDeductionService
         string $idempotencyKey,
         ?string $correlationId = null,
     ): PayrollDeductionCase {
-        return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
+        return $this->mutate(
+            $case,
+            $actor,
+            $idempotencyKey,
+            $correlationId,
+            'record_affordability',
+            $data,
+            function (PayrollDeductionCase $locked) use ($data) {
             $this->requireStatus($locked, ['affordability_pending', 'buyoff_quote_required']);
 
             $affordable = (bool) $data['affordable'];
@@ -140,7 +147,8 @@ class PayrollDeductionService
                 'buyoff_quote_required' => $buyoff,
                 'provider_reference' => $data['provider_reference'] ?? null,
             ]];
-        });
+            },
+        );
     }
 
     public function requestReservation(
@@ -290,7 +298,14 @@ class PayrollDeductionService
         string $idempotencyKey,
         ?string $correlationId = null,
     ): PayrollDeductionCase {
-        return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
+        return $this->mutate(
+            $case,
+            $actor,
+            $idempotencyKey,
+            $correlationId,
+            'submit_key_facts',
+            $data,
+            function (PayrollDeductionCase $locked) use ($data) {
             $this->requireStatus($locked, ['reserved']);
             if ($locked->reservation_expires_at && $locked->reservation_expires_at->isPast()) {
                 throw new InvalidArgumentException('The payroll reservation has expired and must be refreshed.');
@@ -307,7 +322,8 @@ class PayrollDeductionService
                 'key_facts_version' => $data['key_facts']['version'] ?? null,
                 'key_facts_snapshot' => $data['key_facts'],
             ]];
-        });
+            },
+        );
     }
 
     public function recordVoteDecision(
@@ -317,9 +333,21 @@ class PayrollDeductionService
         string $idempotencyKey,
         ?string $correlationId = null,
     ): PayrollDeductionCase {
-        return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
+        return $this->mutate(
+            $case,
+            $actor,
+            $idempotencyKey,
+            $correlationId,
+            'record_vote_decision',
+            $data,
+            function (PayrollDeductionCase $locked) use ($data) {
             $this->requireStatus($locked, ['vote_approval_pending']);
             $approved = (bool) $data['approved'];
+            if ($approved && $locked->reservation_expires_at && $locked->reservation_expires_at->isPast()) {
+                throw new InvalidArgumentException(
+                    'The payroll reservation expired before vote approval and must be refreshed.'
+                );
+            }
             $to = $approved ? 'deduction_approved' : 'vote_rejected';
 
             $locked->fill([
@@ -335,7 +363,8 @@ class PayrollDeductionService
                 'provider_reference' => $data['provider_reference'] ?? null,
                 'rejection_code' => $locked->rejection_code,
             ]];
-        });
+            },
+        );
     }
 
     public function recordPayrollSubmission(
