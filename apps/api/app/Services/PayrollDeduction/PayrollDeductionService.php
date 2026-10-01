@@ -503,31 +503,53 @@ class PayrollDeductionService
         string $idempotencyKey,
         ?string $correlationId = null,
     ): PayrollDeductionCase {
-        return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
-            $this->requireStatus($locked, ['amendment_required']);
-            $requested = (int) ($data['requested_deduction_minor'] ?? $locked->requested_deduction_minor ?? 0);
-            if ($requested <= 0) {
-                throw new InvalidArgumentException('The amended deduction amount must be greater than zero.');
-            }
-            if ($locked->affordable_amount_minor !== null && $requested > (int) $locked->affordable_amount_minor) {
-                throw new InvalidArgumentException('The amended deduction exceeds the verified affordable amount.');
-            }
+        return $this->mutate(
+            $case,
+            $actor,
+            $idempotencyKey,
+            $correlationId,
+            'retry_reservation_after_reject',
+            $data,
+            function (PayrollDeductionCase $locked) use ($data) {
+                $this->requireStatus($locked, ['amendment_required']);
+                $currentRequested = (int) ($locked->requested_deduction_minor ?? 0);
+                $requested = (int) ($data['requested_deduction_minor'] ?? $currentRequested);
 
-            $locked->fill([
-                'status' => 'reserved',
-                'requested_deduction_minor' => $requested,
-                'provider_agreement_reference' => $data['provider_agreement_reference'] ?? $locked->provider_agreement_reference,
-                'reservation_reference' => $data['reservation_reference'] ?? $locked->reservation_reference,
-                'reservation_expires_at' => now()->addHours(max(1, (int) config('payroll_deduction.reservation_ttl_hours', 72))),
-                'rejection_code' => null,
-                'rejection_reason' => null,
-            ])->save();
+                if ($requested <= 0) {
+                    throw new InvalidArgumentException('The payroll deduction amount must be greater than zero.');
+                }
+                if ($requested !== $currentRequested) {
+                    throw new InvalidArgumentException(
+                        'A changed deduction amount requires fresh customer undertaking consent through the reservation request.'
+                    );
+                }
+                if (! $locked->undertaking_consent_record_id) {
+                    throw new InvalidArgumentException(
+                        'A current customer undertaking is required before retrying payroll reservation.'
+                    );
+                }
 
-            return ['event' => 'deduction_amended', 'to' => 'reserved', 'evidence' => [
-                'requested_deduction_minor' => $requested,
-                'reservation_reference' => $locked->reservation_reference,
-            ]];
-        });
+                $locked->fill([
+                    'status' => 'reservation_pending',
+                    'provider_agreement_reference' => null,
+                    'reservation_reference' => null,
+                    'reservation_expires_at' => now()->addHours(
+                        max(1, (int) config('payroll_deduction.reservation_ttl_hours', 72))
+                    ),
+                    'rejection_code' => null,
+                    'rejection_reason' => null,
+                ])->save();
+
+                return [
+                    'event' => 'reservation_retry_requested',
+                    'to' => 'reservation_pending',
+                    'evidence' => [
+                        'requested_deduction_minor' => $currentRequested,
+                        'reservation_expires_at' => $locked->reservation_expires_at?->toIso8601String(),
+                    ],
+                ];
+            },
+        );
     }
 
     public function reconcile(
