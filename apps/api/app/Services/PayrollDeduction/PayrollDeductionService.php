@@ -423,31 +423,46 @@ class PayrollDeductionService
         string $idempotencyKey,
         ?string $correlationId = null,
     ): PayrollDeductionCase {
-        return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
-            $this->requireStatus($locked, ['payroll_submitted']);
-            $submittedPeriod = (string) (($locked->provider_state ?? [])['payroll_period'] ?? '');
-            if ($submittedPeriod !== '' && $submittedPeriod !== (string) $data['payroll_period']) {
-                throw new InvalidArgumentException('Payroll result period must match the submitted payroll period.');
-            }
+        return $this->mutate(
+            $case,
+            $actor,
+            $idempotencyKey,
+            $correlationId,
+            'record_payroll_result',
+            $data,
+            function (PayrollDeductionCase $locked) use ($data) {
+                $this->requireStatus($locked, ['payroll_submitted']);
+                $providerState = is_array($locked->provider_state) ? $locked->provider_state : [];
+                $submittedPeriod = (string) ($providerState['payroll_period'] ?? '');
+                $submissionAttempt = (int) ($providerState['submission_attempt'] ?? 0);
 
-            $category = (string) $data['result_category'];
-            $allowed = ['success', 'rejected', 'off_payroll_lt_3_months', 'off_payroll_ge_3_months'];
-            if (! in_array($category, $allowed, true)) {
-                throw new InvalidArgumentException('Unsupported payroll result category.');
-            }
+                if ($submittedPeriod !== '' && $submittedPeriod !== (string) $data['payroll_period']) {
+                    throw new InvalidArgumentException(
+                        'Payroll result period must match the submitted payroll period.'
+                    );
+                }
+                if ($submissionAttempt <= 0) {
+                    throw new InvalidArgumentException(
+                        'Payroll result requires a recorded payroll submission attempt.'
+                    );
+                }
 
-            $expected = (int) ($locked->requested_deduction_minor ?? 0);
-            $recovered = max(0, (int) ($data['recovered_minor'] ?? 0));
-            $variance = $recovered - $expected;
-            $success = $category === 'success';
-            $to = $success ? 'reconciliation_pending' : 'amendment_required';
+                $category = (string) $data['result_category'];
+                $allowed = ['success', 'rejected', 'off_payroll_lt_3_months', 'off_payroll_ge_3_months'];
+                if (! in_array($category, $allowed, true)) {
+                    throw new InvalidArgumentException('Unsupported payroll result category.');
+                }
 
-            PayrollDeductionReconciliation::updateOrCreate(
-                [
+                $expected = (int) ($locked->requested_deduction_minor ?? 0);
+                $recovered = max(0, (int) ($data['recovered_minor'] ?? 0));
+                $variance = $recovered - $expected;
+                $success = $category === 'success';
+                $to = $success ? 'reconciliation_pending' : 'amendment_required';
+
+                PayrollDeductionReconciliation::create([
                     'payroll_deduction_case_id' => $locked->id,
                     'payroll_period' => $data['payroll_period'],
-                ],
-                [
+                    'submission_attempt' => $submissionAttempt,
                     'expected_minor' => $expected,
                     'recovered_minor' => $recovered,
                     'variance_minor' => $variance,
@@ -456,26 +471,29 @@ class PayrollDeductionService
                     'result_category' => $category,
                     'provider_reference' => $data['provider_reference'] ?? null,
                     'evidence' => $data['evidence'] ?? null,
-                ],
-            );
+                ]);
 
-            $locked->fill([
-                'status' => $to,
-                'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
-                'rejection_code' => $success ? null : ($data['rejection_code'] ?? strtoupper($category)),
-                'rejection_reason' => $success ? null : ($data['rejection_reason'] ?? 'Payroll submission requires review and amendment.'),
-            ])->save();
+                $locked->fill([
+                    'status' => $to,
+                    'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
+                    'rejection_code' => $success ? null : ($data['rejection_code'] ?? strtoupper($category)),
+                    'rejection_reason' => $success
+                        ? null
+                        : ($data['rejection_reason'] ?? 'Payroll submission requires review and amendment.'),
+                ])->save();
 
-            return ['event' => 'payroll_result_recorded', 'to' => $to, 'evidence' => [
-                'payroll_period' => $data['payroll_period'],
-                'result_category' => $category,
-                'expected_minor' => $expected,
-                'recovered_minor' => $recovered,
-                'variance_minor' => $variance,
-                'provider_reference' => $data['provider_reference'] ?? null,
-                'provider_evidence' => $data['evidence'] ?? null,
-            ]];
-        });
+                return ['event' => 'payroll_result_recorded', 'to' => $to, 'evidence' => [
+                    'payroll_period' => $data['payroll_period'],
+                    'submission_attempt' => $submissionAttempt,
+                    'result_category' => $category,
+                    'expected_minor' => $expected,
+                    'recovered_minor' => $recovered,
+                    'variance_minor' => $variance,
+                    'provider_reference' => $data['provider_reference'] ?? null,
+                    'provider_evidence' => $data['evidence'] ?? null,
+                ]];
+            },
+        );
     }
 
     public function amendAfterReject(
