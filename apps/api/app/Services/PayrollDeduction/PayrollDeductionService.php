@@ -14,6 +14,10 @@ use InvalidArgumentException;
 
 class PayrollDeductionService
 {
+    private const UNDERTAKING_POLICY_VERSION = 'payroll-undertaking-v1';
+
+    private const UNDERTAKING_SCOPE = 'government_payroll_deduction';
+
     public function createCase(
         User $user,
         FinancingApplication $application,
@@ -21,21 +25,62 @@ class PayrollDeductionService
         string $idempotencyKey,
         ?string $correlationId = null,
     ): PayrollDeductionCase {
-        if ((int) $application->user_id !== (int) $user->id) {
-            throw new InvalidArgumentException('This financing application does not belong to the customer.');
+        if (trim($idempotencyKey) === '') {
+            throw new InvalidArgumentException('An idempotency key is required.');
         }
 
         return DB::transaction(function () use ($user, $application, $data, $idempotencyKey, $correlationId) {
-            $existing = PayrollDeductionCase::where('financing_application_id', $application->id)->first();
+            $lockedApplication = FinancingApplication::query()
+                ->with('product')
+                ->whereKey($application->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ((int) $lockedApplication->user_id !== (int) $user->id) {
+                throw new InvalidArgumentException('This financing application does not belong to the customer.');
+            }
+            if (! $lockedApplication->product
+                || strtolower((string) $lockedApplication->product->family) !== 'salary_finance') {
+                throw new InvalidArgumentException('Payroll deduction is available only for salary-finance applications.');
+            }
+            if ($lockedApplication->status !== 'submitted') {
+                throw new InvalidArgumentException('Payroll deduction requires a submitted salary-finance application.');
+            }
+
+            $instructionHash = $this->instructionHash('create_case', [
+                'financing_application_id' => (int) $lockedApplication->id,
+                'scheme' => $data['scheme'] ?? 'government_pdms',
+                'provider' => $data['provider'] ?? 'pdms',
+                'vote_code' => $data['vote_code'] ?? null,
+                'vote_name' => $data['vote_name'] ?? null,
+                'employment_reference_hash' => isset($data['employment_reference'])
+                    ? hash('sha256', trim((string) $data['employment_reference']))
+                    : null,
+                'currency' => strtoupper((string) ($data['currency'] ?? 'UGX')),
+            ]);
+
+            $existing = PayrollDeductionCase::where('financing_application_id', $lockedApplication->id)->first();
             if ($existing) {
+                $startEvent = PayrollDeductionEvent::query()
+                    ->where('payroll_deduction_case_id', $existing->id)
+                    ->where('event_type', 'case_started')
+                    ->oldest('id')
+                    ->first();
+
+                if (! $startEvent || ! hash_equals((string) $startEvent->instruction_hash, $instructionHash)) {
+                    throw new InvalidArgumentException(
+                        'This salary-finance application already has a payroll case bound to a different start instruction.'
+                    );
+                }
+
                 return $existing->fresh();
             }
 
             $case = PayrollDeductionCase::create([
                 'reference' => (string) Str::uuid(),
-                'financing_application_id' => $application->id,
+                'financing_application_id' => $lockedApplication->id,
                 'user_id' => $user->id,
-                'financial_space_id' => $application->financial_space_id,
+                'financial_space_id' => $lockedApplication->financial_space_id,
                 'scheme' => $data['scheme'] ?? 'government_pdms',
                 'provider' => $data['provider'] ?? 'pdms',
                 'vote_code' => $data['vote_code'] ?? null,
@@ -52,6 +97,7 @@ class PayrollDeductionService
                 $case,
                 $user,
                 $idempotencyKey,
+                $instructionHash,
                 $correlationId,
                 'case_started',
                 null,
