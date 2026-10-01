@@ -3,6 +3,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / 'distribution' / 'sponsored-data' / 'whitelist-manifest.json'
@@ -14,7 +15,13 @@ def fail(message: str, errors: list[str]) -> None:
 def main() -> int:
     errors: list[str] = []
     data = json.loads(MANIFEST.read_text(encoding='utf-8'))
-    hosts = {row['host'].lower() for row in data.get('client_whitelist_hosts', []) if row.get('host')}
+    rows = [row for row in data.get('client_whitelist_hosts', []) if row.get('host')]
+    hosts = {row['host'].lower() for row in rows}
+    origins = {
+        f"{str(row.get('scheme', 'https')).lower()}://{row['host'].lower()}:{int(port)}"
+        for row in rows
+        for port in (row.get('ports') or [443 if str(row.get('scheme', 'https')).lower() == 'https' else 80])
+    }
     if not hosts:
         fail('whitelist manifest has no client_whitelist_hosts', errors)
     if data.get('status') not in {'candidate', 'approved'}:
@@ -24,11 +31,15 @@ def main() -> int:
         fail('approved sponsorship requires an operator_reference', errors)
 
     constants = (CLIENT / 'constants.dart').read_text(encoding='utf-8')
-    match = re.search(r"defaultValue:\s*'https://([^/']+)", constants)
+    match = re.search(r"defaultValue:\s*'(https?://[^']+)", constants)
     if not match:
-        fail('cannot determine Flutter default API host', errors)
-    elif match.group(1).lower() not in hosts:
-        fail(f"Flutter default API host {match.group(1)} is absent from whitelist manifest", errors)
+        fail('cannot determine Flutter default API origin', errors)
+    else:
+        parsed = urlsplit(match.group(1))
+        effective_port = parsed.port or (443 if parsed.scheme.lower() == 'https' else 80)
+        default_origin = f"{parsed.scheme.lower()}://{parsed.hostname.lower()}:{effective_port}" if parsed.hostname else ''
+        if default_origin not in origins:
+            fail(f"Flutter default API origin {default_origin} is absent from whitelist manifest", errors)
 
     direct_pattern = re.compile(r'\bhttp\.(get|post|put|patch|delete|head)\s*\(')
     url_pattern = re.compile(r'https://([A-Za-z0-9.-]+)')
@@ -54,7 +65,7 @@ def main() -> int:
         for error in errors:
             print(f' - {error}')
         return 1
-    print(f'Sponsored-data governance check passed for {len(hosts)} whitelisted client host(s).')
+    print(f'Sponsored-data governance check passed for {len(origins)} whitelisted client origin(s).')
     return 0
 
 if __name__ == '__main__':
