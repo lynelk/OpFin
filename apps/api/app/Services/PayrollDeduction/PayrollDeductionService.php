@@ -374,30 +374,46 @@ class PayrollDeductionService
         string $idempotencyKey,
         ?string $correlationId = null,
     ): PayrollDeductionCase {
-        return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
-            $this->requireStatus($locked, ['deduction_approved']);
-            $submissionCode = (string) ($data['submission_code'] ?? '482');
-            if ($locked->scheme === 'government_pdms' && $submissionCode !== '482') {
-                throw new InvalidArgumentException('Government payroll deduction submissions must use Code 482.');
-            }
+        return $this->mutate(
+            $case,
+            $actor,
+            $idempotencyKey,
+            $correlationId,
+            'record_payroll_submission',
+            $data,
+            function (PayrollDeductionCase $locked) use ($data) {
+                $this->requireStatus($locked, ['deduction_approved']);
+                $submissionCode = (string) ($data['submission_code'] ?? '482');
+                if ($locked->scheme === 'government_pdms' && $submissionCode !== '482') {
+                    throw new InvalidArgumentException(
+                        'Government payroll deduction submissions must use Code 482.'
+                    );
+                }
 
-            $locked->fill([
-                'status' => 'payroll_submitted',
-                'payroll_submitted_at' => now(),
-                'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
-                'provider_state' => array_merge($locked->provider_state ?? [], [
+                $providerState = is_array($locked->provider_state) ? $locked->provider_state : [];
+                $submissionAttempt = max(1, (int) ($providerState['submission_attempt'] ?? 0) + 1);
+
+                $locked->fill([
+                    'status' => 'payroll_submitted',
+                    'payroll_submitted_at' => now(),
+                    'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
+                    'provider_state' => array_merge($providerState, [
+                        'payroll_period' => $data['payroll_period'],
+                        'submission_attempt' => $submissionAttempt,
+                        'submission_file_reference' => $data['submission_file_reference'] ?? null,
+                        'submission_code' => $submissionCode,
+                    ]),
+                ])->save();
+
+                return ['event' => 'payroll_submitted', 'to' => 'payroll_submitted', 'evidence' => [
                     'payroll_period' => $data['payroll_period'],
+                    'submission_attempt' => $submissionAttempt,
                     'submission_file_reference' => $data['submission_file_reference'] ?? null,
                     'submission_code' => $submissionCode,
-                ]),
-            ])->save();
-
-            return ['event' => 'payroll_submitted', 'to' => 'payroll_submitted', 'evidence' => [
-                'payroll_period' => $data['payroll_period'],
-                'submission_file_reference' => $data['submission_file_reference'] ?? null,
-                'submission_code' => $submissionCode,
-            ]];
-        });
+                    'provider_reference' => $data['provider_reference'] ?? null,
+                ]];
+            },
+        );
     }
 
     public function recordPayrollResult(
