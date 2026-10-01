@@ -94,13 +94,26 @@ class FinancialSpaceStatementService
                 ->first();
 
             if ($existing) {
+                $transactionDate = CarbonImmutable::parse(
+                    $data['transaction_date']
+                )->toDateString();
+                $valueDate = null;
+                if (isset($data['value_date']) && $data['value_date'] !== '') {
+                    $valueDate = CarbonImmutable::parse($data['value_date'])->toDateString();
+                }
+
                 $sameInstruction = (int) $existing->treasury_account_id === (int) $lockedAccount->id
                     && $existing->direction === $data['direction']
                     && (int) $existing->amount_minor === (int) $data['amount_minor']
                     && strtoupper((string) $existing->currency) === strtoupper((string) $lockedAccount->currency)
-                    && $existing->transaction_date?->toDateString() === CarbonImmutable::parse($data['transaction_date'])->toDateString();
+                    && $existing->transaction_date?->toDateString() === $transactionDate
+                    && $existing->value_date?->toDateString() === $valueDate
+                    && trim((string) ($existing->transaction_reference ?? '')) === trim((string) ($data['transaction_reference'] ?? ''))
+                    && trim((string) ($existing->transaction_type ?? 'other')) === trim((string) ($data['transaction_type'] ?? 'other'))
+                    && trim((string) ($existing->description ?? '')) === trim((string) ($data['description'] ?? ''))
+                    && trim((string) ($existing->counterparty_name ?? '')) === trim((string) ($data['counterparty_name'] ?? ''));
 
-                if (! $sameInstruction) {
+                if ($sameInstruction === false) {
                     throw new InvalidArgumentException(
                         'Treasury source reference was already used for a different canonical cashbook instruction.'
                     );
@@ -1739,6 +1752,7 @@ class FinancialSpaceStatementService
     {
         $tokens = function (string $value): array {
             $normalised = strtolower(preg_replace('/[^a-z0-9 ]+/i', ' ', $value) ?? '');
+
             return array_values(array_unique(array_filter(
                 preg_split('/\s+/', $normalised) ?: [],
                 fn ($token) => strlen($token) >= 3
@@ -2077,7 +2091,7 @@ class FinancialSpaceStatementService
             ->value('role');
 
         abort_unless(
-            in_array($role, ['owner','administrator','admin','chairperson','treasurer','secretary','director','manager'], true),
+            in_array($role, ['owner', 'administrator', 'admin', 'chairperson', 'treasurer', 'secretary', 'director', 'manager'], true),
             403
         );
     }

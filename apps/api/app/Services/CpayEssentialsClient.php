@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\EssentialsAccount;
 use App\Models\EssentialsAdvance;
 use App\Models\EssentialsBiller;
+use App\Models\EssentialsOwnMoneyPayment;
 use App\Models\EssentialsRepayment;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -39,6 +40,37 @@ class CpayEssentialsClient
             'lenderFundingReference' => $advance->lender_funding_reference, 'purpose' => 'opfin_essentials_finance',
             'metadata' => ['opfinAdvanceReference' => $advance->reference, 'lenderPartnerId' => $advance->lender_partner_id,
                 'partnerProductId' => $advance->partner_product_id, 'financialSpaceId' => $advance->financial_space_id],
+        ]);
+    }
+
+    public function payOwnMoneyBill(
+        EssentialsOwnMoneyPayment $payment,
+        EssentialsAccount $account,
+        EssentialsBiller $biller,
+        string $collectionReference,
+    ): array
+    {
+        $path = $this->path($biller->route === 'manual_verification' ? 'beneficiary_payment_path' : 'bill_payment_path');
+        $metadata = (array) $account->metadata;
+
+        return $this->sendSigned($path, [
+            'merchantNumber' => $this->merchantNumber(),
+            'country' => strtoupper((string) config('services.cpay.country', 'UG')),
+            'currency' => $payment->currency,
+            'billerCode' => $biller->code,
+            'accountReference' => $account->account_reference,
+            'beneficiaryName' => $metadata['beneficiary_name'] ?? null,
+            'beneficiaryChannel' => $metadata['beneficiary_channel'] ?? null,
+            'landlordName' => $metadata['landlord_name'] ?? null,
+            'amountMinor' => $payment->amount_minor,
+            'requestReference' => $payment->reference,
+            'payerCollectionReference' => $collectionReference,
+            'purpose' => 'opfin_essentials_own_money',
+            'metadata' => [
+                'opfinOwnMoneyPaymentReference' => $payment->reference,
+                'financialSpaceId' => $payment->financial_space_id,
+                'collectionFinalityRequired' => true,
+            ],
         ]);
     }
 

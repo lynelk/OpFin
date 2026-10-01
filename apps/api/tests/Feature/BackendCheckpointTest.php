@@ -40,8 +40,9 @@ class BackendCheckpointTest extends TestCase
         ]);
     }
 
-    public function test_operations_user_can_approve_pending_transaction(): void
+    public function test_operations_user_can_approve_pending_transaction_when_legacy_compatibility_is_explicitly_enabled(): void
     {
+        config()->set('opfin.credit.legacy_manual_transaction_approval_enabled', true);
         $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
         Sanctum::actingAs($operations);
 

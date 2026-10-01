@@ -161,3 +161,18 @@ Read the [Financial Intelligence contract](FINANCIAL_INTELLIGENCE_CONTRACT.md), 
 The institutional namespace is `/api/financial-spaces/{space}/intelligence`. It includes role-aware context, source registration, staged JSON/CSV imports, independent publication, source-reconciled portfolio analysis, comparison and sensitivity analysis, assigned cases, expiring access grants, frozen reports and explicit report-sharing mandates. Personal owners receive statement permissions only. Imports and statement evidence do not post payments, alter core accounting or become credit decisions.
 
 The candidate also includes jurisdiction-specific issuer-version administration under `/api/intelligence/admin/issuers` and purpose-bound statement evidence under the scoped namespace. Original PDFs remain quarantined until an accepted scanner/parser pipeline exists. Arithmetic consistency is not issuer authentication. The actual application, database, browser and mobile build gates remain outstanding; discoverable routes or written tests do not establish acceptance.
+
+
+## Post-merge compatibility hardening — 26 September 2026
+
+Treasury cashbook writes remain idempotent and require an explicit `Idempotency-Key` header or the compatibility `idempotency_key` body field. Keyless cashbook writes return HTTP `422`: OpFin does not derive retry identity from transaction content because two legitimate postings can otherwise be identical in every financial field. Exact replay with the same key returns the original entry; reusing that key with a changed canonical instruction returns a conflict.
+
+The opening-balance baseline is fixed and immutable from treasury-account creation; rebaselining requires a separately reviewed accounting correction. Mobile-money durable intent events retain the established `mobile_money.<direction>.requested` audit event alongside the newer intent/provider-response events. Automated tests explicitly disable production funding/disclosure/EFRIS/Cito-certification activation flags.
+
+## Mobile Home aggregate — 27 September 2026
+
+- `GET /api/mobile/home` — authenticated mobile Home snapshot combining Financial Compass, customer credit-profile state, up to five current personal protection summaries and authorised Financial Spaces. Premium-payment and claim history remain on the dedicated protection APIs and are not embedded in Home.
+- Optional query: `currency` (three-letter code, default `UGX`).
+- Response includes `freshness.observed_at`, `freshness.window_seconds=300` and `freshness.server_authoritative=true`.
+- The endpoint returns a private `ETag`. A matching `If-None-Match` returns HTTP `304` with no replacement financial payload.
+- This is a read-orchestration endpoint only. It does not create a second financial source of truth; underlying domain services and Space permissions remain authoritative.

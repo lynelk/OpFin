@@ -18,7 +18,9 @@ use InvalidArgumentException;
 
 class FinancialSpaceStatementController extends Controller
 {
-    public function __construct(private readonly FinancialSpaceStatementService $statements) {}
+    public function __construct(
+        private readonly FinancialSpaceStatementService $statements,
+    ) {}
 
     public function accounts(FinancialSpace $space, Request $request): JsonResponse
     {
@@ -94,9 +96,10 @@ class FinancialSpaceStatementController extends Controller
             ?: ($validated['idempotency_key'] ?? '')
         ));
         if ($idempotencyKey === '') {
-            return ApiResponse::error('A treasury cashbook idempotency key is required.', 422, [
-                'idempotency_key' => ['Provide Idempotency-Key header or idempotency_key body field.'],
-            ]);
+            return ApiResponse::error(
+                'An Idempotency-Key header or idempotency_key body field is required for every cashbook transaction.',
+                422
+            );
         }
 
         unset($validated['idempotency_key']);
@@ -451,5 +454,4 @@ class FinancialSpaceStatementController extends Controller
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }
-
 }

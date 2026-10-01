@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
 
@@ -20,7 +21,7 @@ class ProtectionApi {
   static Future<List<Map<String, dynamic>>> products({String country = 'UG'}) async {
     final uri = Uri.parse('$apiUrl/protection/products')
         .replace(queryParameters: {'country': country});
-    final response = await http.get(uri, headers: await _headers());
+    final response = await OpFinHttp.get(uri, headers: await _headers());
     final data = _decode(response, 'Unable to load protection products.');
     return (data['products'] as List? ?? const [])
         .whereType<Map>()
@@ -29,7 +30,7 @@ class ProtectionApi {
   }
 
   static Future<List<Map<String, dynamic>>> policies() async {
-    final response = await http.get(
+    final response = await OpFinHttp.get(
       Uri.parse('$apiUrl/protection/policies'),
       headers: await _headers(),
     );
@@ -41,7 +42,7 @@ class ProtectionApi {
   }
 
   static Future<Map<String, dynamic>> enroll(int productId, String disclosureHash) async {
-    final response = await http.post(
+    final response = await OpFinHttp.post(
       Uri.parse('$apiUrl/protection/products/$productId/enroll'),
       headers: await _headers(),
       body: jsonEncode({
@@ -53,7 +54,7 @@ class ProtectionApi {
   }
 
   static Future<Map<String, dynamic>> payPremium(int policyId, String idempotencyKey) async {
-    final response = await http.post(
+    final response = await OpFinHttp.post(
       Uri.parse('$apiUrl/protection/policies/$policyId/premiums'),
       headers: await _headers(),
       body: jsonEncode({'idempotency_key': idempotencyKey}),
@@ -77,7 +78,7 @@ class ProtectionApi {
       body['claimed_amount_minor'] = claimedAmountMinor;
     }
 
-    final response = await http.post(
+    final response = await OpFinHttp.post(
       Uri.parse('$apiUrl/protection/policies/$policyId/claims'),
       headers: await _headers(),
       body: jsonEncode(body),
@@ -86,7 +87,7 @@ class ProtectionApi {
   }
 
   static Future<Map<String, dynamic>> disputeClaim(int claimId, String reason) async {
-    final response = await http.post(
+    final response = await OpFinHttp.post(
       Uri.parse('$apiUrl/protection/claims/$claimId/dispute'),
       headers: await _headers(),
       body: jsonEncode({'reason': reason}),

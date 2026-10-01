@@ -7,6 +7,7 @@ use App\Models\CrbReport;
 use App\Models\CreditProfile;
 use App\Models\CreditScoreComponent;
 use App\Models\KycCase;
+use App\Models\Loan;
 use App\Models\Otp;
 use App\Models\User;
 use App\Services\CustomerCreditProfileService;
@@ -157,7 +158,18 @@ class LaunchCustomerJourneyTest extends TestCase
             ->refresh($user->fresh(), false);
 
         $this->assertGreaterThan(0, $profile->credit_limit_minor);
-        $this->assertGreaterThan(0, $profile->available_to_borrow_minor);
+        $this->assertGreaterThan(
+            0,
+            $profile->available_to_borrow_minor,
+            json_encode([
+                'reason_codes' => $profile->reason_codes,
+                'current_exposure_minor' => $profile->current_exposure_minor,
+                'loans' => Loan::withoutGlobalScopes()
+                    ->where('user_id', $user->id)
+                    ->get(['id', 'status', 'deleted_at'])
+                    ->toArray(),
+            ], JSON_THROW_ON_ERROR)
+        );
         $this->assertSame(60.0, (float) $profile->coverage_percent);
 
         Sanctum::actingAs($user);

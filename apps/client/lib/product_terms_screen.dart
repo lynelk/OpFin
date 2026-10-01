@@ -1,3 +1,4 @@
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 import 'package:opfin/services/distribution_channel.dart';
@@ -6,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/loan_application_screen.dart';
 import 'package:opfin/models/product_term.dart';
-import 'package:http/http.dart' as http;
 import 'package:opfin/services/user_session.dart';
 
 class ProductTermsPage extends StatefulWidget {
@@ -226,7 +226,7 @@ class ProductTermsPageState extends State<ProductTermsPage> {
   Future<List<ProductTerm>> fetchProductTerms(int productId) async {
     final token = await UserSession.getAccessToken();
 
-    final response = await http.get(
+    final response = await OpFinHttp.get(
       Uri.parse("$apiUrl/product-terms/$productId?distribution_channel=${resolveDistributionChannel()}"),
       headers: {
         'Authorization': 'Bearer $token',

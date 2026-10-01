@@ -12,7 +12,7 @@ class FinancialSpaceTreasuryAccount extends Model
     protected $fillable = [
         'public_id', 'financial_space_id', 'account_name', 'account_type', 'institution_name',
         'account_reference_masked', 'currency', 'opening_balance_minor', 'current_balance_minor',
-        'status', 'balance_as_of', 'metadata',
+        'status', 'balance_as_of', 'current_balance_as_of', 'metadata',
     ];
 
     protected function casts(): array
@@ -21,6 +21,7 @@ class FinancialSpaceTreasuryAccount extends Model
             'opening_balance_minor' => 'integer',
             'current_balance_minor' => 'integer',
             'balance_as_of' => 'date',
+            'current_balance_as_of' => 'datetime',
             'metadata' => 'array',
         ];
     }
@@ -34,6 +35,17 @@ class FinancialSpaceTreasuryAccount extends Model
      * remains observable through updated_at. Rebaselining requires a separate
      * reviewed accounting correction, not mass assignment to this attribute.
      */
+    public function setOpeningBalanceMinorAttribute(mixed $value): void
+    {
+        if ($this->exists) {
+            throw new \LogicException(
+                'Opening balance is locked and fixed at treasury-account creation. Use a reviewed accounting correction instead of rebaselining.'
+            );
+        }
+
+        $this->attributes['opening_balance_minor'] = (int) $value;
+    }
+
     public function setBalanceAsOfAttribute(mixed $value): void
     {
         if ($this->exists) {

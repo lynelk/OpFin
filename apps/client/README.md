@@ -25,6 +25,8 @@ One person may access authorised Personal, Household, Savings Group, Investment 
 
 Home is personal-finance first. It uses the server-authoritative Financial Compass to show recorded available money/safe-to-spend, savings, debt, upcoming obligations, cash-flow context and one useful next action before presenting product choices.
 
+For routine refresh, the App uses the authenticated aggregate `/api/mobile/home` contract so Financial Compass, credit-profile state, protection policies and Financial Spaces arrive in one measured request. A private in-memory ETag allows unchanged refreshes to return `304` without retransmitting the financial payload. The former multi-request sequence remains a temporary compatibility fallback only for older API deployments.
+
 **My Money** supports current cash/mobile-money/bank balances and personal debt planning. A debt recorded in the person's Personal Space contributes to the Financial Compass and, when it has a due date, the upcoming commitment view. OpFin-originated loan schedules remain server-derived; customers do not have to re-enter them manually.
 
 Protection is available as a normal personal-finance destination. The App distinguishes premium initiation, partner settlement, insurer issuance and active cover, and routes claim decisions to the disclosed insurer/underwriter.
@@ -53,6 +55,16 @@ Current App entry points include:
 - claim incident location.
 
 Android requests ACCESS_COARSE_LOCATION first and ACCESS_FINE_LOCATION only for precise tasks. iOS requests When In Use access. Background location is not configured.
+
+## Data, storage and low-connectivity behaviour
+
+All ordinary OpFin API traffic is routed through the metered mobile network layer. The App records aggregate application-layer bytes by feature and operation without storing request or response payloads, identity numbers, PINs, OTPs, tokens or raw financial content.
+
+Under **More → Data & storage**, customers can see this month's OpFin application traffic and whether each measured byte falls inside an operator-confirmed sponsored boundary, outside that boundary, or has billing treatment that is not yet confirmed. OpFin does not describe traffic as free merely because it used an OpFin hostname; sponsorship eligibility is bound to the approved scheme, host and effective port, and the mobile operator remains authoritative for billing/zero-rating.
+
+Offline actions use bounded queues and bounded sync batches. Oversized or sensitive actions are not silently stored in the generic offline queue. KYC capture resizes/compresses mobile images and applies a total mobile upload budget while preserving the requirement for legible evidence.
+
+Client-facing hosts are controlled by `distribution/sponsored-data/whitelist-manifest.json`. New SDKs, media sources, direct provider hosts, polling loops or background traffic require a data-impact and whitelist review before release. See `../../docs/architecture/LIGHTWEIGHT_SPONSORED_DATA.md`.
 
 ## Identity verification
 
@@ -118,3 +130,8 @@ Run `make publication-check` before externally publishing product/developer docu
 Credit options, applications and Essentials send the actual channel through `lib/services/distribution_channel.dart`. iOS infers `app_store`, Android infers `play_store`, and web infers `web`. Build Huawei Android with `--dart-define=OPFIN_DISTRIBUTION_CHANNEL=huawei_appgallery`; configure actual store policy before publication. Invalid channel/platform combinations are rejected. The channel flag does not replace Huawei device/service integration testing or store approval.
 
 Repayment terms come from the server's configurable lender/channel rules. The client no longer hides terms using a universal 61-day filter or prefers a universal 90-day product. Options/review/offers identify the actual lender; OpFin is the orchestration platform. Home displays an OpFin Score only when the server supplies one. Flutter analysis/tests, Android/iOS release compilation and device UAT remain required. See [the lender contract](../../docs/architecture/LENDER_ORCHESTRATION.md).
+
+
+## Club accounting client recovery and export
+
+Investment Club members can recover saved accounting requests and retain access to their own historical member statements after leaving a club. Native statement export supports controlled save/share and HTML print flows; exports contain document bytes rather than authentication credentials. Android combines this with the approximate-location-only Play policy, while iOS uses the native print/share bridge. Financial mutations remain server-authoritative and maker-checker controls are not bypassed by the client.

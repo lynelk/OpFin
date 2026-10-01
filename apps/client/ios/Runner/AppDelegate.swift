@@ -144,9 +144,10 @@ private final class ClubStatementExports: NSObject, UIDocumentPickerDelegate, UI
       info.outputType = .general
       printer.printInfo = info
       printer.printFormatter = UIMarkupTextPrintFormatter(markupText: html)
-      let completion = { [weak self] (_: UIPrintInteractionController, completed: Bool, error: Error?) in
-        if error != nil { self?.finish(error: "The print operation failed.") }
-        else { self?.finish(status: completed ? "completed" : "cancelled") }
+      let completion: UIPrintInteractionController.CompletionHandler = { [weak self] _, completed, error in
+        guard let self else { return }
+        if error != nil { self.finish(error: "The print operation failed.") }
+        else { self.finish(status: completed ? "completed" : "cancelled") }
       }
       let shown: Bool
       if UIDevice.current.userInterfaceIdiom == .pad {
