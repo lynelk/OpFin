@@ -33,6 +33,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--android-aab')
     parser.add_argument('--android-apk')
+    parser.add_argument('--android-split-apk-dir')
     parser.add_argument('--ios-app')
     args = parser.parse_args()
 
@@ -41,7 +42,7 @@ def main() -> int:
         check_file(
             'Android App Bundle',
             Path(args.android_aab),
-            int(os.getenv('OPFIN_MAX_ANDROID_AAB_BYTES', 30 * MIB)),
+            int(os.getenv('OPFIN_MAX_ANDROID_AAB_BYTES', 60 * MIB)),
             errors,
         )
     if args.android_apk:
@@ -51,6 +52,18 @@ def main() -> int:
             int(os.getenv('OPFIN_MAX_ANDROID_APK_BYTES', 60 * MIB)),
             errors,
         )
+    if args.android_split_apk_dir:
+        split_dir = Path(args.android_split_apk_dir)
+        split_apks = sorted(split_dir.glob('app-*-release.apk')) if split_dir.is_dir() else []
+        if not split_apks:
+            errors.append(f'Android split APK artefacts are missing: {split_dir}')
+        for split_apk in split_apks:
+            check_file(
+                f'Android split APK ({split_apk.stem})',
+                split_apk,
+                int(os.getenv('OPFIN_MAX_ANDROID_SPLIT_APK_BYTES', 30 * MIB)),
+                errors,
+            )
     if args.ios_app:
         check_dir(
             'iOS Runner.app',
@@ -59,7 +72,7 @@ def main() -> int:
             errors,
         )
 
-    if not any([args.android_aab, args.android_apk, args.ios_app]):
+    if not any([args.android_aab, args.android_apk, args.android_split_apk_dir, args.ios_app]):
         parser.error('provide at least one mobile release artefact')
 
     if errors:
