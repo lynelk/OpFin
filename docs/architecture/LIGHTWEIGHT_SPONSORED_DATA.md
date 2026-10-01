@@ -20,8 +20,8 @@ Measurement is three-sided:
 
 ## Sponsorship states
 
-- `sponsored`: only when the release/environment has operator-confirmed sponsorship configured for the exact client-facing host.
-- `non_sponsored`: traffic to a host outside the approved OpFin client boundary.
+- `sponsored`: only when the release/environment has operator-confirmed sponsorship configured for the exact client-facing origin (scheme, host and effective port).
+- `non_sponsored`: traffic to an origin outside the approved OpFin client boundary.
 - `unknown`: OpFin traffic whose carrier billing treatment is not confirmed.
 
 The App must never convert `unknown` to `sponsored` merely because the request used an OpFin hostname.
@@ -66,11 +66,12 @@ The mobile camera path resizes/compresses images before upload, caps each image,
 
 Package gates currently enforce these initial engineering ceilings:
 
-- Android App Bundle: 30 MiB;
+- Android App Bundle distribution artefact: 60 MiB;
 - universal Android APK: 60 MiB;
+- each architecture-specific Android APK: 30 MiB;
 - uncompressed iOS `Runner.app`: 120 MiB.
 
-The iOS figure is an engineering artefact ceiling, not a claim about App Store cellular download size. Store-reported/device download measurements remain acceptance evidence.
+The AAB is an upload/distribution container and is not treated as the customer's installed download size. Architecture-specific APKs provide the stricter repository proxy for Android device payload size. Store-reported/device download measurements remain final acceptance evidence. The iOS figure is likewise an engineering artefact ceiling, not a claim about App Store cellular download size.
 
 Each signed candidate records:
 
