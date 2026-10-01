@@ -548,7 +548,8 @@ class EssentialsBillPlanningService
         EssentialsOwnMoneyPayment $payment,
         MobileMoneyTransaction $collection,
         string $providerStatus,
-    ): EssentialsOwnMoneyPayment {
+    ): EssentialsOwnMoneyPayment
+    {
         $payment->update([
             'status' => 'refund_pending',
             'evidence' => array_merge((array) $payment->evidence, [
@@ -596,7 +597,8 @@ class EssentialsBillPlanningService
         Carbon $from,
         Carbon $to,
         ?int $excludePlanId,
-    ): int {
+    ): int
+    {
         return EssentialsBillPlan::query()
             ->where('user_id', $user->id)
             ->where('financial_space_id', $spaceId)
