@@ -11,7 +11,6 @@ use App\Models\FinancialSpaceTransaction;
 use App\Models\FinancialSpaceTreasuryAccount;
 use App\Services\FinancialSpaceStatementService;
 use App\Support\ApiResponse;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -97,34 +96,9 @@ class FinancialSpaceStatementController extends Controller
             ?: ($validated['idempotency_key'] ?? '')
         ));
         if ($idempotencyKey === '') {
-            // Compatibility bridge for clients that pre-date the explicit
-            // Idempotency-Key contract. A transaction reference alone is not
-            // unique, so bind the fallback to the complete canonical cashbook
-            // instruction. Exact replay is stable; a legitimate second entry
-            // sharing a bank/reference label receives a different identity.
-            $transactionDate = CarbonImmutable::parse(
-                (string) $validated['transaction_date']
-            )->toDateString();
-            $valueDate = isset($validated['value_date'])
-                && $validated['value_date'] !== null
-                && $validated['value_date'] !== ''
-                    ? CarbonImmutable::parse((string) $validated['value_date'])->toDateString()
-                    : '';
-
-            $legacyInstruction = [
-                'transaction_reference' => trim((string) ($validated['transaction_reference'] ?? '')),
-                'transaction_type' => trim((string) ($validated['transaction_type'] ?? 'other')),
-                'direction' => (string) $validated['direction'],
-                'amount_minor' => (int) $validated['amount_minor'],
-                'currency' => strtoupper((string) ($validated['currency'] ?? $account->currency)),
-                'description' => trim((string) $validated['description']),
-                'counterparty_name' => trim((string) ($validated['counterparty_name'] ?? '')),
-                'transaction_date' => $transactionDate,
-                'value_date' => $valueDate,
-            ];
-            $idempotencyKey = 'legacy-cashbook-v1:'.hash(
-                'sha256',
-                json_encode($legacyInstruction, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            return ApiResponse::error(
+                'An Idempotency-Key header or idempotency_key body field is required for every cashbook transaction.',
+                422
             );
         }
 
