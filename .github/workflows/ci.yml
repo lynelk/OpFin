@@ -307,9 +307,11 @@ jobs:
           flutter analyze
           flutter test
           flutter build apk --release --no-pub
+          flutter build apk --release --split-per-abi --no-pub
           flutter build appbundle --release --no-pub
           python3 ../../scripts/check-mobile-release-size.py \
             --android-apk build/app/outputs/flutter-apk/app-release.apk \
+            --android-split-apk-dir build/app/outputs/flutter-apk \
             --android-aab build/app/outputs/bundle/release/app-release.aab
 
   client-ios:
