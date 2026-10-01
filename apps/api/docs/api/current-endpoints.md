@@ -171,7 +171,7 @@ The opening-balance baseline is fixed and immutable from treasury-account creati
 
 ## Mobile Home aggregate — 27 September 2026
 
-- `GET /api/mobile/home` — authenticated mobile Home snapshot combining Financial Compass, customer credit-profile state, personal protection policies and authorised Financial Spaces.
+- `GET /api/mobile/home` — authenticated mobile Home snapshot combining Financial Compass, customer credit-profile state, up to five current personal protection summaries and authorised Financial Spaces. Premium-payment and claim history remain on the dedicated protection APIs and are not embedded in Home.
 - Optional query: `currency` (three-letter code, default `UGX`).
 - Response includes `freshness.observed_at`, `freshness.window_seconds=300` and `freshness.server_authoritative=true`.
 - The endpoint returns a private `ETag`. A matching `If-None-Match` returns HTTP `304` with no replacement financial payload.
