@@ -153,18 +153,15 @@ Clients must:
 
 ## Investment-club treasury cashbook retry contract
 
-For `POST /api/financial-spaces/{space}/treasury/accounts/{account}/transactions`, new clients **must** send an explicit `Idempotency-Key` header (or the compatibility `idempotency_key` body field) for each logical cashbook instruction.
-
-Older clients that do not yet send an explicit key are supported through a compatibility fingerprint derived from the complete canonical cashbook instruction: account context, transaction reference/type, direction, amount, currency, description, counterparty, transaction date and value date. A transaction reference **alone is not treated as unique**.
+For `POST /api/financial-spaces/{space}/treasury/accounts/{account}/transactions`, every state-changing cashbook instruction must carry an explicit stable retry identity through the `Idempotency-Key` header or the compatibility `idempotency_key` body field.
 
 The retry semantics are:
 
-- exact replay of the same canonical instruction returns the original transaction and does not apply the balance delta twice;
-- the same explicit idempotency key with any changed canonical financial instruction returns a conflict;
-- two legitimate transactions may share the same external/bank `transaction_reference` when other instruction fields differ;
-- callers must not generate a new idempotency key merely because the network outcome is uncertain. Recover/retry the original instruction first.
-
-The compatibility fingerprint exists only to preserve established clients during migration. It is not a substitute for explicit client-generated idempotency in new integrations.
+- exact replay with the same key and the same canonical financial instruction returns the original transaction and does not apply the balance delta twice;
+- reusing a key with any changed canonical financial instruction returns a conflict;
+- two genuinely separate transactions may be financially identical, including the same bank/reference text, amount, counterparty and dates, provided they have distinct idempotency keys;
+- a keyless write returns HTTP `422`. OpFin does not derive transaction identity from financial content because doing so can collapse two legitimate identical postings;
+- callers must not generate a new idempotency key merely because the network outcome is uncertain. Recover or retry the original instruction first.
 
 ## Financial-life space binding
 
