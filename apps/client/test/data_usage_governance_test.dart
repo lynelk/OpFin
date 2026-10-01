@@ -30,6 +30,18 @@ void main() {
     expect(classification, DataSponsorshipClass.nonSponsored);
   });
 
+  test('sponsorship eligibility uses the exact approved origin', () {
+    final api = Uri.parse(apiUrl);
+
+    expect(
+      SponsoredDataPolicy.classify(api.replace(scheme: 'http', port: 80)),
+      DataSponsorshipClass.nonSponsored,
+    );
+    expect(
+      SponsoredDataPolicy.classify(api.replace(port: 8443)),
+      DataSponsorshipClass.nonSponsored,
+    );
+  });
   test('metered client records bytes without storing payload content', () async {
     final client = OpFinMeteredClient(
       feature: 'unit_test',
