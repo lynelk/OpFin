@@ -60,7 +60,7 @@ Android requests ACCESS_COARSE_LOCATION first and ACCESS_FINE_LOCATION only for 
 
 All ordinary OpFin API traffic is routed through the metered mobile network layer. The App records aggregate application-layer bytes by feature and operation without storing request or response payloads, identity numbers, PINs, OTPs, tokens or raw financial content.
 
-Under **More → Data & storage**, customers can see this month's OpFin application traffic and whether each measured byte falls inside an operator-confirmed sponsored boundary, outside that boundary, or has billing treatment that is not yet confirmed. OpFin does not describe traffic as free merely because it used an OpFin hostname; the mobile operator remains authoritative for billing/zero-rating.
+Under **More → Data & storage**, customers can see this month's OpFin application traffic and whether each measured byte falls inside an operator-confirmed sponsored boundary, outside that boundary, or has billing treatment that is not yet confirmed. OpFin does not describe traffic as free merely because it used an OpFin hostname; sponsorship eligibility is bound to the approved scheme, host and effective port, and the mobile operator remains authoritative for billing/zero-rating.
 
 Offline actions use bounded queues and bounded sync batches. Oversized or sensitive actions are not silently stored in the generic offline queue. KYC capture resizes/compresses mobile images and applies a total mobile upload budget while preserving the requirement for legible evidence.
 
