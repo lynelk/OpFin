@@ -154,38 +154,67 @@ class PayrollDeductionService
             throw new InvalidArgumentException('This payroll deduction case does not belong to the customer.');
         }
 
+        $requested = (int) $data['requested_deduction_minor'];
         $consent = ConsentRecord::query()
             ->whereKey((int) $data['undertaking_consent_record_id'])
             ->where('user_id', $customer->id)
             ->where('purpose', ConsentRecord::PURPOSE_CREDIT_PROCESSING)
+            ->where('policy_version', self::UNDERTAKING_POLICY_VERSION)
             ->where('status', ConsentRecord::STATUS_GRANTED)
             ->whereNull('revoked_at')
             ->first();
-        if (! $consent) {
-            throw new InvalidArgumentException('A current credit-processing consent is required before payroll reservation.');
+
+        $consentMetadata = is_array($consent?->metadata) ? $consent->metadata : [];
+        $consentBoundToInstruction = $consent
+            && ($consentMetadata['scope'] ?? null) === self::UNDERTAKING_SCOPE
+            && (int) ($consentMetadata['payroll_case_id'] ?? 0) === (int) $case->id
+            && (string) ($consentMetadata['payroll_case_reference'] ?? '') === (string) $case->reference
+            && (int) ($consentMetadata['requested_deduction_minor'] ?? 0) === $requested;
+
+        if (! $consentBoundToInstruction) {
+            throw new InvalidArgumentException(
+                'A current payroll undertaking consent bound to this case and deduction amount is required before reservation.'
+            );
         }
 
-        return $this->mutate($case, $customer, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data, $consent) {
-            $this->requireStatus($locked, ['affordable']);
-            $requested = (int) $data['requested_deduction_minor'];
-            if ($locked->affordable_amount_minor !== null && $requested > (int) $locked->affordable_amount_minor) {
-                throw new InvalidArgumentException('The requested payroll deduction exceeds the verified affordable amount.');
-            }
+        return $this->mutate(
+            $case,
+            $customer,
+            $idempotencyKey,
+            $correlationId,
+            'request_reservation',
+            $data,
+            function (PayrollDeductionCase $locked) use ($data, $consent, $requested) {
+                $this->requireStatus($locked, ['affordable', 'amendment_required']);
+                if ($locked->affordable_amount_minor !== null
+                    && $requested > (int) $locked->affordable_amount_minor) {
+                    throw new InvalidArgumentException(
+                        'The requested payroll deduction exceeds the verified affordable amount.'
+                    );
+                }
 
-            $locked->fill([
-                'status' => 'reservation_pending',
-                'requested_deduction_minor' => $requested,
-                'undertaking_consent_record_id' => $consent->id,
-                'provider_agreement_reference' => $data['provider_agreement_reference'] ?? null,
-                'reservation_expires_at' => now()->addHours(max(1, (int) config('payroll_deduction.reservation_ttl_hours', 72))),
-            ])->save();
+                $locked->fill([
+                    'status' => 'reservation_pending',
+                    'requested_deduction_minor' => $requested,
+                    'undertaking_consent_record_id' => $consent->id,
+                    'provider_agreement_reference' => $data['provider_agreement_reference'] ?? null,
+                    'reservation_reference' => null,
+                    'reservation_expires_at' => now()->addHours(
+                        max(1, (int) config('payroll_deduction.reservation_ttl_hours', 72))
+                    ),
+                    'rejection_code' => null,
+                    'rejection_reason' => null,
+                ])->save();
 
-            return ['event' => 'reservation_requested', 'to' => 'reservation_pending', 'evidence' => [
-                'requested_deduction_minor' => $requested,
-                'consent_record_id' => $consent->id,
-                'reservation_expires_at' => $locked->reservation_expires_at?->toIso8601String(),
-            ]];
-        });
+                return ['event' => 'reservation_requested', 'to' => 'reservation_pending', 'evidence' => [
+                    'requested_deduction_minor' => $requested,
+                    'consent_record_id' => $consent->id,
+                    'consent_policy_version' => $consent->policy_version,
+                    'consent_scope' => self::UNDERTAKING_SCOPE,
+                    'reservation_expires_at' => $locked->reservation_expires_at?->toIso8601String(),
+                ]];
+            },
+        );
     }
 
     public function recordReservation(
