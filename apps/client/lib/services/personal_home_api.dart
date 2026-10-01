@@ -34,38 +34,31 @@ class PersonalHomeApi {
       headers['If-None-Match'] = _etag!;
     }
 
-    try {
-      final response = await OpFinHttp.get(
-        Uri.parse('$apiUrl/mobile/home'),
-        feature: 'home',
-        operation: 'mobile_home_refresh',
-        headers: headers,
-      );
+    final response = await OpFinHttp.get(
+      Uri.parse('$apiUrl/mobile/home'),
+      feature: 'home',
+      operation: 'mobile_home_refresh',
+      headers: headers,
+    );
 
-      if (response.statusCode == 304 && _cachedSnapshot != null) {
-        return Map<String, dynamic>.from(_cachedSnapshot!);
-      }
-
-      if (response.statusCode == 404 || response.statusCode == 405) {
-        return await _legacyLoad(headers);
-      }
-
-      final snapshot = _decode(
-        response,
-        'Unable to load your financial position.',
-      );
-      final responseEtag = response.headers['etag'];
-      if (responseEtag != null && responseEtag.isNotEmpty) {
-        _etag = responseEtag;
-        _cachedSnapshot = Map<String, dynamic>.from(snapshot);
-      }
-      return snapshot;
-    } catch (_) {
-      if (_cachedSnapshot != null) {
-        return Map<String, dynamic>.from(_cachedSnapshot!);
-      }
-      rethrow;
+    if (response.statusCode == 304 && _cachedSnapshot != null) {
+      return Map<String, dynamic>.from(_cachedSnapshot!);
     }
+
+    if (response.statusCode == 404 || response.statusCode == 405) {
+      return _legacyLoad(headers);
+    }
+
+    final snapshot = _decode(
+      response,
+      'Unable to load your financial position.',
+    );
+    final responseEtag = response.headers['etag'];
+    if (responseEtag != null && responseEtag.isNotEmpty) {
+      _etag = responseEtag;
+      _cachedSnapshot = Map<String, dynamic>.from(snapshot);
+    }
+    return snapshot;
   }
 
   static Future<Map<String, dynamic>> _legacyLoad(
