@@ -79,6 +79,55 @@ class NetworkUsageGovernanceTest extends TestCase
         $this->assertSame('ok', $response->getContent());
     }
 
+    public function test_api_prefix_is_not_recorded_as_the_feature_dimension(): void
+    {
+        config()->set('opfin.data.network_usage_logging', true);
+
+        Log::shouldReceive('info')
+            ->once()
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'opfin.network_usage'
+                    && ($context['feature'] ?? null) === 'health'
+                    && ($context['route'] ?? null) === 'api/health';
+            });
+
+        $this->getJson('/api/health')->assertOk();
+    }
+
+    public function test_exception_rendered_responses_keep_usage_headers_and_are_metered(): void
+    {
+        config()->set('opfin.data.network_usage_logging', true);
+
+        Log::shouldReceive('info')
+            ->once()
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'opfin.network_usage'
+                    && ($context['status'] ?? null) === 500
+                    && ($context['bytes_out'] ?? 0) > 0;
+            });
+
+        $middleware = app(RecordNetworkUsage::class);
+        $request = Request::create('/api/test-rendered-failure', 'GET');
+        $request->headers->set('Accept', 'application/json');
+
+        $response = $middleware->handle(
+            $request,
+            static function (): Response {
+                throw new RuntimeException('rendered failure');
+            }
+        );
+
+        $this->assertSame(500, $response->getStatusCode());
+        $this->assertNotSame(
+            '',
+            (string) $response->headers->get('X-OpFin-Correlation-Id')
+        );
+        $this->assertMatchesRegularExpression(
+            '/^\d+$/',
+            (string) $response->headers->get('X-OpFin-Application-Bytes-Out')
+        );
+    }
+
     public function test_streamed_response_bytes_are_counted_after_emission(): void
     {
         config()->set('opfin.data.network_usage_logging', true);
