@@ -647,15 +647,101 @@ class PayrollDeductionService
             throw new InvalidArgumentException('This payroll deduction case does not belong to the customer.');
         }
 
-        return $this->mutate($case, $customer, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) {
-            $this->requireStatus($locked, [
-                'affordability_pending', 'buyoff_quote_required', 'unaffordable', 'affordable', 'reservation_pending',
-                'reservation_failed', 'reserved', 'vote_approval_pending', 'vote_rejected', 'amendment_required',
-            ]);
-            $locked->fill(['status' => 'cancelled', 'reservation_expires_at' => now()])->save();
+        return $this->mutate(
+            $case,
+            $customer,
+            $idempotencyKey,
+            $correlationId,
+            'cancel_case',
+            [],
+            function (PayrollDeductionCase $locked) {
+                $this->requireStatus($locked, [
+                    'affordability_pending',
+                    'buyoff_quote_required',
+                    'unaffordable',
+                    'affordable',
+                    'reservation_pending',
+                    'reservation_failed',
+                    'reserved',
+                    'vote_approval_pending',
+                    'vote_rejected',
+                    'amendment_required',
+                ]);
 
-            return ['event' => 'case_cancelled', 'to' => 'cancelled', 'evidence' => []];
-        });
+                if (in_array($locked->status, ['reservation_pending', 'reserved', 'vote_approval_pending'], true)) {
+                    $locked->fill(['status' => 'cancellation_pending'])->save();
+
+                    return [
+                        'event' => 'cancellation_requested',
+                        'to' => 'cancellation_pending',
+                        'evidence' => [
+                            'reservation_reference' => $locked->reservation_reference,
+                            'provider_agreement_reference' => $locked->provider_agreement_reference,
+                        ],
+                    ];
+                }
+
+                $locked->fill([
+                    'status' => 'cancelled',
+                    'reservation_expires_at' => now(),
+                ])->save();
+
+                return ['event' => 'case_cancelled', 'to' => 'cancelled', 'evidence' => []];
+            },
+        );
+    }
+
+    public function confirmCancellationRelease(
+        PayrollDeductionCase $case,
+        User $actor,
+        array $data,
+        string $idempotencyKey,
+        ?string $correlationId = null,
+    ): PayrollDeductionCase {
+        return $this->mutate(
+            $case,
+            $actor,
+            $idempotencyKey,
+            $correlationId,
+            'confirm_cancellation_release',
+            $data,
+            function (PayrollDeductionCase $locked) use ($data) {
+                $this->requireStatus($locked, ['cancellation_pending']);
+                $released = (bool) $data['released'];
+                $releaseReference = trim((string) ($data['release_reference'] ?? ''));
+                $providerReference = trim((string) ($data['provider_reference'] ?? ''));
+
+                if ($released && $releaseReference === '' && $providerReference === '') {
+                    throw new InvalidArgumentException(
+                        'Cancellation requires provider release evidence before the case can be closed.'
+                    );
+                }
+
+                $providerState = is_array($locked->provider_state) ? $locked->provider_state : [];
+                $providerState['cancellation_release'] = [
+                    'released' => $released,
+                    'release_reference' => $releaseReference !== '' ? $releaseReference : null,
+                    'provider_reference' => $providerReference !== '' ? $providerReference : null,
+                    'evidence' => $data['evidence'] ?? null,
+                    'recorded_at' => now()->toIso8601String(),
+                ];
+
+                $locked->fill([
+                    'status' => $released ? 'cancelled' : 'cancellation_pending',
+                    'provider_state' => $providerState,
+                    'reservation_expires_at' => $released ? now() : $locked->reservation_expires_at,
+                    'last_provider_reference' => $providerReference !== ''
+                        ? $providerReference
+                        : $locked->last_provider_reference,
+                ])->save();
+
+                return [
+                    'event' => $released ? 'cancellation_release_confirmed' : 'cancellation_release_not_confirmed',
+                    'to' => $locked->status,
+                    'evidence' => $providerState['cancellation_release'],
+                ];
+            },
+        );
     }
 
     public function expireReservations(): int
