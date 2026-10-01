@@ -10,6 +10,7 @@ use App\Services\PayrollDeduction\PayrollDeductionService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class PayrollDeductionController extends Controller
@@ -96,8 +97,11 @@ class PayrollDeductionController extends Controller
 
         try {
             $case = $this->payroll->cancel($case, $request->user(), $idempotency, $correlation);
+            $message = $case->status === 'cancellation_pending'
+                ? 'Payroll deduction cancellation is awaiting provider release confirmation.'
+                : 'Payroll deduction process cancelled.';
 
-            return ApiResponse::success('Payroll deduction process cancelled.', ['case' => $this->customerPayload($case)]);
+            return ApiResponse::success($message, ['case' => $this->customerPayload($case)]);
         } catch (InvalidArgumentException $e) {
             return ApiResponse::error($e->getMessage(), 422);
         }
@@ -211,12 +215,32 @@ class PayrollDeductionController extends Controller
     {
         $data = $request->validate([
             'requested_deduction_minor' => ['nullable', 'integer', 'min:1'],
-            'provider_agreement_reference' => ['nullable', 'string', 'max:180'],
-            'reservation_reference' => ['nullable', 'string', 'max:180'],
         ]);
 
         return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) =>
             $this->payroll->amendAfterReject($case, $request->user(), $data, $idempotency, $correlation));
+    }
+
+    public function cancellationRelease(Request $request, PayrollDeductionCase $case): JsonResponse
+    {
+        $data = $request->validate([
+            'released' => ['required', 'boolean'],
+            'release_reference' => ['nullable', 'string', 'max:180'],
+            'provider_reference' => ['nullable', 'string', 'max:180'],
+            'evidence' => ['nullable', 'array'],
+        ]);
+
+        return $this->operationsMutation(
+            $request,
+            $case,
+            fn ($idempotency, $correlation) => $this->payroll->confirmCancellationRelease(
+                $case,
+                $request->user(),
+                $data,
+                $idempotency,
+                $correlation,
+            )
+        );
     }
 
     public function reconcile(Request $request, PayrollDeductionCase $case): JsonResponse
@@ -253,6 +277,9 @@ class PayrollDeductionController extends Controller
             abort(422, 'A valid Idempotency-Key header is required.');
         }
         $correlation = trim((string) $request->header('X-Correlation-ID', ''));
+        if ($correlation !== '' && ! Str::isUuid($correlation)) {
+            abort(422, 'X-Correlation-ID must be a UUID when supplied.');
+        }
 
         return [$idempotency, $correlation !== '' ? $correlation : null];
     }
@@ -287,6 +314,7 @@ class PayrollDeductionController extends Controller
             'reconciliations' => $case->relationLoaded('reconciliations')
                 ? $case->reconciliations->map(fn ($item) => [
                     'payroll_period' => $item->payroll_period,
+                    'submission_attempt' => $item->submission_attempt,
                     'expected_minor' => $item->expected_minor,
                     'recovered_minor' => $item->recovered_minor,
                     'variance_minor' => $item->variance_minor,
