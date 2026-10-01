@@ -559,12 +559,27 @@ class PayrollDeductionService
         string $idempotencyKey,
         ?string $correlationId = null,
     ): PayrollDeductionCase {
-        return $this->mutate($case, $actor, $idempotencyKey, $correlationId, function (PayrollDeductionCase $locked) use ($data) {
+        return $this->mutate(
+            $case,
+            $actor,
+            $idempotencyKey,
+            $correlationId,
+            'reconcile_payroll_settlement',
+            $data,
+            function (PayrollDeductionCase $locked) use ($data) {
             $this->requireStatus($locked, ['reconciliation_pending', 'reconciliation_exception']);
+
+            $submissionAttempt = (int) (($locked->provider_state ?? [])['submission_attempt'] ?? 0);
+            if ($submissionAttempt <= 0) {
+                throw new InvalidArgumentException(
+                    'A recorded payroll submission attempt is required before reconciliation.'
+                );
+            }
 
             $reconciliation = PayrollDeductionReconciliation::query()
                 ->where('payroll_deduction_case_id', $locked->id)
                 ->where('payroll_period', (string) $data['payroll_period'])
+                ->where('submission_attempt', $submissionAttempt)
                 ->lockForUpdate()
                 ->first();
 
@@ -611,13 +626,15 @@ class PayrollDeductionService
 
             return ['event' => $matched ? 'payment_reconciled' : 'reconciliation_exception', 'to' => $to, 'evidence' => [
                 'payroll_period' => $data['payroll_period'],
+                'submission_attempt' => $submissionAttempt,
                 'expected_minor' => $expected,
                 'recovered_minor' => $recovered,
                 'variance_minor' => $variance,
                 'settlement_provider_reference' => $data['provider_reference'] ?? null,
                 'settlement_evidence' => $data['evidence'] ?? null,
             ]];
-        });
+            },
+        );
     }
 
     public function cancel(
