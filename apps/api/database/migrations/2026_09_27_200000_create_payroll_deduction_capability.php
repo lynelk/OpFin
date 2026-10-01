@@ -47,6 +47,7 @@ return new class extends Migration
             $table->foreignId('payroll_deduction_case_id')->constrained('payroll_deduction_cases')->cascadeOnDelete();
             $table->uuid('correlation_id')->index();
             $table->string('idempotency_key', 180);
+            $table->char('instruction_hash', 64)->index();
             $table->string('event_type', 100)->index();
             $table->string('from_status', 48)->nullable();
             $table->string('to_status', 48);
@@ -62,6 +63,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('payroll_deduction_case_id')->constrained('payroll_deduction_cases')->cascadeOnDelete();
             $table->string('payroll_period', 7);
+            $table->unsignedInteger('submission_attempt')->default(1);
             $table->bigInteger('expected_minor');
             $table->bigInteger('recovered_minor')->default(0);
             $table->bigInteger('variance_minor')->default(0);
@@ -72,7 +74,7 @@ return new class extends Migration
             $table->json('evidence')->nullable();
             $table->timestamp('reconciled_at')->nullable();
             $table->timestamps();
-            $table->unique(['payroll_deduction_case_id', 'payroll_period'], 'payroll_deduction_period_unique');
+            $table->unique(['payroll_deduction_case_id', 'payroll_period', 'submission_attempt'], 'payroll_deduction_period_attempt_unique');
         });
 
         $this->protectEventEvidence();
