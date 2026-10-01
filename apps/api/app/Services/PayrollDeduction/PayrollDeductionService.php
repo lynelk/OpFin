@@ -768,6 +768,9 @@ class PayrollDeductionService
                             ],
                             [
                                 'correlation_id' => (string) Str::uuid(),
+                                'instruction_hash' => $this->instructionHash('expire_reservation', [
+                                    'reservation_expires_at' => $locked->reservation_expires_at?->toIso8601String(),
+                                ]),
                                 'event_type' => 'reservation_expired',
                                 'from_status' => $from,
                                 'to_status' => 'expired',
@@ -790,41 +793,65 @@ class PayrollDeductionService
         User $actor,
         string $idempotencyKey,
         ?string $correlationId,
+        string $command,
+        array $instruction,
         callable $mutation,
     ): PayrollDeductionCase {
         if (trim($idempotencyKey) === '') {
             throw new InvalidArgumentException('An idempotency key is required.');
         }
 
-        return DB::transaction(function () use ($case, $actor, $idempotencyKey, $correlationId, $mutation) {
-            $locked = PayrollDeductionCase::whereKey($case->id)->lockForUpdate()->firstOrFail();
-            if (PayrollDeductionEvent::where('payroll_deduction_case_id', $locked->id)
-                ->where('idempotency_key', $idempotencyKey)
-                ->exists()) {
-                return $locked->fresh();
-            }
+        $instructionHash = $this->instructionHash($command, $instruction);
 
-            $from = $locked->status;
-            $result = $mutation($locked);
-            $this->recordEvent(
-                $locked,
+        return DB::transaction(
+            function () use (
+                $case,
                 $actor,
                 $idempotencyKey,
                 $correlationId,
-                $result['event'],
-                $from,
-                $result['to'],
-                $result['evidence'] ?? [],
-            );
+                $instructionHash,
+                $mutation
+            ) {
+                $locked = PayrollDeductionCase::whereKey($case->id)->lockForUpdate()->firstOrFail();
+                $existingEvent = PayrollDeductionEvent::query()
+                    ->where('payroll_deduction_case_id', $locked->id)
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->first();
 
-            return $locked->fresh();
-        });
+                if ($existingEvent) {
+                    if (! hash_equals((string) $existingEvent->instruction_hash, $instructionHash)) {
+                        throw new InvalidArgumentException(
+                            'This Idempotency-Key is already bound to a different payroll deduction instruction.'
+                        );
+                    }
+
+                    return $locked->fresh();
+                }
+
+                $from = $locked->status;
+                $result = $mutation($locked);
+                $this->recordEvent(
+                    $locked,
+                    $actor,
+                    $idempotencyKey,
+                    $instructionHash,
+                    $correlationId,
+                    $result['event'],
+                    $from,
+                    $result['to'],
+                    $result['evidence'] ?? [],
+                );
+
+                return $locked->fresh();
+            }
+        );
     }
 
     private function recordEvent(
         PayrollDeductionCase $case,
         ?User $actor,
         string $idempotencyKey,
+        string $instructionHash,
         ?string $correlationId,
         string $event,
         ?string $from,
@@ -835,6 +862,7 @@ class PayrollDeductionService
             'payroll_deduction_case_id' => $case->id,
             'correlation_id' => $correlationId ?: (string) Str::uuid(),
             'idempotency_key' => $idempotencyKey,
+            'instruction_hash' => $instructionHash,
             'event_type' => $event,
             'from_status' => $from,
             'to_status' => $to,
@@ -843,6 +871,37 @@ class PayrollDeductionService
             'evidence' => $evidence,
             'occurred_at' => now(),
         ]);
+    }
+
+    private function instructionHash(string $command, array $instruction): string
+    {
+        return hash(
+            'sha256',
+            json_encode(
+                [
+                    'command' => $command,
+                    'instruction' => $this->normaliseInstruction($instruction),
+                ],
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+            )
+        );
+    }
+
+    private function normaliseInstruction(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (! array_is_list($value)) {
+            ksort($value);
+        }
+
+        foreach ($value as $key => $item) {
+            $value[$key] = $this->normaliseInstruction($item);
+        }
+
+        return $value;
     }
 
     private function requireStatus(PayrollDeductionCase $case, array $allowed): void
