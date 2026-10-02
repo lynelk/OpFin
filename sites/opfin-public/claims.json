@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "updated": "2026-10-02",
+  "principle": "Implemented or configured does not mean publicly available.",
+  "claims": [
+    {
+      "id": "PUB-001",
+      "claim": "OpFin is a connected financial-wellbeing and access platform built for Uganda.",
+      "status": "approved_candidate",
+      "public_copy": true,
+      "notes": "Positioning claim. Avoid implying that every financial product family is already live."
+    },
+    {
+      "id": "PUB-002",
+      "claim": "New customers start phone-first in the OpFin App using OTP, names and a six-digit PIN.",
+      "status": "source_supported",
+      "public_copy": true,
+      "notes": "Canonical onboarding direction."
+    },
+    {
+      "id": "PUB-003",
+      "claim": "One identity can participate in multiple authorised Financial Spaces without automatically sharing Personal Space information.",
+      "status": "source_supported",
+      "public_copy": true,
+      "notes": "Authority and privacy separation remains subject to accepted release verification."
+    },
+    {
+      "id": "PUB-004",
+      "claim": "Responsible finance should present affordability, costs, repayment obligations, disclosures and understandable decision information before acceptance.",
+      "status": "product_principle",
+      "public_copy": true,
+      "notes": "Describe as platform direction/control principle rather than a blanket live-provider promise."
+    },
+    {
+      "id": "PUB-005",
+      "claim": "Savings, investment and protection journeys may be available through approved partners.",
+      "status": "conditional",
+      "public_copy": true,
+      "notes": "Always retain partner/eligibility/activation qualification. Do not list a provider or product as live without activation evidence."
+    },
+    {
+      "id": "PUB-006",
+      "claim": "Islamic finance, social finance, digital capital extensions and other future-gated product families are live.",
+      "status": "not_approved_for_public_live_claim",
+      "public_copy": false,
+      "notes": "Do not publish as live until the applicable legal, governance, finance, security, provider and production gates are complete."
+    }
+  ]
+}
