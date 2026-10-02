@@ -6,7 +6,7 @@ case "$phase" in
   apply)
     test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$EXPECTED_HEAD"
     git fetch --depth=1 origin main:refs/remotes/origin/main
-    for script in account_repair payroll_repair partner_and_compatibility_repair regression_tests targeted_followup client_repair web_repair release_contracts final_adjustments; do
+    for script in account_repair payroll_repair partner_and_compatibility_repair regression_tests targeted_followup client_repair web_repair release_contracts final_adjustments mobile_followup; do
       python3 "../repair-tools/preflight/$script.py"
     done
     python3 - <<'PY'
@@ -56,6 +56,8 @@ PY
     git add --intent-to-add lib test
     git diff --name-only --diff-filter=ACMR origin/main -- lib test | sed 's#^apps/client/##' > "$RUNNER_TEMP/changed-dart"
     mapfile -t dart_files < "$RUNNER_TEMP/changed-dart"
+    dart format "${dart_files[@]}"
+    dart fix --apply --code=curly_braces_in_flow_control_structures
     dart format "${dart_files[@]}"
     flutter analyze --no-pub 2>&1 | tee "$RUNNER_TEMP/targeted-flutter-analysis.log"
     flutter test --no-pub test/payroll_instruction_client_test.dart test/distribution_channel_test.dart 2>&1 | tee "$RUNNER_TEMP/targeted-flutter-tests.log"
