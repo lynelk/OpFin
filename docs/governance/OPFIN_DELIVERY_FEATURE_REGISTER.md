@@ -34,7 +34,7 @@ A row may only be `DONE` when every applicable Definition-of-Done gate is eviden
 | OPF-FEAT-0016 | Protection/Takaful | APPROVED | G1/G2/G3/G5 | Partner roles, fund/accounting, coverage/claims, approval and disclosures |
 | OPF-FEAT-0017 | Investment screening | APPROVED | G1/G2/G3 | Underlying assets/income, methodology, return classification and purification controls |
 | OPF-FEAT-0018 | Social Finance | APPROVED | G1/G2/G3 | Sponsored Qard/Zakat/Sadaqah/Waqf records and non-revenue accounting |
-| OPF-FEAT-0019 | Public website consolidation | APPROVED | WEB | Repository source, claim register, Sites parity, live verification and safe duplicate retirement |
+| OPF-FEAT-0019 | Public website consolidation | IN_PROGRESS | WEB | Candidate repository source and claim register established under `sites/opfin-public/`; host/source parity, live-link verification, accessibility/performance acceptance and safe duplicate retirement remain required |
 | OPF-FEAT-0020 | Digital capital extensions | PROPOSED | G0-G10 | Separate approval for each anchoring/tokenisation/stablecoin/transfer capability |
 | OPF-LEGAL-0001 | OpFin Master Terms & Conditions | APPROVED | G1 | Versioned legal approval and product mapping |
 | OPF-LEGAL-0002 | OpFin Product Privacy Notice | APPROVED | G1/G4 | Data-flow mapping, approved notice and version evidence |
@@ -55,7 +55,7 @@ The following remain the first closure targets:
 - **R1:** Essentials immutable accounting, exact-Space grants, concurrent repayment/collection, open-obligation deletion, pending funding/reversal exposure and capital-mandate usability.
 - **FIN-FOUNDATION:** Financial Intent, financing abstractions, Legal Product Passport, Contract Engine, FundingPool and contract-aware accounting.
 - **DOC-CONTINUITY:** same-change updates to APIs, manuals, UAT, legal artefacts and AI knowledge where affected.
-- **WEB-FOUNDATION:** prove actual ChatGPT Sites source-linking/version/recovery capability before cutover.
+- **WEB-FOUNDATION:** candidate canonical source, public-claim register and source-level link validation are now established under `sites/opfin-public/`. Prove actual host source-linking/version/recovery capability, live external links, accessibility/performance and observed deployment before cutover.
 
 ## Change-impact requirement
 
