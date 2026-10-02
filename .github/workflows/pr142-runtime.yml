@@ -1,0 +1,48 @@
+name: PR142 offline PHP runtime
+on:
+  push:
+    branches: [tools/pr142-local-preflight-20261002]
+    paths: [.github/workflows/pr142-runtime.yml]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Stage standard runner PHP CLI and shared extensions
+        run: |
+          mkdir -p "$RUNNER_TEMP/php-runtime/bin" "$RUNNER_TEMP/php-runtime/ext" "$RUNNER_TEMP/php-runtime/lib"
+          php -v
+          php -m
+          cp "$(php -r 'echo PHP_BINARY;')" "$RUNNER_TEMP/php-runtime/bin/php"
+          cp "$(php -r 'echo ini_get("extension_dir");')"/*.so "$RUNNER_TEMP/php-runtime/ext/"
+          export RUNTIME="$RUNNER_TEMP/php-runtime"
+          python3 - <<'PY'
+          import os, re, shutil, subprocess
+          from pathlib import Path
+          root = Path(os.environ['RUNTIME'])
+          pending = [root/'bin/php', *root.glob('ext/*.so')]
+          seen = set()
+          while pending:
+              path = pending.pop()
+              for line in subprocess.run(['ldd', str(path)], capture_output=True, text=True).stdout.splitlines():
+                  match = re.search(r'=> (/\S+)', line)
+                  if not match:
+                      continue
+                  source = Path(match.group(1))
+                  if source.name in seen or source.name in {'libc.so.6', 'libm.so.6', 'libpthread.so.0', 'libdl.so.2', 'librt.so.1'}:
+                      continue
+                  seen.add(source.name)
+                  target = root/'lib'/source.name
+                  shutil.copyfile(source, target)
+                  pending.append(target)
+          PY
+          tar -czf "$RUNNER_TEMP/php-runtime.tgz" -C "$RUNNER_TEMP" php-runtime
+      - name: Retain runtime briefly
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr142-php-runtime
+          path: ${{ runner.temp }}/php-runtime.tgz
+          retention-days: 1
+          if-no-files-found: error
