@@ -1,0 +1,42 @@
+name: Partition existing offline tools
+on:
+  push:
+    branches: [tools/pr142-local-preflight-20261002]
+    paths: [.github/workflows/pr142-partition-tools.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  partition:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Download already-prepared tools without rerunning dependency installation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/tools"
+          gh run download 36958561922 --repo lynelk/OpFin --name pr142-web-mobile-tools --dir "$RUNNER_TEMP/tools"
+          tar -cf - -C "$RUNNER_TEMP/tools" . | split -b 240m -d -a 2 - "$RUNNER_TEMP/tools-part-"
+          ls -lh "$RUNNER_TEMP"/tools-part-*
+      - name: Part 00
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr142-tools-part-00
+          path: ${{ runner.temp }}/tools-part-00
+          retention-days: 1
+          compression-level: 0
+      - name: Part 01
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr142-tools-part-01
+          path: ${{ runner.temp }}/tools-part-01
+          retention-days: 1
+          compression-level: 0
+      - name: Part 02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr142-tools-part-02
+          path: ${{ runner.temp }}/tools-part-02
+          retention-days: 1
+          compression-level: 0
