@@ -31,11 +31,17 @@ class EssentialsDurableCollectionsTest extends TestCase
     use RefreshDatabase;
 
     private User $customer;
+
     private CustomerWallet $wallet;
+
     private EssentialsAdvance $advance;
+
     private int $poolId;
+
     private array $collectionResponses = [];
+
     private array $statusResponses = [];
+
     private int $providerCalls = 0;
 
     protected function setUp(): void
@@ -104,12 +110,18 @@ class EssentialsDurableCollectionsTest extends TestCase
             $mock->shouldReceive('collectRepayment')->andReturnUsing(function (): array {
                 $this->providerCalls++;
                 $response = array_shift($this->collectionResponses);
-                if ($response instanceof \Throwable) { throw $response; }
+                if ($response instanceof \Throwable) {
+                    throw $response;
+                }
+
                 return $response ?? ['status' => 'PENDING'];
             });
             $mock->shouldReceive('status')->andReturnUsing(function (): array {
                 $response = array_shift($this->statusResponses);
-                if ($response instanceof \Throwable) { throw $response; }
+                if ($response instanceof \Throwable) {
+                    throw $response;
+                }
+
                 return $response ?? ['status' => 'PENDING'];
             });
         });
@@ -159,8 +171,12 @@ class EssentialsDurableCollectionsTest extends TestCase
         $this->collectionResponses[] = new \RuntimeException('Synthetic lost response');
         $repayment = $this->pay(100);
         $this->assertSame('pending_provider_confirmation', $repayment->status);
-        try { $this->pay(16, 'SYNTHETIC-KEY-002'); $this->fail('Overlapping collection must not be accepted.'); }
-        catch (InvalidArgumentException) { $this->assertSame(1, $this->providerCalls); }
+        try {
+            $this->pay(16, 'SYNTHETIC-KEY-002');
+            $this->fail('Overlapping collection must not be accepted.');
+        } catch (InvalidArgumentException) {
+            $this->assertSame(1, $this->providerCalls);
+        }
         $this->statusResponses[] = ['status' => 'SUCCESS', 'providerReference' => 'SYNTHETIC-RECOVERED'];
         $result = app(EssentialsDurableCollections::class)->reconcile($repayment);
         $this->assertSame('successful', $result->status);
@@ -219,8 +235,11 @@ class EssentialsDurableCollectionsTest extends TestCase
     {
         $this->collectionResponses[] = ['status' => 'SUCCESS', 'providerReference' => 'SYNTHETIC-REF-1'];
         DB::table('capital_mandates')->where('id', $this->poolId)->update(['deployed_capital_minor' => 0]);
-        try { $this->pay(25); $this->fail('The inconsistent funding position must prevent financial application.'); }
-        catch (\RuntimeException) {}
+        try {
+            $this->pay(25);
+            $this->fail('The inconsistent funding position must prevent financial application.');
+        } catch (\RuntimeException) {
+        }
         $instruction = EssentialsCollectionInstruction::firstOrFail();
         $this->assertSame('confirmed_unapplied', $instruction->status);
         $this->assertSame(115, $this->advance->fresh()->outstanding_minor);
@@ -245,8 +264,9 @@ class EssentialsDurableCollectionsTest extends TestCase
         $this->pay(25);
         $this->advance->update(['status' => 'settled', 'outstanding_minor' => 0, 'principal_outstanding_minor' => 0]);
         $result = app(AccountDeletionService::class)->deleteOrRequest($this->customer, '123456', Request::create('/api/account', 'DELETE'));
-        $this->assertSame('pending_obligations', $result['deletion_status']);
-        $this->assertContains('essentials_collection_reconciliation', $result['active_obligations']);
+        $this->assertSame('blocked_obligations', $result['deletion_status']);
+        $this->assertContains('essentials_collection_reconciliation', array_column($result['active_obligations'], 'code'));
+        $this->assertDatabaseMissing('support_cases', ['customer_id' => $this->customer->id, 'category' => 'account_deletion']);
         $this->assertNull($this->customer->fresh()->deleted_at);
     }
 

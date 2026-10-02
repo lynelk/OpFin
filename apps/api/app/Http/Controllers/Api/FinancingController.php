@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FinancialIntent;
 use App\Models\FinancialProduct;
+use App\Models\FinancingApplication;
 use App\Services\FinancingService;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
@@ -16,6 +17,15 @@ class FinancingController extends Controller
     public function intents(Request $request)
     {
         return response()->json(['data' => FinancialIntent::where('user_id', $request->user()->id)->latest()->get()]);
+    }
+
+    public function applications(Request $request)
+    {
+        return response()->json(['data' => FinancingApplication::query()
+            ->where('user_id', $request->user()->id)
+            ->with(['intent', 'product'])
+            ->latest()
+            ->get()]);
     }
 
     public function createIntent(Request $request)

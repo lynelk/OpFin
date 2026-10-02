@@ -308,7 +308,7 @@ class FinancialSpaceStatementsTest extends TestCase
             'transaction_date' => '2026-09-01',
         ])->assertCreated()->json('data.transaction.id');
 
-        $csv = "Date,Description,Reference,Debit,Credit\n2026-09-20,Contribution,BANK-XYZ,,90000\n";
+        $csv = "Date,Description,Reference,Debit,Credit\n2026-09-05,Contribution,BANK-XYZ,,90000\n";
         $import = $this->post(
             "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statement-imports",
             [
@@ -360,7 +360,8 @@ class FinancialSpaceStatementsTest extends TestCase
 
         $this->postJson("/api/financial-spaces/{$spaceId}/statement-rows/{$rowId}/match", [
             'transaction_id' => $wrongTransactionId,
-        ])->assertUnprocessable();
+        ])->assertStatus(409)
+            ->assertJsonPath('message', 'A confirmed reconciliation is immutable.');
     }
 
     public function test_smart_reconciliation_auto_matches_high_confidence_and_returns_only_review_todos(): void

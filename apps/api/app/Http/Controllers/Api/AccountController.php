@@ -12,6 +12,14 @@ class AccountController extends Controller
 {
     public function __construct(private readonly AccountDeletionService $deletion) {}
 
+    public function deletionReadiness(Request $request): JsonResponse
+    {
+        return ApiResponse::success(
+            'Account deletion readiness loaded.',
+            $this->deletion->readiness($request->user()),
+        );
+    }
+
     public function destroy(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -21,15 +29,42 @@ class AccountController extends Controller
         ]);
 
         $credential = (string) ($data['pin'] ?? $data['password']);
-
         $result = $this->deletion->deleteOrRequest(
             $request->user(),
             $credential,
             $request,
         );
 
-        $status = $result['deletion_status'] === 'completed' ? 200 : 202;
+        if (($result['deletion_status'] ?? null) !== 'completed') {
+            return ApiResponse::error(
+                $result['message'],
+                409,
+                [],
+                ['data' => $result],
+            );
+        }
 
-        return ApiResponse::success($result['message'], $result, $status);
+        return ApiResponse::success($result['message'], $result);
+    }
+
+    public function deleteData(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'pin' => ['nullable', 'required_without:password', 'string'],
+            'password' => ['nullable', 'required_without:pin', 'string'],
+            'confirmation' => ['required', 'in:DELETE_DATA'],
+            'data_categories' => ['required', 'array', 'min:1', 'max:20'],
+            'data_categories.*' => ['required', 'string', 'max:80'],
+        ]);
+
+        $credential = (string) ($data['pin'] ?? $data['password']);
+        $result = $this->deletion->deleteSelectedData(
+            $request->user(),
+            $credential,
+            $data['data_categories'],
+            $request,
+        );
+
+        return ApiResponse::success($result['message'], $result);
     }
 }

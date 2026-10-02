@@ -79,6 +79,8 @@ Route::post('/programme-partner/invitations/accept', [ProgrammeCompletionControl
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::delete('/account', [AccountController::class, 'destroy']);
+    Route::get('/account/deletion-readiness', [AccountController::class, 'deletionReadiness']);
+    Route::delete('/account/data', [AccountController::class, 'deleteData']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
     Route::get('/capabilities', [CapabilityController::class, 'index']);
     Route::get('/location/status', [LocationContextController::class, 'status']);

@@ -13,21 +13,32 @@ class OfflineSyncService {
     final prefs = await SharedPreferences.getInstance();
     final existing = prefs.getString(_deviceKey);
     if (existing != null && existing.isNotEmpty) return existing;
-    final value = 'device-${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 31)}';
+    final value =
+        'device-${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 31)}';
     await prefs.setString(_deviceKey, value);
     return value;
   }
 
-  static Future<void> queueEvent(String type, Map<String, dynamic> payload) async {
+  static Future<void> queueEvent(
+      String type, Map<String, dynamic> payload) async {
     final prefs = await SharedPreferences.getInstance();
     final queue = await pendingEvents();
     queue.add({
-      'event_id': 'evt-${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 31)}',
+      'event_id':
+          'evt-${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 31)}',
       'occurred_at': DateTime.now().toUtc().toIso8601String(),
       'type': type,
       'payload': payload,
     });
     await prefs.setString(_queueKey, jsonEncode(queue));
+  }
+
+  static Future<void> clearLocalData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await Future.wait([
+      prefs.remove(_queueKey),
+      prefs.remove(_deviceKey),
+    ]);
   }
 
   static Future<List<Map<String, dynamic>>> pendingEvents() async {
@@ -36,7 +47,10 @@ class OfflineSyncService {
     if (raw == null || raw.isEmpty) return <Map<String, dynamic>>[];
     try {
       final decoded = jsonDecode(raw) as List<dynamic>;
-      return decoded.whereType<Map>().map((entry) => entry.cast<String, dynamic>()).toList();
+      return decoded
+          .whereType<Map>()
+          .map((entry) => entry.cast<String, dynamic>())
+          .toList();
     } catch (_) {
       return <Map<String, dynamic>>[];
     }
@@ -46,28 +60,42 @@ class OfflineSyncService {
     final events = await pendingEvents();
     if (events.isEmpty) return null;
     final token = await UserSession.getAccessToken();
-    if (token == null || token.isEmpty) throw Exception('Secure session is required before offline data can sync.');
+    if (token == null || token.isEmpty) {
+      throw Exception(
+          'Secure session is required before offline data can sync.');
+    }
     final prefs = await SharedPreferences.getInstance();
     final device = await deviceReference();
     final batchReference = _stableBatchReference(device, events);
     final response = await http.post(
       Uri.parse('$apiUrl/long-range/offline-sync'),
-      headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      body: jsonEncode({'batch_reference': batchReference, 'device_reference': device, 'events': events}),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token'
+      },
+      body: jsonEncode({
+        'batch_reference': batchReference,
+        'device_reference': device,
+        'events': events
+      }),
     );
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(decoded['message'] ?? 'Offline synchronization failed.');
     }
-    final data = (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
-    final batch = (data['batch'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final data = (decoded['data'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
+    final batch =
+        (data['batch'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
     if (batch['status'] == 'processed') {
       await prefs.remove(_queueKey);
     }
     return batch;
   }
 
-  static String _stableBatchReference(String device, List<Map<String, dynamic>> events) {
+  static String _stableBatchReference(
+      String device, List<Map<String, dynamic>> events) {
     final source = '$device|${events.map((e) => e['event_id']).join('|')}';
     final bytes = utf8.encode(source);
     int a = 0x811c9dc5;
@@ -78,7 +106,8 @@ class OfflineSyncService {
     }
     final h1 = a.toRadixString(16).padLeft(8, '0');
     final h2 = b.toRadixString(16).padLeft(8, '0');
-    final tail = (a ^ b).toRadixString(16).padLeft(8, '0') + a.toRadixString(16).padLeft(8, '0');
+    final tail = (a ^ b).toRadixString(16).padLeft(8, '0') +
+        a.toRadixString(16).padLeft(8, '0');
     return '$h1-${h2.substring(0, 4)}-${h2.substring(4, 8)}-${tail.substring(0, 4)}-${tail.substring(4, 16)}';
   }
 }

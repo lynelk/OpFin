@@ -91,8 +91,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
       throw Exception(decoded['message']?.toString() ??
           'Unable to load repayment options.');
     }
-    final data =
-        (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final data = (decoded['data'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
     final options = (data['options'] as List? ?? const [])
         .whereType<Map>()
         .map((item) => item.cast<String, dynamic>())
@@ -151,10 +151,10 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     try {
       final refreshed = await _loadData(amount: amount, reason: _reason);
       if (!mounted) return;
-      final freshOptions = (refreshed['options'] as List)
-          .cast<Map<String, dynamic>>();
-      final matches = freshOptions.where((item) =>
-          _n(item['loan_product_term_id']) == _selectedTermId);
+      final freshOptions =
+          (refreshed['options'] as List).cast<Map<String, dynamic>>();
+      final matches = freshOptions
+          .where((item) => _n(item['loan_product_term_id']) == _selectedTermId);
       setState(() => _load = Future.value(refreshed));
       if (matches.isEmpty) {
         setState(() => _selectedTermId = freshOptions.isEmpty
@@ -172,7 +172,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
-    if (option == null || !mounted) return;
+    if (!mounted) return;
     final reviewedOption = option;
 
     final confirmed = await showModalBottomSheet<bool>(
@@ -194,11 +194,16 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
               ),
               const SizedBox(height: 16),
               _ReviewRow('Amount', _ugx(amount)),
-              _ReviewRow(
-                  'Repayment period', '${_n(reviewedOption['duration_days'])} days'),
+              _ReviewRow('Repayment period',
+                  '${_n(reviewedOption['duration_days'])} days'),
               _ReviewRow('Purpose', _reason!),
-              _ReviewRow('Lender', (reviewedOption['lender'] as Map?)?['legal_name']?.toString() ?? 'Named in your offer'),
-              const Text('OpFin provides the platform. The named lender provides your credit.'),
+              _ReviewRow(
+                  'Lender',
+                  (reviewedOption['lender'] as Map?)?['legal_name']
+                          ?.toString() ??
+                      'Named in your offer'),
+              const Text(
+                  'OpFin provides the platform. The named lender provides your credit.'),
               const SizedBox(height: 12),
               const Text(
                 'This is a request, not yet a loan. If approved, OpFin will show the exact amount you receive, interest, fees, APR where required, total repayment and payment dates before you accept.',
@@ -245,8 +250,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
         throw Exception(
             decoded['message']?.toString() ?? 'Unable to submit loan request.');
       }
-      final data =
-          (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+      final data = (decoded['data'] as Map?)?.cast<String, dynamic>() ??
+          <String, dynamic>{};
       final next = data['next_state']?.toString();
 
       if (!mounted) return;
@@ -298,7 +303,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(snapshot.error.toString(), textAlign: TextAlign.center),
+                      Text(snapshot.error.toString(),
+                          textAlign: TextAlign.center),
                       const SizedBox(height: 12),
                       FilledButton(
                         onPressed: () => setState(() => _load = _loadData()),
@@ -314,7 +320,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
             final profileState =
                 (data['profile_state'] as Map).cast<String, dynamic>();
             final profile =
-                (profileState['profile'] as Map?)?.cast<String, dynamic>() ?? {};
+                (profileState['profile'] as Map?)?.cast<String, dynamic>() ??
+                    {};
             final options = (data['options'] as List)
                 .whereType<Map>()
                 .map((item) => item.cast<String, dynamic>())
@@ -397,7 +404,9 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
                       .map(
                         (option) => DropdownMenuItem(
                           value: _n(option['loan_product_term_id']),
-                          child: Text('${_n(option['duration_days'])} days · ${(option['lender'] as Map?)?['legal_name'] ?? 'Lender'}', overflow: TextOverflow.ellipsis),
+                          child: Text(
+                              '${_n(option['duration_days'])} days · ${(option['lender'] as Map?)?['legal_name'] ?? 'Lender'}',
+                              overflow: TextOverflow.ellipsis),
                         ),
                       )
                       .toList(),

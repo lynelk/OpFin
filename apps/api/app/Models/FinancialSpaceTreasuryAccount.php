@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use LogicException;
 
 class FinancialSpaceTreasuryAccount extends Model
 {
@@ -12,7 +13,7 @@ class FinancialSpaceTreasuryAccount extends Model
     protected $fillable = [
         'public_id', 'financial_space_id', 'account_name', 'account_type', 'institution_name',
         'account_reference_masked', 'currency', 'opening_balance_minor', 'current_balance_minor',
-        'status', 'balance_as_of', 'metadata',
+        'status', 'balance_as_of', 'current_balance_as_of', 'metadata',
     ];
 
     protected function casts(): array
@@ -21,18 +22,32 @@ class FinancialSpaceTreasuryAccount extends Model
             'opening_balance_minor' => 'integer',
             'current_balance_minor' => 'integer',
             'balance_as_of' => 'date',
+            'current_balance_as_of' => 'date',
             'metadata' => 'array',
         ];
     }
 
     /**
-     * The opening-balance baseline is fixed when the account is created.
-     *
-     * Existing balance refresh callers also supply today's balance_as_of.
-     * That refresh timestamp must never replace the opening baseline used by
-     * historical transaction, import and statement validation. Recalculation
-     * remains observable through updated_at. Rebaselining requires a separate
-     * reviewed accounting correction, not mass assignment to this attribute.
+     * The opening-balance baseline is immutable from creation. Corrections
+     * require a separately reviewed accounting adjustment.
+     */
+    public function setOpeningBalanceMinorAttribute(mixed $value): void
+    {
+        $next = (int) $value;
+        $current = array_key_exists('opening_balance_minor', $this->attributes)
+            ? (int) $this->attributes['opening_balance_minor']
+            : null;
+
+        if ($this->exists && $current !== null && $current !== $next) {
+            throw new LogicException('Opening balance is locked from account creation; use a reviewed accounting correction.');
+        }
+
+        $this->attributes['opening_balance_minor'] = $next;
+    }
+
+    /**
+     * The opening-balance date is fixed when the account is created.
+     * Current balance freshness is tracked separately by current_balance_as_of.
      */
     public function setBalanceAsOfAttribute(mixed $value): void
     {

@@ -131,12 +131,11 @@ class ProductionReadinessApiTest extends TestCase
             ->json('data.items.0.id');
 
         $this->patchJson("/api/admin/reconciliation-items/{$itemId}", [
-            'status' => 'matched',
-            'provider_amount_minor' => 100000,
-            'notes' => 'Provider statement matches system transaction.',
+            'status' => 'exception',
+            'notes' => 'Provider statement evidence requires operations follow-up.',
         ])
             ->assertOk()
-            ->assertJsonPath('data.item.status', 'matched');
+            ->assertJsonPath('data.item.status', 'exception');
 
         $this->postJson('/api/admin/support-cases', [
             'customer_id' => $operations->id,

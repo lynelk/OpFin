@@ -19,4 +19,14 @@ class FinancingApplication extends Model
             'risk_snapshot' => 'array',
         ];
     }
+
+    public function intent()
+    {
+        return $this->belongsTo(FinancialIntent::class, 'financial_intent_id');
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(FinancialProduct::class, 'financial_product_id');
+    }
 }

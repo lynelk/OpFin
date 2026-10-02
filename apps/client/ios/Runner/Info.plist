@@ -24,6 +24,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>OpFin uses your camera when you choose to photograph your identity document and yourself holding it for identity verification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>OpFin accesses only the images you choose to attach as evidence for a financial or identity-verification task.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>OpFin uses your location only when you choose a location-based financial task, such as finding nearby services or confirming a group, asset or insured-risk location.</string>
 	<key>UILaunchStoryboardName</key>

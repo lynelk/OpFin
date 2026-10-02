@@ -41,7 +41,7 @@ class MobileMoneyAdapterTest extends TestCase
         $this->assertNotNull($first->provider_reference);
         $this->assertNotEmpty($first->metadata['instruction_fingerprint'] ?? null);
         $this->assertDatabaseHas('audit_logs', [
-            'event' => 'mobile_money.disbursement.requested',
+            'event' => 'mobile_money.disbursement.intent_persisted',
             'subject_type' => MobileMoneyTransaction::class,
             'subject_id' => $first->id,
         ]);

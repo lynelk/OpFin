@@ -55,6 +55,11 @@ import UIKit
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
+  private func currentAuthorisation(_ manager: CLLocationManager) -> CLAuthorizationStatus {
+    if #available(iOS 14.0, *) { return manager.authorizationStatus }
+    return CLLocationManager.authorizationStatus()
+  }
+
   private func requestCurrentLocation() {
     guard CLLocationManager.locationServicesEnabled() else {
       finishLocation(errorCode: "location_disabled", message: "Device location services are turned off.")
@@ -64,7 +69,7 @@ import UIKit
     locationManager = manager
     manager.delegate = self
     manager.desiredAccuracy = requestedPrecise ? kCLLocationAccuracyBest : kCLLocationAccuracyKilometer
-    switch manager.authorizationStatus {
+    switch currentAuthorisation(manager) {
     case .notDetermined: manager.requestWhenInUseAuthorization()
     case .authorizedWhenInUse, .authorizedAlways: manager.requestLocation()
     case .denied, .restricted: finishLocation(errorCode: "location_permission_denied", message: "Location permission was not granted.")
@@ -74,7 +79,7 @@ import UIKit
 
   func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
     guard pendingLocationResult != nil else { return }
-    switch manager.authorizationStatus {
+    switch currentAuthorisation(manager) {
     case .authorizedWhenInUse, .authorizedAlways: manager.requestLocation()
     case .denied, .restricted: finishLocation(errorCode: "location_permission_denied", message: "Location permission was not granted.")
     case .notDetermined: break
@@ -144,9 +149,10 @@ private final class ClubStatementExports: NSObject, UIDocumentPickerDelegate, UI
       info.outputType = .general
       printer.printInfo = info
       printer.printFormatter = UIMarkupTextPrintFormatter(markupText: html)
-      let completion = { [weak self] (_: UIPrintInteractionController, completed: Bool, error: Error?) in
-        if error != nil { self?.finish(error: "The print operation failed.") }
-        else { self?.finish(status: completed ? "completed" : "cancelled") }
+      let completion: UIPrintInteractionController.CompletionHandler = { [weak self] _, completed, error in
+        guard let self else { return }
+        if error != nil { self.finish(error: "The print operation failed.") }
+        else { self.finish(status: completed ? "completed" : "cancelled") }
       }
       let shown: Bool
       if UIDevice.current.userInterfaceIdiom == .pad {

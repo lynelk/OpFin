@@ -5,19 +5,21 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Otp;
 use App\Models\User;
-use App\Services\CustomerCreditProfileService;
+use App\Services\AccountDeletionService;
 use App\Services\CommercialInsightsService;
+use App\Services\CustomerCreditProfileService;
 use App\Services\PersonalFinancialSpaceService;
 use App\Services\SmsService;
 use App\Support\ApiResponse;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -35,42 +37,31 @@ class AuthController extends Controller
 
     public function destroy(Request $request)
     {
-        try {
-            $data = $request->validate([
-                'phone' => ['required'],
-                'pin' => ['nullable', 'required_without:password', 'string'],
-                'password' => ['nullable', 'required_without:pin', 'string'],
-                'confirmation' => ['required', 'in:DELETE'],
-            ]);
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'max:32'],
+            'pin' => ['nullable', 'required_without:password', 'string'],
+            'password' => ['nullable', 'required_without:pin', 'string'],
+            'confirmation' => ['required', 'in:DELETE'],
+        ]);
+        $credential = (string) ($validated['pin'] ?? $validated['password']);
+        $user = User::withoutGlobalScopes()->whereNull('deleted_at')->where('phone', $validated['phone'])->first();
+        if (! $user || ! Hash::check($credential, $user->password)) {
+            $request->session()->forget('deletion_blockers');
 
-            $credential = (string) ($data['pin'] ?? $data['password']);
-            $user = User::where('phone', $request->phone)->first();
-            if (! $user || ! Hash::check($credential, $user->password)) {
-                return redirect()->back()->with('error', 'User details provided are invalid');
-            }
-
-            $this->beforeUserDelete($user);
-            $user->tokens()->delete();
-            $user->delete();
-
-            return redirect('/')->with('success', 'Your account has been closed.');
-        } catch (Exception $e) {
-            report($e);
-
-            return redirect()->back()->with('error', 'Unable to close the account.');
+            return back()->with('error', 'User details provided are invalid.');
         }
-    }
+        $result = app(AccountDeletionService::class)->deleteOrRequest($user, $credential, $request);
+        if (($result['deletion_status'] ?? null) !== 'completed') {
+            return back()->with('error', $result['message'] ?? 'Account deletion could not be completed.')
+                ->with('deletion_blockers', $result['active_obligations'] ?? []);
+        }
+        if ((int) ($request->user()?->id ?? 0) === (int) $user->id) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
-    protected function beforeUserDelete(User $user): void
-    {
-        $user->forceFill([
-            'email' => 'deleted-'.$user->id.'@deleted.example',
-            'phone' => 'deleted-'.$user->id,
-            'name' => 'Deleted User',
-            'first_name' => null,
-            'other_name' => null,
-            'last_name' => null,
-        ])->save();
+        return redirect('/')->with('success', 'Your account has been deleted. Records requiring lawful retention are preserved.');
     }
 
     public function register(Request $request)
