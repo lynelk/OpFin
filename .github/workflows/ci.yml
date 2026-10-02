@@ -127,11 +127,10 @@ jobs:
             exit 1
           fi
 
-          approvals="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr/reviews" --jq "[.[] | select(.state == \"APPROVED\" and .user.login != \"$author\")] | length")"
-          if [[ "${approvals:-0}" -lt 1 ]]; then
-            echo "Financial-control changes require at least one APPROVED review from a user other than the PR author."
-            exit 1
-          fi
+          head="$(gh api "/repos/$GITHUB_REPOSITORY/pulls/$pr" --jq '.head.sha')"
+          gh api --paginate --slurp "/repos/$GITHUB_REPOSITORY/pulls/$pr/reviews?per_page=100" > "$RUNNER_TEMP/opfin-independent-reviews.json"
+          python3 scripts/tests/test_independent_review.py
+          python3 scripts/verify-independent-review.py --reviews "$RUNNER_TEMP/opfin-independent-reviews.json" --author "$author" --head "$head"
           echo "Independent financial-control approval confirmed for PR #$pr."
 
   api:
@@ -165,7 +164,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y php-cli php-mbstring php-sqlite3 php-xml php-curl
           sudo phpdismod xdebug 2>/dev/null || true
-          php -r 'if (version_compare(PHP_VERSION, "8.2.0", "<")) { fwrite(STDERR, "PHP 8.2+ is required\\n"); exit(1); }'
+          php -r 'if (version_compare(PHP_VERSION, "8.2.0", "<")) { fwrite(STDERR, "PHP 8.2+ is required\n"); exit(1); }'
           php -v
           composer --version
       - name: Test API
@@ -338,7 +337,7 @@ jobs:
         run: |
           cd apps/client
           flutter --version
-          OPFIN_IOS_BUNDLE_ID=co.opfin.ci bash tool/prepare_app_store.sh
+          bash tool/prepare_app_store.sh
           flutter pub get
           flutter analyze
           flutter test
@@ -348,7 +347,7 @@ jobs:
 
   release-gate:
     if: always()
-    needs: [layout, repo-security, financial-control-review, api, api-assets, web, client-android, client-ios]
+    needs: [publication-readiness, layout, repo-security, financial-control-review, api, api-assets, web, client-android, client-ios]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
