@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/login_screen.dart';
 import 'package:opfin/services/offline_sync_service.dart';
+import 'package:opfin/services/account_deletion_contract.dart';
 import 'package:opfin/services/user_session.dart';
 
 class AccountDeleteScreen extends StatefulWidget {
@@ -39,7 +40,9 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
 
   Future<Map<String, String>> _headers() async {
     final token = await UserSession.getAccessToken();
-    if (token == null || token.isEmpty) throw Exception('Secure session is required.');
+    if (token == null || token.isEmpty) {
+      throw Exception('Secure session is required.');
+    }
     return {
       'Authorization': 'Bearer $token',
       'Accept': 'application/json',
@@ -56,13 +59,16 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
       );
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode != 200 || decoded['success'] != true) {
-        throw Exception(decoded['message']?.toString() ?? 'Unable to check account deletion readiness.');
+        throw Exception(decoded['message']?.toString() ??
+            'Unable to check account deletion readiness.');
       }
       if (!mounted) return;
       setState(() {
-        _readiness = (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+        _readiness = (decoded['data'] as Map?)?.cast<String, dynamic>() ??
+            <String, dynamic>{};
       });
     } catch (error) {
+      if (mounted) setState(() => _readiness = <String, dynamic>{});
       _message(error.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -76,7 +82,9 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
           .toList();
 
   List<Map<String, dynamic>> get _dataCategories =>
-      (((_readiness['data_deletion'] as Map?)?['available_categories'] as List?) ?? const [])
+      (((_readiness['data_deletion'] as Map?)?['available_categories']
+                  as List?) ??
+              const [])
           .whereType<Map>()
           .map((item) => item.cast<String, dynamic>())
           .toList();
@@ -97,22 +105,30 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
         body: jsonEncode({'pin': _pin.text, 'confirmation': 'DELETE'}),
       );
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final data = (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+      final data = (decoded['data'] as Map?)?.cast<String, dynamic>() ??
+          <String, dynamic>{};
 
-      if (response.statusCode == 409 && data['deletion_status'] == 'blocked_obligations') {
+      if (response.statusCode == 409 &&
+          data['deletion_status'] == 'blocked_obligations') {
         if (!mounted) return;
         setState(() => _readiness = {
-          ..._readiness,
-          'can_delete_account': false,
-          'active_obligations': data['active_obligations'] ?? const [],
-          'active_obligation_count': data['active_obligation_count'] ?? 0,
-        });
+              ..._readiness,
+              'can_delete_account': false,
+              'active_obligations': data['active_obligations'] ?? const [],
+              'active_obligation_count': data['active_obligation_count'] ?? 0,
+            });
         await _showBlockedDialog(data);
         return;
       }
 
       if (response.statusCode != 200 || decoded['success'] != true) {
-        throw Exception(decoded['message']?.toString() ?? 'Unable to delete your account.');
+        throw Exception(
+            decoded['message']?.toString() ?? 'Unable to delete your account.');
+      }
+
+      if (!confirmsAccountClosure(response.statusCode, decoded)) {
+        throw Exception(
+            'Account deletion was not completed. Your account remains available.');
       }
 
       await OfflineSyncService.clearLocalData();
@@ -152,17 +168,26 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
       );
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode != 200 || decoded['success'] != true) {
-        throw Exception(decoded['message']?.toString() ?? 'Unable to delete the selected data.');
+        throw Exception(decoded['message']?.toString() ??
+            'Unable to delete the selected data.');
       }
-      final data = (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+      final data = (decoded['data'] as Map?)?.cast<String, dynamic>() ??
+          <String, dynamic>{};
+      if (!confirmsOptionalDataDeletion(response.statusCode, decoded)) {
+        throw Exception(
+            'The selected data deletion was not confirmed. Please refresh the account status.');
+      }
       if (!mounted) return;
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Selected data deleted'),
-          content: Text(data['message']?.toString() ?? 'The selected optional data has been deleted.'),
+          content: Text(data['message']?.toString() ??
+              'The selected optional data has been deleted.'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Close')),
           ],
         ),
       );
@@ -197,20 +222,28 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close')),
         ],
       ),
     );
   }
 
   Widget _obligationSummary(Map<String, dynamic> item) {
-    final provider = (item['provider'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
-    final amount = item['amount_minor'] is num ? (item['amount_minor'] as num).toInt() : null;
+    final provider = (item['provider'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
+    final amount = item['amount_minor'] is num
+        ? (item['amount_minor'] as num).toInt()
+        : null;
     final currency = item['currency']?.toString() ?? 'UGX';
     final contacts = <String>[
-      if ((provider['phone']?.toString() ?? '').isNotEmpty) provider['phone'].toString(),
-      if ((provider['email']?.toString() ?? '').isNotEmpty) provider['email'].toString(),
-      if ((provider['address']?.toString() ?? '').isNotEmpty) provider['address'].toString(),
+      if ((provider['phone']?.toString() ?? '').isNotEmpty)
+        provider['phone'].toString(),
+      if ((provider['email']?.toString() ?? '').isNotEmpty)
+        provider['email'].toString(),
+      if ((provider['address']?.toString() ?? '').isNotEmpty)
+        provider['address'].toString(),
     ];
 
     return Card(
@@ -226,14 +259,18 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
             Text('Status: ${item['status'] ?? 'active'}'),
             if ((item['reference']?.toString() ?? '').isNotEmpty)
               Text('Reference: ${item['reference']}'),
-            if (amount != null) Text('Amount: $currency ${_money.format(amount)}'),
+            if (amount != null)
+              Text('Amount: $currency ${_money.format(amount)}'),
+            if (item['amount_basis'] == 'contract_total_not_current_balance')
+              const Text('Contract total, not a current outstanding balance.'),
             if ((item['due_date']?.toString() ?? '').isNotEmpty)
               Text('Due / relevant date: ${item['due_date']}'),
             const SizedBox(height: 4),
             Text('Provider: ${provider['name'] ?? 'Provider'}'),
             if (contacts.isNotEmpty) Text('Contact: ${contacts.join(' · ')}'),
             if (contacts.isEmpty)
-              const Text('Direct provider contact is not recorded in OpFin. Use the provider reference above when seeking closure support.'),
+              const Text(
+                  'Direct provider contact is not recorded in OpFin. Use the provider reference above when seeking closure support.'),
           ],
         ),
       ),
@@ -259,7 +296,8 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
                 padding: const EdgeInsets.all(20),
                 children: [
                   const Text('Delete account or optional data',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   const Text(
                     'You can delete your whole OpFin account, or remove selected optional data while keeping your account. Account deletion is blocked immediately if any active financial obligation remains.',
@@ -267,7 +305,8 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
                   const SizedBox(height: 16),
                   if (_obligations.isNotEmpty) ...[
                     const Text('Obligations that must be resolved first',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     ..._obligations.map(_obligationSummary),
                     const SizedBox(height: 12),
@@ -291,9 +330,11 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
                   ),
                   const SizedBox(height: 22),
                   const Text('Delete selected optional data',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
-                  const Text('This keeps your OpFin account active. Select only the optional data you want removed.'),
+                  const Text(
+                      'This keeps your OpFin account active. Select only the optional data you want removed.'),
                   const SizedBox(height: 8),
                   ..._dataCategories.map((category) {
                     final code = category['code']?.toString() ?? '';
@@ -315,12 +356,15 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
                   }),
                   const SizedBox(height: 8),
                   OutlinedButton(
-                    onPressed: _submitting || _selectedData.isEmpty ? null : _deleteSelectedData,
+                    onPressed: _submitting || _selectedData.isEmpty
+                        ? null
+                        : _deleteSelectedData,
                     child: const Text('Delete selected data'),
                   ),
                   const Divider(height: 40),
                   const Text('Delete entire account',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Text(
                     _canDeleteAccount
@@ -340,7 +384,9 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
                   ),
                   const SizedBox(height: 14),
                   FilledButton(
-                    onPressed: !_canDeleteAccount || _submitting ? null : _deleteAccount,
+                    onPressed: !_canDeleteAccount || _submitting
+                        ? null
+                        : _deleteAccount,
                     child: Text(_submitting ? 'Working…' : 'Delete my account'),
                   ),
                 ],

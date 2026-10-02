@@ -23,7 +23,28 @@
                             </div>
                         @endif
 
-                        <form method="POST" action="{{ route('account.destroy') }}">
+                        @if (session('deletion_blockers'))
+    <section aria-label="Account deletion blockers">
+        <h2>Resolve these obligations before submitting a fresh deletion request</h2>
+        @foreach (session('deletion_blockers', []) as $blocker)
+            <div>
+                <strong>{{ $blocker['label'] ?? 'Outstanding obligation' }}</strong>
+                <p>Reference: {{ $blocker['reference'] ?? '' }}; status: {{ $blocker['status'] ?? '' }}</p>
+                @if (isset($blocker['amount_minor']))
+                    <p>{{ $blocker['currency'] ?? '' }} {{ $blocker['amount_minor'] }}
+                    @if (($blocker['amount_basis'] ?? '') === 'contract_total_not_current_balance') (contract total, not a current balance) @endif</p>
+                @endif
+                <p>{{ $blocker['provider']['name'] ?? 'Recorded provider' }}</p>
+                @if (!empty($blocker['provider']['direct_contact_available']))
+                    <p>{{ $blocker['provider']['phone'] ?? '' }} {{ $blocker['provider']['email'] ?? '' }} {{ $blocker['provider']['address'] ?? '' }}</p>
+                @else
+                    <p>No direct provider contact is recorded. Keep the reference above for follow-up.</p>
+                @endif
+            </div>
+        @endforeach
+    </section>
+@endif
+<form method="POST" action="{{ route('account.destroy') }}">
                             @csrf
                             @method('DELETE')
                             <div class="mb-3">

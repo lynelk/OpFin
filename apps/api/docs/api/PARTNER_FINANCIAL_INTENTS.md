@@ -53,3 +53,7 @@ A partner financial-intent request is not:
 - a payment/disbursement instruction.
 
 Those later actions remain under OpFin's normal customer, lender, regulatory and financial-control workflows.
+
+## Release-candidate contract update
+
+Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/frontend-backend-contract.md`. Full deletion is immediately rejected while obligations remain; optional deletion keeps the account. Payroll undertaking and reservation are atomic and case-bound. External reservation release is evidenced before closure. No production activation is implied.

@@ -247,6 +247,41 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
     }
 
+    public function test_selective_location_deletion_keeps_other_customers_and_regulated_asset_context(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER, 'password' => '482951']);
+        $other = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $records = [];
+        foreach ([[$owner->id, 'user', $owner->id, 'personal_service_discovery'], [$other->id, 'user', $other->id, 'personal_service_discovery'], [$owner->id, 'asset', 500, 'asset_verification']] as [$userId, $subjectType, $subjectId, $purpose]) {
+            $records[] = DB::table('location_contexts')->insertGetId([
+                'public_id' => (string) Str::uuid(), 'user_id' => $userId,
+                'subject_type' => $subjectType, 'subject_id' => $subjectId, 'purpose' => $purpose,
+                'source' => 'manual', 'consent_purpose' => $purpose, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+        Sanctum::actingAs($owner);
+        $this->deleteJson('/api/account/data', ['pin' => '482951', 'confirmation' => 'DELETE_DATA', 'data_categories' => ['location_context']])->assertOk();
+        $this->assertDatabaseMissing('location_contexts', ['id' => $records[0]]);
+        $this->assertDatabaseHas('location_contexts', ['id' => $records[1]]);
+        $this->assertDatabaseHas('location_contexts', ['id' => $records[2]]);
+        $this->assertDatabaseHas('users', ['id' => $owner->id, 'deleted_at' => null]);
+    }
+
+    public function test_legacy_web_deletion_uses_the_same_obligation_check_and_requires_reauthentication(): void
+    {
+        $user = User::factory()->create(['role' => User::ROLE_CUSTOMER, 'password' => '482951']);
+        DB::table('participatory_finance_listings')->insert([
+            'reference' => (string) Str::uuid(), 'borrower_user_id' => $user->id, 'purpose' => 'Test obligation',
+            'target_amount_minor' => 500000, 'funded_amount_minor' => 500000, 'term_days' => 90,
+            'status' => 'funded', 'lender_of_record' => 'Recorded lender', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->from('/account/delete')->delete('/account/delete', ['phone' => $user->phone, 'pin' => '482951', 'confirmation' => 'DELETE'])
+            ->assertRedirect('/account/delete')->assertSessionHas('deletion_blockers');
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
+        $this->from('/account/delete')->delete('/account/delete', ['phone' => $user->phone, 'pin' => '000000', 'confirmation' => 'DELETE'])
+            ->assertRedirect('/account/delete')->assertSessionHas('error');
+    }
+
     public function test_wrong_password_cannot_delete_account(): void
     {
         $user = User::factory()->create(['password' => Hash::make('Correct!123')]);

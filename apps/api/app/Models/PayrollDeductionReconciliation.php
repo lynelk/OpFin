@@ -8,7 +8,7 @@ class PayrollDeductionReconciliation extends Model
 {
     protected $fillable = [
         'payroll_deduction_case_id', 'payroll_period', 'submission_attempt', 'expected_minor', 'recovered_minor', 'variance_minor',
-        'currency', 'status', 'result_category', 'provider_reference', 'evidence', 'reconciled_at',
+        'currency', 'status', 'result_category', 'provider_reference', 'evidence', 'reconciled_at', 'provider_result_snapshot',
     ];
 
     protected function casts(): array
@@ -19,6 +19,7 @@ class PayrollDeductionReconciliation extends Model
             'recovered_minor' => 'integer',
             'variance_minor' => 'integer',
             'evidence' => 'array',
+            'provider_result_snapshot' => 'array',
             'reconciled_at' => 'datetime',
         ];
     }

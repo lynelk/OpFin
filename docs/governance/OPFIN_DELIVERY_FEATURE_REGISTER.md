@@ -65,3 +65,7 @@ Every material PR must identify affected register IDs and assess Product, Legal,
 ## CI execution note — 26 September 2026
 
 GitHub Actions was re-enabled by the repository owner on 26 September 2026. Candidate-specific workflow results remain execution evidence only for the exact commit tested; they do not by themselves establish provider, regulatory, Sharia, financial-control or production activation.
+
+## PR 142 candidate acceptance update (2 October 2026)
+
+Account deletion rejects unresolved obligations immediately and preserves servicing; optional-data deletion retains the account and regulated evidence. Payroll undertaking is case-bound and atomic with reservation request; cancellation/expiry awaits evidenced provider release. Apply `docs/releases/2026-10-02-pr142-release-acceptance.md` to OPF-FEAT-0022, FIN-FOUNDATION, DOC-CONTINUITY and OPF-REL-0001. This entry is implementation/validation work, not production or store acceptance.

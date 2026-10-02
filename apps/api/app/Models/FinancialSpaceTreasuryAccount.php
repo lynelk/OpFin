@@ -28,9 +28,8 @@ class FinancialSpaceTreasuryAccount extends Model
     }
 
     /**
-     * The opening-balance baseline may be corrected only before the first
-     * cashbook transaction. Once economic activity exists, changing it would
-     * rewrite every historical balance derived from that baseline.
+     * The opening-balance baseline is immutable from creation. Corrections
+     * require a separately reviewed accounting adjustment.
      */
     public function setOpeningBalanceMinorAttribute(mixed $value): void
     {
@@ -39,8 +38,8 @@ class FinancialSpaceTreasuryAccount extends Model
             ? (int) $this->attributes['opening_balance_minor']
             : null;
 
-        if ($this->exists && $current !== null && $current !== $next && $this->transactions()->exists()) {
-            throw new LogicException('Opening balance is locked after the first cashbook transaction.');
+        if ($this->exists && $current !== null && $current !== $next) {
+            throw new LogicException('Opening balance is locked from account creation; use a reviewed accounting correction.');
         }
 
         $this->attributes['opening_balance_minor'] = $next;

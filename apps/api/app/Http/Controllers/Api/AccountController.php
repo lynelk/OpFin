@@ -35,7 +35,7 @@ class AccountController extends Controller
             $request,
         );
 
-        if ($result['deletion_status'] === 'blocked_obligations') {
+        if (($result['deletion_status'] ?? null) !== 'completed') {
             return ApiResponse::error(
                 $result['message'],
                 409,

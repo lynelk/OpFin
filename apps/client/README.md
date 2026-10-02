@@ -128,3 +128,7 @@ Run `make publication-check` before externally publishing product/developer docu
 Credit options, applications and Essentials send the actual channel through `lib/services/distribution_channel.dart`. iOS infers `app_store`, Android infers `play_store`, and web infers `web`. Build Huawei Android with `--dart-define=OPFIN_DISTRIBUTION_CHANNEL=huawei_appgallery`; configure actual store policy before publication. Invalid channel/platform combinations are rejected. The channel flag does not replace Huawei device/service integration testing or store approval.
 
 Repayment terms come from the server's configurable lender/channel rules. The client no longer hides terms using a universal 61-day filter or prefers a universal 90-day product. Options/review/offers identify the actual lender; OpFin is the orchestration platform. Home displays an OpFin Score only when the server supplies one. Flutter analysis/tests, Android/iOS release compilation and device UAT remain required. See [the lender contract](../../docs/architecture/LENDER_ORCHESTRATION.md).
+
+## Release-candidate contract update
+
+Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/frontend-backend-contract.md`. Full deletion is immediately rejected while obligations remain; optional deletion keeps the account. Payroll undertaking and reservation are atomic and case-bound. External reservation release is evidenced before closure. No production activation is implied.

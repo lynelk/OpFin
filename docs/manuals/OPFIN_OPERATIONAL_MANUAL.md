@@ -94,3 +94,7 @@ The [concept comparison](../product/CONCEPT_AND_PLAN_COMPARISON.md) separates or
 Use **Admin → Lenders & credit deployment** to configure Core Synergies as an affiliated institution and record its actual authority. Link its internal funding partner to a maker-checker-approved capital mandate. Choose withhold, external-first fallback or explicit affiliated priority; record the reason, per-loan cap and expiry. Only platform admin can set strategy or delegate credit management. Existing repayments continue while origination is withheld.
 
 Record product-specific store restrictions as distribution revisions with source evidence and a partner-facing reason. Keep the product definition intact. A lender's licence does not by itself establish store approval. Follow the [full operating contract](../architecture/LENDER_ORCHESTRATION.md); foreign-country metadata does not activate local rails.
+
+## PR 142 candidate acceptance update (2 October 2026)
+
+Account deletion rejects unresolved obligations immediately and preserves servicing; optional-data deletion retains the account and regulated evidence. Payroll undertaking is case-bound and atomic with reservation request; cancellation/expiry awaits evidenced provider release. Apply `docs/releases/2026-10-02-pr142-release-acceptance.md` to OPF-FEAT-0022, FIN-FOUNDATION, DOC-CONTINUITY and OPF-REL-0001. This entry is implementation/validation work, not production or store acceptance.

@@ -88,3 +88,7 @@ The shared Flutter client provides a single Android/iOS experience. When the act
 ## External dependency still pending
 
 Live PDMS activation requires an official machine-interface specification and production credentials. The source process diagram defines the business flow but does not define API endpoints, authentication, callbacks, rate limits, idempotency behaviour or signing requirements. Those details must not be invented in production code.
+
+## Release-candidate contract update
+
+Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/frontend-backend-contract.md`. Full deletion is immediately rejected while obligations remain; optional deletion keeps the account. Payroll undertaking and reservation are atomic and case-bound. External reservation release is evidenced before closure. No production activation is implied.

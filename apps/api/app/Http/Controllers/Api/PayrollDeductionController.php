@@ -71,6 +71,27 @@ class PayrollDeductionController extends Controller
         }
     }
 
+    public function undertaking(Request $request, PayrollDeductionCase $case): JsonResponse
+    {
+        $this->assertCustomer($request, $case);
+        [$idempotency, $correlation] = $this->keys($request);
+        $data = $request->validate([
+            'requested_deduction_minor' => ['required', 'integer', 'min:1'],
+            'authorised' => ['required', 'accepted'],
+            'provider_agreement_reference' => ['nullable', 'string', 'max:180'],
+        ]);
+        $data['authorised'] = true;
+        try {
+            $case = $this->payroll->grantUndertaking($case, $request->user(), $data, $idempotency, $correlation);
+
+            return ApiResponse::success('Payroll undertaking and reservation request recorded.', [
+                'case' => $this->customerPayload($case), 'consent' => ['id' => $case->undertaking_consent_record_id],
+            ]);
+        } catch (InvalidArgumentException $exception) {
+            return ApiResponse::error($exception->getMessage(), 422);
+        }
+    }
+
     public function requestReservation(Request $request, PayrollDeductionCase $case): JsonResponse
     {
         $this->assertCustomer($request, $case);
@@ -138,8 +159,7 @@ class PayrollDeductionController extends Controller
             'provider_reference' => ['nullable', 'string', 'max:180'],
         ]);
 
-        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) =>
-            $this->payroll->recordAffordability($case, $request->user(), $data, $idempotency, $correlation));
+        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) => $this->payroll->recordAffordability($case, $request->user(), $data, $idempotency, $correlation));
     }
 
     public function reservation(Request $request, PayrollDeductionCase $case): JsonResponse
@@ -153,8 +173,7 @@ class PayrollDeductionController extends Controller
             'rejection_reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) =>
-            $this->payroll->recordReservation($case, $request->user(), $data, $idempotency, $correlation));
+        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) => $this->payroll->recordReservation($case, $request->user(), $data, $idempotency, $correlation));
     }
 
     public function keyFacts(Request $request, PayrollDeductionCase $case): JsonResponse
@@ -165,8 +184,7 @@ class PayrollDeductionController extends Controller
             'provider_reference' => ['nullable', 'string', 'max:180'],
         ]);
 
-        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) =>
-            $this->payroll->submitKeyFacts($case, $request->user(), $data, $idempotency, $correlation));
+        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) => $this->payroll->submitKeyFacts($case, $request->user(), $data, $idempotency, $correlation));
     }
 
     public function voteDecision(Request $request, PayrollDeductionCase $case): JsonResponse
@@ -178,8 +196,7 @@ class PayrollDeductionController extends Controller
             'rejection_reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) =>
-            $this->payroll->recordVoteDecision($case, $request->user(), $data, $idempotency, $correlation));
+        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) => $this->payroll->recordVoteDecision($case, $request->user(), $data, $idempotency, $correlation));
     }
 
     public function payrollSubmission(Request $request, PayrollDeductionCase $case): JsonResponse
@@ -191,8 +208,7 @@ class PayrollDeductionController extends Controller
             'provider_reference' => ['nullable', 'string', 'max:180'],
         ]);
 
-        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) =>
-            $this->payroll->recordPayrollSubmission($case, $request->user(), $data, $idempotency, $correlation));
+        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) => $this->payroll->recordPayrollSubmission($case, $request->user(), $data, $idempotency, $correlation));
     }
 
     public function payrollResult(Request $request, PayrollDeductionCase $case): JsonResponse
@@ -207,8 +223,7 @@ class PayrollDeductionController extends Controller
             'evidence' => ['nullable', 'array'],
         ]);
 
-        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) =>
-            $this->payroll->recordPayrollResult($case, $request->user(), $data, $idempotency, $correlation));
+        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) => $this->payroll->recordPayrollResult($case, $request->user(), $data, $idempotency, $correlation));
     }
 
     public function amend(Request $request, PayrollDeductionCase $case): JsonResponse
@@ -217,8 +232,7 @@ class PayrollDeductionController extends Controller
             'requested_deduction_minor' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) =>
-            $this->payroll->amendAfterReject($case, $request->user(), $data, $idempotency, $correlation));
+        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) => $this->payroll->amendAfterReject($case, $request->user(), $data, $idempotency, $correlation));
     }
 
     public function cancellationRelease(Request $request, PayrollDeductionCase $case): JsonResponse
@@ -252,8 +266,7 @@ class PayrollDeductionController extends Controller
             'evidence' => ['nullable', 'array'],
         ]);
 
-        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) =>
-            $this->payroll->reconcile($case, $request->user(), $data, $idempotency, $correlation));
+        return $this->operationsMutation($request, $case, fn ($idempotency, $correlation) => $this->payroll->reconcile($case, $request->user(), $data, $idempotency, $correlation));
     }
 
     private function operationsMutation(Request $request, PayrollDeductionCase $case, callable $callback): JsonResponse

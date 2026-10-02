@@ -13,7 +13,7 @@ class PayrollDeductionProviderManager
         $mode = (string) config("payroll_deduction.providers.{$provider}.mode", 'inactive');
 
         if ($provider === 'pdms' && in_array($mode, ['inactive', 'manual_evidence'], true)) {
-            return new InactivePdmsAdapter();
+            return new InactivePdmsAdapter;
         }
 
         throw new LogicException("Payroll deduction provider [{$provider}] is not certified or configured.");

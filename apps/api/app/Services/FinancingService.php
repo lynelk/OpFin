@@ -59,6 +59,17 @@ class FinancingService
                     });
             });
 
+        // Islamic approval is required for every preference, including ALL_SUITABLE.
+        $query->where(function ($rails) {
+            $rails->where('rail', 'CONVENTIONAL')->orWhere(function ($islamic) {
+                $islamic->where('rail', 'ISLAMIC')->whereHas('shariaApproval', function ($approval) {
+                    $approval->where('status', 'approved')
+                        ->where(fn ($q) => $q->whereNull('effective_from')->orWhere('effective_from', '<=', now()))
+                        ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+                });
+            });
+        });
+
         if ($intent->principles_preference === 'SHARIA_ONLY') {
             $query->where('rail', 'ISLAMIC')->whereHas('shariaApproval', function ($q) {
                 $q->where('status', 'approved')
@@ -78,7 +89,7 @@ class FinancingService
 
     public function apply(User $user, FinancialIntent $intent, FinancialProduct $product): FinancingApplication
     {
-        if ((int) $intent->user_id !== (int) $user->id || $intent->status !== 'open') {
+        if ((int) $intent->user_id !== (int) $user->id || $intent->status !== 'open' || ($intent->expires_at && $intent->expires_at->isPast())) {
             throw new InvalidArgumentException('This financial intent is not available.');
         }
         $this->assertSpaceAuthority($user, (int) $intent->financial_space_id);
@@ -102,13 +113,13 @@ class FinancingService
         ]);
     }
 
-    private function assertSpaceAuthority(User $user, int $spaceId): void
+    public function assertSpaceAuthority(User $user, int $spaceId): void
     {
-        $allowed = DB::table('financial_space_memberships')
-            ->where('financial_space_id', $spaceId)
-            ->where('user_id', $user->id)
-            ->where('status', 'active')
-            ->exists();
+        $allowed = DB::table('financial_space_memberships as memberships')
+            ->join('financial_spaces as spaces', 'spaces.id', '=', 'memberships.financial_space_id')
+            ->where('spaces.id', $spaceId)->where('spaces.status', 'active')->whereNull('spaces.deleted_at')
+            ->where('memberships.user_id', $user->id)->where('memberships.status', 'active')
+            ->whereNull('memberships.deleted_at')->exists();
         if (! $allowed) {
             throw new InvalidArgumentException('You do not have active authority in that Financial Space.');
         }

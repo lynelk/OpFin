@@ -21,3 +21,5 @@ Schedule::command(ProcessUmraCreditControls::class)->hourly()->withoutOverlappin
 Schedule::command(ProcessTaxAndEfris::class)->hourly()->withoutOverlapping(55)->onOneServer();
 
 Schedule::command(MaintainProgrammeMeasurement::class)->hourly()->withoutOverlapping(55)->onOneServer();
+
+Schedule::command('payroll-deduction:expire-reservations')->everyFiveMinutes()->withoutOverlapping()->onOneServer();

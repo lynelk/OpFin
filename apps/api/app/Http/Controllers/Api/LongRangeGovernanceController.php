@@ -71,7 +71,7 @@ class LongRangeGovernanceController extends Controller
 
     public function partner(Request $request, int $id): JsonResponse
     {
-        $data = $request->validate(['status' => 'required|in:approved,rejected']);
+        $data = $request->validate(['status' => 'required|in:approved,rejected', 'financial_intent_source_platform' => 'nullable|in:stolets,shamba,coreworks']);
 
         return ApiResponse::success('Partner due-diligence decision recorded.', ['partner' => $this->governance->approvePartner($request->user(), $id, $data)]);
     }

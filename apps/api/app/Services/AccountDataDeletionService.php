@@ -146,40 +146,15 @@ class AccountDataDeletionService
             return 0;
         }
 
-        $spaces = $this->personalSpaceIds($userId);
-
+        // Optional personal discovery context is not authority over a shared
+        // Space, another customer, or retained asset/claim/contract evidence.
         return DB::table('location_contexts')
-            ->where(function ($query) use ($userId, $spaces) {
-                $query->where(function ($personal) use ($userId) {
-                    $personal
-                        ->where('subject_type', 'user')
-                        ->where('subject_id', $userId);
-                });
-
-                if ($spaces !== []) {
-                    $query->orWhereIn('financial_space_id', $spaces);
-                }
+            ->where('subject_type', 'user')
+            ->where('subject_id', $userId)
+            ->where('purpose', 'personal_service_discovery')
+            ->where(function ($query) use ($userId) {
+                $query->where('user_id', $userId)->orWhereNull('user_id');
             })
             ->delete();
-    }
-
-    private function personalSpaceIds(int $userId): array
-    {
-        if (! Schema::hasTable('financial_spaces') || ! Schema::hasTable('financial_space_memberships')) {
-            return [];
-        }
-
-        return DB::table('financial_spaces as spaces')
-            ->join(
-                'financial_space_memberships as memberships',
-                'memberships.financial_space_id',
-                '=',
-                'spaces.id',
-            )
-            ->where('memberships.user_id', $userId)
-            ->where('spaces.type', 'personal')
-            ->pluck('spaces.id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
     }
 }

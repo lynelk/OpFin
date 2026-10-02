@@ -41,7 +41,9 @@ class UserSession {
     await prefs.setString('role', role);
     if (creditScore != null) await prefs.setInt('credit_score', creditScore);
     if (creditBand != null) await prefs.setString('credit_band', creditBand);
-    if (creditRating != null) await prefs.setString('credit_rating', creditRating);
+    if (creditRating != null) {
+      await prefs.setString('credit_rating', creditRating);
+    }
     if (defaultingPercentage != null) {
       await prefs.setDouble('defaulting_percentage', defaultingPercentage);
     }
@@ -79,6 +81,7 @@ class UserSession {
     final val = await _storage.read(key: _kUserId);
     return val != null ? int.tryParse(val) : null;
   }
+
   static Future<String?> getPhone() => _storage.read(key: _kPhone);
   static Future<String?> getNationalId() => _storage.read(key: _kNationalId);
   static Future<String?> getDateOfBirth() => _storage.read(key: _kDateOfBirth);
@@ -86,8 +89,12 @@ class UserSession {
 
   static Future<Map<String, dynamic>> getProfileData() async {
     final results = await Future.wait([
-      getUserId(), getAccessToken(), getPhone(),
-      getNationalId(), getDateOfBirth(), getNinStatus(),
+      getUserId(),
+      getAccessToken(),
+      getPhone(),
+      getNationalId(),
+      getDateOfBirth(),
+      getNinStatus(),
     ]);
     final prefs = await SharedPreferences.getInstance();
     return {
@@ -102,11 +109,23 @@ class UserSession {
     };
   }
 
+  static Future<String?> readPendingPayroll(String key) =>
+      _storage.read(key: key);
+  static Future<void> writePendingPayroll(String key, String value) =>
+      _storage.write(key: key, value: value);
+  static Future<void> deletePendingPayroll(String key) =>
+      _storage.delete(key: key);
+
   static Future<void> clear() async {
     await _storage.deleteAll();
     final prefs = await SharedPreferences.getInstance();
     for (final key in [
-      'name','role','credit_score','credit_band','credit_rating','defaulting_percentage'
+      'name',
+      'role',
+      'credit_score',
+      'credit_band',
+      'credit_rating',
+      'defaulting_percentage'
     ]) {
       await prefs.remove(key);
     }

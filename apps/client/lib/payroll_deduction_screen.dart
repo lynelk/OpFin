@@ -59,9 +59,11 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(snapshot.error.toString(), textAlign: TextAlign.center),
+                    Text(snapshot.error.toString(),
+                        textAlign: TextAlign.center),
                     const SizedBox(height: 12),
-                    FilledButton(onPressed: _refresh, child: const Text('Try again')),
+                    FilledButton(
+                        onPressed: _refresh, child: const Text('Try again')),
                   ],
                 ),
               ),
@@ -69,11 +71,15 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
           }
 
           final data = snapshot.data!;
-          final machineActive = data.provider['machine_interface_active'] == true;
+          final machineActive =
+              data.provider['machine_interface_active'] == true;
           final eligible = data.applications.where((application) {
-            final product = (application['product'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+            final product =
+                (application['product'] as Map?)?.cast<String, dynamic>() ??
+                    <String, dynamic>{};
             return product['family'] == 'salary_finance' &&
-                !data.cases.any((item) => item['financing_application_id'] == application['id']);
+                !data.cases.any((item) =>
+                    item['financing_application_id'] == application['id']);
           }).toList();
 
           return RefreshIndicator(
@@ -83,7 +89,10 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
               children: [
                 Text(
                   'Salary-linked repayment',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -96,7 +105,9 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(machineActive ? Icons.verified_outlined : Icons.sync_problem_outlined),
+                        Icon(machineActive
+                            ? Icons.verified_outlined
+                            : Icons.sync_problem_outlined),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -118,7 +129,8 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
                   ),
                 ],
                 const SizedBox(height: 20),
-                Text('My payroll cases', style: Theme.of(context).textTheme.titleLarge),
+                Text('My payroll cases',
+                    style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 10),
                 if (data.cases.isEmpty)
                   const Card(
@@ -143,7 +155,8 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
     final status = item['status']?.toString() ?? 'unknown';
     final affordable = _asInt(item['affordable_amount_minor']);
     final requested = _asInt(item['requested_deduction_minor']);
-    final canReserve = status == 'affordable' && affordable > 0;
+    final canReserve =
+        {'affordable', 'amendment_required'}.contains(status) && affordable > 0;
     final canCancel = const {
       'affordability_pending',
       'buyoff_quote_required',
@@ -173,20 +186,24 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
                     item['vote_name']?.toString().isNotEmpty == true
                         ? item['vote_name'].toString()
                         : 'Government payroll deduction',
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            Text(_statusLabel(status), style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(_statusLabel(status),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             Text(_statusDescription(status)),
             if (affordable > 0) ...[
               const SizedBox(height: 10),
-              Text('Verified affordable deduction: UGX ${_money.format(affordable)}'),
+              Text(
+                  'Verified affordable deduction: UGX ${_money.format(affordable)}'),
             ],
-            if (requested > 0) Text('Requested deduction: UGX ${_money.format(requested)}'),
+            if (requested > 0)
+              Text('Requested deduction: UGX ${_money.format(requested)}'),
             if ((item['rejection_reason']?.toString() ?? '').isNotEmpty) ...[
               const SizedBox(height: 10),
               Text('Action needed: ${item['rejection_reason']}'),
@@ -233,11 +250,17 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
               children: [
                 DropdownButtonFormField<Map<String, dynamic>>(
                   value: selected,
-                  decoration: const InputDecoration(labelText: 'Salary-linked finance application'),
+                  decoration: const InputDecoration(
+                      labelText: 'Salary-linked finance application'),
                   items: applications.map((application) {
-                    final product = (application['product'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
-                    final label = product['name']?.toString() ?? application['reference']?.toString() ?? 'Finance application';
-                    return DropdownMenuItem(value: application, child: Text(label));
+                    final product = (application['product'] as Map?)
+                            ?.cast<String, dynamic>() ??
+                        <String, dynamic>{};
+                    final label = product['name']?.toString() ??
+                        application['reference']?.toString() ??
+                        'Finance application';
+                    return DropdownMenuItem(
+                        value: application, child: Text(label));
                   }).toList(),
                   onChanged: (value) {
                     if (value != null) setDialogState(() => selected = value);
@@ -246,27 +269,34 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: voteName,
-                  decoration: const InputDecoration(labelText: 'Government vote or employer name'),
+                  decoration: const InputDecoration(
+                      labelText: 'Government vote or employer name'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: voteCode,
-                  decoration: const InputDecoration(labelText: 'Vote code (optional)'),
+                  decoration:
+                      const InputDecoration(labelText: 'Vote code (optional)'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: employmentReference,
                   decoration: const InputDecoration(
                     labelText: 'Payroll or employment reference (optional)',
-                    helperText: 'OpFin stores only a protected reference fingerprint.',
+                    helperText:
+                        'OpFin stores only a protected reference fingerprint.',
                   ),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Not now')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Continue')),
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Not now')),
+            FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Continue')),
           ],
         ),
       ),
@@ -306,20 +336,23 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: 'Monthly deduction (UGX)',
-                    helperText: 'Verified maximum: UGX ${_money.format(affordable)}',
+                    helperText:
+                        'Verified maximum: UGX ${_money.format(affordable)}',
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: agreement,
-                  decoration: const InputDecoration(labelText: 'Agreement reference (optional)'),
+                  decoration: const InputDecoration(
+                      labelText: 'Agreement reference (optional)'),
                 ),
                 const SizedBox(height: 12),
                 CheckboxListTile(
                   value: authorised,
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
-                  onChanged: (value) => setDialogState(() => authorised = value == true),
+                  onChanged: (value) =>
+                      setDialogState(() => authorised = value == true),
                   title: const Text(
                     'I authorise payroll deduction for repayment under the agreed salary-linked finance terms and understand that final activation requires payroll approval.',
                   ),
@@ -328,9 +361,12 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel')),
             FilledButton(
-              onPressed: authorised ? () => Navigator.pop(dialogContext, true) : null,
+              onPressed:
+                  authorised ? () => Navigator.pop(dialogContext, true) : null,
               child: const Text('Authorise'),
             ),
           ],
@@ -346,11 +382,9 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
     }
 
     try {
-      final consentId = await PayrollDeductionApi.grantUndertakingConsent();
-      await PayrollDeductionApi.requestReservation(
+      await PayrollDeductionApi.authoriseReservation(
         caseId: _asInt(item['id']),
         requestedDeductionMinor: requested,
-        consentRecordId: consentId,
         agreementReference: agreement.text,
       );
       await _refresh();
@@ -364,10 +398,15 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Cancel payroll deduction?'),
-        content: const Text('This stops the current payroll deduction process. It does not erase financial or audit records that OpFin is required to retain.'),
+        content: const Text(
+            'This requests cancellation. Any submitted or confirmed reservation stays open until the provider release is verified. Financial and audit records are retained where required.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Keep process')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Cancel process')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Keep process')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Cancel process')),
         ],
       ),
     );
@@ -387,7 +426,8 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
     );
   }
 
-  int _asInt(dynamic value) => value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+  int _asInt(dynamic value) =>
+      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
 
   String _statusLabel(String status) => switch (status) {
         'affordability_pending' => 'Affordability check pending',
@@ -406,27 +446,46 @@ class _PayrollDeductionScreenState extends State<PayrollDeductionScreen> {
         'reconciliation_exception' => 'Reconciliation review required',
         'reconciled' => 'Payment reconciled',
         'expired' => 'Reservation expired',
+        'cancellation_pending' => 'Awaiting payroll reservation release',
         'cancelled' => 'Process cancelled',
         _ => status.replaceAll('_', ' '),
       };
 
   String _statusDescription(String status) => switch (status) {
-        'affordability_pending' => 'OpFin is waiting for verified payroll affordability evidence.',
-        'buyoff_quote_required' => 'A buy-off quotation is needed before affordability can be confirmed.',
-        'unaffordable' => 'The payroll affordability check did not support the requested deduction.',
-        'affordable' => 'You may authorise a deduction up to the verified amount.',
-        'reservation_pending' => 'Your undertaking has been recorded and payroll reservation confirmation is pending.',
-        'reservation_failed' => 'The reservation was not confirmed. Authorised operations staff will review the reason.',
-        'reserved' => 'The deduction amount is reserved while key facts are submitted for approval.',
-        'vote_approval_pending' => 'The responsible government vote is reviewing the submitted key facts.',
-        'deduction_approved' => 'The deduction is approved for inclusion in the payroll submission cycle.',
-        'vote_rejected' => 'The reservation has been released. Review the reason before another request.',
-        'payroll_submitted' => 'The approved deduction has been included in the payroll submission cycle.',
-        'reconciliation_pending' => 'Payroll feedback was successful and OpFin is matching the recovered payment.',
-        'amendment_required' => 'Payroll feedback requires the deduction request to be corrected or resubmitted.',
-        'reconciliation_exception' => 'The expected and recovered amounts do not yet match.',
-        'reconciled' => 'The recovered payroll amount matches the expected deduction for the recorded period.',
-        'expired' => 'The reservation window ended before the process completed.',
+        'cancellation_pending' =>
+          'OpFin is waiting for evidenced provider release. Your servicing access remains available and this reservation is not yet closed.',
+        'affordability_pending' =>
+          'OpFin is waiting for verified payroll affordability evidence.',
+        'buyoff_quote_required' =>
+          'A buy-off quotation is needed before affordability can be confirmed.',
+        'unaffordable' =>
+          'The payroll affordability check did not support the requested deduction.',
+        'affordable' =>
+          'You may authorise a deduction up to the verified amount.',
+        'reservation_pending' =>
+          'Your undertaking has been recorded and payroll reservation confirmation is pending.',
+        'reservation_failed' =>
+          'The reservation was not confirmed. Authorised operations staff will review the reason.',
+        'reserved' =>
+          'The deduction amount is reserved while key facts are submitted for approval.',
+        'vote_approval_pending' =>
+          'The responsible government vote is reviewing the submitted key facts.',
+        'deduction_approved' =>
+          'The deduction is approved for inclusion in the payroll submission cycle.',
+        'vote_rejected' =>
+          'Approval was not granted. Review the recorded reason and reservation status before another request.',
+        'payroll_submitted' =>
+          'The approved deduction has been included in the payroll submission cycle.',
+        'reconciliation_pending' =>
+          'Payroll feedback was successful and OpFin is matching the recovered payment.',
+        'amendment_required' =>
+          'Payroll feedback requires the deduction request to be corrected or resubmitted.',
+        'reconciliation_exception' =>
+          'The expected and recovered amounts do not yet match.',
+        'reconciled' =>
+          'The recovered payroll amount matches the expected deduction for the recorded period.',
+        'expired' =>
+          'The reservation window ended before the process completed.',
         'cancelled' => 'This payroll deduction process is no longer active.',
         _ => 'Payroll deduction status is being tracked by OpFin.',
       };

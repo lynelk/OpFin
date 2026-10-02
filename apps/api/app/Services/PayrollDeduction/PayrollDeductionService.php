@@ -8,6 +8,8 @@ use App\Models\PayrollDeductionCase;
 use App\Models\PayrollDeductionEvent;
 use App\Models\PayrollDeductionReconciliation;
 use App\Models\User;
+use App\Services\AuditLogger;
+use App\Services\FinancingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -25,11 +27,16 @@ class PayrollDeductionService
         string $idempotencyKey,
         ?string $correlationId = null,
     ): PayrollDeductionCase {
-        if (trim($idempotencyKey) === '') {
-            throw new InvalidArgumentException('An idempotency key is required.');
-        }
+        $this->assertKeys($idempotencyKey, $correlationId);
 
         return DB::transaction(function () use ($user, $application, $data, $idempotencyKey, $correlationId) {
+            User::withoutGlobalScopes()->whereKey($user->id)->whereNull('deleted_at')->lockForUpdate()->firstOrFail();
+            app(FinancingService::class)->assertSpaceAuthority($user, (int) $application->financial_space_id);
+            $boundStart = PayrollDeductionEvent::query()->where('actor_user_id', $user->id)->where('idempotency_key', $idempotencyKey)->where('event_type', 'case_started')->first();
+            if ($boundStart && (int) PayrollDeductionCase::whereKey($boundStart->payroll_deduction_case_id)->value('financing_application_id') !== (int) $application->id) {
+                throw new InvalidArgumentException('This Idempotency-Key is already bound to a different payroll application.');
+            }
+
             $lockedApplication = FinancingApplication::query()
                 ->with('product')
                 ->whereKey($application->id)
@@ -124,105 +131,100 @@ class PayrollDeductionService
             'record_affordability',
             $data,
             function (PayrollDeductionCase $locked) use ($data) {
-            $this->requireStatus($locked, ['affordability_pending', 'buyoff_quote_required']);
+                $this->requireStatus($locked, ['affordability_pending', 'buyoff_quote_required']);
 
-            $affordable = (bool) $data['affordable'];
-            $buyoff = (bool) ($data['buyoff_quote_required'] ?? false);
-            $to = $affordable ? 'affordable' : ($buyoff ? 'buyoff_quote_required' : 'unaffordable');
+                $affordable = (bool) $data['affordable'];
+                $buyoff = (bool) ($data['buyoff_quote_required'] ?? false);
+                $to = $affordable ? 'affordable' : ($buyoff ? 'buyoff_quote_required' : 'unaffordable');
 
-            $locked->fill([
-                'status' => $to,
-                'affordability_status' => $affordable ? 'affordable' : 'not_affordable',
-                'affordable_amount_minor' => $affordable ? (int) ($data['affordable_amount_minor'] ?? 0) : null,
-                'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
-                'provider_state' => array_merge($locked->provider_state ?? [], [
-                    'affordability_checked_at' => now()->toIso8601String(),
+                $locked->fill([
+                    'status' => $to,
+                    'affordability_status' => $affordable ? 'affordable' : 'not_affordable',
+                    'affordable_amount_minor' => $affordable ? (int) ($data['affordable_amount_minor'] ?? 0) : null,
+                    'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
+                    'provider_state' => array_merge($locked->provider_state ?? [], [
+                        'affordability_checked_at' => now()->toIso8601String(),
+                        'buyoff_quote_required' => $buyoff,
+                    ]),
+                ])->save();
+
+                return ['event' => 'affordability_recorded', 'to' => $to, 'evidence' => [
+                    'affordable' => $affordable,
+                    'affordable_amount_minor' => $locked->affordable_amount_minor,
                     'buyoff_quote_required' => $buyoff,
-                ]),
-            ])->save();
-
-            return ['event' => 'affordability_recorded', 'to' => $to, 'evidence' => [
-                'affordable' => $affordable,
-                'affordable_amount_minor' => $locked->affordable_amount_minor,
-                'buyoff_quote_required' => $buyoff,
-                'provider_reference' => $data['provider_reference'] ?? null,
-            ]];
+                    'provider_reference' => $data['provider_reference'] ?? null,
+                ]];
             },
         );
     }
 
+    public function grantUndertaking(
+        PayrollDeductionCase $case, User $customer, array $data, string $idempotencyKey, ?string $correlationId = null,
+    ): PayrollDeductionCase {
+        if ((int) $case->user_id !== (int) $customer->id) {
+            throw new InvalidArgumentException('This payroll case does not belong to the customer.');
+        }
+
+        return $this->mutate($case, $customer, $idempotencyKey, $correlationId,
+            'undertaking_and_reservation', $data, function (PayrollDeductionCase $locked) use ($customer, $data) {
+                $this->requireStatus($locked, ['affordable', 'amendment_required']);
+                $requested = (int) $data['requested_deduction_minor'];
+                if (($data['authorised'] ?? false) !== true || $requested <= 0
+                    || $locked->affordable_amount_minor === null || $requested > (int) $locked->affordable_amount_minor) {
+                    throw new InvalidArgumentException('Explicit authorisation and a deduction within the verified affordable amount are required.');
+                }
+                $consent = ConsentRecord::create([
+                    'user_id' => $customer->id, 'purpose' => 'payroll_deduction',
+                    'policy_version' => self::UNDERTAKING_POLICY_VERSION, 'status' => ConsentRecord::STATUS_GRANTED,
+                    'channel' => 'app', 'granted_at' => now(), 'metadata' => [
+                        'scope' => self::UNDERTAKING_SCOPE, 'payroll_case_id' => $locked->id,
+                        'payroll_case_reference' => $locked->reference, 'requested_deduction_minor' => $requested,
+                    ],
+                ]);
+                $locked->fill([
+                    'status' => 'reservation_pending', 'requested_deduction_minor' => $requested,
+                    'undertaking_consent_record_id' => $consent->id, 'reservation_reference' => null,
+                    'provider_agreement_reference' => $data['provider_agreement_reference'] ?? null,
+                    'reservation_expires_at' => now()->addHours(max(1, (int) config('payroll_deduction.reservation_ttl_hours', 72))),
+                    'rejection_code' => null, 'rejection_reason' => null,
+                ])->save();
+                app(AuditLogger::class)->record('payroll.undertaking.granted', $customer, $consent,
+                    ['payroll_case_id' => $locked->id, 'requested_deduction_minor' => $requested]);
+
+                return ['event' => 'undertaking_and_reservation_requested', 'to' => 'reservation_pending',
+                    'evidence' => ['consent_record_id' => $consent->id, 'requested_deduction_minor' => $requested]];
+            });
+    }
+
     public function requestReservation(
-        PayrollDeductionCase $case,
-        User $customer,
-        array $data,
-        string $idempotencyKey,
-        ?string $correlationId = null,
+        PayrollDeductionCase $case, User $customer, array $data, string $idempotencyKey, ?string $correlationId = null,
     ): PayrollDeductionCase {
         if ((int) $case->user_id !== (int) $customer->id) {
             throw new InvalidArgumentException('This payroll deduction case does not belong to the customer.');
         }
 
-        $requested = (int) $data['requested_deduction_minor'];
-        $consent = ConsentRecord::query()
-            ->whereKey((int) $data['undertaking_consent_record_id'])
-            ->where('user_id', $customer->id)
-            ->where('purpose', ConsentRecord::PURPOSE_CREDIT_PROCESSING)
-            ->where('policy_version', self::UNDERTAKING_POLICY_VERSION)
-            ->where('status', ConsentRecord::STATUS_GRANTED)
-            ->whereNull('revoked_at')
-            ->first();
-
-        $consentMetadata = is_array($consent?->metadata) ? $consent->metadata : [];
-        $consentBoundToInstruction = $consent
-            && ($consentMetadata['scope'] ?? null) === self::UNDERTAKING_SCOPE
-            && (int) ($consentMetadata['payroll_case_id'] ?? 0) === (int) $case->id
-            && (string) ($consentMetadata['payroll_case_reference'] ?? '') === (string) $case->reference
-            && (int) ($consentMetadata['requested_deduction_minor'] ?? 0) === $requested;
-
-        if (! $consentBoundToInstruction) {
-            throw new InvalidArgumentException(
-                'A current payroll undertaking consent bound to this case and deduction amount is required before reservation.'
-            );
-        }
-
-        return $this->mutate(
-            $case,
-            $customer,
-            $idempotencyKey,
-            $correlationId,
-            'request_reservation',
-            $data,
-            function (PayrollDeductionCase $locked) use ($data, $consent, $requested) {
+        return $this->mutate($case, $customer, $idempotencyKey, $correlationId,
+            'request_reservation', $data, function (PayrollDeductionCase $locked) use ($data) {
                 $this->requireStatus($locked, ['affordable', 'amendment_required']);
-                if ($locked->affordable_amount_minor !== null
-                    && $requested > (int) $locked->affordable_amount_minor) {
-                    throw new InvalidArgumentException(
-                        'The requested payroll deduction exceeds the verified affordable amount.'
-                    );
+                $requested = (int) $data['requested_deduction_minor'];
+                if ($requested <= 0 || $locked->affordable_amount_minor === null || $requested > (int) $locked->affordable_amount_minor) {
+                    throw new InvalidArgumentException('The requested payroll deduction exceeds the verified affordable amount.');
                 }
-
+                $consent = $this->liveUndertaking($locked, (int) $data['undertaking_consent_record_id'], $requested);
                 $locked->fill([
-                    'status' => 'reservation_pending',
-                    'requested_deduction_minor' => $requested,
+                    'status' => 'reservation_pending', 'requested_deduction_minor' => $requested,
                     'undertaking_consent_record_id' => $consent->id,
                     'provider_agreement_reference' => $data['provider_agreement_reference'] ?? null,
                     'reservation_reference' => null,
-                    'reservation_expires_at' => now()->addHours(
-                        max(1, (int) config('payroll_deduction.reservation_ttl_hours', 72))
-                    ),
-                    'rejection_code' => null,
-                    'rejection_reason' => null,
+                    'reservation_expires_at' => now()->addHours(max(1, (int) config('payroll_deduction.reservation_ttl_hours', 72))),
+                    'rejection_code' => null, 'rejection_reason' => null,
                 ])->save();
 
                 return ['event' => 'reservation_requested', 'to' => 'reservation_pending', 'evidence' => [
-                    'requested_deduction_minor' => $requested,
-                    'consent_record_id' => $consent->id,
-                    'consent_policy_version' => $consent->policy_version,
-                    'consent_scope' => self::UNDERTAKING_SCOPE,
+                    'requested_deduction_minor' => $requested, 'consent_record_id' => $consent->id,
                     'reservation_expires_at' => $locked->reservation_expires_at?->toIso8601String(),
                 ]];
-            },
-        );
+            });
     }
 
     public function recordReservation(
@@ -242,6 +244,9 @@ class PayrollDeductionService
             function (PayrollDeductionCase $locked) use ($data) {
                 $this->requireStatus($locked, ['reservation_pending']);
                 $accepted = (bool) $data['reserved'];
+                if ($accepted) {
+                    $this->liveUndertaking($locked);
+                }
                 $to = $accepted ? 'reserved' : 'reservation_failed';
                 $reservationReference = trim(
                     (string) ($data['reservation_reference'] ?? $locked->reservation_reference ?? '')
@@ -306,22 +311,24 @@ class PayrollDeductionService
             'submit_key_facts',
             $data,
             function (PayrollDeductionCase $locked) use ($data) {
-            $this->requireStatus($locked, ['reserved']);
-            if ($locked->reservation_expires_at && $locked->reservation_expires_at->isPast()) {
-                throw new InvalidArgumentException('The payroll reservation has expired and must be refreshed.');
-            }
+                $this->requireStatus($locked, ['reserved']);
+                $this->liveUndertaking($locked);
+                $this->requireReservation($locked);
+                if ($locked->reservation_expires_at && $locked->reservation_expires_at->isPast()) {
+                    throw new InvalidArgumentException('The payroll reservation has expired and must be refreshed.');
+                }
 
-            $locked->fill([
-                'status' => 'vote_approval_pending',
-                'key_facts_snapshot' => $data['key_facts'],
-                'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
-            ])->save();
+                $locked->fill([
+                    'status' => 'vote_approval_pending',
+                    'key_facts_snapshot' => $data['key_facts'],
+                    'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
+                ])->save();
 
-            return ['event' => 'key_facts_submitted', 'to' => 'vote_approval_pending', 'evidence' => [
-                'provider_reference' => $data['provider_reference'] ?? null,
-                'key_facts_version' => $data['key_facts']['version'] ?? null,
-                'key_facts_snapshot' => $data['key_facts'],
-            ]];
+                return ['event' => 'key_facts_submitted', 'to' => 'vote_approval_pending', 'evidence' => [
+                    'provider_reference' => $data['provider_reference'] ?? null,
+                    'key_facts_version' => $data['key_facts']['version'] ?? null,
+                    'key_facts_snapshot' => $data['key_facts'],
+                ]];
             },
         );
     }
@@ -341,28 +348,32 @@ class PayrollDeductionService
             'record_vote_decision',
             $data,
             function (PayrollDeductionCase $locked) use ($data) {
-            $this->requireStatus($locked, ['vote_approval_pending']);
-            $approved = (bool) $data['approved'];
-            if ($approved && $locked->reservation_expires_at && $locked->reservation_expires_at->isPast()) {
-                throw new InvalidArgumentException(
-                    'The payroll reservation expired before vote approval and must be refreshed.'
-                );
-            }
-            $to = $approved ? 'deduction_approved' : 'vote_rejected';
+                $this->requireStatus($locked, ['vote_approval_pending']);
+                $approved = (bool) $data['approved'];
+                if ($approved) {
+                    $this->liveUndertaking($locked);
+                    $this->requireReservation($locked);
+                }
+                if ($approved && $locked->reservation_expires_at && $locked->reservation_expires_at->isPast()) {
+                    throw new InvalidArgumentException(
+                        'The payroll reservation expired before vote approval and must be refreshed.'
+                    );
+                }
+                $to = $approved ? 'deduction_approved' : 'vote_rejected';
 
-            $locked->fill([
-                'status' => $to,
-                'approved_at' => $approved ? now() : null,
-                'reservation_expires_at' => $approved ? $locked->reservation_expires_at : now(),
-                'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
-                'rejection_code' => $approved ? null : ($data['rejection_code'] ?? 'VOTE_REJECTED'),
-                'rejection_reason' => $approved ? null : ($data['rejection_reason'] ?? 'The payroll deduction was not approved at the vote.'),
-            ])->save();
+                $locked->fill([
+                    'status' => $to,
+                    'approved_at' => $approved ? now() : null,
+                    'reservation_expires_at' => $approved ? $locked->reservation_expires_at : now(),
+                    'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
+                    'rejection_code' => $approved ? null : ($data['rejection_code'] ?? 'VOTE_REJECTED'),
+                    'rejection_reason' => $approved ? null : ($data['rejection_reason'] ?? 'The payroll deduction was not approved at the vote.'),
+                ])->save();
 
-            return ['event' => $approved ? 'deduction_approved' : 'vote_rejected', 'to' => $to, 'evidence' => [
-                'provider_reference' => $data['provider_reference'] ?? null,
-                'rejection_code' => $locked->rejection_code,
-            ]];
+                return ['event' => $approved ? 'deduction_approved' : 'vote_rejected', 'to' => $to, 'evidence' => [
+                    'provider_reference' => $data['provider_reference'] ?? null,
+                    'rejection_code' => $locked->rejection_code,
+                ]];
             },
         );
     }
@@ -383,6 +394,8 @@ class PayrollDeductionService
             $data,
             function (PayrollDeductionCase $locked) use ($data) {
                 $this->requireStatus($locked, ['deduction_approved']);
+                $this->liveUndertaking($locked);
+                $this->requireReservation($locked);
                 $submissionCode = (string) ($data['submission_code'] ?? '482');
                 if ($locked->scheme === 'government_pdms' && $submissionCode !== '482') {
                     throw new InvalidArgumentException(
@@ -471,6 +484,11 @@ class PayrollDeductionService
                     'result_category' => $category,
                     'provider_reference' => $data['provider_reference'] ?? null,
                     'evidence' => $data['evidence'] ?? null,
+                    'provider_result_snapshot' => [
+                        'expected_minor' => $expected, 'recovered_minor' => $recovered, 'variance_minor' => $variance,
+                        'result_category' => $category, 'provider_reference' => $data['provider_reference'] ?? null,
+                        'evidence' => $data['evidence'] ?? null, 'recorded_at' => now()->toIso8601String(),
+                    ],
                 ]);
 
                 $locked->fill([
@@ -512,6 +530,7 @@ class PayrollDeductionService
             $data,
             function (PayrollDeductionCase $locked) use ($data) {
                 $this->requireStatus($locked, ['amendment_required']);
+                $this->liveUndertaking($locked);
                 $currentRequested = (int) ($locked->requested_deduction_minor ?? 0);
                 $requested = (int) ($data['requested_deduction_minor'] ?? $currentRequested);
 
@@ -567,72 +586,72 @@ class PayrollDeductionService
             'reconcile_payroll_settlement',
             $data,
             function (PayrollDeductionCase $locked) use ($data) {
-            $this->requireStatus($locked, ['reconciliation_pending', 'reconciliation_exception']);
+                $this->requireStatus($locked, ['reconciliation_pending', 'reconciliation_exception']);
 
-            $submissionAttempt = (int) (($locked->provider_state ?? [])['submission_attempt'] ?? 0);
-            if ($submissionAttempt <= 0) {
-                throw new InvalidArgumentException(
-                    'A recorded payroll submission attempt is required before reconciliation.'
-                );
-            }
+                $submissionAttempt = (int) (($locked->provider_state ?? [])['submission_attempt'] ?? 0);
+                if ($submissionAttempt <= 0) {
+                    throw new InvalidArgumentException(
+                        'A recorded payroll submission attempt is required before reconciliation.'
+                    );
+                }
 
-            $reconciliation = PayrollDeductionReconciliation::query()
-                ->where('payroll_deduction_case_id', $locked->id)
-                ->where('payroll_period', (string) $data['payroll_period'])
-                ->where('submission_attempt', $submissionAttempt)
-                ->lockForUpdate()
-                ->first();
+                $reconciliation = PayrollDeductionReconciliation::query()
+                    ->where('payroll_deduction_case_id', $locked->id)
+                    ->where('payroll_period', (string) $data['payroll_period'])
+                    ->where('submission_attempt', $submissionAttempt)
+                    ->lockForUpdate()
+                    ->first();
 
-            if (! $reconciliation) {
-                throw new InvalidArgumentException(
-                    'Recorded payroll-result evidence is required before payment reconciliation.'
-                );
-            }
-            if ($reconciliation->result_category !== 'success') {
-                throw new InvalidArgumentException(
-                    'Only a successful payroll result can proceed to payment reconciliation.'
-                );
-            }
+                if (! $reconciliation) {
+                    throw new InvalidArgumentException(
+                        'Recorded payroll-result evidence is required before payment reconciliation.'
+                    );
+                }
+                if ($reconciliation->result_category !== 'success') {
+                    throw new InvalidArgumentException(
+                        'Only a successful payroll result can proceed to payment reconciliation.'
+                    );
+                }
 
-            $expected = (int) $reconciliation->expected_minor;
-            $recovered = (int) $data['recovered_minor'];
-            if ($recovered < 0) {
-                throw new InvalidArgumentException('Recovered payroll amount cannot be negative.');
-            }
+                $expected = (int) $reconciliation->expected_minor;
+                $recovered = (int) $data['recovered_minor'];
+                if ($recovered < 0) {
+                    throw new InvalidArgumentException('Recovered payroll amount cannot be negative.');
+                }
 
-            $variance = $recovered - $expected;
-            $matched = $variance === 0;
-            $to = $matched ? 'reconciled' : 'reconciliation_exception';
-            $existingEvidence = is_array($reconciliation->evidence) ? $reconciliation->evidence : [];
-            $settlementEvidence = [
-                'provider_reference' => $data['provider_reference'] ?? null,
-                'evidence' => $data['evidence'] ?? null,
-                'recorded_at' => now()->toIso8601String(),
-            ];
+                $variance = $recovered - $expected;
+                $matched = $variance === 0;
+                $to = $matched ? 'reconciled' : 'reconciliation_exception';
+                $existingEvidence = is_array($reconciliation->evidence) ? $reconciliation->evidence : [];
+                $settlementEvidence = [
+                    'provider_reference' => $data['provider_reference'] ?? null,
+                    'evidence' => $data['evidence'] ?? null,
+                    'recorded_at' => now()->toIso8601String(),
+                ];
 
-            $reconciliation->fill([
-                'recovered_minor' => $recovered,
-                'variance_minor' => $variance,
-                'status' => $matched ? 'reconciled' : 'exception',
-                'evidence' => array_merge($existingEvidence, ['settlement' => $settlementEvidence]),
-                'reconciled_at' => $matched ? now() : null,
-            ])->save();
+                $reconciliation->fill([
+                    'recovered_minor' => $recovered,
+                    'variance_minor' => $variance,
+                    'status' => $matched ? 'reconciled' : 'exception',
+                    'evidence' => array_merge($existingEvidence, ['settlement' => $settlementEvidence]),
+                    'reconciled_at' => $matched ? now() : null,
+                ])->save();
 
-            $locked->fill([
-                'status' => $to,
-                'reconciled_at' => $matched ? now() : null,
-                'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
-            ])->save();
+                $locked->fill([
+                    'status' => $to,
+                    'reconciled_at' => $matched ? now() : null,
+                    'last_provider_reference' => $data['provider_reference'] ?? $locked->last_provider_reference,
+                ])->save();
 
-            return ['event' => $matched ? 'payment_reconciled' : 'reconciliation_exception', 'to' => $to, 'evidence' => [
-                'payroll_period' => $data['payroll_period'],
-                'submission_attempt' => $submissionAttempt,
-                'expected_minor' => $expected,
-                'recovered_minor' => $recovered,
-                'variance_minor' => $variance,
-                'settlement_provider_reference' => $data['provider_reference'] ?? null,
-                'settlement_evidence' => $data['evidence'] ?? null,
-            ]];
+                return ['event' => $matched ? 'payment_reconciled' : 'reconciliation_exception', 'to' => $to, 'evidence' => [
+                    'payroll_period' => $data['payroll_period'],
+                    'submission_attempt' => $submissionAttempt,
+                    'expected_minor' => $expected,
+                    'recovered_minor' => $recovered,
+                    'variance_minor' => $variance,
+                    'settlement_provider_reference' => $data['provider_reference'] ?? null,
+                    'settlement_evidence' => $data['evidence'] ?? null,
+                ]];
             },
         );
     }
@@ -668,7 +687,7 @@ class PayrollDeductionService
                     'amendment_required',
                 ]);
 
-                if (in_array($locked->status, ['reservation_pending', 'reserved', 'vote_approval_pending'], true)) {
+                if (in_array($locked->status, ['reservation_pending', 'reserved', 'vote_approval_pending'], true) || $locked->reservation_reference || (int) (($locked->provider_state ?? [])['submission_attempt'] ?? 0) > 0) {
                     $locked->fill(['status' => 'cancellation_pending'])->save();
 
                     return [
@@ -746,46 +765,31 @@ class PayrollDeductionService
 
     public function expireReservations(): int
     {
-        $expired = 0;
-        PayrollDeductionCase::query()
-            ->whereIn('status', ['reservation_pending', 'reserved', 'vote_approval_pending'])
-            ->whereNotNull('reservation_expires_at')
-            ->where('reservation_expires_at', '<=', now())
-            ->orderBy('id')
-            ->chunkById(100, function ($cases) use (&$expired) {
+        $count = 0;
+        $statuses = ['reservation_pending', 'reserved', 'vote_approval_pending', 'deduction_approved'];
+        PayrollDeductionCase::query()->whereIn('status', $statuses)
+            ->whereNotNull('reservation_expires_at')->where('reservation_expires_at', '<=', now())
+            ->chunkById(100, function ($cases) use (&$count, $statuses) {
                 foreach ($cases as $case) {
-                    DB::transaction(function () use ($case, &$expired) {
+                    DB::transaction(function () use ($case, &$count, $statuses) {
                         $locked = PayrollDeductionCase::whereKey($case->id)->lockForUpdate()->first();
-                        if (! $locked || ! in_array($locked->status, ['reservation_pending', 'reserved', 'vote_approval_pending'], true)) {
+                        if (! $locked || ! in_array($locked->status, $statuses, true)
+                            || ! $locked->reservation_expires_at || $locked->reservation_expires_at->isFuture()) {
                             return;
                         }
                         $from = $locked->status;
-                        $locked->fill(['status' => 'expired'])->save();
-                        PayrollDeductionEvent::firstOrCreate(
-                            [
-                                'payroll_deduction_case_id' => $locked->id,
-                                'idempotency_key' => 'reservation-expiry:'.($locked->reservation_expires_at?->timestamp ?? $locked->id),
-                            ],
-                            [
-                                'correlation_id' => (string) Str::uuid(),
-                                'instruction_hash' => $this->instructionHash('expire_reservation', [
-                                    'reservation_expires_at' => $locked->reservation_expires_at?->toIso8601String(),
-                                ]),
-                                'event_type' => 'reservation_expired',
-                                'from_status' => $from,
-                                'to_status' => 'expired',
-                                'actor_user_id' => null,
-                                'channel' => 'scheduler',
-                                'evidence' => ['reservation_expires_at' => $locked->reservation_expires_at?->toIso8601String()],
-                                'occurred_at' => now(),
-                            ],
-                        );
-                        $expired++;
+                        $locked->update(['status' => 'cancellation_pending']);
+                        $this->recordEvent($locked, null,
+                            'reservation-expiry:'.$locked->reservation_expires_at->timestamp,
+                            $this->instructionHash('expire_reservation', ['expires_at' => $locked->reservation_expires_at->toIso8601String()]),
+                            null, 'reservation_expiry_release_required', $from, 'cancellation_pending',
+                            ['reservation_expires_at' => $locked->reservation_expires_at->toIso8601String(), 'provider_release_confirmed' => false]);
+                        $count++;
                     });
                 }
             });
 
-        return $expired;
+        return $count;
     }
 
     private function mutate(
@@ -797,9 +801,7 @@ class PayrollDeductionService
         array $instruction,
         callable $mutation,
     ): PayrollDeductionCase {
-        if (trim($idempotencyKey) === '') {
-            throw new InvalidArgumentException('An idempotency key is required.');
-        }
+        $this->assertKeys($idempotencyKey, $correlationId);
 
         $instructionHash = $this->instructionHash($command, $instruction);
 
@@ -812,14 +814,18 @@ class PayrollDeductionService
                 $instructionHash,
                 $mutation
             ) {
+                User::withoutGlobalScopes()->whereKey($case->user_id)->whereNull('deleted_at')->lockForUpdate()->firstOrFail();
                 $locked = PayrollDeductionCase::whereKey($case->id)->lockForUpdate()->firstOrFail();
+                if ((int) $actor->id === (int) $locked->user_id) {
+                    app(FinancingService::class)->assertSpaceAuthority($actor, (int) $locked->financial_space_id);
+                }
                 $existingEvent = PayrollDeductionEvent::query()
                     ->where('payroll_deduction_case_id', $locked->id)
                     ->where('idempotency_key', $idempotencyKey)
                     ->first();
 
                 if ($existingEvent) {
-                    if (! hash_equals((string) $existingEvent->instruction_hash, $instructionHash)) {
+                    if ((int) $existingEvent->actor_user_id !== (int) $actor->id || ! hash_equals((string) $existingEvent->instruction_hash, $instructionHash)) {
                         throw new InvalidArgumentException(
                             'This Idempotency-Key is already bound to a different payroll deduction instruction.'
                         );
@@ -871,6 +877,41 @@ class PayrollDeductionService
             'evidence' => $evidence,
             'occurred_at' => now(),
         ]);
+    }
+
+    private function assertKeys(string $idempotencyKey, ?string $correlationId): void
+    {
+        if (trim($idempotencyKey) === '' || strlen($idempotencyKey) > 180) {
+            throw new InvalidArgumentException('A valid Idempotency-Key is required.');
+        }
+        if ($correlationId !== null && ! Str::isUuid($correlationId)) {
+            throw new InvalidArgumentException('X-Correlation-ID must be a UUID.');
+        }
+    }
+
+    private function liveUndertaking(PayrollDeductionCase $case, ?int $consentId = null, ?int $amount = null): ConsentRecord
+    {
+        $consent = ConsentRecord::query()->whereKey($consentId ?? $case->undertaking_consent_record_id)
+            ->where('user_id', $case->user_id)->whereIn('purpose', ['payroll_deduction', ConsentRecord::PURPOSE_CREDIT_PROCESSING])
+            ->where('policy_version', self::UNDERTAKING_POLICY_VERSION)->where('status', ConsentRecord::STATUS_GRANTED)
+            ->whereNull('revoked_at')->lockForUpdate()->first();
+        $metadata = (array) ($consent?->metadata ?? []);
+        if (! $consent || ($metadata['scope'] ?? null) !== self::UNDERTAKING_SCOPE
+            || (int) ($metadata['payroll_case_id'] ?? 0) !== (int) $case->id
+            || (string) ($metadata['payroll_case_reference'] ?? '') !== (string) $case->reference
+            || (int) ($metadata['requested_deduction_minor'] ?? 0) !== (int) ($amount ?? $case->requested_deduction_minor)) {
+            throw new InvalidArgumentException('A current payroll undertaking consent bound to this case and deduction amount is required.');
+        }
+
+        return $consent;
+    }
+
+    private function requireReservation(PayrollDeductionCase $case): void
+    {
+        if (! $case->reservation_expires_at || $case->reservation_expires_at->isPast()
+            || ! $case->reservation_reference || ! $case->provider_agreement_reference) {
+            throw new InvalidArgumentException('A current confirmed provider reservation is required.');
+        }
     }
 
     private function instructionHash(string $command, array $instruction): string

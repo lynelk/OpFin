@@ -132,6 +132,41 @@ class PartnerFinancialIntentWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_partner_cannot_spoof_another_source_platform_or_use_unconfigured_source(): void
+    {
+        [$partner, $account] = $this->partner();
+        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($partner);
+        $payload = $this->payload($account, 'SOURCE-CHECK');
+        $payload['source_platform'] = 'shamba';
+        $this->postJson('/api/partner/financial-intents/'.$customer->id, $payload, ['Idempotency-Key' => 'source-1'])->assertForbidden();
+        $payload['source_platform'] = 'stolets';
+        DB::table('partner_distribution_accounts')->where('id', $account)->update(['financial_intent_source_platform' => null]);
+        $this->postJson('/api/partner/financial-intents/'.$customer->id, $payload, ['Idempotency-Key' => 'source-2'])->assertForbidden();
+        $this->assertDatabaseCount('partner_financial_intent_requests', 0);
+    }
+
+    public function test_confirmation_is_audited_once_and_replay_cannot_change_customer_space(): void
+    {
+        [$partner, $account] = $this->partner();
+        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($partner);
+        $this->postJson('/api/partner/financial-intents/'.$customer->id, $this->payload($account, 'AUDIT-CHECK'), ['Idempotency-Key' => 'audit-referral'])->assertCreated();
+        $id = DB::table('partner_financial_intent_requests')->where('external_reference', 'AUDIT-CHECK')->value('id');
+        $space = $this->personalSpace($customer);
+        Sanctum::actingAs($customer);
+        $data = ['financial_space_id' => $space, 'principles_preference' => 'CONVENTIONAL_ONLY'];
+        $one = $this->postJson('/api/partner-financial-intents/'.$id.'/confirm', $data)->assertCreated();
+        $two = $this->postJson('/api/partner-financial-intents/'.$id.'/confirm', $data)->assertCreated();
+        $this->assertSame($one->json('data.financial_intent.id'), $two->json('data.financial_intent.id'));
+        $this->assertSame(1, DB::table('audit_logs')->where('event', 'partner.financial_intent.confirmed')->where('actor_id', $customer->id)->count());
+        $data['financial_space_id'] = $this->personalSpace($customer);
+        $this->postJson('/api/partner-financial-intents/'.$id.'/confirm', $data)->assertStatus(409);
+        DB::table('financial_space_memberships')->where('financial_space_id', $space)->update(['deleted_at' => now()]);
+        $data['financial_space_id'] = $space;
+        $this->postJson('/api/partner-financial-intents/'.$id.'/confirm', $data)->assertUnprocessable();
+    }
+
     private function partner(): array
     {
         $partner = User::factory()->create(['role' => User::ROLE_PARTNER_API]);
@@ -140,6 +175,7 @@ class PartnerFinancialIntentWorkflowTest extends TestCase
             'reference' => (string) Str::uuid(),
             'created_by' => $partner->id,
             'partner_name' => 'Stolets Test Partner',
+            'financial_intent_source_platform' => 'stolets',
             'partner_type' => 'platform',
             'status' => 'active',
             'allowed_products' => json_encode(['financial_intents'], JSON_THROW_ON_ERROR),

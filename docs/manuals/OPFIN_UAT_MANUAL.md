@@ -131,3 +131,7 @@ Automated regression results and remaining mobile/PostgreSQL/reviewer gates are 
 - With affiliated credit withheld, or independent-first with an eligible independent lender, verify no eligibility request or new credit line is created for the affiliate. Then request a genuinely underserved amount/category and verify permitted fallback.
 - Suspend an Essentials product for one channel and verify eligibility, displayed limit, quote and acceptance agree while another authorised channel remains available.
 - Verify legacy loan default-interest caps continue under the configured/snapshotted licence class and each new offer uses one distribution revision in pricing and disclosures.
+
+## PR 142 candidate acceptance update (2 October 2026)
+
+Account deletion rejects unresolved obligations immediately and preserves servicing; optional-data deletion retains the account and regulated evidence. Payroll undertaking is case-bound and atomic with reservation request; cancellation/expiry awaits evidenced provider release. Apply `docs/releases/2026-10-02-pr142-release-acceptance.md` to OPF-FEAT-0022, FIN-FOUNDATION, DOC-CONTINUITY and OPF-REL-0001. This entry is implementation/validation work, not production or store acceptance.

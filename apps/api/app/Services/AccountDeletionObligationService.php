@@ -12,6 +12,8 @@ class AccountDeletionObligationService
     {
         return collect([
             ...$this->loans($user->id),
+            ...$this->financingArrangements($user->id),
+            ...$this->collectionInstructions($user->id),
             ...$this->personalObligations($user->id),
             ...$this->essentials($user->id),
             ...$this->peerFinance($user->id),
@@ -85,6 +87,70 @@ class AccountDeletionObligationService
             ->all();
     }
 
+    private function financingArrangements(int $userId): array
+    {
+        if (! Schema::hasTable('financing_arrangements')) {
+            return [];
+        }
+
+        $rows = DB::table('financing_arrangements as arrangements')
+            ->leftJoin('financial_products as products', 'products.id', '=', 'arrangements.financial_product_id')
+            ->leftJoin('partners as partners', 'partners.id', '=', 'products.partner_id')
+            ->leftJoin('institutions as institutions', 'institutions.id', '=', 'partners.institution_id')
+            ->where('arrangements.user_id', $userId)
+            ->whereNotIn('arrangements.status', ['settled', 'closed', 'cancelled', 'rejected'])
+            ->select('arrangements.*', 'partners.name as partner_name', 'institutions.name as provider_name',
+                'institutions.phone as provider_phone', 'institutions.email as provider_email', 'institutions.address as provider_address')
+            ->get();
+
+        $items = [];
+        foreach ($rows as $row) {
+            $legacyType = strtolower((string) ($row->legacy_type ?? ''));
+            if (in_array($legacyType, ['loan', 'legacy_loan', 'app\\models\\loan'], true)
+                && $row->legacy_id && DB::table('loans')->where('id', $row->legacy_id)->where('user_id', $userId)
+                    ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected'])->exists()) {
+                continue;
+            }
+            $item = $this->item('financing_arrangement', 'Financing arrangement still open', $row->reference,
+                $row->status, isset($row->total_obligation_minor) ? (int) $row->total_obligation_minor : null,
+                $row->currency, null, $this->contact($row->provider_name ?? $row->partner_name ?? 'Financing provider',
+                    $row->provider_phone, $row->provider_email, $row->provider_address));
+            $item['amount_basis'] = 'contract_total_not_current_balance';
+            $items[] = $item;
+        }
+
+        return $items;
+    }
+
+    private function collectionInstructions(int $userId): array
+    {
+        if (! Schema::hasTable('essentials_collection_instructions')) {
+            return [];
+        }
+
+        return DB::table('essentials_collection_instructions as instructions')
+            ->join('essentials_repayments as repayments', 'repayments.id', '=', 'instructions.repayment_id')
+            ->join('essentials_advances as advances', 'advances.id', '=', 'instructions.advance_id')
+            ->leftJoin('partners as partners', 'partners.id', '=', 'advances.lender_partner_id')
+            ->leftJoin('institutions as institutions', 'institutions.id', '=', 'partners.institution_id')
+            ->where('instructions.user_id', $userId)
+            ->where(function ($query) {
+                $query->whereNotIn('instructions.status', ['applied', 'failed', 'reversed'])
+                    ->orWhere(function ($reversed) {
+                        $reversed->where('instructions.status', 'reversed')->where('repayments.status', '<>', 'reversed');
+                    });
+            })
+            ->select('instructions.id', 'instructions.status', 'instructions.amount_minor', 'instructions.currency',
+                'repayments.reference', 'partners.name as partner_name', 'institutions.name as provider_name',
+                'institutions.phone as provider_phone', 'institutions.email as provider_email', 'institutions.address as provider_address')
+            ->get()->map(fn ($row) => $this->item('essentials_collection_reconciliation',
+                'Collection or reversal still requires reconciliation', $row->reference ?: 'collection-'.$row->id,
+                $row->status, (int) $row->amount_minor, $row->currency, null,
+                $this->contact($row->provider_name ?? $row->partner_name ?? 'Collection provider',
+                    $row->provider_phone, $row->provider_email, $row->provider_address)))
+            ->all();
+    }
+
     private function personalObligations(int $userId): array
     {
         if (! Schema::hasTable('financial_obligations')
@@ -102,6 +168,10 @@ class AccountDeletionObligationService
                 'spaces.id',
             )
             ->where('memberships.user_id', $userId)
+            ->where('memberships.role', 'owner')
+            ->where('memberships.status', 'active')
+            ->whereNull('memberships.deleted_at')
+            ->whereNull('spaces.deleted_at')
             ->where('spaces.type', 'personal')
             ->where('obligations.direction', 'i_owe')
             ->where('obligations.status', 'open')
@@ -511,6 +581,7 @@ class AccountDeletionObligationService
                 'reconciliation_pending',
                 'amendment_required',
                 'reconciliation_exception',
+                'cancellation_pending',
             ])
             ->get()
             ->map(fn ($case) => $this->item(
