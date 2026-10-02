@@ -5,13 +5,24 @@ on:
     paths: [.github/workflows/pr142-targeted-repair.yml]
 permissions:
   contents: write
+  actions: read
 concurrency:
   group: opfin-pr142-targeted-repair
   cancel-in-progress: false
 jobs:
   targeted:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: opfin_test
+          POSTGRES_PASSWORD: ephemeral_validation_only
+          POSTGRES_DB: opfin_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U opfin_test" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       EXPECTED_HEAD: d036967fc5f5c0b768fccba0e77b035ed2c893fb
       TARGET_BRANCH: feature/embedded-payroll-deduction
@@ -32,10 +43,10 @@ jobs:
         working-directory: candidate
         run: |
           test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$EXPECTED_HEAD"
-          python3 ../repair-tools/preflight/account_repair.py
-          python3 ../repair-tools/preflight/payroll_repair.py
-          python3 ../repair-tools/preflight/partner_and_compatibility_repair.py
-          python3 ../repair-tools/preflight/regression_tests.py
+          git fetch --depth=1 origin main:refs/remotes/origin/main
+          for script in account_repair payroll_repair partner_and_compatibility_repair regression_tests targeted_followup client_repair web_repair release_contracts; do
+            python3 "../repair-tools/preflight/$script.py"
+          done
           python3 - <<'PY'
           from pathlib import Path
           p = Path('apps/api/scripts/run-tests.sh')
@@ -47,18 +58,22 @@ jobs:
           p.write_text(s)
           PY
           git diff --check
-      - name: Install isolated test dependencies
+          python3 scripts/verify-pr142-release-contract.py
+      - name: Install isolated PHP dependencies without incompatible Xdebug
         working-directory: candidate/apps/api
         run: |
+          sudo phpdismod xdebug 2>/dev/null || true
+          php -r 'if (extension_loaded("xdebug")) { fwrite(STDERR, "Xdebug must be disabled for this runtime.\n"); exit(1); }'
           php -v
+          php -r 'if (!extension_loaded("pdo_pgsql")) exit(1);'
           composer install --prefer-dist --no-progress --no-interaction
           cp .env.example .env
           php artisan key:generate
-      - name: Format and syntax-check changed PHP
+      - name: Format and syntax-check all candidate PHP changes
         working-directory: candidate
         run: |
           git add --intent-to-add apps/api
-          git diff --name-only --diff-filter=ACMR -z -- 'apps/api/**/*.php' > "$RUNNER_TEMP/changed-php"
+          git diff --name-only --diff-filter=ACMR -z origin/main -- 'apps/api/**/*.php' > "$RUNNER_TEMP/changed-php"
           mapfile -d '' -t files < "$RUNNER_TEMP/changed-php"
           for file in "${files[@]}"; do php -l "$file"; done
           cd apps/api
@@ -70,18 +85,87 @@ jobs:
         run: |
           set -o pipefail
           sh scripts/run-tests.sh --filter='AccountDeletionAndAppStorePolicyTest|EssentialsDurableCollectionsTest|PartnerFinancialIntentWorkflowTest|PayrollDeductionWorkflowTest|ApiSecurityTest|BackendCheckpointTest|ClubAccountingReviewTest|ClubAccountingTest|EssentialsFinanceTest|EssentialsSpaceAndClosureTest|FinancialSpaceStatementsTest|LaunchCustomerJourneyTest|LaunchSafetyRegressionTest|MobileMoneyAdapterTest|ProductionReadinessApiTest|IntegratedFinancingFoundationTest|PostMergeFinancialHotfixTest' 2>&1 | tee "$RUNNER_TEMP/targeted-api.log"
-      - name: Publish passing repair batch to the PR branch only
+      - name: Verify database-sensitive boundaries on ephemeral PostgreSQL
+        working-directory: candidate/apps/api
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          DB_DATABASE: opfin_test
+          DB_USERNAME: opfin_test
+          DB_PASSWORD: ephemeral_validation_only
+          MAIL_MAILER: array
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          OPFIN_REQUIRE_FUNDING_POOL_ASSIGNMENT: 'false'
+          OPFIN_REQUIRE_REGULATED_CREDIT_DISCLOSURE: 'false'
+          OPFIN_EFRIS_REQUIRED: 'false'
+          CITO_FINANCIAL_DATA_CERTIFIED: 'false'
+          CPAY_ENVIRONMENT: sandbox
+          CPAY_COLLECTION_MODE: sandbox
+          CPAY_BILLER_MODE: sandbox
+          CPAY_MOCK_MODE: 'true'
+        run: |
+          set -o pipefail
+          php artisan test --filter='PayrollDeductionWorkflowTest|PartnerFinancialIntentWorkflowTest|AccountDeletionAndAppStorePolicyTest|PostgresReleaseRegressionTest' 2>&1 | tee "$RUNNER_TEMP/targeted-postgres.log"
+      - name: Reuse already-audited offline web and Dart tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/reused-tools"
+          gh run download 36958561922 --repo lynelk/OpFin --name pr142-web-mobile-tools --dir "$RUNNER_TEMP/reused-tools"
+          tar -xJf "$RUNNER_TEMP/reused-tools/node-v22.23.2-linux-x64.tar.xz" -C "$RUNNER_TEMP"
+          tar -xzf "$RUNNER_TEMP/reused-tools/pr142-web-deps.tgz" -C candidate/apps/web
+          tar -xzf "$RUNNER_TEMP/reused-tools/pr142-dart-tools.tgz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/node-v22.23.2-linux-x64/bin" >> "$GITHUB_PATH"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          echo "PUB_CACHE=$RUNNER_TEMP/pub-cache" >> "$GITHUB_ENV"
+          cd candidate
+          git diff -- apps/web/package.json
+          git diff --numstat -- apps/web/package-lock.json
+      - name: Flutter analysis and targeted contract tests
+        working-directory: candidate/apps/client
+        run: |
+          set -o pipefail
+          flutter pub get --offline
+          git diff --exit-code -- pubspec.lock
+          git add --intent-to-add lib test
+          git diff --name-only --diff-filter=ACMR origin/main -- lib test | sed 's#^apps/client/##' > "$RUNNER_TEMP/changed-dart"
+          mapfile -t dart_files < "$RUNNER_TEMP/changed-dart"
+          dart format "${dart_files[@]}"
+          flutter analyze --no-pub 2>&1 | tee "$RUNNER_TEMP/targeted-flutter-analysis.log"
+          flutter test --no-pub test/payroll_instruction_client_test.dart test/distribution_channel_test.dart 2>&1 | tee "$RUNNER_TEMP/targeted-flutter-tests.log"
+      - name: Web typecheck and targeted deletion contracts
+        working-directory: candidate/apps/web
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee "$RUNNER_TEMP/targeted-web-typecheck.log"
+          npm run test -- src/lib/api/account.test.ts 2>&1 | tee "$RUNNER_TEMP/targeted-web-tests.log"
+      - name: Verify current documentation and deployment static contracts
+        working-directory: candidate
+        run: |
+          python3 scripts/verify-pr142-release-contract.py
+          python3 scripts/verify-documentation-drift.py --base origin/main
+          python3 scripts/verify-publication-readiness.py
+          sh scripts/verify-layout.sh
+          python3 scripts/verify-security-controls.py
+          python3 scripts/tests/test_deployment_contract.py
+          python3 scripts/tests/test_release_host_safety.py
+          git diff --check
+      - name: Publish validated repair batch to PR branch only
         working-directory: candidate
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$EXPECTED_HEAD"
-          git diff --check
           git config user.name 'lynelk'
           git config user.email '86437305+lynelk@users.noreply.github.com'
-          git add apps/api apps/client
+          git add apps/api apps/client apps/web docs scripts .github/workflows/ci.yml
+          git diff --cached --check
           git diff --cached --stat
-          git commit -m 'fix: close PR142 financial consent and account deletion defects [skip ci]'
+          git commit -m 'fix: complete PR142 account, payroll and release contracts [skip ci]'
           AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
           echo "::add-mask::$AUTH"
           git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push origin "HEAD:refs/heads/$TARGET_BRANCH"
@@ -90,16 +174,24 @@ jobs:
         if: always()
         working-directory: candidate
         run: |
-          git add --intent-to-add apps/api apps/client
-          git diff --binary "$EXPECTED_HEAD" -- apps/api apps/client > "$RUNNER_TEMP/targeted-repair.patch"
-          git status --short
+          git add --intent-to-add apps/api apps/client apps/web docs scripts
+          git diff --binary "$EXPECTED_HEAD" -- apps/api apps/client apps/web docs scripts .github/workflows/ci.yml > "$RUNNER_TEMP/targeted-repair.patch"
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP'])
+          for p in root.glob('targeted-*.log'):
+              print('\n===', p.name, '===')
+              lines = re.sub(r'\x1b\[[0-9;]*m', '', p.read_text(errors='replace')).splitlines()
+              for line in lines[-40:]: print(line)
+          PY
       - name: Retain compact repair evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: pr142-targeted-repair-evidence
           path: |
-            ${{ runner.temp }}/targeted-api.log
+            ${{ runner.temp }}/targeted-*.log
             ${{ runner.temp }}/targeted-repair.patch
             ${{ runner.temp }}/REPAIR_COMMIT.txt
           retention-days: 2
