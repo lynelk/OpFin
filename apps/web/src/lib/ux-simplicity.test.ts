@@ -12,13 +12,12 @@ function source(relativeFromThisFile: string): string {
 describe("launch customer journey simplicity", () => {
   it("keeps primary mobile navigation focused", () => {
     const home = source("../../../client/lib/home_screen.dart");
+    const destinations = [...home.matchAll(/NavigationDestination\([\s\S]*?\blabel\s*:\s*['"]([^'"]+)['"]/g)]
+      .map((match) => match[1]);
 
-    expect(home).toContain("label:'Home'");
-    expect(home).toContain("label:'Borrow'");
-    expect(home).toContain("label:'Activity'");
-    expect(home).toContain("label:'More'");
-    expect(home).not.toContain("label:'Save'");
-    expect(home).not.toContain("label:'Grow'");
+    // Assert actual destinations and order, not the formatter's whitespace.
+    expect(destinations).toEqual(["Home", "Borrow", "Activity", "More"]);
+    expect(home.match(/\bNavigationDestination\(/g)).toHaveLength(4);
   });
 
   it("puts customer state before product catalogue complexity", () => {
