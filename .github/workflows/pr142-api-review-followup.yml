@@ -1,0 +1,142 @@
+name: PR142 API review follow-up
+on:
+  push:
+    branches: [tools/pr142-local-preflight-20261002]
+    paths: [.github/workflows/pr142-api-review-followup.yml]
+permissions:
+  contents: write
+jobs:
+  api-follow-up:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: opfin_test
+          POSTGRES_PASSWORD: ephemeral_validation_only
+          POSTGRES_DB: opfin_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U opfin_test" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      EXPECTED_HEAD: 4f941220542609f71f3da0361c528e0a6e82ff02
+      TARGET_BRANCH: feature/embedded-payroll-deduction
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Load current reviewed repair scripts without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: tools/pr142-local-preflight-20261002
+          path: repair-tools
+          persist-credentials: false
+      - name: Check out exact release-candidate follow-up head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 4f941220542609f71f3da0361c528e0a6e82ff02
+          path: candidate
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Apply and statically inspect the API-only review findings
+        working-directory: candidate
+        run: |
+          test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$EXPECTED_HEAD"
+          python3 ../repair-tools/preflight/final_review_findings.py
+          git add --intent-to-add apps/api docs
+          git diff --check
+          python3 scripts/verify-documentation-drift.py --base HEAD
+          python3 scripts/verify-publication-readiness.py
+          sh scripts/verify-repository-security.sh
+      - name: Install the locked API toolchain and format only changed PHP
+        working-directory: candidate
+        run: |
+          sudo phpdismod xdebug 2>/dev/null || true
+          php -r 'if (extension_loaded("xdebug") || !extension_loaded("pdo_pgsql")) exit(1);'
+          cd apps/api
+          composer audit --locked --no-interaction
+          composer install --prefer-dist --no-progress --no-interaction
+          cp .env.example .env
+          php artisan key:generate
+          cd ../..
+          git diff --name-only --diff-filter=ACMR -z -- 'apps/api/**/*.php' > "$RUNNER_TEMP/changed-php"
+          mapfile -d '' -t files < "$RUNNER_TEMP/changed-php"
+          for file in "${files[@]}"; do php -l "$file"; done
+          cd apps/api
+          files=("${files[@]#apps/api/}")
+          ./vendor/bin/pint "${files[@]}"
+          ./vendor/bin/pint --test "${files[@]}"
+      - name: Target the actual reviewed failure boundaries first
+        working-directory: candidate/apps/api
+        run: |
+          set -o pipefail
+          sh scripts/run-tests.sh --filter='PayrollDeductionWorkflowTest|AccountDeletionAndAppStorePolicyTest' 2>&1 | tee "$RUNNER_TEMP/api-targeted-boundaries.log"
+      - name: Complete the API-only regression suite and provider-routing audit
+        working-directory: candidate/apps/api
+        run: |
+          set -o pipefail
+          sh scripts/enforce-governed-provider-routing.sh
+          sh scripts/run-tests.sh 2>&1 | tee "$RUNNER_TEMP/api-full-regression.log"
+          composer audit
+      - name: Verify the added migration and financial boundaries on ephemeral PostgreSQL
+        working-directory: candidate/apps/api
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          DB_DATABASE: opfin_test
+          DB_USERNAME: opfin_test
+          DB_PASSWORD: ephemeral_validation_only
+          MAIL_MAILER: array
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          OPFIN_REQUIRE_FUNDING_POOL_ASSIGNMENT: 'false'
+          OPFIN_REQUIRE_REGULATED_CREDIT_DISCLOSURE: 'false'
+          OPFIN_EFRIS_REQUIRED: 'false'
+          CITO_FINANCIAL_DATA_CERTIFIED: 'false'
+          CPAY_ENVIRONMENT: sandbox
+          CPAY_COLLECTION_MODE: sandbox
+          CPAY_BILLER_MODE: sandbox
+          CPAY_MOCK_MODE: 'true'
+        run: |
+          set -o pipefail
+          php artisan test --filter='PayrollDeductionWorkflowTest|AccountDeletionAndAppStorePolicyTest|PartnerFinancialIntentWorkflowTest|PostgresReleaseRegressionTest' 2>&1 | tee "$RUNNER_TEMP/api-postgres-regression.log"
+      - name: Publish passing API-only correction without triggering full CI
+        working-directory: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$EXPECTED_HEAD"
+          git diff --check
+          git add apps/api docs
+          if git diff --cached --name-only | grep -Ev '^(apps/api/|docs/)'; then
+            echo 'Unexpected non-API change; preserve mobile and Web build evidence.' >&2
+            exit 1
+          fi
+          git config user.name 'lynelk'
+          git config user.email '86437305+lynelk@users.noreply.github.com'
+          git commit -m 'fix(api): close final payroll and protection review findings [skip ci]'
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push origin "HEAD:refs/heads/$TARGET_BRANCH"
+          git rev-parse HEAD | tee "$RUNNER_TEMP/API_VALIDATED_COMMIT.txt"
+      - name: Summarise actual API results
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, re
+          for path in Path(os.environ['RUNNER_TEMP']).glob('api-*.log'):
+              lines = re.sub(r'\x1b\[[0-9;]*m', '', path.read_text(errors='replace')).splitlines()
+              print('\n' + path.name + '\n' + '\n'.join(lines[-45:]))
+          PY
+      - name: Retain API follow-up evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr142-api-review-followup
+          path: |
+            ${{ runner.temp }}/api-*.log
+            ${{ runner.temp }}/API_VALIDATED_COMMIT.txt
+          retention-days: 3
