@@ -13,6 +13,7 @@ jobs:
     env:
       EXPECTED_HEAD: d036967fc5f5c0b768fccba0e77b035ed2c893fb
       TARGET_BRANCH: feature/embedded-payroll-deduction
+      PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Check out the exact original candidate without credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -27,12 +28,13 @@ jobs:
           gh api /repos/lynelk/OpFin/actions/artifacts/11208407853/zip > "$RUNNER_TEMP/validated-evidence.zip"
           echo 'a985aa691e58c1e72fabfc9ff5b49a8301add050b88ee75c1eaa2428609a2fa6  '"$RUNNER_TEMP/validated-evidence.zip" | sha256sum --check --strict
           unzip -q "$RUNNER_TEMP/validated-evidence.zip" -d "$RUNNER_TEMP/evidence"
-          cat "$RUNNER_TEMP/evidence/targeted-summary.json"
           test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$EXPECTED_HEAD"
           git apply --check --index "$RUNNER_TEMP/evidence/targeted-repair.patch"
           git apply --index "$RUNNER_TEMP/evidence/targeted-repair.patch"
+          git rm -f --ignore-unmatch scripts/__pycache__/verify-independent-review.cpython-312.pyc
+          cp .github/workflows/ci.yml "$RUNNER_TEMP/validated-ci.yml"
           git fetch --depth=1 origin main:refs/remotes/origin/main
-      - name: Inspect the clean source tree rather than installed dependencies and ephemeral test secrets
+      - name: Inspect clean source without installed dependencies or ephemeral test secrets
         run: |
           set -o pipefail
           {
@@ -48,21 +50,40 @@ jobs:
             python3 scripts/tests/test_deployment_contract.py
             python3 scripts/tests/test_release_host_safety.py
           } 2>&1 | tee "$RUNNER_TEMP/clean-source-validation.log"
-      - name: Commit only the validated patch to PR 142
+      - name: Commit validated application source to PR142 without changing workflows
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$EXPECTED_HEAD"
+          # The Actions token cannot write workflow files. Apply that reviewed change
+          # separately through the authorised GitHub connector, never with elevated runner credentials.
+          git restore --source="$EXPECTED_HEAD" --staged --worktree .github/workflows/ci.yml
           git diff --cached --check
-          git diff --cached --stat
+          if git diff --cached --name-only | grep -Eq '(^|/)(__pycache__/|[^/]+\.pyc$)|^\.github/workflows/'; then
+            echo 'Unexpected generated file or workflow in source-only publication.' >&2
+            exit 1
+          fi
           git config user.name 'lynelk'
           git config user.email '86437305+lynelk@users.noreply.github.com'
           git commit -m 'fix: complete PR142 account payroll and release contracts [skip ci]'
           AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
           echo "::add-mask::$AUTH"
           git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push origin "HEAD:refs/heads/$TARGET_BRANCH"
-          git rev-parse HEAD > "$RUNNER_TEMP/VALIDATED_COMMIT.txt"
-      - name: Record final static evidence without rebuilding or rerunning passed suites
+          git rev-parse HEAD | tee "$RUNNER_TEMP/VALIDATED_COMMIT.txt"
+      - name: Retain validated workflow text for the separately authorised connector update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import base64, json, os
+          from pathlib import Path
+          payload = {'message': 'chore: retain exact validated CI text for connector update [skip ci]',
+                     'branch': 'tools/pr142-local-preflight-20261002',
+                     'content': base64.b64encode((Path(os.environ['RUNNER_TEMP'])/'validated-ci.yml').read_bytes()).decode()}
+          (Path(os.environ['RUNNER_TEMP'])/'ci-content.json').write_text(json.dumps(payload))
+          PY
+          gh api --method PUT /repos/lynelk/OpFin/contents/preflight/validated-ci.txt --input "$RUNNER_TEMP/ci-content.json" --jq '.commit.sha'
+      - name: Record static evidence without rerunning passed application suites
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -70,4 +91,5 @@ jobs:
           path: |
             ${{ runner.temp }}/clean-source-validation.log
             ${{ runner.temp }}/VALIDATED_COMMIT.txt
+            ${{ runner.temp }}/validated-ci.yml
           retention-days: 2
