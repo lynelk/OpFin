@@ -1,0 +1,117 @@
+name: PR142 Web release-candidate follow-up
+on:
+  push:
+    branches: [tools/pr142-local-preflight-20261002]
+    paths: [.github/workflows/pr142-web-rc-followup.yml]
+permissions:
+  contents: read
+jobs:
+  web-follow-up:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CANDIDATE: 4f941220542609f71f3da0361c528e0a6e82ff02
+      FULL_RC_HEAD: 3c814446bc2593fc80ece16304f16324837e4492
+    steps:
+      - name: Check out the exact test-only correction
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 4f941220542609f71f3da0361c528e0a6e82ff02
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Prove all application build inputs are unchanged from the comprehensive run
+        run: |
+          test "$(git rev-parse HEAD)" = "$CANDIDATE"
+          test "$(git diff --name-only "$FULL_RC_HEAD" HEAD)" = 'apps/web/src/lib/ux-simplicity.test.ts'
+          git diff --check "$FULL_RC_HEAD" HEAD
+          git diff "$FULL_RC_HEAD" HEAD
+      - name: Install the same integrity-checked Node toolchain
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSLO https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.xz
+          curl -fsSLO https://nodejs.org/dist/v22.23.2/SHASUMS256.txt
+          grep ' node-v22.23.2-linux-x64.tar.xz$' SHASUMS256.txt | sha256sum --check --strict
+          tar -xJf node-v22.23.2-linux-x64.tar.xz
+          echo "$RUNNER_TEMP/node-v22.23.2-linux-x64/bin" >> "$GITHUB_PATH"
+      - name: Validate the single corrected test before the Web build
+        working-directory: apps/web
+        run: |
+          set -o pipefail
+          npm ci --ignore-scripts --legacy-peer-deps
+          npm audit --audit-level=high
+          npm rebuild
+          npm run test -- src/lib/ux-simplicity.test.ts 2>&1 | tee "$RUNNER_TEMP/web-targeted-test.log"
+      - name: Complete the Web release gate only
+        working-directory: apps/web
+        run: |
+          set -o pipefail
+          npm run typecheck
+          npm install --no-save --legacy-peer-deps typescript@npm:@typescript/typescript6@6.0.2
+          npm run lint
+          npm ci --ignore-scripts --legacy-peer-deps
+          npm rebuild
+          npm run test 2>&1 | tee "$RUNNER_TEMP/web-tests.log"
+          NEXT_PUBLIC_OPFIN_API_URL=https://opfin-production.up.railway.app/api NEXT_PUBLIC_USE_MOCK_API=false OPFIN_ENABLE_DEMO_SHORTCUTS=false npm run build 2>&1 | tee "$RUNNER_TEMP/web-build.log"
+          if NODE_ENV=production NEXT_PUBLIC_USE_MOCK_API=true node -e "import('./next.config.mjs')"; then exit 1; fi
+          if NODE_ENV=production OPFIN_ENABLE_DEMO_SHORTCUTS=true node -e "import('./next.config.mjs')"; then exit 1; fi
+      - name: Verify local production HTTP headers and brand assets
+        working-directory: apps/web
+        run: |
+          set -o pipefail
+          NEXT_PUBLIC_OPFIN_API_URL=https://opfin-production.up.railway.app/api NEXT_PUBLIC_USE_MOCK_API=false OPFIN_ENABLE_DEMO_SHORTCUTS=false npm run start -- --port 3210 > "$RUNNER_TEMP/web-server.log" 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          python3 ../../scripts/verify-web-response.py http://localhost:3210 2>&1 | tee "$RUNNER_TEMP/web-http-verification.log"
+      - name: Record bounded public production health observations without changing production
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from urllib.request import Request, build_opener, HTTPRedirectHandler
+          from urllib.error import HTTPError
+          class NoRedirect(HTTPRedirectHandler):
+              def redirect_request(self, *args, **kwargs): return None
+          opener = build_opener(NoRedirect)
+          records = []
+          for url in ['https://opfin-production.up.railway.app/api/health',
+                      'https://opfin-production.up.railway.app/api/health/ready',
+                      'https://opfin-web-production.up.railway.app/',
+                      'https://opfin-web-production.up.railway.app/account/delete']:
+              row = {'url': url, 'observed_at': datetime.now(timezone.utc).isoformat(),
+                     'candidate_deployed': False}
+              try:
+                  response = opener.open(Request(url, headers={'Accept': 'application/json, text/html', 'User-Agent': 'OpFinReleaseReadiness/1.0'}), timeout=15)
+              except HTTPError as error:
+                  response = error
+              except Exception as error:
+                  row['transport_error'] = type(error).__name__
+                  records.append(row)
+                  continue
+              row['status'] = response.code
+              row['content_type'] = response.headers.get('Content-Type')
+              body = response.read(32768)
+              if '/api/health' in url:
+                  try:
+                      data = json.loads(body)
+                      row['health'] = {key: data[key] for key in ['status', 'success', 'version', 'commit', 'source_commit', 'release'] if key in data}
+                  except (ValueError, TypeError): pass
+              response.close()
+              records.append(row)
+          text = json.dumps(records, indent=2)
+          (Path(os.environ['RUNNER_TEMP'])/'public-production-observations.json').write_text(text)
+          print(text)
+          PY
+      - name: Retain Web follow-up and read-only production evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr142-web-rc-followup
+          path: |
+            ${{ runner.temp }}/web-targeted-test.log
+            ${{ runner.temp }}/web-tests.log
+            ${{ runner.temp }}/web-build.log
+            ${{ runner.temp }}/web-http-verification.log
+            ${{ runner.temp }}/public-production-observations.json
+          retention-days: 3
