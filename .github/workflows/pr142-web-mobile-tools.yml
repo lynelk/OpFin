@@ -28,11 +28,13 @@ jobs:
           grep ' node-v22.23.2-linux-x64.tar.xz$' SHASUMS256.txt | sha256sum --check --strict
           tar -xJf node-v22.23.2-linux-x64.tar.xz
           echo "$RUNNER_TEMP/node-v22.23.2-linux-x64/bin" >> "$GITHUB_PATH"
-      - name: Stage locked development dependencies without running application code
+      - name: Repair advisory-affected locked dependency without major upgrades
         working-directory: apps/web
         run: |
+          npm audit fix --package-lock-only --ignore-scripts --legacy-peer-deps
           npm ci --ignore-scripts --legacy-peer-deps
           npm audit --audit-level=high
+          git diff -- package.json package-lock.json
           tar -czf "$RUNNER_TEMP/pr142-web-deps.tgz" package.json package-lock.json node_modules
       - name: Stage the pinned Dart formatter and mobile analysis dependencies
         run: |
