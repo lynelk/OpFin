@@ -14,10 +14,13 @@ s = s.replace(anchor, r'''            $currency = strtoupper(trim((string) $lock
 old = "'currency' => strtoupper((string) ($data['currency'] ?? 'UGX'))"
 assert s.count(old) == 2
 s = s.replace(old, "'currency' => $currency")
-old = "$agreementReference = trim((string) ($data['provider_agreement_reference'] ?? $locked->provider_agreement_reference ?? ''));"
-assert s.count(old) == 1
-s = s.replace(old, "$agreementReference = trim((string) ($data['provider_agreement_reference'] ?? ''));")
-p.write_text(s)
+start = s.index('    public function recordReservation(')
+end = s.index('    public function submitKeyFacts(', start)
+section = s[start:end]
+old = "($data['provider_agreement_reference'] ?? $locked->provider_agreement_reference ?? '')"
+assert section.count(old) == 1
+section = section.replace(old, "($data['provider_agreement_reference'] ?? '')")
+p.write_text(s[:start] + section + s[end:])
 
 p = Path('apps/api/app/Services/AccountDeletionObligationService.php')
 s = p.read_text()
@@ -26,7 +29,6 @@ s = s.replace("['paid', 'rejected', 'closed', 'withdrawn', 'cancelled']", "['pai
 old = "['premium_due', 'active', 'claim_pending']"
 assert old in s
 s = s.replace(old, "['premium_due', 'premium_pending', 'pending_issuance', 'active', 'claim_pending', 'lapsed']")
-# A terminal policy cannot conceal an unsettled premium or reversal exception.
 marker = "        if (Schema::hasTable('protection_claims')) {"
 assert s.count(marker) == 1
 s = s.replace(marker, r'''        if (Schema::hasTable('protection_premium_payments')) {
@@ -59,7 +61,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Install the protection on databases that ran an earlier payroll migration.
+        // Install protection on databases that ran an earlier payroll migration.
         if (DB::getDriverName() === 'pgsql') {
             DB::unprepared(<<<'SQL'
                 CREATE OR REPLACE FUNCTION opfin_payroll_event_immutable()
@@ -80,7 +82,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Rollback must not disable immutable evidence protection installed by the baseline.
+        // Rollback must not disable immutable evidence protection from the baseline.
     }
 };
 ''')
@@ -95,13 +97,10 @@ methods = r'''    public function test_payroll_currency_is_authoritative_and_mis
         $application = $this->financingApplication($customer);
         $application->product->update(['currency' => 'KES']);
         Sanctum::actingAs($customer);
-        $this->postJson('/api/payroll-deduction/cases', ['financing_application_id' => $application->id, 'currency' => 'UGX'], $this->headers('wrong-currency'))
-            ->assertUnprocessable();
+        $this->postJson('/api/payroll-deduction/cases', ['financing_application_id' => $application->id, 'currency' => 'UGX'], $this->headers('wrong-currency'))->assertUnprocessable();
         $this->assertDatabaseCount('payroll_deduction_cases', 0);
-        $this->postJson('/api/payroll-deduction/cases', ['financing_application_id' => $application->id], $this->headers('authoritative-currency'))
-            ->assertCreated()->assertJsonPath('data.case.currency', 'KES');
-        $this->postJson('/api/payroll-deduction/cases', ['financing_application_id' => $application->id, 'currency' => 'KES'], $this->headers('authoritative-currency'))
-            ->assertCreated()->assertJsonPath('data.case.currency', 'KES');
+        $this->postJson('/api/payroll-deduction/cases', ['financing_application_id' => $application->id], $this->headers('authoritative-currency'))->assertCreated()->assertJsonPath('data.case.currency', 'KES');
+        $this->postJson('/api/payroll-deduction/cases', ['financing_application_id' => $application->id, 'currency' => 'KES'], $this->headers('authoritative-currency'))->assertCreated()->assertJsonPath('data.case.currency', 'KES');
         $this->assertDatabaseCount('payroll_deduction_cases', 1);
     }
 
@@ -188,8 +187,8 @@ methods = r'''    public function test_nonterminal_protection_processing_blocks_
 '''
 p.write_text(s.replace(marker, methods + marker))
 
-addition = '''\n\n### Final review corrections\n\nPayroll currency is copied from the authoritative financing product; client-supplied mismatches are rejected. Positive reservation confirmation requires the operations caller to supply the agreement reference independently, not inherit a customer-declared reference. All nonterminal premium processing and reversal exceptions block account deletion, including when the policy itself is cancelled. Fully reversed legacy loans and declined claims are terminal for deletion checks, without deleting their required history. The forward payroll migration installs immutable-event protection on databases that ran an earlier schema.\n'''
+addition = '''\n\n### Final review corrections\n\nPayroll currency is copied from the authoritative financing product; client-supplied mismatches are rejected. Positive reservation confirmation requires the operations caller to supply the agreement reference independently, not inherit a customer-declared reference. Nonterminal premium processing and reversal exceptions block account deletion, including when the policy itself is cancelled. Fully reversed legacy loans and declined claims are terminal for deletion checks, without deleting their required history. The forward payroll migration installs immutable-event protection on databases that ran an earlier schema.\n'''
 for rel in ['apps/api/docs/api/frontend-backend-contract.md', 'apps/api/docs/api/ACCOUNT_AND_DATA_DELETION.md', 'apps/api/docs/api/PAYROLL_DEDUCTION.md', 'docs/releases/2026-10-02-pr142-release-acceptance.md']:
     p = Path(rel)
-    p.write_text(p.read_text().rstrip() + addition)
-print('Reviewed currency, agreement provenance, terminal-status and premium-finality fixes prepared.')
+    p.write_text((p.read_text().rstrip() + addition).rstrip() + '\n')
+print('Reviewed currency, agreement provenance, terminal-state, premium-finality and forward-migration corrections prepared.')
