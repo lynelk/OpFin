@@ -1,0 +1,57 @@
+name: PR142 web and Dart offline tools
+on:
+  push:
+    branches: [tools/pr142-local-preflight-20261002]
+    paths: [.github/workflows/pr142-web-mobile-tools.yml]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the inspected candidate without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 9f46dcd545089c75fcba84946587871c882046d7
+          persist-credentials: false
+      - name: Stage reviewed web dependency update
+        run: |
+          git fetch --depth=1 origin 76fa48da9a7060d6c49b99ffb1d4c64d8595a358
+          git show FETCH_HEAD:apps/web/package.json > apps/web/package.json
+          git show FETCH_HEAD:apps/web/package-lock.json > apps/web/package-lock.json
+      - name: Install integrity-checked Node 22
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSLO https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.xz
+          curl -fsSLO https://nodejs.org/dist/v22.23.2/SHASUMS256.txt
+          grep ' node-v22.23.2-linux-x64.tar.xz$' SHASUMS256.txt | sha256sum --check --strict
+          tar -xJf node-v22.23.2-linux-x64.tar.xz
+          echo "$RUNNER_TEMP/node-v22.23.2-linux-x64/bin" >> "$GITHUB_PATH"
+      - name: Stage locked development dependencies without running application code
+        working-directory: apps/web
+        run: |
+          npm ci --ignore-scripts --legacy-peer-deps
+          npm audit --audit-level=high
+          tar -czf "$RUNNER_TEMP/pr142-web-deps.tgz" package.json package-lock.json node_modules
+      - name: Stage the pinned Dart formatter and mobile analysis dependencies
+        run: |
+          git clone --depth 1 --branch 3.47.1 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          export PATH="$RUNNER_TEMP/flutter/bin:$PATH"
+          export PUB_CACHE="$RUNNER_TEMP/pub-cache"
+          cd apps/client
+          flutter pub get
+          git diff --exit-code -- pubspec.lock
+          cp .dart_tool/package_config.json "$RUNNER_TEMP/package_config.json"
+          cd "$RUNNER_TEMP"
+          tar -czf pr142-dart-tools.tgz flutter pub-cache package_config.json
+      - name: Retain local preflight inputs briefly
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr142-web-mobile-tools
+          path: |
+            ${{ runner.temp }}/pr142-web-deps.tgz
+            ${{ runner.temp }}/pr142-dart-tools.tgz
+            ${{ runner.temp }}/node-v22.23.2-linux-x64.tar.xz
+          retention-days: 1
+          if-no-files-found: error
