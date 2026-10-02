@@ -22,3 +22,7 @@ The iOS manifest records required reasons for app-private file timestamps and pr
 ## External activation gates
 
 Official PDMS machine-interface specification, credentials/certificates, callback/authentication requirements and certification remain required before activation. Live PDMS remains fail-closed. Genuine lender/insurer/payment/KYC/CRB/regulatory authority, independent financial review, Apple/Google/Huawei production signing and store submission access must be supplied by authorised owners. Never enable financial production merely because source code compiles.
+
+### Final review corrections
+
+Payroll currency is copied from the authoritative financing product; client-supplied mismatches are rejected. Positive reservation confirmation requires the operations caller to supply the agreement reference independently, not inherit a customer-declared reference. Nonterminal premium processing and reversal exceptions block account deletion, including when the policy itself is cancelled. Fully reversed legacy loans and declined claims are terminal for deletion checks, without deleting their required history. The forward payroll migration installs immutable-event protection on databases that ran an earlier schema.

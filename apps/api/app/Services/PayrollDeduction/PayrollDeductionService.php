@@ -54,6 +54,12 @@ class PayrollDeductionService
                 throw new InvalidArgumentException('Payroll deduction requires a submitted salary-finance application.');
             }
 
+            $currency = strtoupper(trim((string) $lockedApplication->product->currency));
+            if (! preg_match('/^[A-Z]{3}$/', $currency)
+                || (isset($data['currency']) && strtoupper(trim((string) $data['currency'])) !== $currency)) {
+                throw new InvalidArgumentException('Payroll currency must match the financing product currency.');
+            }
+
             $instructionHash = $this->instructionHash('create_case', [
                 'financing_application_id' => (int) $lockedApplication->id,
                 'scheme' => $data['scheme'] ?? 'government_pdms',
@@ -63,7 +69,7 @@ class PayrollDeductionService
                 'employment_reference_hash' => isset($data['employment_reference'])
                     ? hash('sha256', trim((string) $data['employment_reference']))
                     : null,
-                'currency' => strtoupper((string) ($data['currency'] ?? 'UGX')),
+                'currency' => $currency,
             ]);
 
             $existing = PayrollDeductionCase::where('financing_application_id', $lockedApplication->id)->first();
@@ -97,7 +103,7 @@ class PayrollDeductionService
                     : null,
                 'status' => 'affordability_pending',
                 'affordability_status' => 'pending',
-                'currency' => strtoupper((string) ($data['currency'] ?? 'UGX')),
+                'currency' => $currency,
             ]);
 
             $this->recordEvent(
@@ -252,7 +258,7 @@ class PayrollDeductionService
                     (string) ($data['reservation_reference'] ?? $locked->reservation_reference ?? '')
                 );
                 $agreementReference = trim(
-                    (string) ($data['provider_agreement_reference'] ?? $locked->provider_agreement_reference ?? '')
+                    (string) ($data['provider_agreement_reference'] ?? '')
                 );
 
                 if ($accepted && ! $locked->undertaking_consent_record_id) {

@@ -386,3 +386,7 @@ Closure checks include canonical financing arrangements, compatibility loans, Es
 Optional deletion categories are `location_context`, `financial_planning`, `linked_accounts`, `household_and_microbusiness`, and `profile_preferences`. Location deletion is restricted to the requester's optional personal discovery context; it cannot erase another member's data or regulated asset/claim evidence. Required accounting, KYC/AML, credit reporting, settlement, security, consent and audit evidence are retained.
 
 Partner source attribution is the separately reviewed `financial_intent_source_platform` of the partner account. Existing accounts are not backfilled with invented provenance. The existing independent partner approval workflow may configure the permitted source. `ALL_SUITABLE` does not waive valid Sharia approval for Islamic products.
+
+### Final review corrections
+
+Payroll currency is copied from the authoritative financing product; client-supplied mismatches are rejected. Positive reservation confirmation requires the operations caller to supply the agreement reference independently, not inherit a customer-declared reference. Nonterminal premium processing and reversal exceptions block account deletion, including when the policy itself is cancelled. Fully reversed legacy loans and declined claims are terminal for deletion checks, without deleting their required history. The forward payroll migration installs immutable-event protection on databases that ran an earlier schema.

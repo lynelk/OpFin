@@ -92,3 +92,7 @@ Live PDMS activation requires an official machine-interface specification and pr
 ## Release-candidate contract update
 
 Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/frontend-backend-contract.md`. Full deletion is immediately rejected while obligations remain; optional deletion keeps the account. Payroll undertaking and reservation are atomic and case-bound. External reservation release is evidenced before closure. No production activation is implied.
+
+### Final review corrections
+
+Payroll currency is copied from the authoritative financing product; client-supplied mismatches are rejected. Positive reservation confirmation requires the operations caller to supply the agreement reference independently, not inherit a customer-declared reference. Nonterminal premium processing and reversal exceptions block account deletion, including when the policy itself is cancelled. Fully reversed legacy loans and declined claims are terminal for deletion checks, without deleting their required history. The forward payroll migration installs immutable-event protection on databases that ran an earlier schema.

@@ -372,6 +372,53 @@ class PayrollDeductionWorkflowTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $customer->id, 'deleted_at' => null]);
     }
 
+    public function test_payroll_currency_is_authoritative_and_mismatches_are_rejected(): void
+    {
+        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $application = $this->financingApplication($customer);
+        $application->product->update(['currency' => 'KES']);
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/payroll-deduction/cases', ['financing_application_id' => $application->id, 'currency' => 'UGX'], $this->headers('wrong-currency'))->assertUnprocessable();
+        $this->assertDatabaseCount('payroll_deduction_cases', 0);
+        $this->postJson('/api/payroll-deduction/cases', ['financing_application_id' => $application->id], $this->headers('authoritative-currency'))->assertCreated()->assertJsonPath('data.case.currency', 'KES');
+        $this->postJson('/api/payroll-deduction/cases', ['financing_application_id' => $application->id, 'currency' => 'KES'], $this->headers('authoritative-currency'))->assertCreated()->assertJsonPath('data.case.currency', 'KES');
+        $this->assertDatabaseCount('payroll_deduction_cases', 1);
+    }
+
+    public function test_customer_agreement_reference_cannot_be_promoted_to_confirmed_provider_evidence(): void
+    {
+        [$case, $customer, $operations] = $this->affordableCase();
+        Sanctum::actingAs($customer);
+        $this->postJson('/api/payroll-deduction/cases/'.$case['id'].'/undertaking', [
+            'authorised' => true, 'requested_deduction_minor' => 350000,
+            'provider_agreement_reference' => 'CUSTOMER-DECLARED-ONLY',
+        ], $this->headers('declared-agreement'))->assertOk();
+        Sanctum::actingAs($operations);
+        $this->postJson('/api/operations/payroll-deduction/cases/'.$case['id'].'/reservation', [
+            'reserved' => true, 'reservation_reference' => 'PROVIDER-RESERVATION',
+        ], $this->headers('missing-verified-agreement'))->assertUnprocessable();
+        $this->assertDatabaseHas('payroll_deduction_cases', ['id' => $case['id'], 'status' => 'reservation_pending']);
+        $this->postJson('/api/operations/payroll-deduction/cases/'.$case['id'].'/reservation', [
+            'reserved' => true, 'reservation_reference' => 'PROVIDER-RESERVATION', 'provider_agreement_reference' => 'PROVIDER-AGREEMENT',
+        ], $this->headers('verified-agreement'))->assertOk()->assertJsonPath('data.case.status', 'reserved');
+    }
+
+    public function test_forward_migration_restores_event_protection_on_existing_payroll_database(): void
+    {
+        [$caseId] = $this->caseAtPayrollSubmission();
+        if (DB::getDriverName() === 'pgsql') {
+            DB::unprepared('DROP TRIGGER IF EXISTS payroll_deduction_events_immutable ON payroll_deduction_events');
+        } else {
+            DB::unprepared('DROP TRIGGER IF EXISTS payroll_deduction_events_immutable_update');
+            DB::unprepared('DROP TRIGGER IF EXISTS payroll_deduction_events_immutable_delete');
+        }
+        $migration = require database_path('migrations/2026_10_02_000300_upgrade_payroll_event_protection.php');
+        $migration->up();
+        $migration->up();
+        $this->expectException(QueryException::class);
+        DB::table('payroll_deduction_events')->where('payroll_deduction_case_id', $caseId)->update(['event_type' => 'tampered']);
+    }
+
     private function financingApplication(User $user): FinancingApplication
     {
         $spaceId = DB::table('financial_spaces')->insertGetId([

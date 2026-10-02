@@ -5,6 +5,10 @@ namespace Tests\Feature;
 use App\Models\CreditProfile;
 use App\Models\CustomerPhoneNumber;
 use App\Models\CustomerWallet;
+use App\Models\ProtectionClaim;
+use App\Models\ProtectionPolicy;
+use App\Models\ProtectionPremiumPayment;
+use App\Models\ProtectionProduct;
 use App\Models\User;
 use App\Services\AppStoreCreditPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -280,6 +284,45 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
         $this->from('/account/delete')->delete('/account/delete', ['phone' => $user->phone, 'pin' => '000000', 'confirmation' => 'DELETE'])
             ->assertRedirect('/account/delete')->assertSessionHas('error');
+    }
+
+    public function test_nonterminal_protection_processing_blocks_deletion_even_after_policy_cancellation(): void
+    {
+        $user = User::factory()->create(['role' => User::ROLE_CUSTOMER, 'password' => '482951']);
+        $product = ProtectionProduct::create([
+            'code' => 'DELETION-PREMIUM', 'name' => 'Test protection', 'insurer_name' => 'Recorded insurer',
+            'country_code' => 'UG', 'currency' => 'UGX', 'product_type' => 'funeral', 'status' => 'draft',
+            'premium_amount_minor' => 1000, 'premium_frequency' => 'monthly', 'disclosure_payload' => [],
+        ]);
+        $policy = ProtectionPolicy::create([
+            'protection_product_id' => $product->id, 'user_id' => $user->id, 'policy_reference' => 'POLICY-PENDING',
+            'status' => 'premium_pending', 'premium_amount_minor' => 1000, 'premium_frequency' => 'monthly',
+            'disclosure_hash' => str_repeat('a', 64), 'enrolled_at' => now(),
+        ]);
+        Sanctum::actingAs($user);
+        foreach (['premium_pending', 'pending_issuance'] as $status) {
+            $policy->update(['status' => $status]);
+            $this->getJson('/api/account/deletion-readiness')->assertOk()->assertJsonPath('data.can_delete_account', false);
+        }
+        $policy->update(['status' => 'cancelled']);
+        $payment = ProtectionPremiumPayment::create([
+            'protection_policy_id' => $policy->id, 'user_id' => $user->id, 'payment_reference' => 'PREMIUM-UNSETTLED',
+            'idempotency_key' => 'premium-deletion-boundary', 'status' => 'collected_pending_partner',
+            'amount_minor' => 1000, 'currency' => 'UGX', 'requested_at' => now(),
+        ]);
+        foreach (['collection_pending', 'collected_pending_partner', 'reversal_exception'] as $status) {
+            $payment->update(['status' => $status]);
+            $this->deleteJson('/api/account', ['pin' => '482951', 'confirmation' => 'DELETE'])->assertStatus(409)
+                ->assertJsonPath('data.active_obligations.0.code', 'protection_premium_pending');
+        }
+        $payment->update(['status' => 'reversed']);
+        $this->getJson('/api/account/deletion-readiness')->assertOk()->assertJsonPath('data.can_delete_account', true);
+        ProtectionClaim::create([
+            'protection_policy_id' => $policy->id, 'user_id' => $user->id, 'claim_reference' => 'DECLINED-CLAIM',
+            'status' => 'declined', 'incident_date' => now()->toDateString(), 'category' => 'test',
+            'description' => 'Resolved test claim', 'submitted_at' => now(), 'resolved_at' => now(),
+        ]);
+        $this->getJson('/api/account/deletion-readiness')->assertOk()->assertJsonPath('data.can_delete_account', true);
     }
 
     public function test_wrong_password_cannot_delete_account(): void

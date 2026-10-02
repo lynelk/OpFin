@@ -37,7 +37,7 @@ class AccountDeletionObligationService
 
         $query = DB::table('loans as loans')
             ->where('loans.user_id', $userId)
-            ->whereNotIn('loans.status', ['Cleared', 'Cancelled', 'Rejected']);
+            ->whereNotIn('loans.status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed']);
 
         if (Schema::hasTable('institutions')) {
             $query
@@ -108,7 +108,7 @@ class AccountDeletionObligationService
             $legacyType = strtolower((string) ($row->legacy_type ?? ''));
             if (in_array($legacyType, ['loan', 'legacy_loan', 'app\\models\\loan'], true)
                 && $row->legacy_id && DB::table('loans')->where('id', $row->legacy_id)->where('user_id', $userId)
-                    ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected'])->exists()) {
+                    ->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected', 'Reversed'])->exists()) {
                 continue;
             }
             $item = $this->item('financing_arrangement', 'Financing arrangement still open', $row->reference,
@@ -425,7 +425,7 @@ class AccountDeletionObligationService
         if (Schema::hasTable('protection_policies')) {
             $query = DB::table('protection_policies as policies')
                 ->where('policies.user_id', $userId)
-                ->whereIn('policies.status', ['premium_due', 'active', 'claim_pending']);
+                ->whereIn('policies.status', ['premium_due', 'premium_pending', 'pending_issuance', 'active', 'claim_pending', 'lapsed']);
 
             if (Schema::hasTable('protection_products')) {
                 $query->leftJoin(
@@ -478,10 +478,28 @@ class AccountDeletionObligationService
             }
         }
 
+        if (Schema::hasTable('protection_premium_payments')) {
+            foreach (DB::table('protection_premium_payments as payments')
+                ->join('protection_policies as policies', 'policies.id', '=', 'payments.protection_policy_id')
+                ->join('protection_products as products', 'products.id', '=', 'policies.protection_product_id')
+                ->leftJoin('institutions as institutions', 'institutions.id', '=', 'payments.institution_id')
+                ->where('payments.user_id', $userId)
+                ->whereNotIn('payments.status', ['confirmed', 'failed', 'reversed', 'cancelled'])
+                ->select('payments.*', 'products.insurer_name', 'institutions.name as provider_name',
+                    'institutions.phone as provider_phone', 'institutions.email as provider_email', 'institutions.address as provider_address')
+                ->get() as $payment) {
+                $items[] = $this->item('protection_premium_pending', 'Protection premium or reversal still requires finality',
+                    $payment->payment_reference, $payment->status, (int) $payment->amount_minor,
+                    $payment->currency, $payment->coverage_period_end,
+                    $this->contact($payment->provider_name ?? $payment->insurer_name ?? 'Insurance partner',
+                        $payment->provider_phone, $payment->provider_email, $payment->provider_address));
+            }
+        }
+
         if (Schema::hasTable('protection_claims')) {
             foreach (DB::table('protection_claims')
                 ->where('user_id', $userId)
-                ->whereNotIn('status', ['paid', 'rejected', 'closed', 'withdrawn', 'cancelled'])
+                ->whereNotIn('status', ['paid', 'declined', 'rejected', 'closed', 'withdrawn', 'cancelled'])
                 ->get() as $claim) {
                 $items[] = $this->item(
                     'protection_claim_pending',
