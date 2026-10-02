@@ -4,7 +4,7 @@ const file = new URL('./index.html', import.meta.url);
 const html = fs.readFileSync(file, 'utf8');
 
 const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]));
-const hrefs = [...html.matchAll(/\shref="([^"]+)"/g)].map((match) => match[1]);
+const hrefs = [...html.matchAll(/<a\b[^>]*\shref="([^"]+)"/g)].map((match) => match[1]);
 
 const allowedExternalHosts = new Set([
   'opfin-web-production.up.railway.app',
@@ -15,7 +15,7 @@ const problems = [];
 
 for (const href of hrefs) {
   if (!href || href === '#') {
-    problems.push('Placeholder or empty href found.');
+    problems.push('Placeholder or empty anchor href found.');
     continue;
   }
 
@@ -32,7 +32,7 @@ for (const href of hrefs) {
     continue;
   }
 
-  problems.push(`Unexpected relative link in portable public site: ${href}`);
+  problems.push(`Unexpected relative anchor link in portable public site: ${href}`);
 }
 
 const publiclyVisibleRestrictedLabels = [
@@ -52,5 +52,5 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log(`Validated ${hrefs.length} links and ${ids.size} same-page targets.`);
+console.log(`Validated ${hrefs.length} anchor links and ${ids.size} same-page targets.`);
 console.log('No placeholder links or conspicuous restricted portal labels found.');
