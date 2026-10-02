@@ -27,11 +27,14 @@ jobs:
       EXPECTED_HEAD: d036967fc5f5c0b768fccba0e77b035ed2c893fb
       TARGET_BRANCH: feature/embedded-payroll-deduction
     steps:
-      - name: Read staged repair scripts without credentials
+      - name: Read current repair scripts without credentials and record their exact revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: tools/pr142-local-preflight-20261002
           path: repair-tools
           persist-credentials: false
+      - name: Record the tools revision used by this targeted attempt
+        run: git -C repair-tools rev-parse HEAD | tee "$RUNNER_TEMP/TOOLS_COMMIT.txt"
       - name: Check out the exact PR candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -39,78 +42,16 @@ jobs:
           path: candidate
           fetch-depth: 1
           persist-credentials: false
-      - name: Apply the reviewed repair batch only
+      - name: Apply the complete known repair batch
         working-directory: candidate
-        run: |
-          test "$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$EXPECTED_HEAD"
-          git fetch --depth=1 origin main:refs/remotes/origin/main
-          for script in account_repair payroll_repair partner_and_compatibility_repair regression_tests targeted_followup client_repair web_repair release_contracts; do
-            python3 "../repair-tools/preflight/$script.py"
-          done
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('apps/api/scripts/run-tests.sh')
-          s = p.read_text()
-          anchor = 'CPAY_ENVIRONMENT=sandbox '
-          assert anchor in s
-          flags = ['OPFIN_REQUIRE_FUNDING_POOL_ASSIGNMENT=false', 'OPFIN_REQUIRE_REGULATED_CREDIT_DISCLOSURE=false', 'OPFIN_EFRIS_REQUIRED=false', 'CITO_FINANCIAL_DATA_CERTIFIED=false']
-          s = s.replace(anchor, ''.join(flag + ' \\\n' for flag in flags) + anchor)
-          p.write_text(s)
-          PY
-          git diff --check
-          python3 scripts/verify-pr142-release-contract.py
-      - name: Install isolated PHP dependencies without incompatible Xdebug
-        working-directory: candidate/apps/api
-        run: |
-          sudo phpdismod xdebug 2>/dev/null || true
-          php -r 'if (extension_loaded("xdebug")) { fwrite(STDERR, "Xdebug must be disabled for this runtime.\n"); exit(1); }'
-          php -v
-          php -r 'if (!extension_loaded("pdo_pgsql")) exit(1);'
-          composer install --prefer-dist --no-progress --no-interaction
-          cp .env.example .env
-          php artisan key:generate
-      - name: Format and syntax-check all candidate PHP changes
+        run: bash ../repair-tools/preflight/validate.sh apply
+      - name: Run targeted API regressions and changed-file formatting
         working-directory: candidate
-        run: |
-          git add --intent-to-add apps/api
-          git diff --name-only --diff-filter=ACMR -z origin/main -- 'apps/api/**/*.php' > "$RUNNER_TEMP/changed-php"
-          mapfile -d '' -t files < "$RUNNER_TEMP/changed-php"
-          for file in "${files[@]}"; do php -l "$file"; done
-          cd apps/api
-          files=("${files[@]#apps/api/}")
-          ./vendor/bin/pint "${files[@]}"
-          ./vendor/bin/pint --test "${files[@]}"
-      - name: Targeted financial regression validation only
-        working-directory: candidate/apps/api
-        run: |
-          set -o pipefail
-          sh scripts/run-tests.sh --filter='AccountDeletionAndAppStorePolicyTest|EssentialsDurableCollectionsTest|PartnerFinancialIntentWorkflowTest|PayrollDeductionWorkflowTest|ApiSecurityTest|BackendCheckpointTest|ClubAccountingReviewTest|ClubAccountingTest|EssentialsFinanceTest|EssentialsSpaceAndClosureTest|FinancialSpaceStatementsTest|LaunchCustomerJourneyTest|LaunchSafetyRegressionTest|MobileMoneyAdapterTest|ProductionReadinessApiTest|IntegratedFinancingFoundationTest|PostMergeFinancialHotfixTest' 2>&1 | tee "$RUNNER_TEMP/targeted-api.log"
+        run: bash ../repair-tools/preflight/validate.sh api
       - name: Verify database-sensitive boundaries on ephemeral PostgreSQL
-        working-directory: candidate/apps/api
-        env:
-          APP_ENV: testing
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: '5432'
-          DB_DATABASE: opfin_test
-          DB_USERNAME: opfin_test
-          DB_PASSWORD: ephemeral_validation_only
-          MAIL_MAILER: array
-          CACHE_STORE: array
-          SESSION_DRIVER: array
-          QUEUE_CONNECTION: sync
-          OPFIN_REQUIRE_FUNDING_POOL_ASSIGNMENT: 'false'
-          OPFIN_REQUIRE_REGULATED_CREDIT_DISCLOSURE: 'false'
-          OPFIN_EFRIS_REQUIRED: 'false'
-          CITO_FINANCIAL_DATA_CERTIFIED: 'false'
-          CPAY_ENVIRONMENT: sandbox
-          CPAY_COLLECTION_MODE: sandbox
-          CPAY_BILLER_MODE: sandbox
-          CPAY_MOCK_MODE: 'true'
-        run: |
-          set -o pipefail
-          php artisan test --filter='PayrollDeductionWorkflowTest|PartnerFinancialIntentWorkflowTest|AccountDeletionAndAppStorePolicyTest|PostgresReleaseRegressionTest' 2>&1 | tee "$RUNNER_TEMP/targeted-postgres.log"
-      - name: Reuse already-audited offline web and Dart tools
+        working-directory: candidate
+        run: bash ../repair-tools/preflight/validate.sh postgres
+      - name: Reuse previously prepared web and Dart tools without another dependency install
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -122,39 +63,18 @@ jobs:
           echo "$RUNNER_TEMP/node-v22.23.2-linux-x64/bin" >> "$GITHUB_PATH"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
           echo "PUB_CACHE=$RUNNER_TEMP/pub-cache" >> "$GITHUB_ENV"
-          cd candidate
-          git diff -- apps/web/package.json
-          git diff --numstat -- apps/web/package-lock.json
-      - name: Flutter analysis and targeted contract tests
-        working-directory: candidate/apps/client
-        run: |
-          set -o pipefail
-          flutter pub get --offline
-          git diff --exit-code -- pubspec.lock
-          git add --intent-to-add lib test
-          git diff --name-only --diff-filter=ACMR origin/main -- lib test | sed 's#^apps/client/##' > "$RUNNER_TEMP/changed-dart"
-          mapfile -t dart_files < "$RUNNER_TEMP/changed-dart"
-          dart format "${dart_files[@]}"
-          flutter analyze --no-pub 2>&1 | tee "$RUNNER_TEMP/targeted-flutter-analysis.log"
-          flutter test --no-pub test/payroll_instruction_client_test.dart test/distribution_channel_test.dart 2>&1 | tee "$RUNNER_TEMP/targeted-flutter-tests.log"
-      - name: Web typecheck and targeted deletion contracts
-        working-directory: candidate/apps/web
-        run: |
-          set -o pipefail
-          npm run typecheck 2>&1 | tee "$RUNNER_TEMP/targeted-web-typecheck.log"
-          npm run test -- src/lib/api/account.test.ts 2>&1 | tee "$RUNNER_TEMP/targeted-web-tests.log"
-      - name: Verify current documentation and deployment static contracts
+          git -C candidate diff -- apps/web/package.json
+          git -C candidate diff --numstat -- apps/web/package-lock.json
+      - name: Check Flutter analysis and new financial contracts
         working-directory: candidate
-        run: |
-          python3 scripts/verify-pr142-release-contract.py
-          python3 scripts/verify-documentation-drift.py --base origin/main
-          python3 scripts/verify-publication-readiness.py
-          sh scripts/verify-layout.sh
-          python3 scripts/verify-security-controls.py
-          python3 scripts/tests/test_deployment_contract.py
-          python3 scripts/tests/test_release_host_safety.py
-          git diff --check
-      - name: Publish validated repair batch to PR branch only
+        run: bash ../repair-tools/preflight/validate.sh client
+      - name: Check Web types and account-deletion contracts
+        working-directory: candidate
+        run: bash ../repair-tools/preflight/validate.sh web
+      - name: Verify static release and documentation contracts
+        working-directory: candidate
+        run: bash ../repair-tools/preflight/validate.sh static
+      - name: Publish validated code to PR branch only
         working-directory: candidate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -170,20 +90,22 @@ jobs:
           echo "::add-mask::$AUTH"
           git -c "http.extraheader=AUTHORIZATION: basic $AUTH" push origin "HEAD:refs/heads/$TARGET_BRANCH"
           git rev-parse HEAD | tee "$RUNNER_TEMP/REPAIR_COMMIT.txt"
-      - name: Preserve diagnostics and patch without environment data
+      - name: Preserve diagnostics without application environment data
         if: always()
         working-directory: candidate
         run: |
           git add --intent-to-add apps/api apps/client apps/web docs scripts
           git diff --binary "$EXPECTED_HEAD" -- apps/api apps/client apps/web docs scripts .github/workflows/ci.yml > "$RUNNER_TEMP/targeted-repair.patch"
           python3 - <<'PY'
-          import os, re
+          import os, re, json
           from pathlib import Path
           root = Path(os.environ['RUNNER_TEMP'])
+          summary = {}
           for p in root.glob('targeted-*.log'):
-              print('\n===', p.name, '===')
               lines = re.sub(r'\x1b\[[0-9;]*m', '', p.read_text(errors='replace')).splitlines()
-              for line in lines[-40:]: print(line)
+              summary[p.name] = lines[-55:]
+          (root/'targeted-summary.json').write_text(json.dumps(summary, indent=2))
+          print(json.dumps(summary, indent=2))
           PY
       - name: Retain compact repair evidence
         if: always()
@@ -192,7 +114,9 @@ jobs:
           name: pr142-targeted-repair-evidence
           path: |
             ${{ runner.temp }}/targeted-*.log
+            ${{ runner.temp }}/targeted-summary.json
             ${{ runner.temp }}/targeted-repair.patch
             ${{ runner.temp }}/REPAIR_COMMIT.txt
+            ${{ runner.temp }}/TOOLS_COMMIT.txt
           retention-days: 2
           if-no-files-found: warn
