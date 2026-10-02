@@ -1,0 +1,48 @@
+name: PR142 offline validation workspace
+
+on:
+  push:
+    branches: [tools/pr142-local-preflight-20261002]
+    paths: [.github/workflows/pr142-local-preflight.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the inspected candidate without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 9f46dcd545089c75fcba84946587871c882046d7
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Fetch comparison baseline
+        run: |
+          git fetch --depth=1 origin main:refs/remotes/origin/main
+          git fetch --depth=1 origin 8726af645a48e3b9c2d0c858212f141a7ae00b3b
+      - name: Stage locked PHP dependencies for offline local validation
+        working-directory: apps/api
+        env:
+          COMPOSER_NO_INTERACTION: '1'
+        run: |
+          composer install --prefer-dist --no-scripts --no-progress --ignore-platform-reqs
+      - name: Archive source and isolated development dependencies only
+        run: |
+          git config --local --get-regexp 'http\..*extraheader' && exit 1 || true
+          git diff --exit-code
+          git rev-parse HEAD > "$RUNNER_TEMP/SOURCE_COMMIT.txt"
+          tar -czf "$RUNNER_TEMP/pr142-offline-source.tgz" --exclude='./apps/api/.env' --exclude='./apps/api/storage/logs/*' --exclude='./apps/api/storage/framework/cache/*' .
+          sha256sum "$RUNNER_TEMP/pr142-offline-source.tgz" > "$RUNNER_TEMP/SHA256SUMS.txt"
+      - name: Retain offline workspace briefly
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr142-offline-source
+          path: |
+            ${{ runner.temp }}/pr142-offline-source.tgz
+            ${{ runner.temp }}/SOURCE_COMMIT.txt
+            ${{ runner.temp }}/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 1
