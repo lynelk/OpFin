@@ -118,14 +118,24 @@ class SmsService
         ];
     }
 
-    public function queueSms($to, $message)
+    /**
+     * Queue an SMS. Messages that carry a one-time code must pass a redacted
+     * $storedCopy: the stored record is visible to staff and must never hold
+     * the code, so the deliverable text only travels in the encrypted job.
+     */
+    public function queueSms($to, $message, ?string $storedCopy = null)
     {
         $smsMessage = SmsMessage::create([
             'to' => $to,
-            'message' => $message,
+            'message' => $storedCopy ?? $message,
             'status' => 'Pending',
         ]);
 
-        SendSms::dispatch($smsMessage);
+        SendSms::dispatch($smsMessage, $message);
+    }
+
+    public static function redact(string $message, string $secret): string
+    {
+        return str_replace($secret, SmsMessage::REDACTED, $message);
     }
 }

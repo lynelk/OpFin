@@ -82,6 +82,12 @@ The [24 September delivery record](../operations/DELIVERY_EVIDENCE_2026-09-24.md
 | UAT-64 | Partner location network | Partner opens service network | Own permitted service points, not customer pins |
 | UAT-65 | Aggregate geography | Small/large cohorts | Small cohorts suppressed; individual contexts excluded |
 | UAT-66 | Location deletion | Delete eligible account with optional location | Optional personal location removed through governed closure |
+| UAT-67 | Legacy back-office access | Customer, operations user and platform administrator open the API-origin back-office | Customer denied; operations user can read; only a platform administrator creates or edits user records and institution administrators |
+| UAT-68 | Float maker-checker | Record a float top-up, approve it as the same user, then as a different user, then approve again | Stays pending until a different approver acts; only approval changes the Disbursement balance; the repeat approval is refused |
+| UAT-69 | Code redaction | Request a sign-up OTP, a WhatsApp verification code and a guarantor code, then open the stored SMS records | Codes arrive on the phone; stored records show `******` |
+| UAT-70 | Retired credit-bureau calls | Call `POST /api/credit-scores` and `POST /api/validate-nin` | Both return 404; bureau results come only through the governed, consented credit profile |
+| UAT-71 | Staff access review | Sign in with a `staff_pending_review` account, then run `php artisan opfin:legacy-roles` | Sign-in refused with a review message; the account is listed for a recorded decision |
+| UAT-72 | Legacy deletion path | Open `/account/delete` on the API origin | Forwarded to the Web deletion page, which applies the regulated deletion checks |
 
 ## Treasury and Essentials additions
 

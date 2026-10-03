@@ -33,6 +33,16 @@ Institutional progression is profile → required KYB/regulatory evidence → ca
 
 Employer is a Business capability. Approved positive-only enrichment may provide a capped benefit and treats missing/negative information neutrally. Permitted fields must still respect the original minimal-employment-data boundary; do not infer authority to use unrelated disciplinary, attendance or performance records.
 
+## Staff access, float top-ups and SMS records
+
+The legacy back-office on the API origin stays available until the Web back office covers all of its tasks. It now requires a `platform_admin` or `operations` account, and only a `platform_admin` can create or edit user records and institution administrators.
+
+- **New accounts.** Accounts created by staff have no usable password. Ask the account holder to choose **Forgot PIN** and set their own PIN with the one-time code sent to their phone. Never share a PIN, password or code on their behalf.
+- **Staff awaiting review.** Former institution administrators are in the `staff_pending_review` role and cannot sign in. Run `php artisan opfin:legacy-roles` to list them, then record each reviewed decision (operations, support, or no staff access) with a platform administrator.
+- **Float top-ups.** Record the amount and attach the evidence image. The top-up stays **Pending** until a different staff member checks the evidence and selects **Approve**. Only approval changes the Disbursement balance. You cannot approve a top-up you recorded.
+- **SMS records.** One-time codes appear as `******` in stored SMS records. If a customer says a code didn't arrive, ask them to request a new one; staff cannot see or resend a code.
+- **Account deletion.** The API-origin `/account/delete` page forwards to the Web deletion page, which applies the regulated deletion checks.
+
 ## Programmes and partner identities
 
 Inclusion & programmes and Programme delivery manage programme/sponsor records, versioned instruments, reviewed translations, follow-ups, enrolment/exit, consent exceptions, dedicated partner identities and aggregate MEL reporting.

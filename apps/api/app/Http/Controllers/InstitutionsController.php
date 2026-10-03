@@ -93,11 +93,13 @@ class InstitutionsController extends Controller
 
             $institution = Institution::findOrFail($request->institution_id);
             app(PlatformCreditRoutingService::class)->assertManager($request->user(), $institution);
+            // Institution administrators have no lender-scoped role yet, so new
+            // ones wait for a platform administrator to grant reviewed access.
             $institution->users()->create([
                 'name' => $request->name,
                 'phone' => $request->phone,
                 'email' => $request->email,
-                'role' => $request->role, // Assuming role is passed in the request
+                'role' => User::ROLE_STAFF_PENDING_REVIEW,
                 'password' => bcrypt($request->password),
             ]);
 
@@ -112,6 +114,7 @@ class InstitutionsController extends Controller
     public function updateAdministrator(Request $request, $id)
     {
         $user = User::findOrFail($id);
+        abort_unless($user->hasRole(User::ROLE_STAFF_PENDING_REVIEW), 403, 'Only institution administrators awaiting review can be changed here.');
         app(PlatformCreditRoutingService::class)->assertManager($request->user(), $user->institution);
 
         $request->validate([
