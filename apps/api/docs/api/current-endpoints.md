@@ -1,7 +1,7 @@
 # Current API endpoints
 
 Status: Current endpoint navigation and contract index  
-Reviewed: 25 September 2026  
+Reviewed: 3 October 2026  
 Language: English (United Kingdom)
 
 The complete domain reference from main `3924a26913f85067a3ac900c78fa80125ca589fc` is preserved without content loss in [Domain endpoints](domain-endpoints.md), including the lender-orchestration additions. This index joins that detailed reference with the [Developer Centre contract](DEVELOPER_INTERFACE.md). Registration, reviewed schema, authorisation, provider activation and financial acceptance are separate states.
@@ -64,6 +64,21 @@ Read [assisted-channel contracts](domain-endpoints.md#9-whatsapp-and-ussd). Call
 ## 10. Admin/operations
 
 Read [administration](domain-endpoints.md#10-adminoperations). Catalogue visibility does not replace target-record authorisation.
+
+### Legacy surface hardening (3 October 2026)
+
+| Change | Path | Contract |
+| --- | --- | --- |
+| Removed | `POST /api/credit-scores`, `POST /api/validate-nin` | Retired legacy credit-bureau and NIN calls that did not bind the subject to the caller or record governed consent. Use the [credit profile](domain-endpoints.md#5-credit-profile) and [KYC](domain-endpoints.md#4-identity-and-consent) contracts. Both paths now return 404. |
+| Changed | Credit-profile bureau (`crb`) component | Reuses a stored bureau score only when it came through a governed route (`CITO_MANAGED`, `DIRECT_PROVIDER`). Results from the retired endpoint are no longer used. |
+| Changed | `POST /api/login` | Returns 403 for accounts in the `staff_pending_review` holding role. |
+| Changed | `POST /api/generate-otp` and other code-bearing SMS | The stored SMS record keeps a redacted copy (`******`). The deliverable text only travels in the encrypted queue job. |
+| Changed | Legacy back-office on the API origin (`/home`, `/users`, `/institutions`, `/loan-products`, `/loan-applications`, `/loans`, `/transactions`, `/accounts`, `/float-management`, `/sms-messages`) | Requires `platform_admin` or `operations`. Creating or editing user records and institution administrators requires `platform_admin`. Changes are written to the audit trail. |
+| Added | `POST /float-management/{floatTopup}/approve` | Float top-ups are recorded as `Pending`. A different staff member approves them, and only approval changes the Disbursement balance. |
+| Removed | `/chats*` | The staff AI chat assistant is retired. Existing chat records are retained unchanged. |
+| Changed | `GET`/`DELETE /account/delete` on the API origin | Forwards (303) to the Web app's `/account/delete`, which uses the regulated `DELETE /api/account` workflow. Returns 404 when `OPFIN_WEB_URL` is not configured. |
+
+`php artisan opfin:legacy-roles` reports legacy role names, how the role migration maps them, and the institution administrators waiting for a reviewed staff role.
 
 ## 11. UMRA digital-lending controls
 

@@ -69,10 +69,8 @@ class GuarantorController extends Controller
             'updated_at' => now(),
         ]);
 
-        $this->smsService->queueSms(
-            (string) $request->input('phone'),
-            'OpFin: You were named as a guarantor contact for loan request '.$application->id.'. Confirmation code: '.$code.'. Do not share this code with the borrower. If you did not agree, ignore it and contact OpFin.'
-        );
+        $message = 'OpFin: You were named as a guarantor contact for loan request '.$application->id.'. Confirmation code: '.$code.'. Do not share this code with the borrower. If you did not agree, ignore it and contact OpFin.';
+        $this->smsService->queueSms((string) $request->input('phone'), $message, SmsService::redact($message, $code));
 
         $this->auditLogger->record('credit.guarantor.invited', $request->user(), $application, [
             'guarantor_contact_id' => $id,

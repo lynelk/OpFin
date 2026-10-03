@@ -12,3 +12,11 @@
 **/ios/Pods/
 **/DerivedData/
 coverage/
+
+# Signing keys and certificates must never enter this public repository.
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+**/key.properties

@@ -120,12 +120,6 @@
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a href="{{ route('chat.index') }}" class="nav-link {{ request()->is('chats*') ? 'active' : '' }}">
-                        <i class="bi bi-chat-dots me-2"></i> Chat
-                    </a>
-                </li>
-
                 {{-- <li class="nav-item">
                     <a href="{{ route('float-management.index') }}"
                         class="nav-link {{ request()->is('float-management*') ? 'active' : '' }}">

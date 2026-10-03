@@ -64,8 +64,13 @@ class ExternalScoringService
             ], ['status' => $fresh->status, 'provider' => $fresh->provider]);
         }
 
+        // Only reuse scores this service obtained through a governed, consented
+        // route. Rows written by the retired /api/credit-scores endpoint hold a
+        // raw bureau payload for an unverified phone number and no route, so
+        // they are not attributable to this customer and must not be reused.
         $legacy = CreditScore::query()
             ->where('user_id', $user->id)
+            ->whereIn('data->route', ['DIRECT_PROVIDER', 'CITO_MANAGED'])
             ->where(function ($query) {
                 $query->whereNull('valid_until')->orWhere('valid_until', '>', now());
             })
