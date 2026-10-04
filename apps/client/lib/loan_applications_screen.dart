@@ -1,7 +1,7 @@
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:opfin/constants.dart';
 import 'package:opfin/loan_repayment_screen.dart';
 import 'package:opfin/services/user_session.dart';
@@ -18,7 +18,7 @@ class LoanApplicationsScreenState extends State<LoanApplicationsScreen> {
   Future<List<dynamic>> fetchLoanApplications() async {
     final userId = await UserSession.getUserId();
     final token = await UserSession.getAccessToken();
-    final response = await http.get(
+    final response = await OpFinHttp.get(
       Uri.parse('$apiUrl/loan-applications/$userId'),
       headers: {
         'Accept': 'application/json',

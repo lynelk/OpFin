@@ -36,16 +36,37 @@ A row may only be `DONE` when every applicable Definition-of-Done gate is eviden
 | OPF-FEAT-0018 | Social Finance | APPROVED | G1/G2/G3 | Sponsored Qard/Zakat/Sadaqah/Waqf records and non-revenue accounting |
 | OPF-FEAT-0019 | Public website consolidation | IN_PROGRESS | WEB | Candidate repository source and claim register established under `sites/opfin-public/`; host/source parity, live-link verification, accessibility/performance acceptance and safe duplicate retirement remain required |
 | OPF-FEAT-0020 | Digital capital extensions | PROPOSED | G0-G10 | Separate approval for each anchoring/tokenisation/stablecoin/transfer capability |
+| OPF-FEAT-0021 | Lightweight & Sponsored Data Governance | IN_PROGRESS | G0/G4/G5/G10 | Client/server byte metering, feature attribution, whitelist manifest, sponsorship state, low-data/offline rules, bounded sync, KYC/upload budgets, operator reconciliation hooks and release data budgets |
+| OPF-FEAT-0022 | Employer HR lifecycle & payroll-linked finance | APPROVED | G1/G4/G5/G6 | Standalone/connected/B2B2C HR modes; employee onboarding/offboarding, leave, suspend/restore/exit, payroll-cycle metadata, deduction instructions, consent/minimisation, retries/audit and employer reporting |
+| OPF-FEAT-0023 | Financial engagement rewards & referrals | APPROVED | G0/G4/G5 | Versioned points/streaks/milestones/referrals, genuine financial benefits, anti-gaming controls, disclosures, accounting/economics and customer acceptance |
+| OPF-FEAT-0024 | Money Autopilot & Financial Shock Centre | APPROVED | G0/G4/G5/G6 | Customer-controlled automation rules, pause/override/recovery, non-credit shock alternatives, consent, execution evidence and interrupted-network behaviour |
 | OPF-LEGAL-0001 | OpFin Master Terms & Conditions | APPROVED | G1 | Versioned legal approval and product mapping |
 | OPF-LEGAL-0002 | OpFin Product Privacy Notice | APPROVED | G1/G4 | Data-flow mapping, approved notice and version evidence |
 | OPF-LEGAL-0003 | Electronic Contracting & Records | APPROVED | G1 | Execution/evidence standard and acceptance implementation |
 | OPF-LEGAL-0004 | Partner Protection Schedule | APPROVED | G1 | Approved partner controls and deviation workflow |
 | OPF-LEGAL-0005 | Legal Product Passport | APPROVED | G1 | Machine-readable activation hard stop and product linkage |
 | OPF-AI-0001 | Automated Decisioning & AI Schedule | APPROVED | G1/G4 | AI role classification, prohibited actions, review and evidence routes |
+| OPF-AI-0002 | AI coaching, explainable intelligence & portfolio optimisation | APPROVED | G1/G4/G5 | Provider abstraction, customer coaching/personalisation, explainable scoring/recommendations, default-risk and portfolio/loan-book intelligence, model/version provenance and human/rules ownership of monetary decisions |
 | OPF-DATA-0001 | Canonical Legal Relationship Record | APPROVED | G1/G4 | Immutable accepted versions, agreements, consents, disputes and retention |
 | OPF-DATA-0002 | Consent & Mandate Registry | APPROVED | G1/G4 | Purpose-specific authority, revocation, runtime validation and audit |
+| OPF-COMP-0001 | Regulatory reporting & CRB dispute/correction operations | APPROVED | G1/G4/G5/G6 | Exact Uganda filing datasets/templates, validation and resubmission, secure submission evidence, CRB reporting/corrections/disputes, complaint/support workflow and auditable operational ownership |
+| OPF-REL-0001 | Multi-store distribution & signed-release acceptance | IN_PROGRESS | G5/G10 | Android signed AAB/APK and Play rollout evidence, iOS signing/TestFlight/App Store Connect acceptance, Huawei/AppGallery non-GMS build/device evidence, versioned release manifest and rollback path |
+| OPF-MGT-0001 | Profitability & operating cadence | APPROVED | G6/G9 | Reconciled revenue/cost/unit-economics/portfolio data, management cadence, actions/owners, profitability trajectory and evidence that decisions use the canonical operating metrics |
 | OPF-QA-0001 | QA Traceability Framework | APPROVED | G5 | Requirement -> code -> test -> evidence -> docs -> release traceability |
 | OPF-TRAIN-0001 | Training Content Lifecycle | APPROVED | G6 | Versioned manuals/videos linked to feature changes and releases |
+
+## Archived-conversation reconciliation — 27 September 2026
+
+A review of prior and archived OpFin discussions was reconciled against the current repository and register. The rows added above capture requirements that were discussed or accepted previously but were not cleanly represented as distinct execution items.
+
+The audit also confirmed several historical requests are **not missing**, because they have deliberately evolved:
+
+- P2P/private loan books are represented by **Participatory Finance** and broader Capital/partner-finance work rather than being restored as a separate legacy P2P architecture.
+- Microbusiness/POS/inventory/purchasing operations belong to **Stolets**; OpFin retains the financial-wellbeing/finance side of microbusiness needs.
+- The customer entry is migrating from **Borrow** to **Finance** under `FIN-010`, preserving legacy route compatibility during transition.
+- Fixed historical product assumptions must not be reintroduced where the current architecture has moved to versioned lender/channel/product policy.
+
+Items with source foundations but without full live acceptance remain tracked through their existing rows and gates, including savings/protection/investments, provider activation, USSD/WhatsApp/device acceptance, club capital/NAV/distributions, regional scale and production recovery.
 
 ## Immediate evidence queue
 
@@ -53,8 +74,11 @@ The following remain the first closure targets:
 
 - **R0:** API/Web candidate build failures.
 - **R1:** Essentials immutable accounting, exact-Space grants, concurrent repayment/collection, open-obligation deletion, pending funding/reversal exposure and capital-mandate usability.
+- **DATA-LIGHT:** complete `OPF-FEAT-0021` and make its budgets/whitelist/sponsorship checks inherited by relevant future work.
 - **FIN-FOUNDATION:** Financial Intent, financing abstractions, Legal Product Passport, Contract Engine, FundingPool and contract-aware accounting.
 - **DOC-CONTINUITY:** same-change updates to APIs, manuals, UAT, legal artefacts and AI knowledge where affected.
+- **WEB-FOUNDATION:** prove actual ChatGPT Sites source-linking/version/recovery capability before cutover.
+- **CONVERSATION-GAPS:** create/advance delivery slices for `OPF-FEAT-0022`, `OPF-FEAT-0023`, `OPF-FEAT-0024`, `OPF-AI-0002`, `OPF-COMP-0001`, `OPF-REL-0001` and `OPF-MGT-0001` without displacing R0/R1.
 - **WEB-FOUNDATION:** candidate canonical source, public-claim register and source-level link validation are now established under `sites/opfin-public/`. Prove actual host source-linking/version/recovery capability, live external links, accessibility/performance and observed deployment before cutover.
 
 ## Change-impact requirement

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/credit_profile_api.dart';
 import 'package:opfin/services/user_session.dart';
@@ -15,7 +15,7 @@ class _WalletsScreenState extends State<WalletsScreen>{
   @override void initState(){super.initState();_wallets=CreditProfileApi.wallets();}
   Future<void> _default(Map<String,dynamic> w) async{
     final token=await UserSession.getAccessToken();
-    final r=await http.patch(Uri.parse('$apiUrl/wallets/${w['id']}/default'),headers:{
+    final r=await OpFinHttp.patch(Uri.parse('$apiUrl/wallets/${w['id']}/default'),headers:{
       'Authorization':'Bearer $token','Accept':'application/json','Content-Type':'application/json'
     },body:jsonEncode({'use_for':'both'}));
     final d=jsonDecode(r.body) as Map<String,dynamic>;

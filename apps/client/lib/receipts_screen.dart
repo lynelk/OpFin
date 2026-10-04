@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
 
@@ -25,7 +25,7 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
 
   Future<List<Map<String, dynamic>>> _load() async {
     final token = await UserSession.getAccessToken();
-    final response = await http.get(
+    final response = await OpFinHttp.get(
       Uri.parse('$apiUrl/receipts'),
       headers: {
         'Authorization': 'Bearer $token',

@@ -716,103 +716,82 @@ class FinancialSpaceStatementsTest extends TestCase
         );
     }
 
-    public function test_legacy_cashbook_fingerprint_deduplicates_exact_replay_without_collapsing_shared_references(): void
+    public function test_cashbook_rejects_keyless_writes_instead_of_guessing_instruction_identity(): void
     {
         $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
         Sanctum::actingAs($owner);
 
         $spaceId = (int) $this->postJson('/api/financial-spaces', [
             'type' => 'investment_club',
-            'name' => 'Legacy Retry Club',
+            'name' => 'Explicit Retry Club',
         ])->assertCreated()->json('data.space.id');
 
         $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
-            'account_name' => 'Legacy Retry Account',
+            'account_name' => 'Explicit Retry Account',
             'account_type' => 'bank',
             'currency' => 'UGX',
         ])->assertCreated()->json('data.account.id');
 
-        $firstPayload = [
+        $this->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
+            [
+                'transaction_reference' => 'GENERIC-BANK-REF',
+                'transaction_type' => 'other',
+                'direction' => 'credit',
+                'amount_minor' => 25000,
+                'description' => 'Legitimate entry',
+                'counterparty_name' => 'Member A',
+                'transaction_date' => '2026-09-04',
+            ],
+        )->assertStatus(422);
+
+        $this->assertDatabaseCount('financial_space_transactions', 0);
+        $this->assertSame(
+            0,
+            (int) FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->current_balance_minor,
+        );
+    }
+
+    public function test_distinct_explicit_keys_preserve_identical_legitimate_cashbook_entries(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($owner);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'investment_club',
+            'name' => 'Identical Entry Club',
+        ])->assertCreated()->json('data.space.id');
+
+        $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'Identical Entry Account',
+            'account_type' => 'bank',
+            'currency' => 'UGX',
+        ])->assertCreated()->json('data.account.id');
+
+        $payload = [
             'transaction_reference' => 'GENERIC-BANK-REF',
             'transaction_type' => 'other',
             'direction' => 'credit',
             'amount_minor' => 25000,
-            'description' => 'First legitimate entry',
+            'description' => 'Two legitimate identical bank rows',
             'counterparty_name' => 'Member A',
             'transaction_date' => '2026-09-04',
         ];
 
-        $first = $this->postJson(
+        $first = $this->withHeader('Idempotency-Key', 'identical-entry-001')->postJson(
             "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
-            $firstPayload,
+            $payload,
         )->assertCreated();
 
-        $replay = $this->postJson(
+        $second = $this->withHeader('Idempotency-Key', 'identical-entry-002')->postJson(
             "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
-            $firstPayload,
-        )->assertCreated();
-
-        $this->assertSame($first->json('data.transaction.id'), $replay->json('data.transaction.id'));
-
-        $secondPayload = $firstPayload;
-        $secondPayload['description'] = 'Second legitimate entry';
-        $secondPayload['counterparty_name'] = 'Member B';
-
-        $second = $this->postJson(
-            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
-            $secondPayload,
+            $payload,
         )->assertCreated();
 
         $this->assertNotSame($first->json('data.transaction.id'), $second->json('data.transaction.id'));
         $this->assertDatabaseCount('financial_space_transactions', 2);
         $this->assertSame(
             50000,
-            (int) FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->current_balance_minor,
-        );
-    }
-
-    public function test_legacy_cashbook_retry_normalises_equivalent_date_representations(): void
-    {
-        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
-        Sanctum::actingAs($owner);
-
-        $spaceId = (int) $this->postJson('/api/financial-spaces', [
-            'type' => 'investment_club',
-            'name' => 'Canonical Date Retry Club',
-        ])->assertCreated()->json('data.space.id');
-
-        $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
-            'account_name' => 'Canonical Date Account',
-            'account_type' => 'bank',
-            'currency' => 'UGX',
-        ])->assertCreated()->json('data.account.id');
-
-        $payload = [
-            'transaction_reference' => 'DATE-RETRY-001',
-            'direction' => 'credit',
-            'amount_minor' => 10000,
-            'description' => 'Equivalent date retry',
-            'transaction_date' => '2026-09-04',
-            'value_date' => '2026-09-05',
-        ];
-
-        $first = $this->postJson(
-            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
-            $payload,
-        )->assertCreated();
-
-        $payload['transaction_date'] = '2026-09-04T00:00:00Z';
-        $payload['value_date'] = '2026-09-05T00:00:00Z';
-
-        $replay = $this->postJson(
-            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
-            $payload,
-        )->assertCreated();
-
-        $this->assertSame($first->json('data.transaction.id'), $replay->json('data.transaction.id'));
-        $this->assertDatabaseCount('financial_space_transactions', 1);
-        $this->assertSame(
-            10000,
             (int) FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->current_balance_minor,
         );
     }

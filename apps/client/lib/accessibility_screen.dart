@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/accessibility/accessibility_state.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
@@ -23,7 +23,7 @@ class _AccessibilityScreenState extends State<AccessibilityScreen>{
       if(token==null||token.isEmpty){
         throw Exception('Secure session is required to sync accessibility preferences.');
       }
-      final response=await http.patch(Uri.parse('$apiUrl/accessibility-preferences'),headers:{
+      final response=await OpFinHttp.patch(Uri.parse('$apiUrl/accessibility-preferences'),headers:{
         'Authorization':'Bearer $token','Accept':'application/json','Content-Type':'application/json'
       },body:jsonEncode({
         'simple_language':_settings.simpleLanguage,'large_text':_settings.largeText,
