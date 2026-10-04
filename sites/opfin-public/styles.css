@@ -14,7 +14,7 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; scroll-padding-top: 96px; }
 body {
   margin: 0;
   background: var(--ivory);
@@ -24,7 +24,7 @@ body {
 }
 a { color: inherit; text-decoration: none; }
 button, a { -webkit-tap-highlight-color: transparent; }
-:focus-visible { outline: 3px solid var(--apricot); outline-offset: 4px; }
+:focus-visible { outline: 3px solid var(--indigo-strong); outline-offset: 4px; }
 .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 100; background: var(--white); padding: 12px 16px; border-radius: 8px; }
 .skip-link:focus { left: 8px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
@@ -192,6 +192,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .pillar-grid p, .audience-grid p, .steps p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
 
 .audience-section { padding-top: 60px; }
+[id] { scroll-margin-top: 96px; }
 .audience-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-top: 34px; }
 .audience-grid article { min-height: 310px; padding: 30px; border-radius: var(--radius); background: var(--white); border: 1px solid var(--line); }
 .audience-grid article:nth-child(2) { background: var(--periwinkle); }
@@ -250,7 +251,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .footer-nav { justify-self: end; display: flex; gap: 20px; flex-wrap: wrap; justify-content: flex-end; }
 .footer-nav a, .footer-legal { color: var(--muted); font-size: 12px; font-weight: 700; }
 .footer-legal { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 20px; }
-.footer-legal > div { display: flex; gap: 18px; flex-wrap: wrap; }
+.footer-legal > div { display: flex; gap: 6px 12px; flex-wrap: wrap; }
+.footer-legal a { min-height: 48px; display: inline-flex; align-items: center; padding: 8px 6px; }
 
 @media (max-width: 1020px) {
   .nav-wrap { grid-template-columns: 1fr auto; }
