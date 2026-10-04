@@ -26,10 +26,15 @@ class ClubAccountingReviewTest extends TestCase
     use RefreshDatabase;
 
     private User $owner;
+
     private User $checker;
+
     private User $member;
+
     private FinancialSpace $space;
+
     private FinancialSpaceTreasuryAccount $treasury;
+
     private ClubBook $book;
 
     protected function setUp(): void
@@ -61,6 +66,7 @@ class ClubAccountingReviewTest extends TestCase
         $service = app(ClubInstructions::class);
         $item = $service->submit($this->book->fresh(), $this->owner, ['type' => $type, 'business_date' => $date,
             'idempotency_key' => (string) Str::uuid(), 'payload' => $payload + ['evidence_reference' => 'SYNTHETIC-'.Str::random(12)]]);
+
         return $service->approve($this->book->fresh(), $item, $this->checker, $item->payload_hash)->result;
     }
 
@@ -74,9 +80,11 @@ class ClubAccountingReviewTest extends TestCase
     private function source(string $direction, int $amount, string $date): int
     {
         Sanctum::actingAs($this->owner);
+
         return (int) $this->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
             'transaction_date' => $date, 'direction' => $direction, 'amount_minor' => $amount,
             'description' => 'Synthetic bank-derived source', 'source_type' => 'bank_import', 'source_reference' => (string) Str::uuid(),
+            'idempotency_key' => (string) Str::uuid(),
         ])->assertCreated()->json('data.transaction.id');
     }
 

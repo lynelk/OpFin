@@ -17,7 +17,8 @@ class CommunityFinanceReadinessServiceTest extends TestCase
         $this->assertSame('Workplace Support Finance', $catalogue['language']['employer_backed_lending']['public_name']);
         $this->assertSame('Member Growth Score', $catalogue['language']['behaviour_scoring']['public_name']);
         $this->assertSame('Member Cooperative Core', $catalogue['language']['sacco_core']['public_name']);
-        $this->assertSame('DORMANT_READY', $catalogue['modules']['member_cooperative_core']['status']);
+        $this->assertSame('DORMANT_READY', $catalogue['modules']['community_growth_circles']['status']);
+        $this->assertSame('LIVE_ENABLED', $catalogue['modules']['member_cooperative_core']['status']);
     }
 
     public function test_readiness_summary_keeps_live_actions_blocked_by_default(): void

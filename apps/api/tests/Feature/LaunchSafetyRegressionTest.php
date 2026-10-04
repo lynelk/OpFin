@@ -32,6 +32,7 @@ class LaunchSafetyRegressionTest extends TestCase
                 'direction' => $direction, 'amount_minor' => $amount,
                 'description' => 'Synthetic historical entry', 'transaction_date' => $date,
                 'transaction_reference' => 'LAUNCH-BASELINE-'.$index,
+                'idempotency_key' => 'launch-baseline-'.$index,
             ])->assertCreated();
             $this->assertSame('2026-09-01', FinancialSpaceTreasuryAccount::findOrFail($account)->balance_as_of->toDateString());
         }
@@ -39,6 +40,7 @@ class LaunchSafetyRegressionTest extends TestCase
         $this->postJson("/api/financial-spaces/{$space}/treasury/accounts/{$account}/transactions", [
             'direction' => 'credit', 'amount_minor' => 1,
             'description' => 'Before baseline must remain invalid', 'transaction_date' => '2026-08-31',
+            'idempotency_key' => 'launch-before-baseline',
         ])->assertUnprocessable();
         $this->assertSame(1150000, FinancialSpaceTreasuryAccount::findOrFail($account)->current_balance_minor);
     }
