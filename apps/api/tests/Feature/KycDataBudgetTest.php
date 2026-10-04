@@ -12,7 +12,6 @@ class KycDataBudgetTest extends TestCase
 {
     use RefreshDatabase;
 
-
     private function fakePng(string $name, int $kilobytes): UploadedFile
     {
         $png = base64_decode(
