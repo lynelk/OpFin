@@ -8,6 +8,15 @@ use Tests\TestCase;
 
 class CommunityFinanceReadinessServiceTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('community_finance.activation.mode', 'dormant');
+        config()->set('community_finance.activation.live_enabled', false);
+        config()->set('community_finance.activation.sacco_core_enabled', false);
+    }
+
     public function test_catalogue_exposes_member_friendly_terms_and_dormant_modules(): void
     {
         $catalogue = (new CommunityFinanceReadinessService)->catalogue();
