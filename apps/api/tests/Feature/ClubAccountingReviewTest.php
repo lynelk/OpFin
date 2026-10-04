@@ -26,10 +26,15 @@ class ClubAccountingReviewTest extends TestCase
     use RefreshDatabase;
 
     private User $owner;
+
     private User $checker;
+
     private User $member;
+
     private FinancialSpace $space;
+
     private FinancialSpaceTreasuryAccount $treasury;
+
     private ClubBook $book;
 
     protected function setUp(): void
