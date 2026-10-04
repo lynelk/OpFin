@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AdminEssentialsController;
+use App\Http\Controllers\Api\AssetRegistryController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CapabilityController;
 use App\Http\Controllers\Api\CpayWebhookController;
@@ -101,6 +102,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/financial-spaces/{space}/credentials', [FinancialSpaceCredentialController::class, 'index']);
     Route::post('/financial-spaces/{space}/credentials', [FinancialSpaceCredentialController::class, 'store']);
     Route::get('/financial-spaces/{space}/protection/products', [ProtectionController::class, 'spaceProducts']);
+    Route::get('/financial-spaces/{space}/asset-passports', [AssetRegistryController::class, 'index']);
+    Route::post('/financial-spaces/{space}/asset-passports', [AssetRegistryController::class, 'register']);
+    Route::get('/financial-spaces/{space}/asset-passports/{asset}', [AssetRegistryController::class, 'show']);
+    Route::post('/financial-spaces/{space}/asset-passports/{asset}/report-stolen', [AssetRegistryController::class, 'reportStolen']);
+    Route::post('/financial-spaces/{space}/asset-passports/{asset}/dispose', [AssetRegistryController::class, 'dispose']);
     Route::get('/financial-spaces/{space}/treasury/accounts', [FinancialSpaceStatementController::class, 'accounts']);
     Route::post('/financial-spaces/{space}/treasury/accounts', [FinancialSpaceStatementController::class, 'createAccount']);
     Route::get('/financial-spaces/{space}/treasury/accounts/{account}/transactions', [FinancialSpaceStatementController::class, 'transactions']);
@@ -288,6 +294,13 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::get('/admin/asset-passports/review-queue', [AssetRegistryController::class, 'reviewQueue']);
+    Route::post('/admin/asset-passports/identifier-check', [AssetRegistryController::class, 'identifierCheck']);
+    Route::post('/admin/asset-passports/{asset}/verify', [AssetRegistryController::class, 'verify']);
+    Route::post('/admin/asset-passports/{asset}/review', [AssetRegistryController::class, 'review']);
+    Route::post('/admin/asset-passports/{asset}/encumbrances', [AssetRegistryController::class, 'encumber']);
+    Route::post('/admin/asset-passports/{asset}/recover', [AssetRegistryController::class, 'recover']);
+    Route::post('/admin/asset-encumbrances/{encumbrance}/release', [AssetRegistryController::class, 'release'])->whereNumber('encumbrance');
     Route::get('/admin/lending-platform', [LendingPlatformController::class, 'index']);
     Route::post('/admin/lending-platform/institutions', [LendingPlatformController::class, 'institution']);
     Route::post('/admin/lending-platform/products', [LendingPlatformController::class, 'product']);

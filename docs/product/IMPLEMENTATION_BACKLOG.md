@@ -162,6 +162,14 @@ These requirements extend the existing backlog.
 - **DEV-006**: SACCO/FI/employer/merchant/API/white-label reuse with strict Space/tenant isolation.
 - **PF-001**: Versioned partner Product Factory for asset/device finance; actual lender/funder/principal and disclosures remain explicit.
 - **PF-002**: Partner APIs/webhooks for quote, application, decision, evidence, supplier settlement, servicing, repayment and status.
+
+Source status, 4 October 2026: the Universal Asset Registry foundation exists in source and is under review, but has no acceptance evidence yet. It covers:
+- CAP-002: shared passport lifecycle with class-specific identity evidence;
+- DEV-001 and AUTO-001: identity validation (IMEI check digit, serial, VIN, chassis, engine number, plate);
+- AST-001: solar, machinery and agricultural classes;
+- DEV-002: duplicate-identifier review, one active lien per asset, and stolen assets refused for new liens.
+
+See the [asset registry contract](../../apps/api/docs/api/ASSET_REGISTRY_CONTRACT.md). Valuation, inspection, protection/warranty, supplier settlement, the Product Factory and the App/Web journeys remain open.
 - **DGT-001**: Provider-neutral cryptographic anchoring of selected agreements and lifecycle events; no customer PII on public chain.
 - **DGT-002**: Approved digital investment interests reconcile to enforceable legal records and the OpFin ledger.
 - **DGT-003**: Stablecoin funding/settlement only through approved jurisdiction, VASP/custodian, AML, custody, FX and accounting controls.

@@ -131,3 +131,15 @@ Automated regression results and remaining mobile/PostgreSQL/reviewer gates are 
 - With affiliated credit withheld, or independent-first with an eligible independent lender, verify no eligibility request or new credit line is created for the affiliate. Then request a genuinely underserved amount/category and verify permitted fallback.
 - Suspend an Essentials product for one channel and verify eligibility, displayed limit, quote and acceptance agree while another authorised channel remains available.
 - Verify legacy loan default-interest caps continue under the configured/snapshotted licence class and each new offer uses one distribution revision in pricing and disclosures.
+
+## Asset registry
+
+Use synthetic identifiers only (for example a computed check-digit IMEI). IDs UAT-67 to UAT-83 are reserved for suites in review.
+
+| ID | Area | Action | Expected result |
+|---|---|---|---|
+| UAT-84 | Registration | Register a phone with a valid IMEI, then try an IMEI with a wrong check digit and a laptop without a serial | The valid phone is `registered` and only its masked identifier is shown. The other two are refused with plain guidance. |
+| UAT-85 | Duplicate identifier | Register the same IMEI in a second Space | The second passport is `review_required`. Its user sees no information about the first Space. Operations see the reason in the review queue. |
+| UAT-86 | Verification | Verify as the registrant, then as a different operations user | The first is refused. The second records the method and evidence reference. |
+| UAT-87 | Liens | Register a lien, try a second, release before and after settlement | Only one lien is active. Early release needs a platform administrator. After release the passport is `verified`. |
+| UAT-88 | Theft and resale | Report the asset stolen and try a new lien, then recover it; separately dispose of an asset and register its IMEI in another Space | The stolen asset is refused a lien and the identifier check shows "reported stolen". Recovery restores the prior state. After disposal the new registration is `registered`. |

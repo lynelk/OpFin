@@ -59,6 +59,18 @@ Keep providers unactivated until genuine configuration, contracts and certificat
 
 Provider acknowledgement is not finality. Preserve pending state and original references, reconcile before retry, and change route only under an explicit safe policy. Apply payload-bound idempotency and appropriate concurrency controls. Confirmed, expected financial events must produce the required accounting and receipts.
 
+## Asset passports, liens and theft reports
+
+The asset registry is off until `OPFIN_ASSET_IDENTIFIER_KEY` is set. Use the review queue (`/api/admin/asset-passports/review-queue`) daily.
+
+- **Review.** A passport reaches the queue when one of its identifiers is already active on another passport or belongs to a reported-stolen asset. Contact the customer for evidence. Never tell them about the other Space. Clear the review only after the other passport has been disposed of or rejected; otherwise reject it, with a reason.
+- **Verification.** Verify only with first-hand evidence: a physical inspection, a dealer invoice, an OEM record or a registry extract. You cannot verify an asset you registered. Verification confirms identifiers, not ownership or value.
+- **Liens.** Register a lien only against an open financing arrangement in the same Space. Release it after settlement. Releasing before settlement needs a platform administrator and a recorded lender instruction.
+- **Theft and recovery.** A theft report blocks new liens; existing liens stay in place. Record recovery only on evidence such as a police or partner confirmation.
+- **Device controls.** Remote device controls are not available. Never promise or attempt device locking.
+
+Before quoting asset-backed finance, lenders' staff use the identifier check. It shows only registry state, never the owner or Space.
+
 ## Essentials operations and activation hold
 
 The intended capability covers verified bill/rental beneficiaries, named third-party lenders, funding capacity, quotes, purpose-bound fulfilment and repayment servicing. OpFin must not be configured or described as the primary Essentials lender.
