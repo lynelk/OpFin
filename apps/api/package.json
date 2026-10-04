@@ -4,7 +4,7 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "audit": "npm audit --audit-level=high",
+        "audit": "node scripts/audit-dependencies.mjs",
         "prebuild": "npm run audit"
     },
     "devDependencies": {
