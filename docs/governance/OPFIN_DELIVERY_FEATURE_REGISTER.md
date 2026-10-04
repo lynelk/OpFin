@@ -34,7 +34,7 @@ A row may only be `DONE` when every applicable Definition-of-Done gate is eviden
 | OPF-FEAT-0016 | Protection/Takaful | APPROVED | G1/G2/G3/G5 | Partner roles, fund/accounting, coverage/claims, approval and disclosures |
 | OPF-FEAT-0017 | Investment screening | APPROVED | G1/G2/G3 | Underlying assets/income, methodology, return classification and purification controls |
 | OPF-FEAT-0018 | Social Finance | APPROVED | G1/G2/G3 | Sponsored Qard/Zakat/Sadaqah/Waqf records and non-revenue accounting |
-| OPF-FEAT-0019 | Public website consolidation | APPROVED | WEB | Repository source, claim register, Sites parity, live verification and safe duplicate retirement |
+| OPF-FEAT-0019 | Public website consolidation | IN_PROGRESS | WEB | Candidate repository source and claim register established under `sites/opfin-public/`; host/source parity, live-link verification, accessibility/performance acceptance and safe duplicate retirement remain required |
 | OPF-FEAT-0020 | Digital capital extensions | PROPOSED | G0-G10 | Separate approval for each anchoring/tokenisation/stablecoin/transfer capability |
 | OPF-FEAT-0021 | Lightweight & Sponsored Data Governance | IN_PROGRESS | G0/G4/G5/G10 | Client/server byte metering, feature attribution, whitelist manifest, sponsorship state, low-data/offline rules, bounded sync, KYC/upload budgets, operator reconciliation hooks and release data budgets |
 | OPF-FEAT-0022 | Employer HR lifecycle & payroll-linked finance | APPROVED | G1/G4/G5/G6 | Standalone/connected/B2B2C HR modes; employee onboarding/offboarding, leave, suspend/restore/exit, payroll-cycle metadata, deduction instructions, consent/minimisation, retries/audit and employer reporting |
@@ -79,6 +79,7 @@ The following remain the first closure targets:
 - **DOC-CONTINUITY:** same-change updates to APIs, manuals, UAT, legal artefacts and AI knowledge where affected.
 - **WEB-FOUNDATION:** prove actual ChatGPT Sites source-linking/version/recovery capability before cutover.
 - **CONVERSATION-GAPS:** create/advance delivery slices for `OPF-FEAT-0022`, `OPF-FEAT-0023`, `OPF-FEAT-0024`, `OPF-AI-0002`, `OPF-COMP-0001`, `OPF-REL-0001` and `OPF-MGT-0001` without displacing R0/R1.
+- **WEB-FOUNDATION:** candidate canonical source, public-claim register and source-level link validation are now established under `sites/opfin-public/`. Prove actual host source-linking/version/recovery capability, live external links, accessibility/performance and observed deployment before cutover.
 
 ## Change-impact requirement
 

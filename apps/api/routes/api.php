@@ -439,3 +439,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/compliance-reports', [ProductionOperationsController::class, 'createComplianceReport']);
     Route::post('/admin/compliance-reports/{report}/exports', [ProductionOperationsController::class, 'createComplianceExport']);
 });
+
+require __DIR__.'/financial_space_operations.php';
+require __DIR__.'/sacco_core.php';
+require __DIR__.'/audmon.php';

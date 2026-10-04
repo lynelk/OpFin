@@ -1,7 +1,7 @@
 # OpFin Product Blueprint
 
 Status: Canonical product contract  
-Updated: 24 September 2026  
+Updated: 28 September 2026  
 Language: English (United Kingdom)
 
 ## Product position
@@ -22,6 +22,58 @@ OpFin is a personal financial operating platform with embedded financial service
 10. **Independent operation with preferred gateways.** OpFin owns customer/product state, financial intent, experience, intelligence, ledger, servicing and reconciliation. Cito is the preferred third-party integration gateway and CPay is the preferred payment route, but neither is a mandatory runtime dependency. Certified direct-provider adapters remain controlled fallbacks.
 11. **Partner-funded credit by default.** At initial launch OpFin is not the primary balance-sheet lender. Every live credit offer requires an approved third-party lender/funding partner. Any future direct-lending model requires explicit legal, regulatory, accounting and product activation rather than a configuration bypass.
 11. **Evidence over appearance.** Implemented source, deployed source, activated provider service and release certification are separate states and must be described separately.
+
+## Complexity Behind Simplicity — standing build doctrine
+
+This doctrine operationalises **Simple by default, powerful on demand** and is a mandatory product, UX, architecture, security, compliance and release standard for OpFin. The same doctrine is intended to govern Stolets, Cito, CPay, CoreWorks and future builds.
+
+> **Maximum sophistication underneath. Minimum unnecessary thinking demanded from the user.**
+
+Technical, regulatory, operational, financial, security and data complexity belongs inside the platform wherever reasonably possible. The customer should encounter only the information, choices and actions necessary to complete an objective safely, transparently and confidently.
+
+### Customer experience rules
+
+1. **One meaningful decision at a time.** Screens and workflows should present a clear next action rather than expose an entire internal process.
+2. **Plain language first.** Ordinary language precedes technical, regulatory, accounting or operational terminology. Detailed terminology remains available where required or useful.
+3. **Progressive disclosure.** Information and controls appear when they become relevant. Advanced detail remains available without overwhelming ordinary users.
+4. **Hide irrelevant complexity.** Do not expose products, settings, controls or actions that the customer cannot use or does not need in the current context.
+5. **Explain outcomes rather than machinery.** A customer should understand what happened, what it costs, what they receive, what the material risks are, what happens next and what they can do about it without understanding the internal implementation.
+6. **Compliance interrupts only when necessary.** Additional KYC, suitability questions, disclosures, warnings, confirmations or security steps appear when law, risk or a material customer decision genuinely requires them.
+7. **Transparency is not complexity.** Simplicity must never conceal price, fees, repayment obligations, returns, material risk, limitations, consent, significant automated decisions, transaction status, contractual obligations or available remedies.
+8. **Safe defaults over configuration burden.** Where an explicit customer decision is unnecessary, the platform should use safe, lawful, reversible and non-manipulative defaults.
+9. **Human error messages.** Infrastructure and provider failures are translated into useful instructions, status and recovery paths rather than raw technical errors.
+10. **Mobile simplicity is the baseline.** Essential journeys must remain understandable and operable on a small mobile screen, including under low-connectivity and low-digital-literacy conditions.
+
+### Backend responsibility
+
+The platform should absorb, automate or orchestrate wherever possible: regulatory rules; eligibility; permissions; identity verification; AML/sanctions controls; risk assessment; credit decisioning; investor suitability; exposure and concentration controls; fee and tax calculations; settlement and reconciliation; data validation; workflow routing; audit evidence; security controls; partner selection; API orchestration; retries and recovery; reporting; monitoring; model governance; and regulatory reporting.
+
+The existence of twenty backend checks does not justify twenty customer-facing steps.
+
+### Default and advanced information depth
+
+The default experience is guided, concise, mobile-first, task-oriented and low-friction. Advanced users may access deeper analytics, statements, reports, raw transaction detail, portfolio analysis, audit information and professional controls where appropriate. Advanced capability must not force advanced complexity onto everyone else.
+
+### Mandatory release gate
+
+No feature is complete merely because its code path works. Before production, Product, UX, Engineering, Security, Compliance and Operations must be able to answer:
+
+1. Can the customer complete the main task without understanding our architecture?
+2. Is every field, choice or interruption genuinely necessary at that point?
+3. Can any step be automated safely or deferred until it becomes relevant?
+4. Are cost, risk, rights, obligations and consequences still clear?
+5. Are errors actionable and recoverable in human language?
+6. Are regulatory and security controls embedded rather than dependent on staff memory?
+7. Does the experience remain simple and usable on a small mobile screen?
+8. Have we added complexity because the customer needs it, or merely because the system contains it?
+
+A feature fails the release gate if it transfers avoidable platform complexity to the customer, obscures a material consequence in the name of simplicity, or depends on manual remembrance of controls that the platform can reasonably enforce.
+
+### Definition of done
+
+A feature is done only when **the system works, the controls work, the evidence exists, failures are recoverable, and the customer can complete the intended task without carrying unnecessary system complexity**.
+
+This doctrine is a build constraint, not a presentation preference. Product specifications, designs, APIs, workflows and release decisions should be interpreted consistently with it.
 
 ## Canonical layers
 
@@ -207,6 +259,8 @@ Therefore the current source may be described as deployed, but the exact head mu
 Implementation proceeds by vertical journey slices and reuses working components. Existing identity, consent, credit, savings/protection, financial-wellbeing, ledger/reconciliation, governed provider adapters, community-finance and channel foundations are adapted rather than rewritten without evidence.
 
 Every slice is done only when implementation, permissions, failure states, tests, documentation and applicable production acceptance evidence agree.
+
+Every slice must also satisfy the **Complexity Behind Simplicity** release gate above. A technically correct feature is not production-ready if it transfers avoidable platform, regulatory or operational complexity to the customer.
 
 ## OpFin Essentials
 

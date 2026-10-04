@@ -38,4 +38,19 @@ class FinancialSpacesApi {
   static Future<List<Map<String,dynamic>>> obligations(int id) async => (((await _request('/financial-spaces/$id/obligations'))['obligations'] as List?)??[]).whereType<Map>().map((e)=>e.cast<String,dynamic>()).toList();
   static Future<void> addObligation(int id,String kind,String direction,String counterparty,int amount,{String? dueDate,String? currency}) async { await _request('/financial-spaces/$id/obligations',method:'POST',body:{'kind':kind,'direction':direction,'counterparty_name':counterparty,'amount_minor':amount,if(dueDate!=null)'due_date':dueDate,if(currency!=null)'currency':currency}); }
   static Future<void> settleObligation(int id,int obligationId,int amount) async { await _request('/financial-spaces/$id/obligations/$obligationId/settlements',method:'POST',body:{'amount_minor':amount}); }
+  static Future<Map<String,dynamic>> operationsAnalytics(int id) async => (await _request('/financial-spaces/$id/operations/analytics') as Map).cast<String,dynamic>();
+  static Future<List<Map<String,dynamic>>> operations(int id) async {
+    final data=await _request('/financial-spaces/$id/operations/actions');
+    final raw=data['actions'];
+    final list=raw is Map ? (raw['data'] as List? ?? const []) : (raw as List? ?? const []);
+    return list.whereType<Map>().map((e)=>e.cast<String,dynamic>()).toList();
+  }
+  static Future<Map<String,dynamic>> createOperation(int id,{required String actionType,required String direction,required int amountMinor,required String phone,required String idempotencyKey}) async =>
+    ((await _request('/financial-spaces/$id/operations/actions',method:'POST',body:{'action_type':actionType,'direction':direction,'amount_minor':amountMinor,'counterparty_phone':phone,'idempotency_key':idempotencyKey}))['action'] as Map).cast<String,dynamic>();
+  static Future<Map<String,dynamic>> approveOperation(int id,int actionId) async => ((await _request('/financial-spaces/$id/operations/actions/$actionId/approve',method:'POST'))['action'] as Map).cast<String,dynamic>();
+  static Future<List<Map<String,dynamic>>> saccoProducts(int id) async => (((await _request('/financial-spaces/$id/sacco/products'))['products'] as List?)??[]).whereType<Map>().map((e)=>e.cast<String,dynamic>()).toList();
+  static Future<Map<String,dynamic>> saccoPosition(int id) async => (await _request('/financial-spaces/$id/sacco/me') as Map).cast<String,dynamic>();
+  static Future<Map<String,dynamic>> proposeGuarantee(int id,int borrowerUserId,int amountMinor,{int? loanId}) async =>
+    ((await _request('/financial-spaces/$id/sacco/guarantees',method:'POST',body:{'borrower_user_id':borrowerUserId,'amount_minor':amountMinor,if(loanId!=null)'loan_id':loanId}))['guarantee'] as Map).cast<String,dynamic>();
+
 }
