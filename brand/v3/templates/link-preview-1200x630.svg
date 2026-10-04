@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title">
+  <title id="title">OpFin link preview (Open Graph) template</title>
+  <!-- Warm Ivory on Indigo is about 10:1 contrast; Apricot on Indigo is about 5.7:1. Keep titles to two lines. -->
+  <rect width="1200" height="630" fill="#353B78"/>
+  <g transform="translate(90 155) scale(.62)" fill="#FAF8F2">
+    <path d="M96 76h184c78 0 142 64 142 142v50c0 78-64 142-142 142h-50l-52 48V354h102c48 0 86-38 86-86v-50c0-48-38-86-86-86H96V76Z"/>
+    <path d="M96 157h174c15 0 27 12 27 27s-12 27-27 27H96v-54Z"/>
+    <path d="M96 247h144c15 0 27 12 27 27s-12 27-27 27h-90v130l-54-45V247Z"/>
+  </g>
+  <text x="440" y="285" fill="#FAF8F2" font-family="Inter, Arial, sans-serif" font-size="58" font-weight="700">[Page title, line one</text>
+  <text x="440" y="355" fill="#FAF8F2" font-family="Inter, Arial, sans-serif" font-size="58" font-weight="700">line two]</text>
+  <text x="440" y="440" fill="#F2B38D" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="600">Your next step, clearer.</text>
+</svg>

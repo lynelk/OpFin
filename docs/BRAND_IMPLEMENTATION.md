@@ -2,7 +2,7 @@
 
 Status: Brand System v3 release-candidate implementation reference  
 Version: 3.0.0-rc.1  
-Updated: 24 September 2026  
+Updated: 4 October 2026  
 Language: English (United Kingdom)
 
 ## Canonical direction
@@ -36,7 +36,9 @@ The v3 vector source files are under `brand/v3/assets/`:
 - `opfin-progress-path.svg`;
 - `opfin-feature-graphic-master.svg`.
 
-Web renders the vector monogram directly. Mobile and store raster exports remain provenance-controlled through `brand/asset-manifest.json` and the asset-generation scripts.
+Web renders the vector monogram directly. Mobile and store raster exports remain provenance-controlled through `brand/asset-manifest.json` and the asset-generation scripts. The wider toolkit (monogram variants, favicons, profile images and motif exports) is generated into `brand/v3/exports/` with its own `EXPORT_MANIFEST.json`.
+
+The wordmark and lock-ups set "OpFin" as live Inter text rather than outlined paths. Where Inter is not installed they render in a fallback font, so they must be outlined before the v3.0 freeze and are not yet exported.
 
 Inter is self-hosted and bundled from the pinned official source recorded in `brand/opfin.tokens.json`. Applications do not rely on a runtime external font CDN.
 
@@ -61,7 +63,8 @@ One recommended action, one reason and one primary action. Web and mobile Home n
 - Web: v3 vector symbol, Inter, direct token-based styles and signature Financial Compass / Next Step treatments.
 - Mobile: shared Material theme, Inter, 48-pixel target baseline and branded Next Step treatment.
 - Store: v3 copy, app-icon direction and feature-graphic source; the Apricot accent sits below “clearer.” rather than crossing it.
-- Documents, presentations, social and partner co-branding: controlled starter artwork under `brand/v3/templates/`.
+- Documents, letterhead, one-pagers, presentations, social, link previews, email signatures and partner co-branding: controlled starter artwork under `brand/v3/templates/`.
+- Distribution: `brand/v3/DISTRIBUTION.md` describes the versioned package built by `sh scripts/package-brand.sh`.
 
 The brand system does not activate financial products, providers, permissions, licences or store publication.
 
@@ -71,7 +74,7 @@ The brand system does not activate financial products, providers, permissions, l
 2. Change approved values in `brand/opfin.tokens.json`.
 3. Update the vector master only through a reviewed brand-system change.
 4. Run `python3 scripts/sync-brand.py` when tokens change.
-5. Run `node scripts/prepare-brand-assets.mjs` when vector/font-derived platform assets need regeneration.
+5. Run `node scripts/prepare-brand-assets.mjs` when vector/font-derived platform assets need regeneration, and `node scripts/prepare-brand-toolkit.mjs` when a master changes (CI rejects stale toolkit exports).
 6. Run `sh scripts/build-play-store-assets.sh` when store artwork changes.
 7. Commit sources, generated assets, manifest and relevant documentation together.
 8. Run the required Web/mobile/security jobs and complete visual review.

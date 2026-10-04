@@ -12,3 +12,6 @@
 **/ios/Pods/
 **/DerivedData/
 coverage/
+
+# Locally built distribution packages (scripts/package-brand.sh)
+/dist/
