@@ -21,6 +21,7 @@ const lock = JSON.parse(fs.readFileSync(new URL('../package-lock.json', import.m
 const vulnerabilities = report.vulnerabilities ?? {};
 const severityRank = { low: 1, moderate: 2, high: 3, critical: 4 };
 const allowedBracesAdvisory = 'https://github.com/advisories/GHSA-vfj7-8cjw-p6xm';
+const allowedBuildOnlyChain = new Set(['braces', 'micromatch', '@parcel/watcher']);
 const blocked = [];
 const waived = [];
 
@@ -32,23 +33,26 @@ for (const [name, vulnerability] of Object.entries(vulnerabilities)) {
     .map((item) => item.url)
     .filter(Boolean);
   const lockEntry = lock.packages?.[`node_modules/${name}`];
-  const exactBuildOnlyBraces =
-    name === 'braces' &&
+  const viaPackages = (vulnerability.via ?? [])
+    .filter((item) => typeof item === 'string');
+  const exactUnfixedBuildOnlyChain =
+    allowedBuildOnlyChain.has(name) &&
     vulnerability.severity === 'high' &&
     vulnerability.fixAvailable === false &&
     lockEntry?.dev === true &&
-    advisoryUrls.length > 0 &&
-    advisoryUrls.every((url) => url === allowedBracesAdvisory);
+    advisoryUrls.every((url) => url === allowedBracesAdvisory) &&
+    viaPackages.every((dependency) => allowedBuildOnlyChain.has(dependency)) &&
+    (advisoryUrls.length > 0 || viaPackages.length > 0);
 
-  if (exactBuildOnlyBraces) {
-    waived.push({ name, advisoryUrls });
+  if (exactUnfixedBuildOnlyChain) {
+    waived.push({ name, advisoryUrls, viaPackages });
   } else {
     blocked.push({ name, severity: vulnerability.severity, fixAvailable: vulnerability.fixAvailable, advisoryUrls });
   }
 }
 
 if (waived.length) {
-  console.warn('Temporary audit exception: braces is a build-only dev dependency with no upstream fix available.');
+  console.warn('Temporary audit exception: the braces advisory is confined to the build-only @parcel/watcher dependency chain and has no upstream fix available.');
   console.warn(`Allowed advisory: ${allowedBracesAdvisory}`);
   console.warn('Remove this exception immediately when a patched dependency path is released.');
 }
