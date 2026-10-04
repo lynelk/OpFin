@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\ClubAsset;
 use App\Models\ClubBook;
-use App\Models\ClubMember;
 use App\Models\FinancialSpace;
 use App\Models\FinancialSpaceMembership;
 use App\Models\FinancialSpaceTreasuryAccount;
@@ -71,6 +70,7 @@ class ClubAccountingTest extends TestCase
     private function submit(string $type, array $payload, string $date = '2026-09-01', ?string $key = null): array
     {
         Sanctum::actingAs($this->owner);
+
         return $this->postJson($this->base.'/instructions', ['type' => $type, 'business_date' => $date,
             'idempotency_key' => $key ?? (string) Str::uuid(), 'payload' => $payload + ['evidence_reference' => 'SYNTHETIC-'.Str::upper(Str::random(12))]])
             ->assertCreated()->json('data.instruction');
@@ -79,6 +79,7 @@ class ClubAccountingTest extends TestCase
     private function approve(array $instruction): array
     {
         Sanctum::actingAs($this->checker);
+
         return $this->postJson($this->base.'/instructions/'.$instruction['id'].'/approve', ['payload_hash' => $instruction['payload_hash']])
             ->assertOk()->assertJsonPath('data.instruction.status', 'approved')->json('data.instruction');
     }
@@ -344,7 +345,8 @@ class ClubAccountingTest extends TestCase
 
     public function test_former_member_retains_only_their_own_financial_history(): void
     {
-        $this->opening(); $this->applyInstruction('contribution', ['member_user_id' => $this->member->id,
+        $this->opening();
+        $this->applyInstruction('contribution', ['member_user_id' => $this->member->id,
             'amount_minor' => 1000, 'treasury_account_id' => $this->treasury->id], '2026-09-02');
         DB::table('financial_space_memberships')->where('financial_space_id', $this->space->id)->where('user_id', $this->member->id)->update(['status' => 'inactive']);
         Sanctum::actingAs($this->member);
