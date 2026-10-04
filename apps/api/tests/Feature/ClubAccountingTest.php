@@ -358,7 +358,8 @@ class ClubAccountingTest extends TestCase
 
     public function test_historical_reports_exclude_later_member_activity(): void
     {
-        $this->opening(); $this->applyInstruction('contribution', ['member_user_id' => $this->member->id,
+        $this->opening();
+        $this->applyInstruction('contribution', ['member_user_id' => $this->member->id,
             'amount_minor' => 1000, 'treasury_account_id' => $this->treasury->id], '2026-09-15');
         $report = app(ClubReports::class)->report($this->book->fresh(), $this->owner, '2026-09-01', '2026-09-10');
         $this->assertCount(1, $report['member_positions']);
