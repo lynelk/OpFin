@@ -16,18 +16,18 @@ class TransactionController extends Controller
      */
     public function approve(Request $request, $id)
     {
-        if (! (bool) config('opfin.credit.legacy_manual_transaction_approval_enabled', false)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Legacy manual transaction approval is retired. Provider finality and governed financial workflows are authoritative.',
-            ], 410);
-        }
-
         if (! $this->canManageTransactions($request)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized.',
             ], 403);
+        }
+
+        if (! (bool) config('opfin.credit.legacy_manual_transaction_approval_enabled', false)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Legacy manual transaction approval is retired. Provider finality and governed financial workflows are authoritative.',
+            ], 410);
         }
 
         try {

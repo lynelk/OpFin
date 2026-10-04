@@ -8,7 +8,6 @@ import 'package:opfin/financial_hubs.dart';
 import 'package:opfin/protection_screen.dart';
 import 'package:opfin/personal_money_screen.dart';
 import 'package:opfin/kyc_setup_screen.dart';
-import 'package:opfin/inclusive_finance_screen.dart';
 import 'package:opfin/loan_application_screen.dart';
 import 'package:opfin/loan_applications_screen.dart';
 import 'package:opfin/loan_repayment_screen.dart';
