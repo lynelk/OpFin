@@ -66,6 +66,7 @@ class ClubAccountingReviewTest extends TestCase
         $service = app(ClubInstructions::class);
         $item = $service->submit($this->book->fresh(), $this->owner, ['type' => $type, 'business_date' => $date,
             'idempotency_key' => (string) Str::uuid(), 'payload' => $payload + ['evidence_reference' => 'SYNTHETIC-'.Str::random(12)]]);
+
         return $service->approve($this->book->fresh(), $item, $this->checker, $item->payload_hash)->result;
     }
 
@@ -79,6 +80,7 @@ class ClubAccountingReviewTest extends TestCase
     private function source(string $direction, int $amount, string $date): int
     {
         Sanctum::actingAs($this->owner);
+
         return (int) $this->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
             'idempotency_key' => (string) Str::uuid(),
             'transaction_date' => $date, 'direction' => $direction, 'amount_minor' => $amount,
