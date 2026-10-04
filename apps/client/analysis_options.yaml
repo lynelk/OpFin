@@ -4,6 +4,10 @@ include: package:flutter_lints/flutter.yaml
 # CI keeps analyzer errors and warnings fatal while the style-only backlog is
 # remediated incrementally; new code should still follow flutter_lints.
 analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
   errors:
     deprecated_member_use: ignore
     prefer_interpolation_to_compose_strings: ignore
