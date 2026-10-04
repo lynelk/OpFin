@@ -11,13 +11,14 @@ export type Overview = { space_id: number; space_name: string; role: string; per
 export type ImportSummary = { id: number; source_id: number; as_of: string; row_count: number; status: string; submitted_by: number; reviewed_by: number | null; source_hash: string; engine_version: string; created_at: string; reviewed_at: string | null; source_authenticity: string };
 export type Loan = { loan_ref: string; borrower_ref: string; currency: string; principal_outstanding_minor: number; dpd: number | null; arrears_minor: number | null; restructured: boolean; unlikely_to_pay: boolean; regulatory_npl: boolean | null; product: string | null; branch: string | null };
 export type CaseItem = { id: number; source_id: number; import_id: number; signal: string; status: string; priority: string; assigned_to: number | null; due_on: string | null; version: number; evidence: { loan_ref: string; borrower_ref: string; currency: string; principal_outstanding_minor: number; dpd: number | null; arrears_minor: number | null; as_of: string; warning: string } };
-export type Statement = { id: number; issuer_version_id: number; status: string; period_start: string; period_end: string; file_hash: string; source_authenticity: string; account_ownership: string; credit_decision_eligible: false; authority_expires_at: string; revoked_at: string | null };
+export type StatementAssurance = { institution_eligibility: string; account_authority: string; extraction: string; financial_consistency: string; source_authenticity: string; review: string; document_signals: string[] };
+export type Statement = { id: number; issuer_version_id: number; status: string; period_start: string; period_end: string; file_hash: string; source_authenticity: string; account_ownership: string; credit_decision_eligible: false; authority_expires_at: string; revoked_at: string | null; analysed_at?: string | null; original_purged_at?: string | null; assurance?: StatementAssurance };
 export type Issuer = { id: number; legal_name: string; country: string; product_type: string; regulator: string; licence_reference: string; valid_from: string; valid_until: string; review_due_on: string };
-export type StatementDetail = { statement: Statement; issuer_eligibility_current: boolean; source_authenticity: string; credit_decision_eligible: false; analysis: null | {
+export type StatementDetail = { statement: Statement; issuer_eligibility_current: boolean; source_authenticity: string; credit_decision_eligible: false; assurance?: StatementAssurance; status_explanation?: string; analysis: null | {
   currency: string; credits_minor: number; debits_minor: number; net_movement_minor: number; financial_checks: string; interpretation: string;
   verified_income_minor: null; row_count: number; transaction_total: number; page: number;
   transactions: Array<{ row_number: number; date: string; description: string; direction: string; amount_minor: number; balance_minor: number | null; suggested_category: string }>;
-  findings: Array<{ code: string; row: number | null; severity: string }>;
+  findings: Array<{ code: string; row: number | null; source_line?: number | null; severity: string }>;
   monthly_activity: Array<{ month: string; credits_minor: number; debits_minor: number; net_movement_minor: number }>;
 } };
 export type Page<T> = { items: T[]; total?: number; page: number; page_size?: number };

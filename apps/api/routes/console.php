@@ -1,10 +1,12 @@
 <?php
 
+use App\Console\Commands\AnalysePendingStatements;
 use App\Console\Commands\EvaluateMoneyAutopilot;
 use App\Console\Commands\GenerateRegulatoryReports;
 use App\Console\Commands\MaintainProgrammeMeasurement;
 use App\Console\Commands\ProcessTaxAndEfris;
 use App\Console\Commands\ProcessUmraCreditControls;
+use App\Console\Commands\PurgeStatementOriginals;
 use App\Console\Commands\ReconcileLongRangeFinancialIntents;
 use App\Console\Commands\RunFinancialIntegrityAudit;
 use App\Console\Commands\RunPlatformAutopilot;
@@ -19,5 +21,7 @@ Schedule::command(EvaluateMoneyAutopilot::class)->hourly()->withoutOverlapping(6
 Schedule::command(GenerateRegulatoryReports::class)->dailyAt('01:15')->withoutOverlapping(120)->onOneServer();
 Schedule::command(ProcessUmraCreditControls::class)->hourly()->withoutOverlapping(55)->onOneServer();
 Schedule::command(ProcessTaxAndEfris::class)->hourly()->withoutOverlapping(55)->onOneServer();
+Schedule::command(AnalysePendingStatements::class)->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
+Schedule::command(PurgeStatementOriginals::class)->dailyAt('02:30')->withoutOverlapping(60)->onOneServer();
 
 Schedule::command(MaintainProgrammeMeasurement::class)->hourly()->withoutOverlapping(55)->onOneServer();

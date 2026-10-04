@@ -63,7 +63,30 @@ Frozen reports are management evidence, not audits, regulatory certificates or b
 
 Upload statement_file, issuer_version_id, currency, period_start, period_end, account_reference, authority_reference, authority_confirmed, authority_expires_at and purpose=financial_analysis. Optional balances are exact integer minor units. Optional mapping is a JSON object. The original is encrypted and fingerprinted. File hashes establish after-receipt integrity, not issuer authenticity.
 
-CSV analysis produces financial-consistency findings and suggested categories. It does not establish income, ownership or lending eligibility. PDF originals remain quarantined_parser_required until the separate processing pipeline exists and is accepted. No password, PIN or OTP is required by this endpoint. Authority withdrawal or expiry blocks detailed analysis access. Retention execution is outstanding and must be resolved before launch.
+CSV analysis produces financial-consistency findings and suggested categories. It does not establish income, ownership or lending eligibility. Optional `minor_unit_exponent` (0–4) sets how PDF amounts convert to minor units; it defaults to the currency's ISO 4217 exponent (0 for UGX). No password, PIN or OTP is required by this endpoint. Authority withdrawal or expiry blocks detailed analysis access.
+
+### PDF analysis pipeline
+
+1. **Upload.** The PDF must be at most 10 MB. It is encrypted, fingerprinted and stored with status `queued_for_analysis`. An `AnalyseStatementDocument` job is queued after the upload commits; its payload is the statement id only.
+2. **Raw screen.** Before parsing, the raw bytes are checked. A document with active content (JavaScript, launch, submit or import actions, embedded files, rich media, XFA, remote go-to actions, including `#xx`-escaped names) becomes `rejected_active_content`. Password protection becomes `export_required_password_protected`, which asks for an unprotected export and never for a password. Oversize documents become `rejected_processing_limits`.
+3. **Parse and object check.** Parsing runs on the queue worker with images discarded and decoding memory capped. The parsed object graph is checked again for active content, including dictionaries in compressed object streams. The page count limit is 200.
+4. **Read the layout.** A versioned layout reader extracts dated rows, opening and closing balances, amounts and running balances. When the document gives no sign or CR/DR marker, the direction comes only from the balance chain. Rows that cannot be resolved stay unresolved rather than being guessed. The generic reader does not guess transaction references. A document it cannot read becomes `layout_not_supported` ("not yet supported", never suspicious).
+5. **Checks.** Each row is checked against the running balance printed on the row before it, so an altered row produces one `amount_balance_discrepancy` or `running_balance_mismatch` on its source line rather than a cascade. Opening and closing totals, reversed (newest-first) ordering, out-of-period rows, mixed ordering and declared balances that differ from the document are reported as review findings. Resolved rows then pass through the same statement engine as CSV imports.
+6. **Labels.** The result is `analysed_unconfirmed` with an encrypted analysis. The plain `assurance` codes are stored separately so listings never decrypt evidence:
+   - `institution_eligibility`: `approved_at_upload`.
+   - `account_authority`: `declared_by_uploader`.
+   - `extraction`: `pending`, `complete`, `partial`, `not_yet_supported`, `not_processed` or `unreadable`.
+   - `financial_consistency`: `pending`, `consistent`, `discrepancies` or `unable_to_assess`.
+   - `source_authenticity`: always `unconfirmed` until an approved issuer channel exists.
+   - `review`: `pending`, `no_issues_detected_by_executed_checks`, `needs_review` or `not_applicable`.
+   - `document_signals`: `incremental_updates_present`, `digital_signature_present_unvalidated`, `editing_software_metadata` or `modified_after_creation`.
+
+   Signals are reasons to look closer, not findings of wrongdoing. A fully rebalanced alteration can pass every arithmetic check and remains source-unconfirmed.
+7. **Recovery.** `opfin:statements:analyse-pending` runs every five minutes. It requeues statements whose analysis was interrupted and closes them as `unreadable` after two attempts.
+
+Retention: `opfin:statements:purge-originals` runs daily at 02:30. Once analysis permission has expired or been withdrawn for `OPFIN_STATEMENT_RETENTION_DAYS` days (default 90; confirm with legal and privacy before launch), it deletes the original and its analysis. The file hash, authority record and assurance codes remain as audit evidence, and `original_purged_at` is set. A `legal_hold_until` date defers purging. There is not yet an API to set legal holds.
+
+Not yet in place: antivirus scanning (needs an approved scanner service), issuer-specific layout readers validated against authorised samples, issuer source verification, a statement review queue, and the Flutter journey.
 
 ## Web integration
 
