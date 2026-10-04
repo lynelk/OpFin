@@ -29,6 +29,13 @@ Ordinary discovery responses use `success`, `message` and `data`; `/openapi` ret
 
 Read the [domain reference](domain-endpoints.md#1-health). Liveness is not financial readiness or provider activation.
 
+`GET /api/health/ready` reports the `operations.scheduler` and `operations.worker` heartbeats separately:
+- The scheduler writes its own heartbeat every five minutes (`opfin-scheduler-heartbeat`).
+- The worker proves it is consuming the queue by running `RecordWorkerHeartbeat`, which the scheduler dispatches every five minutes (`opfin-worker-heartbeat-dispatch`).
+- A heartbeat is `ready` when it is under 12 minutes old, `stale` when older, and `warming` when it has never been seen.
+
+The API, worker and scheduler must share one cache store and prefix. `CACHE_PREFIX` defaults to `opfin_` in code, so a service without a `.env` file still agrees.
+
 ## 2. Account authentication
 
 Read [authentication, registration and closure](domain-endpoints.md#2-account-authentication). New App registration remains phone, OTP, names and six-digit PIN; migrated Web-password compatibility is separate.

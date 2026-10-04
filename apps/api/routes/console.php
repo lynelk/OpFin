@@ -9,8 +9,16 @@ use App\Console\Commands\ReconcileLongRangeFinancialIntents;
 use App\Console\Commands\RunFinancialIntegrityAudit;
 use App\Console\Commands\RunPlatformAutopilot;
 use App\Jobs\QueueWorkerHeartbeat;
+use App\Jobs\RecordWorkerHeartbeat;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schedule;
 
+// Heartbeats read by /api/health/ready. The scheduler writes its own; the worker proves it is
+// consuming the queue by running RecordWorkerHeartbeat. Restored after being dropped in a merge.
+Schedule::call(function (): void {
+    Cache::put('opfin:operations:scheduler_heartbeat', now()->toIso8601String(), now()->addMinutes(20));
+})->name('opfin-scheduler-heartbeat')->everyFiveMinutes()->withoutOverlapping(10)->onOneServer();
+Schedule::job(new RecordWorkerHeartbeat)->name('opfin-worker-heartbeat-dispatch')->everyFiveMinutes()->withoutOverlapping(10)->onOneServer();
 Schedule::job(new QueueWorkerHeartbeat)->everyFiveMinutes()->onOneServer();
 Schedule::command(ReconcileLongRangeFinancialIntents::class)->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
 Schedule::command(RunFinancialIntegrityAudit::class)->everyFiveMinutes()->withoutOverlapping(5)->onOneServer();
