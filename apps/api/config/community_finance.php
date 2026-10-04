@@ -4,10 +4,10 @@ return [
     'activation' => [
         // Keep the full SACCO/community finance foundation built but closed until governance,
         // partner, custody, regulatory and production sign-off are all recorded.
-        'mode' => env('OPFIN_COMMUNITY_FINANCE_MODE', 'live'),
-        'live_enabled' => (bool) env('OPFIN_COMMUNITY_FINANCE_LIVE_ENABLED', true),
-        'sacco_core_enabled' => (bool) env('OPFIN_SACCO_CORE_ENABLED', true),
-        'public_routes_enabled' => (bool) env('OPFIN_COMMUNITY_FINANCE_PUBLIC_ROUTES_ENABLED', true),
+        'mode' => env('OPFIN_COMMUNITY_FINANCE_MODE', 'dormant'),
+        'live_enabled' => (bool) env('OPFIN_COMMUNITY_FINANCE_LIVE_ENABLED', false),
+        'sacco_core_enabled' => (bool) env('OPFIN_SACCO_CORE_ENABLED', false),
+        'public_routes_enabled' => (bool) env('OPFIN_COMMUNITY_FINANCE_PUBLIC_ROUTES_ENABLED', false),
         'required_signoffs' => [
             'board_or_product_committee_approval',
             'licence_or_regulated_partner_confirmation',
@@ -79,7 +79,7 @@ return [
             'blocked_before_activation' => ['automated_decline', 'automated_limit_reduction', 'price_increase_without_review'],
         ],
         'member_cooperative_core' => [
-            'status' => 'LIVE_ENABLED',
+            'status' => 'DORMANT_READY',
             'activation_gate' => 'sacco_entity_partner_or_membership_model_signoff',
             'allowed_before_activation' => ['schema_migration', 'admin_configuration', 'dry_run_member_import', 'training'],
             'blocked_before_activation' => ['member_share_collection', 'member_savings_collection', 'credit_committee_approval', 'dividend_distribution'],
