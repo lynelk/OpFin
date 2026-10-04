@@ -57,7 +57,7 @@ jobs:
         working-directory: apps/api
         run: |
           npm ci --ignore-scripts
-          npm audit --audit-level=high
+          npm run audit
       - name: Audit locked PHP dependencies without executing application code
         if: matrix.scope == 'composer'
         working-directory: apps/api
