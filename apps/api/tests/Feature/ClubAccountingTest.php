@@ -259,7 +259,8 @@ class ClubAccountingTest extends TestCase
     public function test_existing_cashbook_receipt_is_classified_once_without_duplicate_cash(): void
     {
         $this->opening(); Sanctum::actingAs($this->owner);
-        $id = $this->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
+        $id = $this->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
             'transaction_date' => '2026-09-02', 'direction' => 'credit', 'amount_minor' => 1000,
             'description' => 'Synthetic bank interest', 'transaction_reference' => 'SYNTHETIC-INTEREST'])->assertCreated()->json('data.transaction.id');
         $payload = ['direction' => 'credit', 'amount_minor' => 1000, 'treasury_account_id' => $this->treasury->id,
@@ -274,8 +275,9 @@ class ClubAccountingTest extends TestCase
     public function test_unclassified_earlier_cash_prevents_an_inaccurate_subscription_price(): void
     {
         $this->opening(); Sanctum::actingAs($this->owner);
-        $this->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
-            'transaction_date' => '2026-09-02', 'direction' => 'credit', 'amount_minor' => 1000, 'description' => 'Unclassified receipt'])->assertCreated();
+        $this->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
+                'transaction_date' => '2026-09-02', 'direction' => 'credit', 'amount_minor' => 1000, 'description' => 'Unclassified receipt'])->assertCreated();
         $this->assertApprovalRejected($this->submit('contribution', ['member_user_id' => $this->member->id,
             'amount_minor' => 100, 'treasury_account_id' => $this->treasury->id], '2026-09-03'));
     }
