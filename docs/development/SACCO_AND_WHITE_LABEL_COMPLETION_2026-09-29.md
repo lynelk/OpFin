@@ -38,7 +38,7 @@ White-label configuration may set display name, short name, logo URL, primary/ac
 
 ## Activation
 
-SACCO Core is enabled in application defaults on this implementation branch. This is product activation, not blanket legal authorisation. Each SACCO still requires its own organisation/KYB/regulatory evidence, product configuration, custody/settlement arrangement, commercial pricing and production acceptance before regulated live operations.
+SACCO Core is implemented but remains dormant by default. Source completeness is not product activation or blanket legal authorisation. Deliberate live flags may only be enabled after the required governance runbook is executed, and each SACCO still requires its own organisation/KYB/regulatory evidence, product configuration, custody/settlement arrangement, commercial pricing and production acceptance before regulated live operations.
 
 ## Remaining engineering
 
