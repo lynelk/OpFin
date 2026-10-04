@@ -74,7 +74,8 @@ class ClubAccountingReviewTest extends TestCase
     private function source(string $direction, int $amount, string $date): int
     {
         Sanctum::actingAs($this->owner);
-        return (int) $this->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
+        return (int) $this->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
             'transaction_date' => $date, 'direction' => $direction, 'amount_minor' => $amount,
             'description' => 'Synthetic bank-derived source', 'source_type' => 'bank_import', 'source_reference' => (string) Str::uuid(),
         ])->assertCreated()->json('data.transaction.id');
