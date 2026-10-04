@@ -155,16 +155,20 @@ class ClubAccountingTest extends TestCase
 
     public function test_submission_and_approval_replay_have_exactly_once_effects(): void
     {
-        $this->opening(); $key = (string) Str::uuid();
+        $this->opening();
+        $key = (string) Str::uuid();
         $payload = ['member_user_id' => $this->member->id, 'amount_minor' => 1000, 'treasury_account_id' => $this->treasury->id, 'evidence_reference' => 'SYNTHETIC-REPLAY'];
         $one = $this->submit('contribution', $payload, '2026-09-02', $key);
         $two = $this->submit('contribution', $payload, '2026-09-02', $key);
-        $this->assertSame($one['id'], $two['id']); $this->approve($one);
-        $journals = DB::table('club_journals')->count(); $cash = DB::table('financial_space_transactions')->count();
+        $this->assertSame($one['id'], $two['id']);
+        $this->approve($one);
+        $journals = DB::table('club_journals')->count();
+        $cash = DB::table('financial_space_transactions')->count();
         $this->approve($one);
         $this->assertSame($journals, DB::table('club_journals')->count());
         $this->assertSame($cash, DB::table('financial_space_transactions')->count());
-        Sanctum::actingAs($this->owner); $payload['amount_minor'] = 1001;
+        Sanctum::actingAs($this->owner);
+        $payload['amount_minor'] = 1001;
         $this->postJson($this->base.'/instructions', ['type' => 'contribution', 'business_date' => '2026-09-02', 'idempotency_key' => $key, 'payload' => $payload])->assertUnprocessable();
     }
 
@@ -195,12 +199,14 @@ class ClubAccountingTest extends TestCase
             'balances' => [['account_code' => 'CASH-'.$this->treasury->id, 'direction' => 'debit', 'amount_minor' => 1100000]]]);
         $this->assertApprovalRejected($item);
         $this->assertSame('draft', $this->book->fresh()->status);
-        $this->assertSame(0, DB::table('club_members')->count()); $this->assertSame(0, DB::table('club_journals')->count());
+        $this->assertSame(0, DB::table('club_members')->count());
+        $this->assertSame(0, DB::table('club_journals')->count());
     }
 
     public function test_wrong_space_and_non_officer_reads_are_denied(): void
     {
-        $this->opening(); Sanctum::actingAs($this->member);
+        $this->opening();
+        Sanctum::actingAs($this->member);
         $this->getJson($this->base.'/journals')->assertForbidden();
         $this->getJson($this->base.'/report?period_start=2026-09-01&period_end=2026-09-25')->assertForbidden();
         $this->getJson('/api/financial-spaces/'.($this->space->id + 1000).'/accounting/books/'.$this->book->id.'/integrity')->assertNotFound();
@@ -208,7 +214,8 @@ class ClubAccountingTest extends TestCase
 
     public function test_removed_checker_cannot_approve_existing_instructions(): void
     {
-        $this->opening(); $item = $this->submit('capital_call', ['member_user_ids' => [$this->member->id], 'amount_minor' => 100, 'due_date' => '2026-10-01']);
+        $this->opening();
+        $item = $this->submit('capital_call', ['member_user_ids' => [$this->member->id], 'amount_minor' => 100, 'due_date' => '2026-10-01']);
         DB::table('financial_space_memberships')->where('financial_space_id', $this->space->id)->where('user_id', $this->checker->id)->update(['status' => 'inactive']);
         Sanctum::actingAs($this->checker);
         $this->postJson($this->base.'/instructions/'.$item['id'].'/approve', ['payload_hash' => $item['payload_hash']])->assertForbidden();
@@ -219,7 +226,8 @@ class ClubAccountingTest extends TestCase
     {
         $this->opening();
         $call = $this->applyInstruction('capital_call', ['member_user_ids' => [$this->member->id], 'amount_minor' => 3000, 'due_date' => '2026-09-10']);
-        $id = $call['result']['capital_call_ids'][0]; $this->assertSame(1, DB::table('club_journals')->count());
+        $id = $call['result']['capital_call_ids'][0];
+        $this->assertSame(1, DB::table('club_journals')->count());
         foreach ([[1000, '2026-09-02'], [2000, '2026-09-03']] as [$amount, $date]) {
             $this->applyInstruction('contribution', ['member_user_id' => $this->member->id, 'amount_minor' => $amount,
                 'capital_call_id' => $id, 'treasury_account_id' => $this->treasury->id], $date);
@@ -232,10 +240,14 @@ class ClubAccountingTest extends TestCase
         $this->opening();
         $this->applyInstruction('contribution_plan', ['member_user_id' => $this->member->id, 'amount_minor' => 2500,
             'first_due_month' => '2026-09', 'due_day' => 31, 'end_date' => '2026-12-31']);
-        $this->travelTo(now()->setDate(2026, 11, 1)); $schedules = app(ClubSchedules::class);
-        for ($i = 0; $i < 3; $i++) { $schedules->generateDueCalls(); }
+        $this->travelTo(now()->setDate(2026, 11, 1));
+        $schedules = app(ClubSchedules::class);
+        for ($i = 0; $i < 3; $i++) {
+            $schedules->generateDueCalls();
+        }
         $this->assertSame(['2026-09-30', '2026-10-31'], DB::table('club_capital_calls')->orderBy('due_date')->pluck('due_date')->all());
-        $this->assertSame(1, DB::table('club_journals')->count()); $this->assertSame(1000000, $this->treasury->fresh()->current_balance_minor);
+        $this->assertSame(1, DB::table('club_journals')->count());
+        $this->assertSame(1000000, $this->treasury->fresh()->current_balance_minor);
         Http::assertNothingSent();
     }
 
@@ -244,7 +256,8 @@ class ClubAccountingTest extends TestCase
         $this->opening();
         $buy = $this->applyInstruction('asset_acquisition', ['name' => 'Synthetic Shares', 'asset_class' => 'equity',
             'quantity_micro' => 10000000, 'amount_minor' => 100000, 'treasury_account_id' => $this->treasury->id], '2026-09-02');
-        $id = $buy['result']['asset_id']; $count = DB::table('club_journals')->count();
+        $id = $buy['result']['asset_id'];
+        $count = DB::table('club_journals')->count();
         $this->applyInstruction('asset_valuation', ['asset_id' => $id, 'carrying_value_minor' => 100000], '2026-09-03');
         $this->applyInstruction('asset_split', ['asset_id' => $id, 'numerator' => 2, 'denominator' => 1], '2026-09-04');
         $this->assertSame($count, DB::table('club_journals')->count());
@@ -264,7 +277,8 @@ class ClubAccountingTest extends TestCase
 
     public function test_existing_cashbook_receipt_is_classified_once_without_duplicate_cash(): void
     {
-        $this->opening(); Sanctum::actingAs($this->owner);
+        $this->opening();
+        Sanctum::actingAs($this->owner);
         $id = $this->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
             'idempotency_key' => (string) Str::uuid(),
             'transaction_date' => '2026-09-02', 'direction' => 'credit', 'amount_minor' => 1000,
@@ -280,7 +294,8 @@ class ClubAccountingTest extends TestCase
 
     public function test_unclassified_earlier_cash_prevents_an_inaccurate_subscription_price(): void
     {
-        $this->opening(); Sanctum::actingAs($this->owner);
+        $this->opening();
+        Sanctum::actingAs($this->owner);
         $this->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
             'idempotency_key' => (string) Str::uuid(),
             'transaction_date' => '2026-09-02', 'direction' => 'credit', 'amount_minor' => 1000, 'description' => 'Unclassified receipt'])->assertCreated();
@@ -290,7 +305,8 @@ class ClubAccountingTest extends TestCase
 
     public function test_closed_period_rejects_backdated_financial_instructions(): void
     {
-        $this->opening(); $this->applyInstruction('close_period', ['closed_through' => '2026-09-10'], '2026-09-11');
+        $this->opening();
+        $this->applyInstruction('close_period', ['closed_through' => '2026-09-10'], '2026-09-11');
         Sanctum::actingAs($this->owner);
         $this->postJson($this->base.'/instructions', ['type' => 'contribution', 'business_date' => '2026-09-05',
             'idempotency_key' => (string) Str::uuid(), 'payload' => ['member_user_id' => $this->member->id,
@@ -303,7 +319,8 @@ class ClubAccountingTest extends TestCase
         $this->opening();
         $income = $this->applyInstruction('cash_entry', ['direction' => 'credit', 'amount_minor' => 1000,
             'treasury_account_id' => $this->treasury->id, 'allocations' => [['account_code' => 'INVESTMENT_INCOME', 'amount_minor' => 1000]]], '2026-09-02');
-        $id = $income['result']['journal_id']; $hash = DB::table('club_journals')->where('id', $id)->value('content_hash');
+        $id = $income['result']['journal_id'];
+        $hash = DB::table('club_journals')->where('id', $id)->value('content_hash');
         $this->applyInstruction('reverse_journal', ['original_journal_id' => $id, 'description' => 'Synthetic correction of duplicate income'], '2026-09-03');
         $this->assertSame(1000000, $this->treasury->fresh()->current_balance_minor);
         $this->assertSame($hash, DB::table('club_journals')->where('id', $id)->value('content_hash'));
@@ -312,12 +329,14 @@ class ClubAccountingTest extends TestCase
 
     public function test_statements_are_frozen_and_same_request_returns_the_same_issue(): void
     {
-        $this->opening(); Sanctum::actingAs($this->owner);
+        $this->opening();
+        Sanctum::actingAs($this->owner);
         $input = ['period_start' => '2026-09-01', 'period_end' => '2026-09-25', 'idempotency_key' => 'SYNTHETIC-STATEMENT-1'];
         $one = $this->postJson($this->base.'/statements', $input)->assertCreated()->json('data.statement');
         $this->space->update(['name' => 'Changed after statement issue']);
         $two = $this->postJson($this->base.'/statements', $input)->assertCreated()->json('data.statement');
-        $this->assertSame($one['id'], $two['id']); $this->assertSame('Synthetic Member Accounting Club', $two['snapshot']['space']['name']);
+        $this->assertSame($one['id'], $two['id']);
+        $this->assertSame('Synthetic Member Accounting Club', $two['snapshot']['space']['name']);
         $this->getJson($this->base.'/statements/'.$one['id'])->assertOk()->assertJsonPath('data.statement.content_hash', $one['content_hash']);
         $this->get($this->base.'/statements/'.$one['id'].'/html')->assertOk()->assertSee('Synthetic Member Accounting Club');
         $this->get($this->base.'/statements/'.$one['id'].'/csv')->assertOk();
@@ -340,12 +359,14 @@ class ClubAccountingTest extends TestCase
         $this->opening(); $this->applyInstruction('contribution', ['member_user_id' => $this->member->id,
             'amount_minor' => 1000, 'treasury_account_id' => $this->treasury->id], '2026-09-15');
         $report = app(ClubReports::class)->report($this->book->fresh(), $this->owner, '2026-09-01', '2026-09-10');
-        $this->assertCount(1, $report['member_positions']); $this->assertSame(1000000, $report['net_asset_value']['net_assets_minor']);
+        $this->assertCount(1, $report['member_positions']);
+        $this->assertSame(1000000, $report['net_asset_value']['net_assets_minor']);
     }
 
     public function test_database_rejects_edits_to_posted_journals(): void
     {
-        $this->opening(); $journal = DB::table('club_journals')->first();
+        $this->opening();
+        $journal = DB::table('club_journals')->first();
         $this->expectException(QueryException::class);
         DB::table('club_journals')->where('id', $journal->id)->update(['description' => 'Tampered']);
     }
@@ -361,12 +382,14 @@ class ClubAccountingTest extends TestCase
             ],
         ]);
         $this->assertSame(1300000, $item['result']['net_assets_minor']);
-        $this->assertSame(2, DB::table('club_asset_movements')->count()); $this->assertSame(1, DB::table('club_journals')->count());
+        $this->assertSame(2, DB::table('club_asset_movements')->count());
+        $this->assertSame(1, DB::table('club_journals')->count());
     }
 
     public function test_unknown_payload_fields_and_floating_point_money_are_rejected(): void
     {
-        $this->opening(); Sanctum::actingAs($this->owner);
+        $this->opening();
+        Sanctum::actingAs($this->owner);
         foreach ([['amount_minor' => 12.5], ['amount_minor' => 12, 'status' => 'approved']] as $input) {
             $this->postJson($this->base.'/instructions', ['type' => 'contribution', 'business_date' => '2026-09-02',
                 'idempotency_key' => (string) Str::uuid(), 'payload' => $input + ['member_user_id' => $this->member->id,
@@ -376,11 +399,13 @@ class ClubAccountingTest extends TestCase
 
     public function test_ownership_transfer_does_not_create_cash_or_new_capital(): void
     {
-        $this->opening(); $before = $this->treasury->fresh()->current_balance_minor;
+        $this->opening();
+        $before = $this->treasury->fresh()->current_balance_minor;
         $this->applyInstruction('ownership_transfer', ['from_user_id' => $this->owner->id, 'to_user_id' => $this->member->id, 'units_micro' => 250000000], '2026-09-02');
         $this->assertDatabaseHas('club_members', ['book_id' => $this->book->id, 'user_id' => $this->owner->id, 'capital_minor' => 750000, 'units_micro' => 750000000]);
         $this->assertDatabaseHas('club_members', ['book_id' => $this->book->id, 'user_id' => $this->member->id, 'capital_minor' => 250000, 'units_micro' => 250000000]);
-        $this->assertSame($before, $this->treasury->fresh()->current_balance_minor); Http::assertNothingSent();
+        $this->assertSame($before, $this->treasury->fresh()->current_balance_minor);
+        Http::assertNothingSent();
     }
 
     public function test_schema_exposes_exactly_the_implemented_instruction_types(): void
