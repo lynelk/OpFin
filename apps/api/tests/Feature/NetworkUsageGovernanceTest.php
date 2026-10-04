@@ -83,6 +83,7 @@ class NetworkUsageGovernanceTest extends TestCase
     {
         config()->set('opfin.data.network_usage_logging', true);
 
+        Log::shouldReceive('error')->zeroOrMoreTimes();
         Log::shouldReceive('info')
             ->once()
             ->withArgs(function (string $message, array $context): bool {
