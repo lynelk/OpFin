@@ -23,15 +23,9 @@ class KycDataBudgetTest extends TestCase
         $response = $this->post('/api/kyc/cases', [
             'national_id' => 'CM123456789012',
             'capture_channel' => 'app',
-            'national_id_front' => UploadedFile::fake()
-                ->image('front.jpg', 800, 600)
-                ->size(600),
-            'national_id_back' => UploadedFile::fake()
-                ->image('back.jpg', 800, 600)
-                ->size(600),
-            'selfie_with_id' => UploadedFile::fake()
-                ->image('selfie.jpg', 800, 600)
-                ->size(600),
+            'national_id_front' => UploadedFile::fake()->create('front.jpg', 600, 'image/jpeg'),
+            'national_id_back' => UploadedFile::fake()->create('back.jpg', 600, 'image/jpeg'),
+            'selfie_with_id' => UploadedFile::fake()->create('selfie.jpg', 600, 'image/jpeg'),
         ], ['Accept' => 'application/json']);
 
         $response->assertUnprocessable()
