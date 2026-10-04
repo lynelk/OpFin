@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\RecordNetworkUsage;
 use App\Http\Middleware\RecordSensitiveAction;
 use App\Support\ApiResponse;
 use Illuminate\Auth\AuthenticationException;
@@ -26,7 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->use([HandleCors::class]);
+        $middleware->use([HandleCors::class, RecordNetworkUsage::class]);
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'audit.sensitive' => RecordSensitiveAction::class,

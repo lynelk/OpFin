@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
 
@@ -18,7 +19,7 @@ class FinancialWellbeingApi {
   }
 
   static Future<List<Map<String, dynamic>>> accounts() async {
-    final response = await http.get(
+    final response = await OpFinHttp.get(
       Uri.parse('$apiUrl/financial-accounts'),
       headers: await _headers(),
     );
@@ -35,7 +36,7 @@ class FinancialWellbeingApi {
     required int balanceMinor,
     String currency = 'UGX',
   }) async {
-    final response = await http.post(
+    final response = await OpFinHttp.post(
       Uri.parse('$apiUrl/financial-accounts'),
       headers: await _headers(),
       body: jsonEncode({
@@ -62,7 +63,7 @@ class FinancialWellbeingApi {
     if (displayName != null) body['display_name'] = displayName;
     if (currency != null) body['currency'] = currency;
 
-    final response = await http.patch(
+    final response = await OpFinHttp.patch(
       Uri.parse('$apiUrl/financial-accounts/$accountId'),
       headers: await _headers(),
       body: jsonEncode(body),

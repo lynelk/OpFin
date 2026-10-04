@@ -168,3 +168,11 @@ The candidate also includes jurisdiction-specific issuer-version administration 
 Treasury cashbook writes remain idempotent. New clients should send `Idempotency-Key`. Established clients that do not yet send an explicit key use a compatibility fingerprint derived from the full canonical cashbook instruction: transaction reference/type, direction, amount, currency, description, counterparty, transaction date and value date. Dates are normalised before fingerprinting, and `transaction_reference` alone is not unique. Exact replay returns the original entry; a changed instruction receives a different compatibility identity.
 
 The opening-balance baseline is fixed and immutable from treasury-account creation; rebaselining requires a separately reviewed accounting correction. Mobile-money durable intent events retain the established `mobile_money.<direction>.requested` audit event alongside the newer intent/provider-response events. Automated tests explicitly disable production funding/disclosure/EFRIS/Cito-certification activation flags.
+
+## Mobile Home aggregate — 27 September 2026
+
+- `GET /api/mobile/home` — authenticated mobile Home snapshot combining Financial Compass, customer credit-profile state, personal protection policies and authorised Financial Spaces.
+- Optional query: `currency` (three-letter code, default `UGX`).
+- Response includes `freshness.observed_at`, `freshness.window_seconds=300` and `freshness.server_authoritative=true`.
+- The endpoint returns a private `ETag`. A matching `If-None-Match` returns HTTP `304` with no replacement financial payload.
+- This is a read-orchestration endpoint only. It does not create a second financial source of truth; underlying domain services and Space permissions remain authoritative.

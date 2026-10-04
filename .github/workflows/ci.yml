@@ -53,6 +53,8 @@ jobs:
       - run: sh scripts/verify-layout.sh
       - run: python3 scripts/sync-brand.py --check
       - run: python3 scripts/verify-security-controls.py
+      - name: Verify lightweight and sponsored-data governance
+        run: python3 scripts/verify-sponsored-data-governance.py
 
   repo-security:
     runs-on: ubuntu-latest
@@ -306,6 +308,9 @@ jobs:
           flutter test
           flutter build apk --release --no-pub
           flutter build appbundle --release --no-pub
+          python3 ../../scripts/check-mobile-release-size.py \
+            --android-apk build/app/outputs/flutter-apk/app-release.apk \
+            --android-aab build/app/outputs/bundle/release/app-release.aab
 
   client-ios:
     runs-on: macos-15
@@ -343,6 +348,8 @@ jobs:
           flutter build ios --release --no-codesign --no-pub \
             --dart-define=OPFIN_API_BASE_URL=https://opfin-production.up.railway.app/api \
             --dart-define=OPFIN_APP_STORE_P2P_BORROWING_ENABLED=false
+          python3 ../../scripts/check-mobile-release-size.py \
+            --ios-app build/ios/iphoneos/Runner.app
 
   release-gate:
     if: always()
