@@ -104,6 +104,8 @@ Use synthetic statements only. IDs UAT-67 to UAT-78 are reserved for the securit
 | UAT-81 | Unsafe or protected files | Upload a PDF with an embedded script, then a password-protected PDF | The first is refused without parsing. The second asks for an unprotected export. Neither asks for a password, PIN or OTP. |
 | UAT-82 | Unsupported layout | Upload a PDF with no dated transaction rows | The page reads "not yet supported", and nothing describes the document or customer as suspicious. |
 | UAT-83 | Retention | Let permission end, wait past the retention period, then run the purge command; repeat with a future legal hold | The original and its analysis are deleted, with the hash and audit event kept. A statement on legal hold is kept. |
+| UAT-89 | Statement review | In an institutional Space, upload a statement with a balance discrepancy. As a reviewer, open the queue and resolve it with a reason; separately, try to review your own upload | The queue shows a masked member, the issuer, findings and source lines. The resolution is recorded and source authenticity stays `unconfirmed`. Reviewing your own upload is refused. |
+| UAT-90 | Appeal and resubmission | Reject a statement for issuer-confirmed alteration (with evidence) and appeal it as the uploader; then request a resubmission and upload a replacement | Rejection without evidence is refused. The appeal is accepted once and the rejecting reviewer cannot decide it. The replacement links to the earlier statement, which keeps its history. |
 
 ## Causality and privacy
 

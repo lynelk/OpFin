@@ -19,7 +19,12 @@ use Throwable;
 /** Encrypted evidence storage. Document integrity is never promoted to issuer authenticity. */
 final class StatementVault
 {
-    public function __construct(private readonly Access $access, private readonly CsvImportReader $csv, private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly Access $access,
+        private readonly CsvImportReader $csv,
+        private readonly AuditLogger $audit,
+        private readonly StatementReviews $reviews,
+    ) {}
 
     public function issuers(FinancialSpace $space, User $actor): array
     {
@@ -102,6 +107,13 @@ final class StatementVault
                     ->where('review_due_on', '>=', now()->toDateString())->lockForUpdate()->first();
                 abort_unless($issuer, 422, 'The issuer is not approved for this jurisdiction, product or historical period. Request issuer review; this is not a fraud finding.');
                 abort_unless($data['authority_confirmed'] === true && $data['purpose'] === 'financial_analysis', 422, 'Confirm your authority and the analysis purpose. Credit use is not included.');
+                $previous = null;
+                if (! empty($data['supersedes_statement_id'])) {
+                    $previous = DB::table('fi_statements')->where('financial_space_id', $space->id)
+                        ->where('id', (int) $data['supersedes_statement_id'])->lockForUpdate()->first();
+                    abort_unless($previous !== null && (int) $previous->uploaded_by === (int) $actor->id && $previous->revoked_at === null, 422,
+                        'Choose one of your own current statements in this Space to replace.');
+                }
                 $analysis = null;
                 $pipeline = ['currency' => $data['currency'], 'minor_unit_exponent' => isset($data['minor_unit_exponent'])
                     ? (int) $data['minor_unit_exponent'] : Values::exponent($data['currency'])];
@@ -133,8 +145,12 @@ final class StatementVault
                     'analysis_cipher' => $analysis ? Crypt::encryptString(Values::canonical($analysis)) : null,
                     'pipeline_cipher' => Crypt::encryptString(Values::canonical($pipeline)),
                     'assurance' => json_encode(StatementAssurance::from($status, $analysis)), 'analysed_at' => $isCsv ? now() : null,
-                    'created_at' => now(), 'updated_at' => now()]);
-                $this->audit->record('intelligence.statement_uploaded', $actor, $space, ['statement_id' => $id, 'file_hash' => $fileHash, 'issuer_version_id' => $issuer->id]);
+                    'supersedes_statement_id' => $previous?->id, 'created_at' => now(), 'updated_at' => now()]);
+                if ($previous !== null) {
+                    $this->reviews->supersede($previous, $actor, $key);
+                }
+                $this->audit->record('intelligence.statement_uploaded', $actor, $space, ['statement_id' => $id, 'file_hash' => $fileHash,
+                    'issuer_version_id' => $issuer->id, 'supersedes_statement_id' => $previous?->id]);
                 if (! $isCsv) {
                     AnalyseStatementDocument::dispatch($id)->afterCommit();
                 }
@@ -160,7 +176,7 @@ final class StatementVault
 
     public function detail(FinancialSpace $space, User $actor, int $id, int $page): array
     {
-        $this->access->require($space, $actor, 'statement');
+        $role = $this->access->require($space, $actor, 'statement');
         $row = DB::table('fi_statements')->where('financial_space_id', $space->id)->where('id', $id)->first();
         abort_unless($row, 404);
         abort_if($row->revoked_at !== null || Carbon::parse($row->authority_expires_at)->isPast(), 403, 'Analysis permission has expired or been withdrawn.');
@@ -177,6 +193,8 @@ final class StatementVault
 
         return ['statement' => $this->summary($row), 'issuer_eligibility_current' => $issuerCurrent, 'analysis' => $analysis,
             'assurance' => $this->assurance($row), 'status_explanation' => $this->explanation($row->status),
+            'supersedes_statement_id' => $row->supersedes_statement_id,
+            ...$this->reviews->forDetail($row, $actor, $role),
             'source_authenticity' => 'unconfirmed', 'credit_decision_eligible' => false];
     }
 

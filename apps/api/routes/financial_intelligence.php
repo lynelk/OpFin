@@ -33,6 +33,9 @@ Route::prefix('financial-spaces/{space}/intelligence')->group(function (): void 
     Route::post('/statements', [Statements::class, 'upload']);
     Route::get('/statements/{statement}', [Statements::class, 'show']);
     Route::delete('/statements/{statement}/permission', [Statements::class, 'revoke']);
+    Route::get('/statement-reviews', [Statements::class, 'reviewQueue']);
+    Route::post('/statements/{statement}/reviews', [Statements::class, 'review'])->whereNumber('statement');
+    Route::post('/statements/{statement}/appeal', [Statements::class, 'appeal'])->whereNumber('statement');
 });
 Route::post('intelligence/admin/issuers', [Statements::class, 'proposeIssuer']);
 Route::post('intelligence/admin/issuers/{issuer}/review', [Statements::class, 'reviewIssuer']);

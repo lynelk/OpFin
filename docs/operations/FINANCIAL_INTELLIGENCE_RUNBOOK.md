@@ -53,7 +53,7 @@ PDF parsing, structural screening and retention purging now exist in source and 
 - issuer-specific layout readers validated against authorised redacted samples;
 - account and source-verification evidence;
 - a legal-hold management interface;
-- a statement review queue;
+- member notifications for statement review decisions (the queue, decisions, appeals and resubmission exist in source and need acceptance);
 - supported customer and mobile journeys;
 - production-like security, performance and accessibility evidence;
 - real integration contracts.

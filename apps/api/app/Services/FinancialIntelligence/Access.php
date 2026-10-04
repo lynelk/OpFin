@@ -12,11 +12,13 @@ use Illuminate\Support\Facades\DB;
 final class Access
 {
     public const ADMIN_ROLES = ['owner', 'administrator', 'director', 'chairperson', 'treasurer'];
+
     public const ROLES = ['analyst', 'reviewer', 'collections', 'board', 'auditor'];
+
     private const PERMISSIONS = [
-        'administrator' => ['overview', 'source', 'import', 'publish', 'detail', 'case', 'report', 'grant', 'statement', 'share'],
+        'administrator' => ['overview', 'source', 'import', 'publish', 'detail', 'case', 'report', 'grant', 'statement', 'statement_review', 'share'],
         'analyst' => ['overview', 'import', 'detail', 'case', 'report', 'statement'],
-        'reviewer' => ['overview', 'publish', 'detail', 'case', 'report', 'statement'],
+        'reviewer' => ['overview', 'publish', 'detail', 'case', 'report', 'statement', 'statement_review'],
         'collections' => ['case'],
         'board' => ['overview', 'report'],
         'auditor' => ['overview', 'detail', 'report'],
@@ -52,6 +54,7 @@ final class Access
             abort_if($space->trashed() || $user->trashed() || $space->status !== 'active', 403);
             abort_unless(FinancialSpaceMembership::query()->where('financial_space_id', $space->id)
                 ->where('user_id', $user->id)->where('status', 'active')->where('role', 'owner')->exists(), 403);
+
             return 'personal';
         }
         $role = $this->role($space, $user);

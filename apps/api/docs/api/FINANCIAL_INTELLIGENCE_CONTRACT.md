@@ -86,7 +86,38 @@ CSV analysis produces financial-consistency findings and suggested categories. I
 
 Retention: `opfin:statements:purge-originals` runs daily at 02:30. Once analysis permission has expired or been withdrawn for `OPFIN_STATEMENT_RETENTION_DAYS` days (default 90; confirm with legal and privacy before launch), it deletes the original and its analysis. The file hash, authority record and assurance codes remain as audit evidence, and `original_purged_at` is set. A `legal_hold_until` date defers purging. There is not yet an API to set legal holds.
 
-Not yet in place: antivirus scanning (needs an approved scanner service), issuer-specific layout readers validated against authorised samples, issuer source verification, a statement review queue, and the Flutter journey.
+### Review, appeal and resubmission
+
+Reviews take place inside institutional Spaces. They are decided by Space administrators or users with a current `reviewer` grant (permission `statement_review`). Personal Spaces have no reviewer: the owner sees the results and can resubmit. Platform staff do not gain access to a Space's statements.
+
+- `GET /statement-reviews` is the queue. It lists statements whose `review` is `needs_review`, `escalated`, `appealed` or `issuer_verification_requested`. Each item shows a masked member ("Member with phone ending 4321"), the issuer's legal name and jurisdiction, coverage, findings with source lines, the assurance codes and the decisions the viewer may take.
+- `POST /statements/{statement}/reviews` records a decision. It needs `decision`, `reason_code`, an optional `evidence_reference` and optional `notes`, and requires `Idempotency-Key`.
+
+| Decision | Resulting `review` | Reason codes |
+|---|---|---|
+| `resolved_no_concern` | `resolved_with_reasons` | `explained_by_customer`, `explained_by_layout`, `verified_with_original`, `other_documented`; notes required |
+| `resubmission_requested` | `resubmission_requested` | `unreadable_or_partial`, `period_or_account_mismatch`, `balances_do_not_reconcile` |
+| `original_requested` | `original_requested` | `edited_copy_suspected`, `signals_need_original` |
+| `issuer_verification_requested` | `issuer_verification_requested` | `material_discrepancy`, `high_impact_use` |
+| `escalated` | `escalated` | `needs_senior_review`, `possible_conflict` |
+| `rejected` | `rejected_with_reasons` | `issuer_confirmed_alteration` (evidence reference required), `not_the_declared_account`, `uploader_withdrew`, `unreadable_after_resubmission` |
+
+The following rules apply:
+- Reviewers cannot decide on statements they uploaded.
+- Escalated reviews need a Space administrator.
+- An appeal must be decided by a reviewer other than the one who rejected the statement.
+- No reason code allows rejection on document signals alone.
+- A decision never changes `source_authenticity`, which stays `unconfirmed`.
+- Decisions are append-only (database triggers on PostgreSQL and SQLite) and audited.
+- Notes are encrypted and visible only to reviewers.
+
+`POST /statements/{statement}/appeal` lets the uploader appeal a `rejected_with_reasons` decision once. It takes a `reason` and requires `Idempotency-Key`.
+
+To resubmit, upload a new statement with `supersedes_statement_id` set to one of the uploader's own current statements in the Space. The replaced statement keeps its history and moves to `superseded_by_resubmission`.
+
+The statement detail now includes `reviews`, `next_action`, `can_appeal`, `permitted_decisions` and `supersedes_statement_id`. The uploader's view omits reviewer notes and roles.
+
+Not yet in place: antivirus scanning (needs an approved scanner service), issuer-specific layout readers validated against authorised samples, issuer source verification, member notifications for review decisions, and the Flutter journey.
 
 ## Web integration
 

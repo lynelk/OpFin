@@ -14,7 +14,12 @@ export type CaseItem = { id: number; source_id: number; import_id: number; signa
 export type StatementAssurance = { institution_eligibility: string; account_authority: string; extraction: string; financial_consistency: string; source_authenticity: string; review: string; document_signals: string[] };
 export type Statement = { id: number; issuer_version_id: number; status: string; period_start: string; period_end: string; file_hash: string; source_authenticity: string; account_ownership: string; credit_decision_eligible: false; authority_expires_at: string; revoked_at: string | null; analysed_at?: string | null; original_purged_at?: string | null; assurance?: StatementAssurance };
 export type Issuer = { id: number; legal_name: string; country: string; product_type: string; regulator: string; licence_reference: string; valid_from: string; valid_until: string; review_due_on: string };
-export type StatementDetail = { statement: Statement; issuer_eligibility_current: boolean; source_authenticity: string; credit_decision_eligible: false; assurance?: StatementAssurance; status_explanation?: string; analysis: null | {
+export type ReviewOption = { decision: string; reason_codes: string[] };
+export type StatementReview = { decision: string; reason_code: string; decided_at: string; actor_role?: string; evidence_reference?: string | null; notes?: string | null };
+export type StatementReviewItem = { statement_id: number; uploader: string; uploaded_by_you: boolean; issuer: { legal_name: string; country: string; product_type: string } | null;
+  period_start: string; period_end: string; assurance: StatementAssurance; findings: Array<{ code: string; severity: string; source_line: number | null }>; permitted_decisions: ReviewOption[] };
+export type StatementDetail = { statement: Statement; issuer_eligibility_current: boolean; source_authenticity: string; credit_decision_eligible: false; assurance?: StatementAssurance; status_explanation?: string;
+  reviews?: StatementReview[]; next_action?: string | null; can_appeal?: boolean; permitted_decisions?: ReviewOption[]; supersedes_statement_id?: number | null; analysis: null | {
   currency: string; credits_minor: number; debits_minor: number; net_movement_minor: number; financial_checks: string; interpretation: string;
   verified_income_minor: null; row_count: number; transaction_total: number; page: number;
   transactions: Array<{ row_number: number; date: string; description: string; direction: string; amount_minor: number; balance_minor: number | null; suggested_category: string }>;
@@ -77,6 +82,9 @@ export const intelligenceApi = {
   statement: (s: number, record: number, page: number, t?: string) => request<StatementDetail>(s, `/statements/${id(record)}?page=${id(page)}`, t),
   uploadStatement: (s: number, body: FormData, key: string, t?: string) => request<Statement>(s, "/statements", t, "POST", body, key),
   revokeStatement: (s: number, record: number, t?: string) => request<Record<string, unknown>>(s, `/statements/${id(record)}/permission`, t, "DELETE"),
+  statementReviews: (s: number, page: number, t?: string) => request<Page<StatementReviewItem>>(s, `/statement-reviews?page=${id(page)}`, t),
+  reviewStatement: (s: number, record: number, body: unknown, key: string, t?: string) => request<{ statement_id: number; review: string }>(s, `/statements/${id(record)}/reviews`, t, "POST", body, key),
+  appealStatement: (s: number, record: number, body: unknown, key: string, t?: string) => request<{ statement_id: number; review: string }>(s, `/statements/${id(record)}/appeal`, t, "POST", body, key),
 };
 export async function reportBytes(space: number, report: number, format: "csv" | "html", token?: string): Promise<Response> {
   if (!token) throw new IntelligenceApiError(401, "Authentication required.");

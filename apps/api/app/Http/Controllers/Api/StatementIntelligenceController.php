@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
+use App\Services\FinancialIntelligence\StatementReviews;
 use App\Services\FinancialIntelligence\StatementVault;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -15,7 +16,31 @@ use JsonException;
 
 final class StatementIntelligenceController extends Controller
 {
-    public function __construct(private readonly StatementVault $vault) {}
+    public function __construct(private readonly StatementVault $vault, private readonly StatementReviews $reviews) {}
+
+    public function reviewQueue(Request $r, FinancialSpace $space)
+    {
+        return response()->json(['data' => $this->reviews->queue($space, $r->user(), $this->page($r))]);
+    }
+
+    public function review(Request $r, FinancialSpace $space, int $statement)
+    {
+        $v = $r->validate([
+            'decision' => ['required', Rule::in(array_keys(StatementReviews::DECISIONS))],
+            'reason_code' => ['required', 'string', 'max:60'],
+            'evidence_reference' => ['nullable', 'string', 'max:160'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        return response()->json(['data' => $this->reviews->decide($space, $r->user(), $statement, $v, (string) $r->header('Idempotency-Key', ''))], 201);
+    }
+
+    public function appeal(Request $r, FinancialSpace $space, int $statement)
+    {
+        $v = $r->validate(['reason' => ['required', 'string', 'max:2000']]);
+
+        return response()->json(['data' => $this->reviews->appeal($space, $r->user(), $statement, $v, (string) $r->header('Idempotency-Key', ''))], 201);
+    }
 
     public function issuers(Request $r, FinancialSpace $space)
     {
@@ -43,6 +68,7 @@ final class StatementIntelligenceController extends Controller
             'currency' => ['required', 'regex:/^[A-Z]{3}$/'], 'period_start' => ['required', 'date_format:Y-m-d'], 'period_end' => ['required', 'date_format:Y-m-d', 'after_or_equal:period_start'],
             'opening_balance_minor' => ['nullable', 'integer'], 'closing_balance_minor' => ['nullable', 'integer'],
             'minor_unit_exponent' => ['nullable', 'integer', 'between:0,4'],
+            'supersedes_statement_id' => ['nullable', 'integer', 'min:1'],
             'account_reference' => ['required', 'string', 'max:120'], 'authority_reference' => ['required', 'string', 'max:255'], 'authority_confirmed' => ['required', 'accepted'],
             'authority_expires_at' => ['required', 'date', 'after:now', 'before:+367 days'], 'purpose' => ['required', Rule::in(['financial_analysis'])],
             'mapping' => ['nullable', 'string', 'max:20000']]);
