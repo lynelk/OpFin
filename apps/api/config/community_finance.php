@@ -2,8 +2,8 @@
 
 return [
     'activation' => [
-        // Keep the full SACCO/community finance foundation built but closed until governance,
-        // partner, custody, regulatory and production sign-off are all recorded.
+        // Community/SACCO finance is on by default (owner decision, 5 October 2026). Set these
+        // variables to dormant/false to switch it off for an environment.
         'mode' => env('OPFIN_COMMUNITY_FINANCE_MODE', 'live'),
         'live_enabled' => (bool) env('OPFIN_COMMUNITY_FINANCE_LIVE_ENABLED', true),
         'sacco_core_enabled' => (bool) env('OPFIN_SACCO_CORE_ENABLED', true),
