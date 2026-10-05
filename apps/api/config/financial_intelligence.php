@@ -8,7 +8,8 @@ return [
     'max_loans' => 50000,
     'management_npl_days' => 90,
     'stale_after_hours' => 48,
-    'statement_disk' => 'local',
+    // Production must use durable private storage shared by the API, worker and scheduler (for example `s3`).
+    'statement_disk' => env('OPFIN_STATEMENT_DISK', 'local'),
     'statement_prefix' => 'financial-intelligence/evidence',
     // PDF analysis runs on the queue under these bounds; larger documents need a shorter period or the CSV export.
     'statement_pdf_max_bytes' => 10 * 1024 * 1024,

@@ -1,7 +1,7 @@
 # OpFin deployment: three application parts
 
 Status: Controlled internal deployment runbook  
-Updated: 23 September 2026  
+Updated: 5 October 2026  
 Language: English (United Kingdom)
 
 OpFin is one source repository, not one executable application. Deploying its root with automatic language detection fails because the app manifests live under `apps/`.
@@ -36,6 +36,10 @@ Set values on backend services only; use Railway references rather than copying 
 - The callback route implemented in source is `/api/webhooks/cpay`.
 
 The worker timeout is 75 seconds and the database retry interval is 120 seconds. Job-specific timeouts must remain below the retry interval. Railway's `ALWAYS` restart policy restarts the worker after its one-hour planned recycling. Worker and scheduler must remain private, without public domains. Give production provider credentials only to the backend processes that require them, through service-scoped variables; no credential values belong in this document.
+
+### Document storage and database recovery
+
+KYC photos and statement uploads go to the private `OpFin Buck` bucket: set the `AWS_*` bucket references, `KYC_FILESYSTEM_DISK=s3` and `OPFIN_STATEMENT_DISK=s3` on the API, worker and scheduler, then run `php artisan opfin:storage-check`. The production database (`Postgres OpFin` in the Railway canvas) uses Railway's managed point-in-time recovery with `POSTGRES_ARCHIVE_TIMEOUT=30`. Follow the [backup and restore runbook](../../apps/api/docs/production/backup-and-restore-plan.md#railway-runbook-october-2026) for setup, restore and drills. Both buckets are recorded in `ops/railway/topology-policy.json`.
 
 ## 2. Web frontend
 
