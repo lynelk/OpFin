@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendSms;
 use App\Models\SmsMessage;
 use App\Models\User;
 use App\Services\FinancialIntegrityService;
@@ -65,7 +66,13 @@ class GovernancePlatformTest extends TestCase
         $this->assertSame('challenge_sent', $start['state']);
 
         $sms = SmsMessage::latest('id')->firstOrFail();
-        preg_match('/(\d{6})/', $sms->message, $matches);
+        $this->assertStringContainsString(SmsMessage::REDACTED, $sms->message);
+        $this->assertDoesNotMatchRegularExpression('/\d{6}/', $sms->message);
+
+        $matches = [];
+        Queue::assertPushed(SendSms::class, function (SendSms $job) use (&$matches): bool {
+            return preg_match('/(\d{6})/', $job->content(), $matches) === 1;
+        });
         $this->assertArrayHasKey(1, $matches);
 
         $service->handle('256700111222', 'VERIFY '.$matches[1], 'wamid.verify');

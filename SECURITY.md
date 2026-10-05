@@ -1,7 +1,7 @@
 # OpFin security
 
 Status: Controlled internal security standard  
-Updated: 24 September 2026  
+Updated: 3 October 2026  
 Language: English (United Kingdom)
 
 Security is maintained through layered controls, verified changes and timely response. A successful scan is not a certification that a system is free of vulnerabilities. Do not describe this repository or a release as permanently secure.
@@ -25,6 +25,7 @@ Failed, cancelled, missing or incomplete checks are not a pass. Do not weaken an
 
 - New mobile customers verify their phone by OTP, then create a six-digit PIN.
 - OTPs are hashed at rest, expire, have attempt limits and are consumed/invalidated by the relevant flow.
+- Stored SMS records keep a redacted copy of any one-time code (sign-up/PIN OTP, WhatsApp verification, guarantor confirmation). The deliverable text only travels in the encrypted queue job, so staff screens and database reads never reveal a live code.
 - Android may use SMS Retriever/app-signature formatting for OTP auto-fill; OpFin does not require broad SMS-reading permission.
 - Weak repeated/sequential PINs are rejected and login attempts are rate-limited.
 - Existing legacy password authentication remains a migration compatibility path; it is not the new-customer UX.
@@ -82,6 +83,15 @@ KYC requires NIN, National ID front/back and a customer photo holding the ID. Au
 - Offer acceptance is tied to an immutable disclosure hash.
 - A provider acknowledgement or pending collection/disbursement is not accounting finality. Customer balances change only through the existing provider-success, ledger and reconciliation controls.
 - Callbacks remain authenticated, replay-safe and auditable.
+
+## Staff access and the legacy back-office
+
+- The legacy back-office on the API origin requires `platform_admin` or `operations`. Creating or editing user records and institution administrators requires `platform_admin`. Every change is written to the audit trail.
+- Accounts are never created with a default password. Staff-created accounts get an unusable random credential, and the holder sets their own PIN through the OTP-verified reset journey.
+- Disbursement float top-ups follow maker-checker: they are recorded as pending, and a different staff member must approve them before the balance changes.
+- Legacy institution administrators sit in the `staff_pending_review` holding role. It grants no permissions and cannot sign in until a platform administrator assigns a reviewed role. `php artisan opfin:legacy-roles` lists them.
+- The staff AI chat assistant is retired. Do not reintroduce a feature that sends customer or staff conversations to a third-party model without consent, rate limits, content-free logging and a security review.
+- Credit-bureau enquiries go only through the governed credit-profile path. It binds the subject to the authenticated customer and records explicit consent.
 
 ## Web/runtime protections
 

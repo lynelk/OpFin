@@ -32,7 +32,6 @@ use App\Http\Controllers\Api\LocationContextController;
 use App\Http\Controllers\Api\LongRangeGovernanceController;
 use App\Http\Controllers\Api\LongRangePlatformController;
 use App\Http\Controllers\Api\MobileHomeController;
-use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\OrganisationJourneyController;
 use App\Http\Controllers\Api\PartnerEssentialsController;
 use App\Http\Controllers\Api\PartnerReportingController;
@@ -227,8 +226,6 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/support-cases', [CustomerSupportController::class, 'store']);
     Route::get('/receipts', [ReceiptController::class, 'index']);
     Route::get('/receipts/{receipt}', [ReceiptController::class, 'show']);
-    Route::post('/validate-nin', [NinValidationController::class, 'validateNin']);
-    Route::post('/credit-scores', [NinValidationController::class, 'creditScores']);
 
     Route::get('/credit/applications', [ProductionLoanApplicationController::class, 'index']);
     Route::post('/credit/applications', [ProductionLoanApplicationController::class, 'store']);

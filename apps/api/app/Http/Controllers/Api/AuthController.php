@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Otp;
 use App\Models\User;
-use App\Services\CustomerCreditProfileService;
 use App\Services\CommercialInsightsService;
+use App\Services\CustomerCreditProfileService;
 use App\Services\PersonalFinancialSpaceService;
 use App\Services\SmsService;
 use App\Support\ApiResponse;
@@ -16,8 +16,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -28,49 +28,16 @@ class AuthController extends Controller
         private readonly PersonalFinancialSpaceService $personalSpaces,
     ) {}
 
-    public function showDeleteForm()
+    /**
+     * The Web app owns public account deletion and routes it through
+     * AccountDeletionService. This legacy URL only forwards there.
+     */
+    public function redirectToAccountDeletion()
     {
-        return view('account.delete');
-    }
+        $web = rtrim((string) config('services.opfin.web_url'), '/');
+        abort_if($web === '', 404);
 
-    public function destroy(Request $request)
-    {
-        try {
-            $data = $request->validate([
-                'phone' => ['required'],
-                'pin' => ['nullable', 'required_without:password', 'string'],
-                'password' => ['nullable', 'required_without:pin', 'string'],
-                'confirmation' => ['required', 'in:DELETE'],
-            ]);
-
-            $credential = (string) ($data['pin'] ?? $data['password']);
-            $user = User::where('phone', $request->phone)->first();
-            if (! $user || ! Hash::check($credential, $user->password)) {
-                return redirect()->back()->with('error', 'User details provided are invalid');
-            }
-
-            $this->beforeUserDelete($user);
-            $user->tokens()->delete();
-            $user->delete();
-
-            return redirect('/')->with('success', 'Your account has been closed.');
-        } catch (Exception $e) {
-            report($e);
-
-            return redirect()->back()->with('error', 'Unable to close the account.');
-        }
-    }
-
-    protected function beforeUserDelete(User $user): void
-    {
-        $user->forceFill([
-            'email' => 'deleted-'.$user->id.'@deleted.example',
-            'phone' => 'deleted-'.$user->id,
-            'name' => 'Deleted User',
-            'first_name' => null,
-            'other_name' => null,
-            'last_name' => null,
-        ])->save();
+        return redirect()->away($web.'/account/delete', 303);
     }
 
     public function register(Request $request)
@@ -220,6 +187,9 @@ class AuthController extends Controller
         }
 
         RateLimiter::clear($key);
+        if ($user->hasRole(User::ROLE_STAFF_PENDING_REVIEW)) {
+            return ApiResponse::error('Your staff access is under review. Contact an OpFin platform administrator.', 403);
+        }
         $this->personalSpaces->ensure($user);
         $this->profiles->ensurePrimaryPhone($user);
         $token = $this->createAccessToken($user);
@@ -320,7 +290,7 @@ class AuthController extends Controller
         if ($signature !== '') {
             $message .= "\n".$signature;
         }
-        $this->smsService->queueSms($request->phone, $message);
+        $this->smsService->queueSms($request->phone, $message, SmsService::redact($message, $otp));
 
         return ApiResponse::success('OTP generated successfully', [
             'expires_at' => $expiresAt->toIso8601String(),

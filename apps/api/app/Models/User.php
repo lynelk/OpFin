@@ -25,6 +25,13 @@ class User extends Authenticatable
 
     public const ROLE_SUPPORT = 'support';
 
+    /**
+     * Holding state for legacy institution administrators. It grants nothing and
+     * cannot sign in until a platform administrator assigns a reviewed role.
+     * It is deliberately not an assignable role in ROLES.
+     */
+    public const ROLE_STAFF_PENDING_REVIEW = 'staff_pending_review';
+
     public const ROLES = [
         self::ROLE_PLATFORM_ADMIN,
         self::ROLE_OPERATIONS,

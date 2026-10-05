@@ -63,30 +63,44 @@
                             <th>Account</th>
                             <th>Amount</th>
                             <th>Status</th>
+                            <th>Recorded by</th>
+                            <th>Approved by</th>
                             <th>Image</th>
                             <th>Date</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($floatTopups as $floatTopup)
                             <tr>
                                 <td>{{ $floatTopup->id }}</td>
-                                <td>{{ $account->name }}</td>
+                                <td>{{ $account?->name ?? 'Disbursement' }}</td>
                                 <td>{{ number_format($floatTopup->amount, 2) }}</td>
                                 <td>{{ $floatTopup->status }}</td>
-                                <td>                            
+                                <td>{{ $floatTopup->recordedBy?->name ?? 'Not recorded' }}</td>
+                                <td>{{ $floatTopup->approvedBy?->name ?? '—' }}</td>
+                                <td>
                                     @if($floatTopup->image)
                                         <a href="{{ asset('storage/' . $floatTopup->image) }}" target="_blank">View Image</a>
                                     @else
                                         N/A
-                                    @endif 
+                                    @endif
                                 </td>
                                 <td>{{ $floatTopup->created_at?->format('M d, Y H:i') }}</td>
-                                
+                                <td>
+                                    @if($floatTopup->status === \App\Models\FloatTopup::STATUS_PENDING && (int) $floatTopup->recorded_by_user_id !== (int) Auth::id())
+                                        <form method="POST" action="{{ route('float-topups.approve', $floatTopup) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Approve</button>
+                                        </form>
+                                    @elseif($floatTopup->status === \App\Models\FloatTopup::STATUS_PENDING)
+                                        <span class="text-muted small">Awaiting another approver</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
+                                <td colspan="9" class="text-center text-muted py-4">
                                     <i class="bi bi-exclamation-circle me-1"></i> No float top-ups found.
                                 </td>
                             </tr>

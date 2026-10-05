@@ -32,10 +32,10 @@ Public, throttled:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| POST | `/api/generate-otp` | Send a six-digit OTP; accepts optional Android app signature for SMS Retriever |
+| POST | `/api/generate-otp` | Send a six-digit OTP; accepts optional Android app signature for SMS Retriever. The stored SMS record keeps a redacted copy |
 | POST | `/api/verify-otp` | Verify OTP and return short-lived phone-verification token |
 | POST | `/api/register` | Create account after verified phone; preferred payload is names + six-digit PIN |
-| POST | `/api/login` | Phone + PIN; legacy password remains migration-compatible |
+| POST | `/api/login` | Phone + PIN; legacy password remains migration-compatible. Returns 403 while an account is in the `staff_pending_review` holding role |
 | POST | `/api/reset-password` | OTP-backed PIN reset; endpoint name retained for compatibility |
 
 Authenticated:
