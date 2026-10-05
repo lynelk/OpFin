@@ -30,10 +30,34 @@ Repeat the same import and event keys; confirm no duplicated publication or case
 
 Share a report to one recipient with expiry, revoke it, and verify access stops. Test eight loans belonging to one borrower: external aggregates must remain suppressed. Confirm source report and filtered shared report hashes are separately labelled. Attempt to mutate source facts and frozen evidence directly in the test database; verify rejection.
 
-Use synthetic CSV statements with balance differences, duplicate/conflicting references, missing opening balances, reversals and possible salary descriptions. None may become issuer-authenticated or credit-eligible. Unknown/stale/revoked issuers must fail eligibility without accusing the customer of fraud. Upload a test PDF and verify quarantine, no parsing claims and no public original-file URL. Withdraw or expire analysis authority and verify denial.
+Use synthetic CSV statements with balance differences, duplicate/conflicting references, missing opening balances, reversals and possible salary descriptions. None may become issuer-authenticated or credit-eligible. Unknown/stale/revoked issuers must fail eligibility without accusing the customer of fraud. Upload synthetic PDFs and verify, in turn:
+- a consistent statement reads as `analysed_unconfirmed`, with source authenticity `unconfirmed`;
+- one altered amount is flagged on its own line;
+- a fully rebalanced alteration still reads `unconfirmed`;
+- an embedded script is refused without parsing;
+- a password-protected PDF asks for an unprotected export and never for a password;
+- an unrecognised layout reads "not yet supported";
+- editing metadata appears as a review signal, not a finding.
+
+Confirm there is no public original-file URL. Withdraw or expire analysis authority and verify denial.
+
+Operational checks:
+- `opfin:statements:analyse-pending` (every five minutes) recovers interrupted analysis and closes a statement as `unreadable` after two attempts.
+- `opfin:statements:purge-originals` (daily at 02:30) deletes originals and their analysis `OPFIN_STATEMENT_RETENTION_DAYS` (default 90) after permission ends, unless `legal_hold_until` is in the future.
+- After a purge, the file hash, authority record, assurance codes and the `intelligence.statement_original_purged` audit event remain.
 
 ## Still required before any launch
 
-Implement and accept document scanning/parsing, account/source-verification evidence, governed retention/legal holds, supported customer/mobile journeys, production-like security/performance/accessibility and real integration contracts. Resolve outstanding commercial, reporting and analytical scope in the product register. Update existing manuals and endpoint indexes without deleting their prior requirements.
+PDF parsing, structural screening and retention purging now exist in source and need acceptance. Still to implement and accept:
+- antivirus scanning, which needs an approved scanner service;
+- issuer-specific layout readers validated against authorised redacted samples;
+- account and source-verification evidence;
+- a legal-hold management interface;
+- member notifications for statement review decisions (the queue, decisions, appeals and resubmission exist in source and need acceptance);
+- acceptance of the App statement journey on real Android and iOS devices (the journey exists in source);
+- production-like security, performance and accessibility evidence;
+- real integration contracts.
+
+Resolve outstanding commercial, reporting and analytical scope in the product register. Update existing manuals and endpoint indexes without deleting their prior requirements.
 
 An absent data source, unknown financial amount, quarantined document or unexecuted test must remain visibly unknown. No mock institution, fabricated statement, seeded licence, causal NPL claim or invented profitability measure belongs in production evidence.

@@ -99,6 +99,21 @@ Execute `DEL-ES-01` through `DEL-ES-06` for expected immutable accounting, concu
 
 Essentials acceptance must additionally cover biller/rental verification, non-stacking overall headroom, rejection of OpFin as the primary lender, server-enforced distribution-channel terms, immutable disclosures, failed/ambiguous provider outcomes, repayment schedules, reconciliation and customer-controlled embedded-platform scopes. No financial exercise may create an unauthorised real obligation.
 
+## Statement upload and PDF analysis
+
+Use synthetic statements only. IDs UAT-67 to UAT-78 are reserved for the security and back-office suites in review.
+
+| ID | Area | Action | Expected result |
+|---|---|---|---|
+| UAT-79 | PDF analysis | Upload a consistent synthetic PDF statement for an approved issuer | Status moves from `queued_for_analysis` to `analysed_unconfirmed`. Extraction reads `complete` and financial consistency reads `consistent`. Source authenticity stays `unconfirmed`, and the layout reader is shown as not validated. |
+| UAT-80 | Tamper evidence | Change one amount without changing the running balances; separately, rebalance a change throughout | The first is flagged once on its own line and needs review. The second passes arithmetic and still reads source `unconfirmed`, not credit-eligible. |
+| UAT-81 | Unsafe or protected files | Upload a PDF with an embedded script, then a password-protected PDF | The first is refused without parsing. The second asks for an unprotected export. Neither asks for a password, PIN or OTP. |
+| UAT-82 | Unsupported layout | Upload a PDF with no dated transaction rows | The page reads "not yet supported", and nothing describes the document or customer as suspicious. |
+| UAT-83 | Retention | Let permission end, wait past the retention period, then run the purge command; repeat with a future legal hold | The original and its analysis are deleted, with the hash and audit event kept. A statement on legal hold is kept. |
+| UAT-89 | Statement review | In an institutional Space, upload a statement with a balance discrepancy. As a reviewer, open the queue and resolve it with a reason; separately, try to review your own upload | The queue shows a masked member, the issuer, findings and source lines. The resolution is recorded and source authenticity stays `unconfirmed`. Reviewing your own upload is refused. |
+| UAT-90 | Appeal and resubmission | Reject a statement for issuer-confirmed alteration (with evidence) and appeal it as the uploader; then request a resubmission and upload a replacement | Rejection without evidence is refused. The appeal is accepted once and the rejecting reviewer cannot decide it. The replacement links to the earlier statement, which keeps its history. |
+| UAT-91 | App statement journey | On Android and iOS 14+, open a Space where statements are available, upload a PDF through the document picker, open its results, and repeat in a Space where they are not available | The upload needs no storage or media permission and never asks for a password, PIN or OTP. Results use plain wording and say the provider has not confirmed the document. The card is hidden where statements are unavailable. |
+
 ## Causality and privacy
 
 Programme reports describe measured/observed change only, unless an appropriate evaluation design supports causal attribution. Financial-health and programme measurement remain distinct from credit scoring. Record privacy and financial-control failures as defects, not missing provider credentials.

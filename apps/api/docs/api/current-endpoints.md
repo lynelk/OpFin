@@ -182,7 +182,15 @@ Read the [Financial Intelligence contract](FINANCIAL_INTELLIGENCE_CONTRACT.md), 
 
 The institutional namespace is `/api/financial-spaces/{space}/intelligence`. It includes role-aware context, source registration, staged JSON/CSV imports, independent publication, source-reconciled portfolio analysis, comparison and sensitivity analysis, assigned cases, expiring access grants, frozen reports and explicit report-sharing mandates. Personal owners receive statement permissions only. Imports and statement evidence do not post payments, alter core accounting or become credit decisions.
 
-The candidate also includes jurisdiction-specific issuer-version administration under `/api/intelligence/admin/issuers` and purpose-bound statement evidence under the scoped namespace. Original PDFs remain quarantined until an accepted scanner/parser pipeline exists. Arithmetic consistency is not issuer authentication. The actual application, database, browser and mobile build gates remain outstanding; discoverable routes or written tests do not establish acceptance.
+The candidate also includes jurisdiction-specific issuer-version administration under `/api/intelligence/admin/issuers` and purpose-bound statement evidence under the scoped namespace. Statement PDFs are screened before parsing: active content (scripts, launch/submit actions, embedded files, XFA, including `#xx`-escaped names) and password protection are refused, and size, page, decode and line limits apply. Accepted PDFs are analysed on the queue by a versioned layout reader. The only reader so far is the generic running-balance reader, which is **not validated** for any issuer; issuer-specific readers need authorised redacted samples. Statement responses carry separate `assurance` codes (`institution_eligibility`, `account_authority`, `extraction`, `financial_consistency`, `source_authenticity`, `review`, `document_signals`) and a plain-language `status_explanation`. `opfin:statements:analyse-pending` runs every five minutes to recover interrupted analysis (two attempts at most). `opfin:statements:purge-originals` runs daily and deletes originals and their analysis `OPFIN_STATEMENT_RETENTION_DAYS` (default 90) after analysis permission ends, unless a legal hold applies. Antivirus scanning is not yet in place because it needs an approved scanner service.
+
+Institutional Spaces review flagged statements:
+- `GET /statement-reviews` is the queue for administrators and `reviewer` grants.
+- `POST /statements/{statement}/reviews` records a reasoned, append-only decision. Reviewers cannot decide their own uploads; escalations need an administrator; appeals go to a different reviewer.
+- `POST /statements/{statement}/appeal` lets the uploader appeal a rejection once.
+- `supersedes_statement_id` on upload links a resubmission and keeps the earlier version.
+
+Arithmetic consistency is not issuer authentication, and no review decision changes that. The actual application, database, browser and mobile build gates remain outstanding; discoverable routes or written tests do not establish acceptance.
 
 
 ## Post-merge compatibility hardening — 26 September 2026
