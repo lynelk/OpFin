@@ -21,7 +21,7 @@ GitHub Actions remains disabled at the owner's instruction. Equivalent candidate
 
 ## Daily controls
 
-Review API live/readiness, worker heartbeat and queue, scheduler cycles, provider callbacks and ambiguous requests, accounting/reconciliation exceptions, failed financial actions, KYC/consent exceptions, complaint SLAs, programme follow-ups, privacy suppression and security alerts.
+Review API live/readiness, worker heartbeat and queue, scheduler cycles (in `/api/health/ready`, `warming` means a heartbeat has never been seen and `stale` means it is over 12 minutes old; check the service's Railway log, then that every service uses the same cache prefix), provider callbacks and ambiguous requests, accounting/reconciliation exceptions, failed financial actions, KYC/consent exceptions, complaint SLAs, programme follow-ups, privacy suppression and security alerts.
 
 Do not change customer financial status without matching provider and accounting evidence. A historical successful deployment is not a fresh health check. Keep secrets out of diagnostic commands and restrict access to operational logs; any accidental credential output requires incident handling and controlled rotation.
 
