@@ -11,7 +11,15 @@ class FinancialProduct extends Model
         'currency', 'partner_id', 'legal_product_passport_id', 'sharia_approval_id', 'customer_classes',
         'purpose_rules', 'policy_versions', 'settlement_model', 'asset_supplier_requirements',
         'disclosure', 'status', 'effective_from', 'effective_to',
+        'product_template_id', 'parameters', 'lender_reference', 'funder_reference', 'principal_reference',
+        'supersedes_product_id', 'created_by', 'idempotency_key', 'submitted_by', 'submitted_at',
+        'approved_by', 'approved_at', 'retired_at',
     ];
+
+    public function template()
+    {
+        return $this->belongsTo(ProductTemplate::class, 'product_template_id');
+    }
 
     public function legalPassport()
     {
@@ -35,6 +43,10 @@ class FinancialProduct extends Model
             'disclosure' => 'array',
             'effective_from' => 'datetime',
             'effective_to' => 'datetime',
+            'parameters' => 'array',
+            'submitted_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'retired_at' => 'datetime',
         ];
     }
 }

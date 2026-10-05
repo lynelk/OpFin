@@ -5,7 +5,7 @@
 @section('content')
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">Users</h3>
-        @if (Auth::user()->role === 'Admin')
+        @if (Auth::user()->hasRole(\App\Models\User::ROLE_PLATFORM_ADMIN))
             <a href="{{ route('users.create') }}" class="btn btn-primary">
                 <i class="bi bi-plus-circle me-1"></i> Add User
             </a>
@@ -44,8 +44,10 @@
                                 <td><span class="badge bg-success">Active</span></td>
                                 <td>{{ $user->created_at?->format('M d, Y') }}</td>
                                 <td>
-                                    <a href="{{ route('users.edit', $user->id) }}"
-                                        class="btn btn-sm btn-outline-secondary">Edit</a>
+                                    @if (Auth::user()->hasRole(\App\Models\User::ROLE_PLATFORM_ADMIN))
+                                        <a href="{{ route('users.edit', $user->id) }}"
+                                            class="btn btn-sm btn-outline-secondary">Edit</a>
+                                    @endif
                                     <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-outline-primary">
                                         View
                                     </a>

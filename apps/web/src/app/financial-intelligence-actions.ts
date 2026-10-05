@@ -133,9 +133,30 @@ export async function financialIntelligenceAction(form: FormData): Promise<void>
         body.set("authority_confirmed", "1");
         body.set("purpose", "financial_analysis");
         body.set("mapping", JSON.stringify(jsonObject(optional(form, "mapping"))));
+        const supersedes = optional(form, "supersedes_statement_id");
+        if (supersedes !== undefined) body.set("supersedes_statement_id", String(positiveId(supersedes)));
         const statement = await intelligenceApi.uploadStatement(space, body, idempotency(form), token);
         params = { statement: statement.id };
         outcome = "uploaded";
+        break;
+      }
+      case "statement_review": {
+        tab = "statements";
+        const statement = record(form, "statement_id");
+        params = { statement };
+        const [decision, reasonCode] = text(form, "decision_reason").split(":");
+        if (!decision || !reasonCode) throw new Error("Choose a decision and a reason.");
+        await intelligenceApi.reviewStatement(space, statement, { decision, reason_code: reasonCode, notes: optional(form, "notes"),
+          evidence_reference: optional(form, "evidence_reference") }, idempotency(form), token);
+        outcome = "reviewed";
+        break;
+      }
+      case "statement_appeal": {
+        tab = "statements";
+        const statement = record(form, "statement_id");
+        params = { statement };
+        await intelligenceApi.appealStatement(space, statement, { reason: text(form, "reason") }, idempotency(form), token);
+        outcome = "appealed";
         break;
       }
       case "revoke_statement": {

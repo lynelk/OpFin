@@ -21,7 +21,10 @@ The v3 system makes that direction operational across product, communications, d
 - `VISUAL_QA_CHECKLIST.md` — mobile, Web, print, reverse-background and accessibility acceptance.
 - `SCREENSHOT_CAPTURE_STANDARD.md` — release-candidate screenshot evidence standard.
 - `assets/` — vector master symbol, lock-ups, wordmark, app icon, progress-path motif and Play feature-graphic master.
-- `templates/` — controlled starter artwork for presentations, documents, social and partner co-branding.
+- `templates/` — controlled starter artwork for presentations, documents, letterhead, one-pagers, social, link previews, email signatures and partner co-branding.
+- `exports/` — generated toolkit exports with `EXPORT_MANIFEST.json` (from `scripts/prepare-brand-toolkit.mjs`).
+- `CHANGELOG.md` — changes, retired values and superseded identities.
+- `DISTRIBUTION.md` — what the distribution package contains, its status and how to build it (`scripts/package-brand.sh`).
 
 ## Release status
 
@@ -30,7 +33,8 @@ The source-controlled visual system is ready for engineering review. It must not
 1. exact signed Android release-candidate screenshots from tested devices;
 2. completed official trademark/name searches and legal disposition for launch/expansion markets;
 3. representative mobile, desktop, print, reverse-background and accessibility visual sign-off;
-4. generated production assets reviewed against the vector masters;
-5. Google Play listing and graphics actually updated in Play Console.
+4. generated production assets reviewed against the vector masters (toolkit exports generated on 4 October 2026, with visual review pending);
+5. Google Play listing and graphics actually updated in Play Console;
+6. the wordmark and lock-ups outlined from the licensed Inter SemiBold, because they currently use live text that renders in fallback fonts.
 
 Until then, use **OpFin Brand System 3.0.0-rc.1**. This avoids the ancient corporate ritual of declaring something complete because the PDF has a date on it.

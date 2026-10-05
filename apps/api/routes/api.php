@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AdminEssentialsController;
+use App\Http\Controllers\Api\AssetRegistryController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CapabilityController;
 use App\Http\Controllers\Api\CpayWebhookController;
@@ -32,11 +33,11 @@ use App\Http\Controllers\Api\LocationContextController;
 use App\Http\Controllers\Api\LongRangeGovernanceController;
 use App\Http\Controllers\Api\LongRangePlatformController;
 use App\Http\Controllers\Api\MobileHomeController;
-use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\OrganisationJourneyController;
 use App\Http\Controllers\Api\PartnerEssentialsController;
 use App\Http\Controllers\Api\PartnerReportingController;
 use App\Http\Controllers\Api\PlatformCommerceController;
+use App\Http\Controllers\Api\ProductFactoryController;
 use App\Http\Controllers\Api\ProductionConsentController;
 use App\Http\Controllers\Api\ProductionCreditController;
 use App\Http\Controllers\Api\ProductionCreditOfferController;
@@ -103,6 +104,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/financial-spaces/{space}/credentials', [FinancialSpaceCredentialController::class, 'index']);
     Route::post('/financial-spaces/{space}/credentials', [FinancialSpaceCredentialController::class, 'store']);
     Route::get('/financial-spaces/{space}/protection/products', [ProtectionController::class, 'spaceProducts']);
+    Route::get('/financial-spaces/{space}/asset-passports', [AssetRegistryController::class, 'index']);
+    Route::post('/financial-spaces/{space}/asset-passports', [AssetRegistryController::class, 'register']);
+    Route::get('/financial-spaces/{space}/asset-passports/{asset}', [AssetRegistryController::class, 'show']);
+    Route::post('/financial-spaces/{space}/asset-passports/{asset}/report-stolen', [AssetRegistryController::class, 'reportStolen']);
+    Route::post('/financial-spaces/{space}/asset-passports/{asset}/dispose', [AssetRegistryController::class, 'dispose']);
     Route::get('/financial-spaces/{space}/treasury/accounts', [FinancialSpaceStatementController::class, 'accounts']);
     Route::post('/financial-spaces/{space}/treasury/accounts', [FinancialSpaceStatementController::class, 'createAccount']);
     Route::get('/financial-spaces/{space}/treasury/accounts/{account}/transactions', [FinancialSpaceStatementController::class, 'transactions']);
@@ -229,8 +235,6 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/support-cases', [CustomerSupportController::class, 'store']);
     Route::get('/receipts', [ReceiptController::class, 'index']);
     Route::get('/receipts/{receipt}', [ReceiptController::class, 'show']);
-    Route::post('/validate-nin', [NinValidationController::class, 'validateNin']);
-    Route::post('/credit-scores', [NinValidationController::class, 'creditScores']);
 
     Route::get('/credit/applications', [ProductionLoanApplicationController::class, 'index']);
     Route::post('/credit/applications', [ProductionLoanApplicationController::class, 'store']);
@@ -290,6 +294,32 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function () {
+    Route::get('/admin/asset-passports/review-queue', [AssetRegistryController::class, 'reviewQueue']);
+    Route::post('/admin/asset-passports/identifier-check', [AssetRegistryController::class, 'identifierCheck']);
+    Route::post('/admin/asset-passports/{asset}/verify', [AssetRegistryController::class, 'verify']);
+    Route::post('/admin/asset-passports/{asset}/review', [AssetRegistryController::class, 'review']);
+    Route::post('/admin/asset-passports/{asset}/encumbrances', [AssetRegistryController::class, 'encumber']);
+    Route::post('/admin/asset-passports/{asset}/recover', [AssetRegistryController::class, 'recover']);
+    Route::post('/admin/asset-encumbrances/{encumbrance}/release', [AssetRegistryController::class, 'release'])->whereNumber('encumbrance');
+    Route::prefix('admin/financing-factory')->group(function () {
+        Route::get('/templates', [ProductFactoryController::class, 'templates']);
+        Route::post('/templates', [ProductFactoryController::class, 'createTemplate']);
+        Route::post('/templates/{template}/approve', [ProductFactoryController::class, 'approveTemplate']);
+        Route::post('/templates/{template}/retire', [ProductFactoryController::class, 'retireTemplate']);
+        Route::get('/passports', [ProductFactoryController::class, 'passports']);
+        Route::post('/passports', [ProductFactoryController::class, 'createPassport']);
+        Route::post('/passports/{passport}/approve', [ProductFactoryController::class, 'approvePassport']);
+        Route::post('/passports/{passport}/revoke', [ProductFactoryController::class, 'revokePassport']);
+        Route::get('/products', [ProductFactoryController::class, 'products']);
+        Route::post('/products', [ProductFactoryController::class, 'createProduct']);
+        Route::put('/products/{product}', [ProductFactoryController::class, 'updateProduct']);
+        Route::post('/products/{product}/submit', [ProductFactoryController::class, 'submitProduct']);
+        Route::post('/products/{product}/approve', [ProductFactoryController::class, 'approveProduct']);
+        Route::post('/products/{product}/reject', [ProductFactoryController::class, 'rejectProduct']);
+        Route::post('/products/{product}/activate', [ProductFactoryController::class, 'activateProduct']);
+        Route::post('/products/{product}/retire', [ProductFactoryController::class, 'retireProduct']);
+        Route::post('/products/{product}/revise', [ProductFactoryController::class, 'reviseProduct']);
+    });
     Route::get('/admin/lending-platform', [LendingPlatformController::class, 'index']);
     Route::post('/admin/lending-platform/institutions', [LendingPlatformController::class, 'institution']);
     Route::post('/admin/lending-platform/products', [LendingPlatformController::class, 'product']);

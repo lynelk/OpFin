@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1754" role="img" aria-labelledby="title">
+  <title id="title">OpFin A4 product one-pager template</title>
+  <!-- Describe only what is live in the named channel today. The costs-and-risks panel is mandatory and may not be removed or shrunk. -->
+  <rect width="1240" height="1754" fill="#FFFFFF"/>
+  <rect width="1240" height="300" fill="#FAF8F2"/>
+  <g transform="translate(90 70) scale(.12)" fill="#353B78">
+    <path d="M96 76h184c78 0 142 64 142 142v50c0 78-64 142-142 142h-50l-52 48V354h102c48 0 86-38 86-86v-50c0-48-38-86-86-86H96V76Z"/>
+    <path d="M96 157h174c15 0 27 12 27 27s-12 27-27 27H96v-54Z"/>
+    <path d="M96 247h144c15 0 27 12 27 27s-12 27-27 27h-90v130l-54-45V247Z"/>
+  </g>
+  <text x="166" y="118" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="600">OpFin</text>
+  <text x="90" y="210" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="56" font-weight="700">[Product or service name]</text>
+  <text x="90" y="262" fill="#555D72" font-family="Inter, Arial, sans-serif" font-size="26">[One sentence on the customer job it helps with]</text>
+  <text x="90" y="380" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="600">What it helps you do</text>
+  <text x="90" y="430" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">• [Benefit one, in the customer's words]</text>
+  <text x="90" y="472" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">• [Benefit two]</text>
+  <text x="90" y="514" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">• [Benefit three]</text>
+  <text x="90" y="610" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="600">How it works</text>
+  <circle cx="114" cy="676" r="24" fill="#F2B38D"/><text x="114" y="685" text-anchor="middle" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">1</text>
+  <text x="160" y="684" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[First step]</text>
+  <circle cx="114" cy="746" r="24" fill="#F2B38D"/><text x="114" y="755" text-anchor="middle" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">2</text>
+  <text x="160" y="754" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[Second step]</text>
+  <circle cx="114" cy="816" r="24" fill="#F2B38D"/><text x="114" y="825" text-anchor="middle" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">3</text>
+  <text x="160" y="824" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[Third step]</text>
+  <rect x="90" y="900" width="1060" height="380" rx="24" fill="#FFFFFF" stroke="#353B78" stroke-width="3"/>
+  <text x="130" y="966" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="600">Costs, risks and what you commit to</text>
+  <text x="130" y="1022" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[Every fee, rate or charge, exactly as disclosed in the product]</text>
+  <text x="130" y="1066" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[What happens if a payment is late or missed]</text>
+  <text x="130" y="1110" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[Who provides the product and who you owe, by legal name]</text>
+  <text x="130" y="1154" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[How to get help or complain]</text>
+  <text x="130" y="1230" fill="#555D72" font-family="Inter, Arial, sans-serif" font-size="20">No guaranteed approvals or returns. Approval depends on eligibility checks.</text>
+  <text x="90" y="1370" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="600">Availability</text>
+  <text x="90" y="1420" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[Only the channels and regions where this is live today]</text>
+  <path d="M900 1700V1560c0-62 50-112 112-112h128" fill="none" stroke="#E8EAF6" stroke-width="60" stroke-linecap="round"/>
+  <text x="90" y="1640" fill="#555D72" font-family="Inter, Arial, sans-serif" font-size="18">[Registered legal name] · [Regulatory status as approved by Legal]</text>
+  <text x="90" y="1680" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="600">Your next step, clearer.</text>
+</svg>

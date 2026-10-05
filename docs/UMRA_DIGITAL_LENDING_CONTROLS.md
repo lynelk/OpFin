@@ -1,7 +1,7 @@
 # UMRA digital-lending controls
 
 Status: Controlled external regulatory-control mapping  
-Updated: 25 September 2026
+Updated: 3 October 2026
 Language: English (United Kingdom)
 
 This document maps the OpFin product/system controls implemented against the January 2024 Uganda Microfinance Regulatory Authority Digital Lending Guidelines. It does not claim that source code alone proves licensing or regulatory approval.
@@ -33,6 +33,10 @@ Controls:
 - blocked-consent and blocked-data-quality states.
 
 The adapter is provider-neutral and configured through `CREDIT_REFERENCE_REPORTING_*`. Production must configure the applicable authorised credit-reference mechanism and validate its exact schema/certification requirements before activation.
+
+### Inbound credit-bureau enquiries
+
+Bureau enquiries run only through the governed credit-profile path. That path binds the subject to the authenticated customer and requires their recorded credit-processing consent. On 3 October 2026 the legacy `POST /api/credit-scores` and `POST /api/validate-nin` endpoints were removed. They accepted any registered phone number, sent a fixed "consented" flag to the bureau and stored the result against the caller. Results already held in `credit_scores` are kept for compliance review. Credit scoring now reuses a stored bureau score only when it came through a governed route (`CITO_MANAGED` or `DIRECT_PROVIDER`). Results from the retired endpoint can't be attributed to the customer, so they no longer feed the Composite Score. Affected customers get a fresh, consented enquiry, or the bureau component shows as unavailable.
 
 ## Inclusive-finance and alternative-data guardrails
 

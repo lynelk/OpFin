@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opfin/location_context_screen.dart';
 import 'package:opfin/financial_space_statements_screen.dart';
+import 'package:opfin/provider_statements_screen.dart';
 import 'package:opfin/services/financial_spaces_api.dart';
+import 'package:opfin/services/statement_intelligence_api.dart';
 import 'package:opfin/sacco_workspace_screen.dart';
 import 'package:opfin/club_accounting/workspace.dart';
 
@@ -46,9 +48,9 @@ class FinancialSpaceDetailScreen extends StatefulWidget{
   @override State<FinancialSpaceDetailScreen> createState()=>_FinancialSpaceDetailScreenState();
 }
 class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>{
-  late Future<Map<String,dynamic>> _life; final money=NumberFormat('#,##0','en_US');
+  late Future<Map<String,dynamic>> _life; late Future<bool> _statementsAvailable; final money=NumberFormat('#,##0','en_US');
   int get id=>(widget.space['id'] as num).toInt();
-  @override void initState(){super.initState();_life=FinancialSpacesApi.financialLife(id);}
+  @override void initState(){super.initState();_life=FinancialSpacesApi.financialLife(id);_statementsAvailable=StatementIntelligenceApi.available(id);}
   Future<void> reload()async{setState(()=>_life=FinancialSpacesApi.financialLife(id));await _life;}
   String ugx(dynamic v)=>'UGX ${money.format((v as num?)?.toInt()??0)}';
   bool get groupLike=>['savings_group','investment_club','sacco'].contains(widget.space['type']?.toString());
@@ -63,6 +65,8 @@ class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>
     Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Financial position'),Text(ugx(d['net_worth_minor']),style:const TextStyle(fontSize:30,fontWeight:FontWeight.w800)),const SizedBox(height:8),Text('Safe to spend ${ugx(d['safe_to_spend_minor'])}')] ))),
     Row(children:[Expanded(child:_tile('I own',ugx(d['assets_minor']),()=>quick('asset'))),const SizedBox(width:8),Expanded(child:_tile('I owe',ugx(d['debt_minor']),()=>quick('owe')))]),
     _tile('Owed to me',ugx(d['receivables_minor']),()=>quick('receivable')),
+    // Shown only when the server reports statements are switched on for this Space.
+    FutureBuilder<bool>(future:_statementsAvailable,builder:(_,available)=>available.data==true?Card(child:ListTile(leading:const Icon(Icons.description_outlined),title:const Text('Provider statements'),subtitle:const Text('Upload bank or mobile money statements to see money in and out. Results are checks, not provider confirmation.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProviderStatementsScreen(space:widget.space))))):const SizedBox.shrink()),
     if(widget.space['type']=='sacco')Card(child:ListTile(leading:const Icon(Icons.account_balance_outlined),title:const Text('SACCO member workspace'),subtitle:const Text('Shares, savings, guarantees, contributions, repayments and cooperative analytics.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SaccoWorkspaceScreen(space:widget.space))))),
     if(widget.space['type']=='investment_club')Card(child:ListTile(leading:const Icon(Icons.candlestick_chart_outlined),title:const Text('Investment club portfolio'),subtitle:const Text('Capital, units, investments, NAV, returns, distributions, approvals and statements.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ClubAccountingScreen(space:widget.space))))),
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.insights_outlined),title:const Text('Space operations & analytics'),subtitle:const Text('Collections, disbursements, obligations, fees and operating position.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SpaceOperationsScreen(space:widget.space))))),

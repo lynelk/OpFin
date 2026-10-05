@@ -21,7 +21,7 @@ GitHub Actions remains disabled at the owner's instruction. Equivalent candidate
 
 ## Daily controls
 
-Review API live/readiness, worker heartbeat and queue, scheduler cycles, provider callbacks and ambiguous requests, accounting/reconciliation exceptions, failed financial actions, KYC/consent exceptions, complaint SLAs, programme follow-ups, privacy suppression and security alerts.
+Review API live/readiness, worker heartbeat and queue, scheduler cycles (in `/api/health/ready`, `warming` means a heartbeat has never been seen and `stale` means it is over 12 minutes old; check the service's Railway log, then that every service uses the same cache prefix), provider callbacks and ambiguous requests, accounting/reconciliation exceptions, failed financial actions, KYC/consent exceptions, complaint SLAs, programme follow-ups, privacy suppression and security alerts.
 
 Do not change customer financial status without matching provider and accounting evidence. A historical successful deployment is not a fresh health check. Keep secrets out of diagnostic commands and restrict access to operational logs; any accidental credential output requires incident handling and controlled rotation.
 
@@ -32,6 +32,16 @@ Confirm Space, role and target record before every administrative action. Group,
 Institutional progression is profile → required KYB/regulatory evidence → capabilities/products → integration → certification. Enabling a capability does not itself activate regulated distribution.
 
 Employer is a Business capability. Approved positive-only enrichment may provide a capped benefit and treats missing/negative information neutrally. Permitted fields must still respect the original minimal-employment-data boundary; do not infer authority to use unrelated disciplinary, attendance or performance records.
+
+## Staff access, float top-ups and SMS records
+
+The legacy back-office on the API origin stays available until the Web back office covers all of its tasks. It now requires a `platform_admin` or `operations` account, and only a `platform_admin` can create or edit user records and institution administrators.
+
+- **New accounts.** Accounts created by staff have no usable password. Ask the account holder to choose **Forgot PIN** and set their own PIN with the one-time code sent to their phone. Never share a PIN, password or code on their behalf.
+- **Staff awaiting review.** Former institution administrators are in the `staff_pending_review` role and cannot sign in. Run `php artisan opfin:legacy-roles` to list them, then record each reviewed decision (operations, support, or no staff access) with a platform administrator.
+- **Float top-ups.** Record the amount and attach the evidence image. The top-up stays **Pending** until a different staff member checks the evidence and selects **Approve**. Only approval changes the Disbursement balance. You cannot approve a top-up you recorded.
+- **SMS records.** One-time codes appear as `******` in stored SMS records. If a customer says a code didn't arrive, ask them to request a new one; staff cannot see or resend a code.
+- **Account deletion.** The API-origin `/account/delete` page forwards to the Web deletion page, which applies the regulated deletion checks.
 
 ## Programmes and partner identities
 
@@ -58,6 +68,28 @@ Confirmation retains accepted differences; it must not fabricate balancing entri
 Keep providers unactivated until genuine configuration, contracts and certification are supplied. Evidence ingestion proves provenance, not automatic underwriting eligibility. Cached identity evidence, where separately implemented and approved, must preserve source, subject, purpose, verification age and consent; it must not stand in for biometric, phone, sanctions or affordability checks.
 
 Provider acknowledgement is not finality. Preserve pending state and original references, reconcile before retry, and change route only under an explicit safe policy. Apply payload-bound idempotency and appropriate concurrency controls. Confirmed, expected financial events must produce the required accounting and receipts.
+
+## Asset passports, liens and theft reports
+
+The asset registry is off until `OPFIN_ASSET_IDENTIFIER_KEY` is set. Use the review queue (`/api/admin/asset-passports/review-queue`) daily.
+
+- **Review.** A passport reaches the queue when one of its identifiers is already active on another passport or belongs to a reported-stolen asset. Contact the customer for evidence. Never tell them about the other Space. Clear the review only after the other passport has been disposed of or rejected; otherwise reject it, with a reason.
+- **Verification.** Verify only with first-hand evidence: a physical inspection, a dealer invoice, an OEM record or a registry extract. You cannot verify an asset you registered. Verification confirms identifiers, not ownership or value.
+- **Liens.** Register a lien only against an open financing arrangement in the same Space. Release it after settlement. Releasing before settlement needs a platform administrator and a recorded lender instruction.
+- **Theft and recovery.** A theft report blocks new liens; existing liens stay in place. Record recovery only on evidence such as a police or partner confirmation.
+- **Device controls.** Remote device controls are not available. Never promise or attempt device locking.
+
+Before quoting asset-backed finance, lenders' staff use the identifier check. It shows only registry state, never the owner or Space.
+
+## Financing Product Factory
+
+Configure financing products only through `/api/admin/financing-factory`. Nothing configured there is a production launch on its own.
+
+- **Templates.** A platform administrator drafts the template from the approved credit or product policy and cites it in `policy_reference`. A different administrator approves it. To change bounds, draft the next version; never ask for an approved template to be edited.
+- **Passports.** Draft a Legal Product Passport only from legal's written opinion or the licence record. A different administrator approves it with the licence and evidence references. If a licence lapses or legal withdraws approval, revoke the passport at once: every product relying on it stops matching.
+- **Products.** Name the actual lender, funder and contracting principal exactly as in the partner agreement. Disclosures must be the approved customer wording. Approval needs an administrator who neither made nor submitted the product.
+- **Islamic products.** Activation needs an approved, current Sharia approval recorded through governance. Staff cannot create or override one. Never describe a product as Sharia-compliant before that approval exists.
+- **Changes.** Revise a live product to create the next version. Activating the new version retires the old one; agreements already made keep their own snapshot.
 
 ## Essentials operations and activation hold
 

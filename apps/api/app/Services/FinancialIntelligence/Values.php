@@ -87,6 +87,12 @@ final class Values
         return $value;
     }
 
+    /** ISO 4217 minor-unit exponent: zero for currencies without minor units (including UGX), otherwise two. */
+    public static function exponent(string $currency): int
+    {
+        return in_array($currency, ['UGX', 'RWF', 'BIF', 'KMF', 'DJF', 'GNF', 'XAF', 'XOF', 'XPF', 'JPY', 'KRW', 'VND', 'CLP', 'PYG', 'ISK', 'VUV'], true) ? 0 : 2;
+    }
+
     public static function canonical(mixed $value): string
     {
         $normalise = function (mixed $item) use (&$normalise): mixed {
@@ -94,11 +100,13 @@ final class Values
                 if (! array_is_list($item)) {
                     ksort($item, SORT_STRING);
                 }
+
                 return array_map($normalise, $item);
             }
             if (is_float($item) || is_object($item) || is_resource($item)) {
                 throw new InvalidArgumentException('Evidence may contain only exact JSON values, not floating-point or runtime objects.');
             }
+
             return $item;
         };
 
@@ -121,6 +129,7 @@ final class Values
     public static function csvCell(mixed $value): string
     {
         $text = $value === null ? '' : (is_bool($value) ? ($value ? 'true' : 'false') : (string) $value);
+
         // Includes whitespace-prefixed spreadsheet formula payloads.
         return preg_match('/^\s*[=+@\-]/u', $text) ? "'".$text : $text;
     }

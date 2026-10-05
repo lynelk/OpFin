@@ -35,6 +35,15 @@ Protection is available as a normal personal-finance destination. The App distin
 
 Individuals and Savings Groups should be able to complete normal everyday journeys in the App without Web being a hidden prerequisite. Investment Club members use the same App and identity. Group/SACCO administrators can use the Web Workspace for deeper administration, but member participation is not split into another consumer app.
 
+### Provider statements
+
+When the server reports that Financial Intelligence is available for a Space, a **Provider statements** card appears on that Space's screen. Otherwise the card is hidden rather than advertised. From there a customer can:
+- upload a bank or mobile-money statement (PDF or CSV) through the system document picker, which needs no storage or media permission;
+- see the server's plain-language results: whether it was read, whether balances add up, that the provider has not confirmed it, the review state and the next step;
+- appeal a rejection once, upload a replacement when a reviewer asks, or stop the statement being used.
+
+The upload screen reminds customers that OpFin never asks for a statement password, PIN or OTP. All calls go through the metered `OpFinHttp` client under the `statements` feature. Retried uploads and appeals reuse one idempotency key, so nothing is recorded twice. No wording describes a document or customer as suspicious.
+
 The App supports server-authoritative Space context and financial-life features such as money/accounts, budgets, goals, assets, liabilities/receivables, net position and supported financial-health guidance. Savings Groups, Investment Clubs and SACCOs can attach external government/regulator identifiers to their existing Space record as those schemes become applicable. Group protection catalogues are visible only for approved group-capable products; group enrolment and premium collection remain fail-closed until separately activated.
 
 ## Lightweight location context
@@ -111,6 +120,12 @@ The Android build currently requires compile SDK 37, targets SDK 36 and retains 
 Camera features must remain optional for installation so devices without a rear camera are not filtered merely because the App requests camera permission.
 
 The existing Play application ID is `org.rotaryo.opfin`. The Kotlin namespace remains `co.opfin.app`. Distribution builds must use the registered upload key.
+
+The document picker (`file_picker`) declares no Android permissions: only a package-visibility query for the system "get content" intent. Keep it that way. The release contract forbids storage and media permissions.
+
+## iOS compatibility
+
+The iOS minimum is 14.0. It was raised from 13.0 on 4 October 2026 because the system document picker for provider statements requires iOS 14. Every device that runs iOS 13 can also run iOS 14.
 
 ## Development
 

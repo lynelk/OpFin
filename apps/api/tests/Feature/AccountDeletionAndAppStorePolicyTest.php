@@ -271,19 +271,23 @@ class AccountDeletionAndAppStorePolicyTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $owner->id, 'deleted_at' => null]);
     }
 
-    public function test_legacy_web_deletion_uses_the_same_obligation_check_and_requires_reauthentication(): void
+    public function test_legacy_web_deletion_forwards_to_the_canonical_obligation_checked_journey(): void
     {
+        config()->set('services.opfin.web_url', 'https://web.opfin.test');
         $user = User::factory()->create(['role' => User::ROLE_CUSTOMER, 'password' => '482951']);
         DB::table('participatory_finance_listings')->insert([
             'reference' => (string) Str::uuid(), 'borrower_user_id' => $user->id, 'purpose' => 'Test obligation',
             'target_amount_minor' => 500000, 'funded_amount_minor' => 500000, 'term_days' => 90,
             'status' => 'funded', 'lender_of_record' => 'Recorded lender', 'created_at' => now(), 'updated_at' => now(),
         ]);
-        $this->from('/account/delete')->delete('/account/delete', ['phone' => $user->phone, 'pin' => '482951', 'confirmation' => 'DELETE'])
-            ->assertRedirect('/account/delete')->assertSessionHas('deletion_blockers');
+        $this->delete('/account/delete', ['phone' => $user->phone, 'pin' => '482951', 'confirmation' => 'DELETE'])
+            ->assertRedirect('https://web.opfin.test/account/delete');
         $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
-        $this->from('/account/delete')->delete('/account/delete', ['phone' => $user->phone, 'pin' => '000000', 'confirmation' => 'DELETE'])
-            ->assertRedirect('/account/delete')->assertSessionHas('error');
+
+        Sanctum::actingAs($user);
+        $this->deleteJson('/api/account', ['pin' => '482951', 'confirmation' => 'DELETE'])->assertStatus(409)
+            ->assertJsonPath('data.deletion_status', 'blocked_obligations');
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'deleted_at' => null]);
     }
 
     public function test_nonterminal_protection_processing_blocks_deletion_even_after_policy_cancellation(): void
