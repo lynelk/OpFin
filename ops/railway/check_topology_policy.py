@@ -15,4 +15,14 @@ if p["workspaceCostPolicy"].get("computeHardLimitUsd") != 10:
 allowed=p["environments"]["production"]["allowedServices"]
 if len(allowed) != len(set(allowed)):
     raise SystemExit("Duplicate approved service names are not allowed.")
+buckets=p["environments"]["production"].get("allowedBuckets", [])
+if len(buckets) != len(set(buckets)):
+    raise SystemExit("Duplicate approved bucket names are not allowed.")
+approved=set()
+for approval in p["environments"]["production"].get("approvals", []):
+    if not approval.get("date") or not approval.get("purpose") or not approval.get("costImpact"):
+        raise SystemExit("Each Railway approval needs a date, purpose and cost impact.")
+    approved.update(approval.get("resources", []))
+if set(buckets) - approved:
+    raise SystemExit("Every approved bucket needs a recorded owner approval.")
 print("OpFin Railway topology policy: PASS")

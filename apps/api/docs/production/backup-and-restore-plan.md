@@ -73,65 +73,75 @@ Before production replacement:
 
 ## Railway runbook (October 2026)
 
-Production runs on the approved Railway services in `ops/railway/topology-policy.json`: `Postgres`, `OpFin` (API), `opfin-web`, `opfin-worker` and `opfin-scheduler`. The steps below use only those services and the owner's own computer. A new Railway service, volume or bucket needs the owner's explicit approval of that specific change first (see the Railway rules in `AGENTS.md`).
+Production runs on the Railway services and buckets approved in `ops/railway/topology-policy.json`. The owner approved two buckets on 5 October 2026: `OpFin Buck` for customer documents, and the `Postgres-PITR` bucket that Railway creates when point-in-time recovery is enabled. Any other new Railway service, volume or bucket still needs the owner's explicit approval first (see the Railway rules in `AGENTS.md`).
 
-### Step 1: Check where uploaded files are stored
+### What each layer protects against
 
-KYC photos and uploaded statements are files, not database rows. Database backups do not include them.
+| Failure | Data lost | Protection |
+|---|---|---|
+| Database container crashes or restarts | None: committed transactions are already on the volume | PostgreSQL durability |
+| Bad deploy, bad migration, deleted rows | None before the chosen moment | Point-in-time recovery: restore to the second before the mistake |
+| Database volume or host destroyed | About the last 30 seconds | Point-in-time recovery (continuous WAL archive in the bucket) |
+| Railway account or region unavailable | Back to the last off-site copy | Weekly encrypted off-site copy (Step 5) |
 
-1. In Railway, open the `OpFin` service, then **Variables**. Note `FILESYSTEM_DISK` and `KYC_FILESYSTEM_DISK`. Uploaded statement PDFs always use the `local` disk: `statement_disk` is fixed in `config/financial_intelligence.php`.
-2. Where a disk is `local` (the default for all three), those files live on the container's disk. Unless the `OpFin` service has a volume attached at `storage/app`, they are lost on every redeploy, and the worker and scheduler cannot read them.
-3. If that is the case, treat it as a launch blocker. The fix is a decision for the owner: either approve a volume on the `OpFin` service, or configure an S3-compatible bucket (the `s3` disk) and approve that change. Record the decision before taking KYC documents from real customers.
+Zero loss when the volume itself is destroyed needs a standby database that confirms every write before it counts (synchronous replication). That is not set up; it needs a separate decision on Railway's Postgres high-availability option or a managed database with synchronous standby, and its cost.
 
-### Step 2: Turn on Railway's scheduled database backups
+### Step 1: Store customer documents in the bucket
 
-This uses a feature of the existing `Postgres` service. It does not create a new service.
+KYC photos and statement uploads are files, not database rows, and are not covered by database recovery. On the container's local disk they are lost on every redeploy and the worker and scheduler cannot read them.
 
-1. In Railway, open the `Postgres` service in the `production` environment, then the **Backups** tab.
-2. Choose **Edit schedule** and turn on the daily, weekly and monthly backups. Note the retention Railway shows for each.
-3. Choose **Create backup** to take one straight away.
-4. Backup storage is billed by Railway. Check that the cost fits within the workspace limits in `ops/railway/topology-policy.json`.
+1. In Railway, on each of `OpFin`, `opfin-worker` and `opfin-scheduler`, add these variables as references to the `OpFin Buck` bucket (use **Add variable reference** so no key is copied by hand):
+   - `AWS_ACCESS_KEY_ID` → the bucket's `ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY` → the bucket's `SECRET_ACCESS_KEY`
+   - `AWS_DEFAULT_REGION` → the bucket's `REGION`
+   - `AWS_BUCKET` → the bucket's `BUCKET` (not `RAILWAY_BUCKET_NAME`)
+   - `AWS_ENDPOINT` → the bucket's `ENDPOINT`
+   - `AWS_USE_PATH_STYLE_ENDPOINT=false`, unless the bucket's **Credentials** tab says to use path-style URLs
+2. On the same three services set `KYC_FILESYSTEM_DISK=s3` and `OPFIN_STATEMENT_DISK=s3`. Leave `FILESYSTEM_DISK` unchanged.
+3. Deploy, then in the `OpFin` service shell run `php artisan opfin:storage-check`. It writes, reads back and deletes a probe file on both document disks and fails if either does not work. Do not take real customers' documents until it passes.
+4. Files uploaded before this change were on the container disk and are likely already gone. Ask affected customers to upload their documents again.
 
-These backups stay inside Railway. They protect against a bad deploy, a bad migration or deleted data, not against losing access to the Railway account.
+The bucket is private. Never make it public; the API reads documents with its own credentials.
 
-### Step 3: Take a manual backup before risky changes
+### Step 2: Turn on point-in-time recovery
 
-Take a Railway backup (**Backups**, then **Create backup**) before every deploy that runs a migration, and before any bulk data change. Note the backup's time in the release record.
+1. In Railway, open the `Postgres OpFin` service, then **Settings**, and check that its source image is `ghcr.io/railwayapp-templates/postgres-ssl:18`. Point-in-time recovery needs Railway's image.
+2. Open the **Backups** tab and choose **Enable PITR**. Railway creates the `Postgres-PITR` bucket, sets the archive variables and redeploys the database, which causes a short interruption. Do this in a quiet period.
+3. On `Postgres OpFin`, add the variable `POSTGRES_ARCHIVE_TIMEOUT=30` and deploy. This forces a copy at least every 30 seconds even when the database is quiet (Railway's default is 60).
+4. Wait until the Backups tab shows the restore range and date picker. That means the first base backup has finished.
+5. Check health at least weekly, and after any Railway incident: `railway postgres pitr status --service "Postgres OpFin"`. If archiving is failing, fix it the same day: while it fails, the recovery window is not growing.
 
-### Step 4: Keep an encrypted off-site copy
+Railway keeps the last four weekly full backups, so the restore window is about four weeks. Storage and upload traffic are billed by Railway; check the cost against the workspace limits.
 
-Do this at least weekly until an automated off-site copy is approved.
+### Step 3: Keep the scheduled volume backups
 
-1. Install the Railway CLI and PostgreSQL client tools whose version is at least the server's (`SELECT version();`).
+On the same **Backups** tab, keep the daily, weekly and monthly schedule on, and take a manual backup (**Create backup**, or `railway postgres pitr backup create --service "Postgres OpFin" --name pre-migration`) before every deploy that runs a migration. These are a second, independent copy.
+
+### Step 4: Restore after a mistake or incident
+
+1. On the `Postgres OpFin` **Backups** tab, pick the moment just before the problem and choose **Restore to this moment**. Railway builds a new service next to the original and never touches the original.
+2. Check the restored copy (connect with `railway connect`, inspect the affected rows).
+3. To switch over: pause `opfin-worker` and `opfin-scheduler`, put the API in maintenance mode, point the API, worker and scheduler database variables at the restored service, deploy, then run `php artisan opfin:integrity-audit`.
+4. Reconcile provider transactions after the restore point. Provider records are the evidence for any money that moved later. Never re-send a payment because it is missing from the restored data.
+5. Enable PITR on the restored service if it becomes production, then remove the old service once the owner agrees. Record the incident.
+
+### Step 5: Keep an encrypted off-site copy
+
+Everything above lives inside Railway. At least weekly, keep a copy the owner controls elsewhere:
+
+1. Install the Railway CLI and PostgreSQL 18 client tools.
 2. Run `railway login`, then `railway link` and choose the `OpFin` project and `production` environment.
-3. Check whether the `Postgres` service has a public TCP proxy (it has `DATABASE_PUBLIC_URL`). If it does not, do not enable one only for this; use the Railway backups and ask for an approved off-site method instead.
-4. From a folder outside the repository, run:
-   `railway run --service Postgres -- sh -c 'pg_dump "$DATABASE_PUBLIC_URL" --format=custom --no-owner --file=opfin-YYYY-MM-DD.dump'`
-5. Encrypt the file at once (for example a 7-Zip archive with AES-256 and a long passphrase kept in the password manager), delete the unencrypted dump, and store the encrypted copy on storage the owner controls outside Railway.
-6. Never put a dump inside the repository folder, in a GitHub Actions artifact or in an issue. The repository is public.
+3. If the `Postgres OpFin` service has a public TCP proxy (`DATABASE_PUBLIC_URL`), from a folder outside the repository run:
+   `railway run --service "Postgres OpFin" -- sh -c 'pg_dump "$DATABASE_PUBLIC_URL" --format=custom --no-owner --file=opfin-YYYY-MM-DD.dump'`
+   If it has no TCP proxy, do not enable one only for this; ask for an approved off-site method instead.
+4. Encrypt the file at once (for example a 7-Zip archive with AES-256 and a long passphrase kept in the password manager), delete the unencrypted dump, and store the encrypted copy outside Railway.
+5. Never put a dump inside the repository folder, in a GitHub Actions artifact or in an issue. The repository is public.
 
-### Step 5: Run a restore drill
+### Step 6: Restore drill
 
-Run one before launch and then every quarter. Restore into a throwaway database on the owner's computer, not into production and not into a new Railway service.
+Before launch and then every quarter:
 
-1. Start an empty local PostgreSQL database (a local installation or a container).
-2. Restore: `pg_restore --no-owner --dbname=<local database URL> opfin-YYYY-MM-DD.dump`.
-3. In a local copy of `apps/api`, point `DB_*` at the local database. Set `APP_ENV=local` and leave every provider credential (SMS, mobile money, CPay, Cito, KYC, CRB) empty, so the restored data cannot message customers or move money. Do not start the worker or scheduler against restored data.
-4. Run `php artisan migrate:status` (nothing pending), then `php artisan opfin:integrity-audit`.
-5. Compare row counts for `users`, `loans`, `transactions`, the ledger tables and `audit_logs` with production at the backup time.
-6. Record the date, backup used, start and end times, results and problems in the operational readiness evidence, then delete the local database and the decrypted dump.
-
-To test a Railway backup itself, restoring it in the production service rewinds production data. Only do that in an incident, after taking a fresh manual backup.
-
-### Point-in-time recovery
-
-Railway's template PostgreSQL has no built-in point-in-time recovery. With daily backups, up to 24 hours of transactions could be lost. Manual backups before releases narrow that gap but do not close it. Real point-in-time recovery needs continuous WAL archiving to storage outside the database (for example pgBackRest or WAL-G with a bucket), or a managed PostgreSQL that provides it. Either is an infrastructure change that needs the owner's approval and cost review. Until then, the recovery point objective in the table above must be agreed knowing this limit.
-
-### Restoring production after an incident
-
-1. Stop writes: pause `opfin-worker` and `opfin-scheduler`, then put the API into maintenance mode.
-2. Take a manual backup of the current state, even if it is damaged.
-3. Restore the chosen Railway backup from the **Backups** tab and deploy the change.
-4. Run `php artisan opfin:integrity-audit` on the API service.
-5. Reconcile provider transactions made after the backup time. Provider records are the evidence for any money that moved after the backup. Never re-send a payment because it is missing from the restored data.
-6. Resume the scheduler and worker, leave maintenance mode, and record the incident.
+1. Restore a recent point in time (Step 4, first part only) to a temporary service. This creates a Railway service for the drill: the owner approves it at the time and deletes it the same day.
+2. Do not connect the API, worker or scheduler to it. In a local copy of `apps/api` with `APP_ENV=local` and every provider credential (SMS, mobile money, CPay, Cito, KYC, CRB) left empty, point `DB_*` at the restored service and run `php artisan migrate:status` and `php artisan opfin:integrity-audit`.
+3. Compare row counts for `users`, `loans`, `transactions`, the ledger tables and `audit_logs` with production at the restore time.
+4. Record the date, restore target, start and end times, results and problems in the operational readiness evidence, then delete the temporary service.

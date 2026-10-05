@@ -9,11 +9,26 @@
   "environments": {
     "production": {
       "allowedServices": [
-        "Postgres",
+        "Postgres OpFin",
         "OpFin",
         "opfin-web",
         "opfin-worker",
         "opfin-scheduler"
+      ],
+      "allowedBuckets": [
+        "OpFin Buck",
+        "Postgres-PITR"
+      ],
+      "approvals": [
+        {
+          "date": "2026-10-05",
+          "resources": [
+            "OpFin Buck",
+            "Postgres-PITR"
+          ],
+          "purpose": "Private customer-document storage (KYC and statement uploads) and the Railway-managed point-in-time recovery archive for Postgres OpFin",
+          "costImpact": "Railway bucket storage plus database upload egress. Not yet measured: the owner confirms it against the workspace limits after the first billing cycle."
+        }
       ]
     }
   },

@@ -91,6 +91,18 @@ class StatementPdfPipelineTest extends TestCase
             ->assertJsonPath('data.credit_decision_eligible', false);
     }
 
+    public function test_statements_are_stored_and_analysed_on_the_configured_durable_disk(): void
+    {
+        config(['financial_intelligence.statement_disk' => 's3']);
+        Storage::fake('s3');
+
+        $id = $this->upload($this->pdf([self::STATEMENT]))->assertCreated()->json('data.id');
+
+        $this->assertNotSame([], Storage::disk('s3')->allFiles());
+        $this->assertSame([], Storage::disk('local')->allFiles());
+        $this->assertSame('analysed_unconfirmed', $this->analyse($id));
+    }
+
     public function test_changed_amount_with_unchanged_running_balances_is_flagged_on_its_line(): void
     {
         $lines = self::STATEMENT;
