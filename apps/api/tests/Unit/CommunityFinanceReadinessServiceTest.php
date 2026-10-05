@@ -8,15 +8,6 @@ use Tests\TestCase;
 
 class CommunityFinanceReadinessServiceTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        config()->set('community_finance.activation.mode', 'dormant');
-        config()->set('community_finance.activation.live_enabled', false);
-        config()->set('community_finance.activation.sacco_core_enabled', false);
-    }
-
     public function test_catalogue_exposes_member_friendly_terms_and_dormant_modules(): void
     {
         $catalogue = (new CommunityFinanceReadinessService)->catalogue();
@@ -27,7 +18,7 @@ class CommunityFinanceReadinessServiceTest extends TestCase
         $this->assertSame('Member Growth Score', $catalogue['language']['behaviour_scoring']['public_name']);
         $this->assertSame('Member Cooperative Core', $catalogue['language']['sacco_core']['public_name']);
         $this->assertSame('DORMANT_READY', $catalogue['modules']['community_growth_circles']['status']);
-        $this->assertSame('DORMANT_READY', $catalogue['modules']['member_cooperative_core']['status']);
+        $this->assertSame('LIVE_ENABLED', $catalogue['modules']['member_cooperative_core']['status']);
     }
 
     public function test_readiness_summary_keeps_live_actions_blocked_by_default(): void
