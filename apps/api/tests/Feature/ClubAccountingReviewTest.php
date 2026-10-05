@@ -82,7 +82,6 @@ class ClubAccountingReviewTest extends TestCase
         Sanctum::actingAs($this->owner);
 
         return (int) $this->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
-            'idempotency_key' => (string) Str::uuid(),
             'transaction_date' => $date, 'direction' => $direction, 'amount_minor' => $amount,
             'description' => 'Synthetic bank-derived source', 'source_type' => 'bank_import', 'source_reference' => (string) Str::uuid(),
             'idempotency_key' => (string) Str::uuid(),
