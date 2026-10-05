@@ -106,6 +106,9 @@ class NetworkUsageGovernanceTest extends TestCase
                     && ($context['status'] ?? null) === 500
                     && ($context['bytes_out'] ?? 0) > 0;
             });
+        Log::shouldReceive('error')
+            ->atLeast()->once()
+            ->withArgs(fn (string $message): bool => $message === 'rendered failure');
 
         $middleware = app(RecordNetworkUsage::class);
         $request = Request::create('/api/test-rendered-failure', 'GET');

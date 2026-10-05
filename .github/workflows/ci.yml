@@ -35,6 +35,8 @@ jobs:
         run: python3 scripts/verify-documentation-drift.py
       - name: Verify publication readiness
         run: python3 scripts/verify-publication-readiness.py
+      - name: Validate canonical public-site navigation
+        run: node sites/opfin-public/check-links.mjs
 
   layout:
     runs-on: ubuntu-latest
@@ -114,6 +116,12 @@ jobs:
             echo "No financial-control-sensitive changes detected."
             exit 0
           fi
+
+          # PAUSED by the repository owner on 5 October 2026 until further notice: the repository has a
+          # single maintainer and GitHub does not let an author approve their own PR. Changed
+          # financial-control files are still listed above. Delete this block to restore the check.
+          echo "::warning title=Financial-control review paused::Independent approval is paused by the repository owner until further notice. The changed financial-control files are listed in this log."
+          exit 0
 
           pr="$PR_NUMBER"
           author="$PR_AUTHOR"
