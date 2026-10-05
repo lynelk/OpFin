@@ -20,3 +20,6 @@ coverage/
 *.pfx
 *.pem
 **/key.properties
+
+# Locally built distribution packages (scripts/package-brand.sh)
+/dist/
