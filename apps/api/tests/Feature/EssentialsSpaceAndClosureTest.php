@@ -183,19 +183,19 @@ class EssentialsSpaceAndClosureTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_each_reservation_or_active_state_blocks_deletion_and_reuses_the_support_case(): void
+    public function test_each_reservation_or_active_state_blocks_deletion_without_opening_a_pending_case(): void
     {
         $id = $this->advance($this->personal, 'funding_reserved');
         foreach (['funding_reserved', 'lender_funding_pending', 'lender_reversal_pending', 'fulfilment_pending', 'active', 'overdue', 'future_unknown_state'] as $status) {
             DB::table('essentials_advances')->where('id', $id)->update(['status' => $status]);
             $result = app(AccountDeletionService::class)->deleteOrRequest($this->customer, '123456', Request::create('/api/account', 'DELETE'));
-            $this->assertSame('pending_obligations', $result['deletion_status'], $status);
-            $this->assertContains('essentials_financing', $result['active_obligations']);
+            $this->assertSame('blocked_obligations', $result['deletion_status'], $status);
+            $this->assertContains('essentials_financing', array_column($result['active_obligations'], 'code'));
             $this->assertNull($this->customer->fresh()->deleted_at);
             $this->assertDatabaseHas('financial_spaces', ['id' => $this->personal->id]);
             $this->assertDatabaseHas('credit_profiles', ['user_id' => $this->customer->id]);
         }
-        $this->assertSame(1, DB::table('support_cases')->where('customer_id', $this->customer->id)->where('category', 'account_deletion')->count());
+        $this->assertSame(0, DB::table('support_cases')->where('customer_id', $this->customer->id)->where('category', 'account_deletion')->count());
         Http::assertNothingSent();
     }
 
@@ -217,8 +217,8 @@ class EssentialsSpaceAndClosureTest extends TestCase
             'idempotency_key' => 'synthetic-pending-repayment', 'created_at' => now(), 'updated_at' => now(),
         ]);
         $result = app(AccountDeletionService::class)->deleteOrRequest($this->customer, '123456', Request::create('/api/account', 'DELETE'));
-        $this->assertSame('pending_obligations', $result['deletion_status']);
-        $this->assertContains('essentials_repayment_pending', $result['active_obligations']);
+        $this->assertSame('blocked_obligations', $result['deletion_status']);
+        $this->assertContains('essentials_repayment_pending', array_column($result['active_obligations'], 'code'));
     }
 
     public function test_inconsistent_settled_balance_requires_review_instead_of_deletion(): void
@@ -226,7 +226,7 @@ class EssentialsSpaceAndClosureTest extends TestCase
         $id = $this->advance($this->personal, 'settled');
         DB::table('essentials_advances')->where('id', $id)->update(['outstanding_minor' => 1]);
         $result = app(AccountDeletionService::class)->deleteOrRequest($this->customer, '123456', Request::create('/api/account', 'DELETE'));
-        $this->assertSame('pending_obligations', $result['deletion_status']);
-        $this->assertContains('essentials_financing', $result['active_obligations']);
+        $this->assertSame('blocked_obligations', $result['deletion_status']);
+        $this->assertContains('essentials_financing', array_column($result['active_obligations'], 'code'));
     }
 }

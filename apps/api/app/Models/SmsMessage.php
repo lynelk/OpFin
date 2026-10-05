@@ -9,6 +9,8 @@ class SmsMessage extends Model
 {
     use HasFactory;
 
+    public const REDACTED = '******';
+
     protected $fillable = [
         'to',
         'message',

@@ -8,6 +8,10 @@ analyzer:
     - build/**
     - android/**
     - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
   errors:
     deprecated_member_use: ignore
     prefer_interpolation_to_compose_strings: ignore

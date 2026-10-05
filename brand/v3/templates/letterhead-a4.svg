@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1754" role="img" aria-labelledby="title">
+  <title id="title">OpFin A4 letterhead template</title>
+  <!-- Fill bracketed fields from approved records only. Never invent registration, licence or regulator details. -->
+  <rect width="1240" height="1754" fill="#FFFFFF"/>
+  <rect width="1240" height="12" fill="#353B78"/>
+  <g transform="translate(110 92) scale(.14)" fill="#353B78">
+    <path d="M96 76h184c78 0 142 64 142 142v50c0 78-64 142-142 142h-50l-52 48V354h102c48 0 86-38 86-86v-50c0-48-38-86-86-86H96V76Z"/>
+    <path d="M96 157h174c15 0 27 12 27 27s-12 27-27 27H96v-54Z"/>
+    <path d="M96 247h144c15 0 27 12 27 27s-12 27-27 27h-90v130l-54-45V247Z"/>
+  </g>
+  <text x="196" y="150" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="40" font-weight="600">OpFin</text>
+  <text x="1130" y="118" text-anchor="end" fill="#555D72" font-family="Inter, Arial, sans-serif" font-size="20">[Postal address]</text>
+  <text x="1130" y="146" text-anchor="end" fill="#555D72" font-family="Inter, Arial, sans-serif" font-size="20">[Telephone] · [Email]</text>
+  <text x="1130" y="174" text-anchor="end" fill="#555D72" font-family="Inter, Arial, sans-serif" font-size="20">[Website]</text>
+  <line x1="110" y1="220" x2="1130" y2="220" stroke="#D7DAE8" stroke-width="2"/>
+  <text x="110" y="300" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[Date]</text>
+  <text x="110" y="360" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[Recipient name and address]</text>
+  <text x="110" y="480" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600">[Subject]</text>
+  <text x="110" y="540" fill="#202436" font-family="Inter, Arial, sans-serif" font-size="24">[Letter body in plain British English, 12 pt or larger when printed.]</text>
+  <line x1="110" y1="1610" x2="1130" y2="1610" stroke="#D7DAE8" stroke-width="2"/>
+  <text x="110" y="1650" fill="#555D72" font-family="Inter, Arial, sans-serif" font-size="18">[Registered legal name] · [Company registration number] · [Registered office]</text>
+  <text x="110" y="1680" fill="#555D72" font-family="Inter, Arial, sans-serif" font-size="18">[Regulatory status exactly as approved by Legal; omit if none applies]</text>
+  <text x="1130" y="1680" text-anchor="end" fill="#353B78" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">Your next step, clearer.</text>
+</svg>

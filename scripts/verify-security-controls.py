@@ -73,11 +73,32 @@ for label, text in (('Web dashboard', web_dashboard), ('mobile Home', mobile_hom
     require('Financial Compass' in text, f'{label} must retain the Financial Compass pattern')
     require('Next Step' in text or 'NEXT STEP' in text or 'Recommended next step' in text, f'{label} must retain the Next Step pattern')
 
+def provenance_hash(target):
+    # Text assets are compared in their committed LF form, so an autocrlf checkout is not a false provenance failure.
+    data = target.read_bytes()
+    if target.suffix.lower() in ('.svg', '.txt', '.json'):
+        data = data.replace(b'\r\n', b'\n')
+    return hashlib.sha256(data).hexdigest()
+
 assets = json.loads((ROOT / 'brand/asset-manifest.json').read_text())
 for path, expected in assets['files'].items():
     target = (ROOT / path).resolve()
     require(target.is_relative_to(ROOT), 'Invalid asset path')
-    require(target.is_file() and hashlib.sha256(target.read_bytes()).hexdigest() == expected, f'Brand asset changed without provenance update: {path}')
+    require(target.is_file() and provenance_hash(target) == expected, f'Brand asset changed without provenance update: {path}')
+
+# Brand toolkit exports (issue #103) must match their manifest, and must be regenerated when a master changes.
+export_root = (ROOT / 'brand/v3/exports').resolve()
+toolkit = json.loads((export_root / 'EXPORT_MANIFEST.json').read_text())
+for path, meta in toolkit['files'].items():
+    target = (ROOT / path).resolve()
+    require(target.is_relative_to(export_root), f'Invalid brand export path: {path}')
+    require(target.is_file() and provenance_hash(target) == meta['sha256'], f'Brand export changed without provenance update: {path}')
+for path, blob in toolkit['masters'].items():
+    data = (ROOT / path).read_bytes().replace(b'\r\n', b'\n')
+    require(hashlib.sha1(b'blob %d\0' % len(data) + data).hexdigest() == blob, f'Brand exports are stale: {path} changed after they were generated')
+listed = {(ROOT / path).resolve() for path in toolkit['files']} | {(export_root / 'EXPORT_MANIFEST.json').resolve()}
+for path in export_root.rglob('*'):
+    require(path.is_dir() or path.resolve() in listed, f'Unlisted file in brand exports: {path.relative_to(ROOT)}')
 for path in (ROOT / 'apps/client/lib').rglob('*.dart'):
     text = path.read_text()
     require(not re.search(r'badCertificateCallback\s*=', text), f'TLS certificate bypass in {path.relative_to(ROOT)}')

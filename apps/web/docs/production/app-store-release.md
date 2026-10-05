@@ -21,7 +21,7 @@ Updated: 18 September 2026
 From `apps/client`:
 
 ```bash
-OPFIN_IOS_BUNDLE_ID=co.opfin.app bash tool/prepare_app_store.sh
+bash tool/prepare_app_store.sh
 flutter pub get
 flutter analyze
 flutter test

@@ -681,7 +681,8 @@ class WhatsAppJourneyService
             'expires_at' => null,
             'updated_at' => now(),
         ]);
-        $this->smsService->queueSms($user->phone, 'OpFin WhatsApp verification code: '.$code.'. It expires in 5 minutes.');
+        $message = 'OpFin WhatsApp verification code: '.$code.'. It expires in 5 minutes.';
+        $this->smsService->queueSms($user->phone, $message, SmsService::redact($message, $code));
 
         return $this->respond($conversation->id, 'A WhatsApp verification code was sent to your registered phone. Send VERIFY followed by the 6-digit code.', 'challenge_sent');
     }

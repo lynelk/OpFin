@@ -69,3 +69,7 @@ Read [current state](../../docs/CURRENT_STATE.md), the [Blueprint](../../docs/pr
 `/admin/lending-platform` manages actual lenders, products/terms, affiliated-credit deployment, scoped distribution revisions and delegated operations access. It calls authenticated Laravel endpoints with no mock fallback and no cached configuration. Core Synergies uses an internal lender record under platform admin; no separate partner login is required. Offers show the snapshotted actual lender. See [the operating contract](../../docs/architecture/LENDER_ORCHESTRATION.md).
 
 Local lint uses the TypeScript 6 compatibility procedure already present in `.github/workflows/ci.yml`; restore lockfile dependencies before the normal TypeScript/build gates. Do not disable lint rules to hide compatibility errors.
+
+## Release-candidate contract update
+
+Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/frontend-backend-contract.md`. Full deletion is immediately rejected while obligations remain; optional deletion keeps the account. Payroll undertaking and reservation are atomic and case-bound. External reservation release is evidenced before closure. No production activation is implied.

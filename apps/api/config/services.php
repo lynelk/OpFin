@@ -147,11 +147,6 @@ return [
         ],
     ],
 
-    'openai_api_key' => env('OPENAI_API_KEY'),
-    'pinecone' => [
-        'key' => env('PINECONE_API_KEY'),
-        'url' => env('PINECONE_URL'),
-    ],
     'opfin' => [
         'enable_demo_routes' => env('OPFIN_ENABLE_DEMO_ROUTES', false),
         'web_url' => env('OPFIN_WEB_URL'),

@@ -82,6 +82,12 @@ The [24 September delivery record](../operations/DELIVERY_EVIDENCE_2026-09-24.md
 | UAT-64 | Partner location network | Partner opens service network | Own permitted service points, not customer pins |
 | UAT-65 | Aggregate geography | Small/large cohorts | Small cohorts suppressed; individual contexts excluded |
 | UAT-66 | Location deletion | Delete eligible account with optional location | Optional personal location removed through governed closure |
+| UAT-67 | Legacy back-office access | Customer, operations user and platform administrator open the API-origin back-office | Customer denied; operations user can read; only a platform administrator creates or edits user records and institution administrators |
+| UAT-68 | Float maker-checker | Record a float top-up, approve it as the same user, then as a different user, then approve again | Stays pending until a different approver acts; only approval changes the Disbursement balance; the repeat approval is refused |
+| UAT-69 | Code redaction | Request a sign-up OTP, a WhatsApp verification code and a guarantor code, then open the stored SMS records | Codes arrive on the phone; stored records show `******` |
+| UAT-70 | Retired credit-bureau calls | Call `POST /api/credit-scores` and `POST /api/validate-nin` | Both return 404; bureau results come only through the governed, consented credit profile |
+| UAT-71 | Staff access review | Sign in with a `staff_pending_review` account, then run `php artisan opfin:legacy-roles` | Sign-in refused with a review message; the account is listed for a recorded decision |
+| UAT-72 | Legacy deletion path | Open `/account/delete` on the API origin | Forwarded to the Web deletion page, which applies the regulated deletion checks |
 
 ## Treasury and Essentials additions
 
@@ -92,6 +98,21 @@ Execute `DEL-ES-01` through `DEL-ES-06` for expected immutable accounting, concu
 `DEL-REL-01` verifies exact running sources, migrations and health; `DEL-DOC-01` checks original requirements, later decisions, API and manual consistency. Procedures and expected evidence are in the [supplement](CURRENT_CAPABILITY_SUPPLEMENT.md). Keep existing test IDs stable when extending a suite.
 
 Essentials acceptance must additionally cover biller/rental verification, non-stacking overall headroom, rejection of OpFin as the primary lender, server-enforced distribution-channel terms, immutable disclosures, failed/ambiguous provider outcomes, repayment schedules, reconciliation and customer-controlled embedded-platform scopes. No financial exercise may create an unauthorised real obligation.
+
+## Statement upload and PDF analysis
+
+Use synthetic statements only. IDs UAT-67 to UAT-78 are reserved for the security and back-office suites in review.
+
+| ID | Area | Action | Expected result |
+|---|---|---|---|
+| UAT-79 | PDF analysis | Upload a consistent synthetic PDF statement for an approved issuer | Status moves from `queued_for_analysis` to `analysed_unconfirmed`. Extraction reads `complete` and financial consistency reads `consistent`. Source authenticity stays `unconfirmed`, and the layout reader is shown as not validated. |
+| UAT-80 | Tamper evidence | Change one amount without changing the running balances; separately, rebalance a change throughout | The first is flagged once on its own line and needs review. The second passes arithmetic and still reads source `unconfirmed`, not credit-eligible. |
+| UAT-81 | Unsafe or protected files | Upload a PDF with an embedded script, then a password-protected PDF | The first is refused without parsing. The second asks for an unprotected export. Neither asks for a password, PIN or OTP. |
+| UAT-82 | Unsupported layout | Upload a PDF with no dated transaction rows | The page reads "not yet supported", and nothing describes the document or customer as suspicious. |
+| UAT-83 | Retention | Let permission end, wait past the retention period, then run the purge command; repeat with a future legal hold | The original and its analysis are deleted, with the hash and audit event kept. A statement on legal hold is kept. |
+| UAT-89 | Statement review | In an institutional Space, upload a statement with a balance discrepancy. As a reviewer, open the queue and resolve it with a reason; separately, try to review your own upload | The queue shows a masked member, the issuer, findings and source lines. The resolution is recorded and source authenticity stays `unconfirmed`. Reviewing your own upload is refused. |
+| UAT-90 | Appeal and resubmission | Reject a statement for issuer-confirmed alteration (with evidence) and appeal it as the uploader; then request a resubmission and upload a replacement | Rejection without evidence is refused. The appeal is accepted once and the rejecting reviewer cannot decide it. The replacement links to the earlier statement, which keeps its history. |
+| UAT-91 | App statement journey | On Android and iOS 14+, open a Space where statements are available, upload a PDF through the document picker, open its results, and repeat in a Space where they are not available | The upload needs no storage or media permission and never asks for a password, PIN or OTP. Results use plain wording and say the provider has not confirmed the document. The card is hidden where statements are unavailable. |
 
 ## Causality and privacy
 
@@ -131,3 +152,31 @@ Automated regression results and remaining mobile/PostgreSQL/reviewer gates are 
 - With affiliated credit withheld, or independent-first with an eligible independent lender, verify no eligibility request or new credit line is created for the affiliate. Then request a genuinely underserved amount/category and verify permitted fallback.
 - Suspend an Essentials product for one channel and verify eligibility, displayed limit, quote and acceptance agree while another authorised channel remains available.
 - Verify legacy loan default-interest caps continue under the configured/snapshotted licence class and each new offer uses one distribution revision in pricing and disclosures.
+
+## PR 142 candidate acceptance update (2 October 2026)
+
+Account deletion rejects unresolved obligations immediately and preserves servicing; optional-data deletion retains the account and regulated evidence. Payroll undertaking is case-bound and atomic with reservation request; cancellation/expiry awaits evidenced provider release. Apply `docs/releases/2026-10-02-pr142-release-acceptance.md` to OPF-FEAT-0022, FIN-FOUNDATION, DOC-CONTINUITY and OPF-REL-0001. This entry is implementation/validation work, not production or store acceptance.
+## Asset registry
+
+Use synthetic identifiers only (for example a computed check-digit IMEI). IDs UAT-67 to UAT-83 are reserved for suites in review.
+
+| ID | Area | Action | Expected result |
+|---|---|---|---|
+| UAT-84 | Registration | Register a phone with a valid IMEI, then try an IMEI with a wrong check digit and a laptop without a serial | The valid phone is `registered` and only its masked identifier is shown. The other two are refused with plain guidance. |
+| UAT-85 | Duplicate identifier | Register the same IMEI in a second Space | The second passport is `review_required`. Its user sees no information about the first Space. Operations see the reason in the review queue. |
+| UAT-86 | Verification | Verify as the registrant, then as a different operations user | The first is refused. The second records the method and evidence reference. |
+| UAT-87 | Liens | Register a lien, try a second, release before and after settlement | Only one lien is active. Early release needs a platform administrator. After release the passport is `verified`. |
+| UAT-88 | Theft and resale | Report the asset stolen and try a new lien, then recover it; separately dispose of an asset and register its IMEI in another Space | The stolen asset is refused a lien and the identifier check shows "reported stolen". Recovery restores the prior state. After disposal the new registration is `registered`. |
+
+## Financing Product Factory
+
+Use synthetic partners, licence references and wording only.
+
+| ID | Area | Action | Expected result |
+|---|---|---|---|
+| UAT-92 | Templates | Draft a device template, approve it as the same administrator, then as a different one; draft an Islamic template with `HIRE_PURCHASE` | Self-approval is refused and the second approval makes it `active`. The Islamic template is refused with the allowed contract types. |
+| UAT-93 | Guardrails | Draft products above the price cap, with a car on a phone template, with a fee above the cap, without a required disclosure and without a funder | Each is refused with one plain-language reason. An Islamic template's message says "profit rate", not "APR". |
+| UAT-94 | Maker-checker | Submit a product, then approve it as its maker, as operations and as a different administrator | Only the different administrator can approve. A change to the approved product is refused; a revision creates version 2. |
+| UAT-95 | Passport gate | Activate a product whose passport is still a draft, approve the passport, activate, then revoke the passport | Activation is refused until the passport is approved. After revocation the product no longer appears in product matching. |
+| UAT-96 | Sharia gate | Activate an Islamic product without a Sharia approval, then with a governance-recorded approval; attach that approval to a conventional product | The first activation is refused and says the factory cannot create one. The second succeeds. The conventional product is refused. |
+| UAT-97 | Versions | Activate version 2 of a live product | Version 1 becomes `retired` with its approved parameters unchanged; only version 2 matches. |

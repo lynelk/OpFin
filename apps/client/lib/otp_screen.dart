@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:opfin/services/distribution_channel.dart';
 import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/complete_registration_screen.dart';
 import 'package:opfin/constants.dart';
@@ -24,8 +27,10 @@ class OtpScreen extends StatefulWidget {
   State<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
+class _OtpScreenState extends State<OtpScreen> {
   final _controller = TextEditingController();
+  StreamSubscription<String>? _smsSubscription;
+  SmsAutoFill? _sms;
 
   bool _loading = false;
   bool _resend = false;
@@ -35,19 +40,42 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
   @override
   void initState() {
     super.initState();
-    listenForCode();
+    unawaited(_listenForCodeSafely());
     _tick();
   }
 
-  @override
-  void codeUpdated() {
-    final value = code;
-    if (value != null && RegExp(r'^\d{6}$').hasMatch(value)) {
-      _controller.text = value;
-      if (!_autoSubmitted) {
-        _autoSubmitted = true;
-        _verify();
-      }
+  Future<void> _listenForCodeSafely() async {
+    if (kIsWeb ||
+        defaultTargetPlatform != TargetPlatform.android ||
+        resolveDistributionChannel() == 'huawei_appgallery') {
+      return;
+    }
+    try {
+      await _smsSubscription?.cancel();
+      if (!mounted) return;
+      final sms = _sms ??= SmsAutoFill();
+      _smsSubscription = sms.code.listen((value) {
+        if (!mounted || !RegExp(r'^\d{6}$').hasMatch(value)) return;
+        _controller.text = value;
+        if (!_autoSubmitted && !_loading) {
+          _autoSubmitted = true;
+          unawaited(_verify());
+        }
+      }, onError: (Object _) {
+        // Manual input stays available when optional native autofill fails.
+      });
+      await sms.listenForCode();
+    } catch (_) {
+      // A missing Google SMS Retriever service is not an authentication failure.
+    }
+  }
+
+  Future<void> _disposeAutofill() async {
+    try {
+      await _smsSubscription?.cancel();
+      await _sms?.unregisterListener();
+    } catch (_) {
+      // Disposing optional autofill must not affect the account/session flow.
     }
   }
 
@@ -171,13 +199,14 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
         );
       }
 
+      if (!mounted) return;
       setState(() {
         _countdown = 300;
         _resend = false;
         _controller.clear();
         _autoSubmitted = false;
       });
-      listenForCode();
+      unawaited(_listenForCodeSafely());
       _tick();
     } catch (error) {
       if (mounted) {
@@ -196,7 +225,7 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
 
   @override
   void dispose() {
-    cancel();
+    unawaited(_disposeAutofill());
     _controller.dispose();
     super.dispose();
   }
@@ -205,8 +234,7 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
   Widget build(BuildContext context) => OpFinAuthScaffold(
         eyebrow: widget.registration ? 'Create account' : 'Secure verification',
         title: 'Enter the 6-digit code',
-        description:
-            'We sent it to ' +
+        description: 'We sent it to ' +
             widget.phone +
             '. On supported phones, OpFin fills it in automatically.',
         showBackButton: true,

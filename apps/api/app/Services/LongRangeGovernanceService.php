@@ -248,11 +248,13 @@ class LongRangeGovernanceService
         }
         DB::table('partner_distribution_accounts')->where('id', $id)->update([
             'status' => $data['status'],
+            'financial_intent_source_platform' => $data['status'] === 'approved'
+                ? ($data['financial_intent_source_platform'] ?? $record->financial_intent_source_platform) : null,
             'approved_by' => $actor->id,
             'approved_at' => now(),
             'updated_at' => now(),
         ]);
-        $this->auditLogger->record('long_range.partner.reviewed', $actor, null, ['reference' => $record->reference, 'status' => $data['status']]);
+        $this->auditLogger->record('long_range.partner.reviewed', $actor, null, ['reference' => $record->reference, 'status' => $data['status'], 'financial_intent_source_platform' => $data['financial_intent_source_platform'] ?? null]);
 
         return DB::table('partner_distribution_accounts')->find($id);
     }

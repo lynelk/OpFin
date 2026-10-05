@@ -10,6 +10,7 @@ class LegalProductPassport extends Model
         'reference', 'jurisdiction', 'regulated_activity', 'booking_entity', 'partner_id', 'funding_entity',
         'servicer', 'licence_or_approval_reference', 'restrictions', 'tax_accounting_references', 'status',
         'effective_from', 'effective_to', 'approved_by', 'approved_at',
+        'created_by', 'idempotency_key', 'evidence_reference', 'revoked_by', 'revoked_at',
     ];
 
     protected function casts(): array
@@ -20,6 +21,7 @@ class LegalProductPassport extends Model
             'effective_from' => 'datetime',
             'effective_to' => 'datetime',
             'approved_at' => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 }

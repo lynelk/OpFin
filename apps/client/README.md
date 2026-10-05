@@ -1,7 +1,7 @@
 # OpFin mobile application
 
 Status: Controlled external developer/product reference  
-Updated: 24 September 2026  
+Updated: 27 September 2026  
 Language: English (United Kingdom)
 
 The Flutter application is OpFin's primary customer mobile experience. It presents a mobile-complete financial journey while the API remains authoritative for identity, permissions, eligibility, money, credit, provider finality, programme state, ledger and reconciliation.
@@ -34,6 +34,15 @@ Protection is available as a normal personal-finance destination. The App distin
 ## Financial Spaces and everyday money
 
 Individuals and Savings Groups should be able to complete normal everyday journeys in the App without Web being a hidden prerequisite. Investment Club members use the same App and identity. Group/SACCO administrators can use the Web Workspace for deeper administration, but member participation is not split into another consumer app.
+
+### Provider statements
+
+When the server reports that Financial Intelligence is available for a Space, a **Provider statements** card appears on that Space's screen. Otherwise the card is hidden rather than advertised. From there a customer can:
+- upload a bank or mobile-money statement (PDF or CSV) through the system document picker, which needs no storage or media permission;
+- see the server's plain-language results: whether it was read, whether balances add up, that the provider has not confirmed it, the review state and the next step;
+- appeal a rejection once, upload a replacement when a reviewer asks, or stop the statement being used.
+
+The upload screen reminds customers that OpFin never asks for a statement password, PIN or OTP. All calls go through the metered `OpFinHttp` client under the `statements` feature. Retried uploads and appeals reuse one idempotency key, so nothing is recorded twice. No wording describes a document or customer as suspicious.
 
 The App supports server-authoritative Space context and financial-life features such as money/accounts, budgets, goals, assets, liabilities/receivables, net position and supported financial-health guidance. Savings Groups, Investment Clubs and SACCOs can attach external government/regulator identifiers to their existing Space record as those schemes become applicable. Group protection catalogues are visible only for approved group-capable products; group enrolment and premium collection remain fail-closed until separately activated.
 
@@ -80,6 +89,16 @@ The App reads server-authoritative credit profile, available-to-borrow amount, a
 
 A profile limit is not guaranteed approval. Pending provider requests are not completed payments or disbursements. Completed provider-finality-backed events may create auditable receipts under **Activity**.
 
+### Salary-linked payroll deduction
+
+Android and iOS share one Flutter payroll-deduction journey and the same API state. The experience covers affordability, customer undertaking, reservation, Key Facts/vote approval, payroll submission, rejection/amendment and payment reconciliation.
+
+The navigation entry is gated by `OPFIN_PAYROLL_DEDUCTION_ENABLED` and is off by default. It must be enabled only after the salary-finance product and operating route are approved. The customer can still see that a live provider machine connection is inactive when the screen is opened in a controlled test build; the client never contains PDMS credentials or invents provider endpoints.
+
+For an eligible `salary_finance` application, the customer may start a payroll case, review the verified affordable deduction, explicitly authorise the payroll undertaking and request a reservation. The requested deduction cannot exceed the verified affordable amount. Vote approval and payroll feedback remain server/operations-controlled. A successful payroll result is displayed as reconciliation pending until the expected and recovered amounts match.
+
+The shared client version for this change is `1.0.2+20`. Android and iOS release builds must both pass the monorepo CI gates before distribution.
+
 ## Financial resilience and inclusive finance
 
 The App supports financial-health guidance, a financial-reputation stage that is not a second credit score, optional programme-measurement consent, due programme check-ins, reviewed translations with explicit English fallback, voluntary programme exit, alternative credit-support evidence and optional recorded-data health enrichment.
@@ -102,6 +121,12 @@ Camera features must remain optional for installation so devices without a rear 
 
 The existing Play application ID is `org.rotaryo.opfin`. The Kotlin namespace remains `co.opfin.app`. Distribution builds must use the registered upload key.
 
+The document picker (`file_picker`) declares no Android permissions: only a package-visibility query for the system "get content" intent. Keep it that way. The release contract forbids storage and media permissions.
+
+## iOS compatibility
+
+The iOS minimum is 14.0. It was raised from 13.0 on 4 October 2026 because the system document picker for provider statements requires iOS 14. Every device that runs iOS 13 can also run iOS 14.
+
 ## Development
 
 ```bash
@@ -121,7 +146,7 @@ Never place provider secrets in Flutter.
 
 ## Documentation
 
-Start with `../../docs/CURRENT_STATE.md`, `../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`, `../../docs/manuals/OPFIN_USER_MANUAL.md`, `../../docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md`, `../api/docs/api/API_QUICK_REFERENCE.md` and `../../SECURITY.md`.
+Start with `../../docs/CURRENT_STATE.md`, `../../docs/product/OPFIN_PRODUCT_BLUEPRINT.md`, `../../docs/manuals/OPFIN_USER_MANUAL.md`, `../../docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md`, `../api/docs/api/API_QUICK_REFERENCE.md`, `../api/docs/api/PAYROLL_DEDUCTION.md` and `../../SECURITY.md`.
 
 Run `make publication-check` before externally publishing product/developer documentation.
 
@@ -131,6 +156,9 @@ Credit options, applications and Essentials send the actual channel through `lib
 
 Repayment terms come from the server's configurable lender/channel rules. The client no longer hides terms using a universal 61-day filter or prefers a universal 90-day product. Options/review/offers identify the actual lender; OpFin is the orchestration platform. Home displays an OpFin Score only when the server supplies one. Flutter analysis/tests, Android/iOS release compilation and device UAT remain required. See [the lender contract](../../docs/architecture/LENDER_ORCHESTRATION.md).
 
+## Release-candidate contract update
+
+Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/frontend-backend-contract.md`. Full deletion is immediately rejected while obligations remain; optional deletion keeps the account. Payroll undertaking and reservation are atomic and case-bound. External reservation release is evidenced before closure. No production activation is implied.
 
 ## Club accounting client recovery and export
 

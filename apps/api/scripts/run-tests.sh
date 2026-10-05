@@ -8,6 +8,7 @@ set -eu
 # into the explicitly selected sqlite test connection. Test execution must never
 # depend on, connect to, or mutate the production database or invoke the production money-movement
 # adapter unless an individual test explicitly opts into CPay configuration.
+unset DB_PASSWORD
 APP_ENV=testing \
 APP_DEBUG=false \
 DB_CONNECTION=sqlite \

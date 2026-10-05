@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use App\Models\ConsentRecord;
-use App\Models\Loan;
-use App\Models\SupportCase;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,55 +13,69 @@ use Illuminate\Validation\ValidationException;
 
 class AccountDeletionService
 {
-    public function __construct(private readonly AuditLogger $auditLogger) {}
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly AccountDeletionObligationService $obligations,
+        private readonly AccountDataDeletionService $dataDeletion,
+    ) {}
+
+    public function readiness(User $user): array
+    {
+        $active = $this->obligations->forUser($user);
+
+        return [
+            'can_delete_account' => $active === [],
+            'active_obligation_count' => count($active),
+            'active_obligations' => $active,
+            'data_deletion' => [
+                'available_categories' => $this->dataDeletion->options(),
+                'retained_record_categories' => AccountDataDeletionService::RETAINED,
+            ],
+            'message' => $active === []
+                ? 'No active financial obligation currently prevents account deletion.'
+                : 'Account deletion is blocked until the listed obligations are settled, closed or otherwise resolved with the relevant provider.',
+        ];
+    }
 
     public function deleteOrRequest(User $user, string $credential, Request $request): array
     {
-        if (! Hash::check($credential, $user->password)) {
-            throw ValidationException::withMessages(['pin' => ['Your current PIN or legacy password is incorrect.']]);
-        }
+        $this->assertCredential($user, $credential);
 
         return DB::transaction(function () use ($user, $credential, $request) {
-            // Essentials acceptance reserves credit under the same profile lock.
-            // Check obligations only after acquiring it, before deleting the
-            // profile, wallet or Personal Space needed to service an advance.
             if (Schema::hasTable('credit_profiles')) {
-                DB::table('credit_profiles')->where('user_id', $user->id)->lockForUpdate()->first();
-            }
-            $user = User::withoutGlobalScopes()->whereNull('deleted_at')->whereKey($user->id)->lockForUpdate()->firstOrFail();
-            if (! Hash::check($credential, $user->password)) {
-                throw ValidationException::withMessages(['pin' => ['Your current PIN or legacy password is incorrect.']]);
-            }
-            $obligations = $this->activeObligations($user);
-            if ($obligations !== []) {
-                $case = SupportCase::query()
-                    ->where('customer_id', $user->id)
-                    ->where('category', 'account_deletion')
-                    ->whereIn('status', [SupportCase::STATUS_OPEN, SupportCase::STATUS_IN_PROGRESS])
-                    ->latest('id')
+                DB::table('credit_profiles')
+                    ->where('user_id', $user->id)
+                    ->lockForUpdate()
                     ->first();
-                if (! $case) {
-                    $case = SupportCase::create([
-                        'customer_id' => $user->id,
-                        'created_by' => $user->id,
-                        'case_number' => 'CASE-'.now()->format('Ymd').'-'.Str::upper(Str::random(8)),
-                        'category' => 'account_deletion',
-                        'status' => SupportCase::STATUS_OPEN,
-                        'priority' => 'high',
-                        'subject' => 'Account deletion request',
-                        'description' => 'Customer requested account deletion while regulated or financial obligations remain active. Close or transfer those obligations before completing deletion.',
-                    ]);
-                }
-                $this->auditLogger->record('account.deletion.requested', $user, $case, [
-                    'active_obligations' => $obligations,
-                    'case_number' => $case->case_number,
-                ], $request);
+            }
+
+            $user = User::withoutGlobalScopes()
+                ->whereNull('deleted_at')
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $this->assertCredential($user, $credential);
+
+            $active = $this->obligations->forUser($user);
+            if ($active !== []) {
+                $this->auditLogger->record(
+                    'account.deletion.rejected_obligations',
+                    $user,
+                    null,
+                    [
+                        'active_obligation_count' => count($active),
+                        'active_obligations' => $active,
+                    ],
+                    $request,
+                );
 
                 return [
-                    'deletion_status' => 'pending_obligations',
-                    'case_number' => $case->case_number,
-                    'active_obligations' => $obligations,
-                    'message' => 'Your deletion request is recorded. The account remains available while active regulated or financial obligations are completed safely.',
+                    'deletion_status' => 'blocked_obligations',
+                    'can_retry' => true,
+                    'active_obligation_count' => count($active),
+                    'active_obligations' => $active,
+                    'message' => 'Your account cannot be deleted while financial obligations remain. Resolve each listed obligation with the relevant provider, then submit the deletion request again.',
                 ];
             }
 
@@ -75,17 +87,19 @@ class AccountDeletionService
                     'revoked_at' => now(),
                     'updated_at' => now(),
                 ]);
-            $this->purgeOptionalCustomerContext($user->id);
-            $retained = [
-                'financial transaction and settlement evidence where legally required',
-                'loan, repayment, accounting and reconciliation records where legally required',
-                'KYC/AML, credit-reporting and regulatory evidence where legally required',
-                'security, consent and audit evidence required to demonstrate lawful processing and account closure',
-            ];
-            $this->auditLogger->record('account.deletion.completed', $user, null, [
-                'retained_record_categories' => $retained,
-            ], $request);
+
+            $this->dataDeletion->purgeForClosedAccount($user->id);
+
+            $this->auditLogger->record(
+                'account.deletion.completed',
+                $user,
+                null,
+                ['retained_record_categories' => AccountDataDeletionService::RETAINED],
+                $request,
+            );
+
             $user->tokens()->delete();
+
             $user->forceFill([
                 'name' => 'Deleted User',
                 'first_name' => null,
@@ -103,144 +117,64 @@ class AccountDeletionService
                 'phone_verified_at' => null,
                 'email_verified_at' => null,
             ])->save();
+
             $user->delete();
 
             return [
                 'deletion_status' => 'completed',
-                'retained_record_categories' => $retained,
+                'retained_record_categories' => AccountDataDeletionService::RETAINED,
                 'message' => 'Your OpFin account has been deleted. Records that must be retained for legal, regulatory, accounting or fraud-prevention purposes are isolated from active use and kept only for the required retention period.',
             ];
         });
     }
 
-    private function activeObligations(User $user): array
-    {
-        $obligations = [];
-        if (Loan::withoutGlobalScopes()->where('user_id', $user->id)->whereNotIn('status', ['Cleared', 'Cancelled', 'Rejected'])->exists()) {
-            $obligations[] = 'active_credit';
-        }
-        if ($this->hasOpenEssentials($user->id)) {
-            $obligations[] = 'essentials_financing';
-        }
-        if ($this->existsForUser('essentials_repayments', 'user_id', $user->id, ['pending', 'pending_provider_confirmation'])) {
-            $obligations[] = 'essentials_repayment_pending';
-        }
-        if ($this->existsForUser('participatory_finance_listings', 'borrower_user_id', $user->id, ['awaiting_compliance_review', 'approved', 'funding', 'funded'])) {
-            $obligations[] = 'peer_borrowing';
-        }
-        if ($this->existsForUser('participatory_finance_commitments', 'investor_user_id', $user->id, ['awaiting_step_up', 'provider_processing', 'settled'])) {
-            $obligations[] = 'peer_lending';
-        }
-        if (Schema::hasTable('savings_goals') && Schema::hasColumn('savings_goals', 'user_id')) {
-            $query = DB::table('savings_goals')->where('user_id', $user->id);
-            if (Schema::hasColumn('savings_goals', 'confirmed_balance_minor')) {
-                $query->where('confirmed_balance_minor', '>', 0);
-            } elseif (Schema::hasColumn('savings_goals', 'status')) {
-                $query->whereIn('status', ['active', 'withdrawal_pending']);
-            }
-            if ($query->exists()) {
-                $obligations[] = 'savings_position';
-            }
-        }
-        if (Schema::hasTable('protection_policies') && Schema::hasColumn('protection_policies', 'user_id')) {
-            $query = DB::table('protection_policies')->where('user_id', $user->id);
-            if (Schema::hasColumn('protection_policies', 'status')) {
-                $query->whereIn('status', ['premium_due', 'active', 'claim_pending']);
-            }
-            if ($query->exists()) {
-                $obligations[] = 'protection_policy';
-            }
-        }
+    public function deleteSelectedData(
+        User $user,
+        string $credential,
+        array $categories,
+        Request $request,
+    ): array {
+        $this->assertCredential($user, $credential);
 
-        return array_values(array_unique($obligations));
+        return DB::transaction(function () use ($user, $credential, $categories, $request) {
+            $locked = User::withoutGlobalScopes()
+                ->whereNull('deleted_at')
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $this->assertCredential($locked, $credential);
+
+            $deleted = $this->dataDeletion->delete($locked, $categories);
+
+            $this->auditLogger->record(
+                'account.data_deletion.completed',
+                $locked,
+                null,
+                [
+                    'requested_categories' => array_values(array_unique($categories)),
+                    'deleted_record_counts' => $deleted,
+                    'retained_record_categories' => AccountDataDeletionService::RETAINED,
+                ],
+                $request,
+            );
+
+            return [
+                'deletion_status' => 'data_deleted',
+                'deleted_categories' => array_keys($deleted),
+                'deleted_record_counts' => $deleted,
+                'retained_record_categories' => AccountDataDeletionService::RETAINED,
+                'message' => 'The selected optional data has been deleted. Regulated financial, identity, accounting, settlement, security and audit records remain subject to their applicable retention requirements.',
+            ];
+        });
     }
 
-    private function hasOpenEssentials(int $userId): bool
+    private function assertCredential(User $user, string $credential): void
     {
-        if (! Schema::hasTable('essentials_advances')) {
-            return false;
-        }
-
-        return DB::table('essentials_advances')->where('user_id', $userId)
-            ->where(function ($query): void {
-                // Unknown future states remain blocked until their terminal
-                // accounting semantics are deliberately included here.
-                $query->whereNotIn('status', ['settled', 'fulfilment_failed', 'lender_funding_failed'])
-                    ->orWhere(function ($inconsistent): void {
-                        $inconsistent->where(function ($amounts): void {
-                            $amounts->where('outstanding_minor', '>', 0)->orWhere('principal_outstanding_minor', '>', 0);
-                        })->where(function ($funded): void {
-                            $funded->where('status', 'settled')->orWhereNotNull('activated_at');
-                        });
-                    });
-            })->exists();
-    }
-
-    private function existsForUser(string $table, string $userColumn, int $userId, array $activeStatuses): bool
-    {
-        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $userColumn)) {
-            return false;
-        }
-        $query = DB::table($table)->where($userColumn, $userId);
-        if (Schema::hasColumn($table, 'status')) {
-            $query->whereIn('status', $activeStatuses);
-        }
-
-        return $query->exists();
-    }
-
-    private function purgeOptionalCustomerContext(int $userId): void
-    {
-        $personalSpaceIds = [];
-        if (Schema::hasTable('financial_spaces') && Schema::hasTable('financial_space_memberships')) {
-            $personalSpaceIds = DB::table('financial_spaces as spaces')
-                ->join('financial_space_memberships as memberships', 'memberships.financial_space_id', '=', 'spaces.id')
-                ->where('memberships.user_id', $userId)
-                ->where('spaces.type', 'personal')
-                ->pluck('spaces.id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
-        }
-        foreach ([
-            'financial_accounts',
-            'financial_budgets',
-            'financial_entries',
-            'financial_calendar_events',
-            'linked_financial_accounts',
-            'household_finance_profiles',
-            'microbusiness_profiles',
-            'community_finance_memberships',
-            'offline_sync_batches',
-            'customer_wallets',
-            'customer_phone_numbers',
-            'credit_profiles',
-        ] as $table) {
-            if (Schema::hasTable($table) && Schema::hasColumn($table, 'user_id')) {
-                DB::table($table)->where('user_id', $userId)->delete();
-            }
-        }
-        if (Schema::hasTable('location_contexts')) {
-            $query = DB::table('location_contexts')->where(function ($locations) use ($userId, $personalSpaceIds) {
-                $locations->where(function ($personal) use ($userId) {
-                    $personal->where('subject_type', 'user')->where('subject_id', $userId);
-                });
-                if ($personalSpaceIds !== []) {
-                    $locations->orWhereIn('financial_space_id', $personalSpaceIds);
-                }
-            });
-            $query->delete();
-        }
-        if ($personalSpaceIds !== []) {
-            foreach (['financial_obligations', 'financial_assets'] as $table) {
-                if (Schema::hasTable($table) && Schema::hasColumn($table, 'financial_space_id')) {
-                    DB::table($table)->whereIn('financial_space_id', $personalSpaceIds)->delete();
-                }
-            }
-            DB::table('financial_space_memberships')
-                ->where('user_id', $userId)
-                ->whereIn('financial_space_id', $personalSpaceIds)
-                ->delete();
-            DB::table('financial_spaces')->whereIn('id', $personalSpaceIds)->delete();
+        if (! Hash::check($credential, $user->password)) {
+            throw ValidationException::withMessages([
+                'pin' => ['Your current PIN or legacy password is incorrect.'],
+            ]);
         }
     }
 }

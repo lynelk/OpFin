@@ -25,7 +25,7 @@ A row may only be `DONE` when every applicable Definition-of-Done gate is eviden
 | OPF-FEAT-0007 | Financing abstraction | APPROVED | G0/G7 | FinancialProduct/Arrangement model plus legacy compatibility |
 | OPF-FEAT-0008 | Contract Engine | APPROVED | G1/G5 | Versioned state machines, fail-closed commands, transition audit |
 | OPF-FEAT-0009 | Funding Pools & capital mandates | APPROVED | G3/G5 | Segregation, allocation controls, provenance, reconciliation |
-| OPF-FEAT-0010 | Universal Asset Registry/Passport | APPROVED | G0/G5 | Shared asset lifecycle, evidence provenance, uniqueness/privacy tests |
+| OPF-FEAT-0010 | Universal Asset Registry/Passport | IN_PROGRESS | G0/G5 | Shared asset lifecycle, evidence provenance, uniqueness/privacy tests (registry foundation in source under review, 4 October 2026) |
 | OPF-FEAT-0011 | Bills & Essentials | IN_PROGRESS | G3/G5/G6 | Existing R1 findings closed plus own-money, gap finance and recurring-affordability acceptance |
 | OPF-FEAT-0012 | Murabaha pilot | APPROVED | G0-G10 | Acquisition/possession, contracts, Sharia approval, accounting, CPay and pilot evidence |
 | OPF-FEAT-0013 | OpFin Auto | APPROVED | G0-G10 | Uganda country pack and full asset-finance lifecycle acceptance |
@@ -89,3 +89,7 @@ Every material PR must identify affected register IDs and assess Product, Legal,
 ## CI execution note — 26 September 2026
 
 GitHub Actions was re-enabled by the repository owner on 26 September 2026. Candidate-specific workflow results remain execution evidence only for the exact commit tested; they do not by themselves establish provider, regulatory, Sharia, financial-control or production activation.
+
+## PR 142 candidate acceptance update (2 October 2026)
+
+Account deletion rejects unresolved obligations immediately and preserves servicing; optional-data deletion retains the account and regulated evidence. Payroll undertaking is case-bound and atomic with reservation request; cancellation/expiry awaits evidenced provider release. Apply `docs/releases/2026-10-02-pr142-release-acceptance.md` to OPF-FEAT-0022, FIN-FOUNDATION, DOC-CONTINUITY and OPF-REL-0001. This entry is implementation/validation work, not production or store acceptance.

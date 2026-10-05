@@ -290,3 +290,7 @@ An enrolled customer with active programme-measurement consent may receive short
 WhatsApp adds **CHECKIN** and USSD adds **Programme check-in**. These channels use the same response model as App/Web rather than maintaining separate programme logic.
 
 Financial resilience may also offer **Use recorded data**, which builds a transparent wellbeing snapshot from financial-life information already recorded by OpFin. Missing external evidence is not guessed. The resulting status is not an underwriting score.
+
+## PR 142 candidate acceptance update (2 October 2026)
+
+Account deletion rejects unresolved obligations immediately and preserves servicing; optional-data deletion retains the account and regulated evidence. Payroll undertaking is case-bound and atomic with reservation request; cancellation/expiry awaits evidenced provider release. Apply `docs/releases/2026-10-02-pr142-release-acceptance.md` to OPF-FEAT-0022, FIN-FOUNDATION, DOC-CONTINUITY and OPF-REL-0001. This entry is implementation/validation work, not production or store acceptance.

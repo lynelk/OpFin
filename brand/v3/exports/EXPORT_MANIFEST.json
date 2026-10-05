@@ -1,0 +1,403 @@
+{
+  "brandSystemVersion": "3.0.0-rc.1",
+  "generator": {
+    "script": "scripts/prepare-brand-toolkit.mjs",
+    "sharp": "0.35.4",
+    "libvips": "8.18.6"
+  },
+  "status": "Generated from the vector masters; pending visual review (v3 release gate 4). Not a frozen v3.0 release.",
+  "pending": [
+    "Wordmark and lock-up exports: outline the live Inter text from the licensed font first.",
+    "Representative mobile, desktop, print and reverse-background visual sign-off."
+  ],
+  "masters": {
+    "brand/v3/assets/opfin-symbol-master.svg": "208f5dabdd408a7be47b0d3f4e80da326cdcdec4",
+    "brand/v3/assets/opfin-app-icon-master.svg": "1091757f9e04ecc1ca47a053e9a03dc827b10436",
+    "brand/v3/assets/opfin-progress-path.svg": "2f1cc3e89361d0ce46bedf41433cc5b988b72e00"
+  },
+  "files": {
+    "brand/v3/exports/symbol/opfin-symbol-primary.svg": {
+      "sha256": "0ff1acddc00af89569d7820f4dc5806e1f78295eace0802b2ff929adad5a658a",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "primary",
+      "colour": "#353B78",
+      "format": "svg"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-primary-64.png": {
+      "sha256": "ac7e4ba5b6167cf1817fbb10ecbdcba5424c2b0855dae67170ea1937bc531e35",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "primary",
+      "colour": "#353B78",
+      "format": "png",
+      "width": 64,
+      "height": 64,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-primary-128.png": {
+      "sha256": "c829feb459f918e2deb025e34e5d08575111b0ec766994a5041e9059a74c5118",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "primary",
+      "colour": "#353B78",
+      "format": "png",
+      "width": 128,
+      "height": 128,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-primary-256.png": {
+      "sha256": "30ad0f250bc0651680dbad2f9ffaddb31a9cffee149dc64d4284714e89ad8cbc",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "primary",
+      "colour": "#353B78",
+      "format": "png",
+      "width": 256,
+      "height": 256,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-primary-512.png": {
+      "sha256": "e72aa0ad196e20b2a504824426d97e732ea9437e1e7f7799a463fee6a7fb2445",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "primary",
+      "colour": "#353B78",
+      "format": "png",
+      "width": 512,
+      "height": 512,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-primary-1024.png": {
+      "sha256": "110a5eb942874b426f10356418bb3733d508d16b97d899da6f547c8c683668aa",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "primary",
+      "colour": "#353B78",
+      "format": "png",
+      "width": 1024,
+      "height": 1024,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-primary-2048.png": {
+      "sha256": "652ed175a4f6feceeb1f8284d9792291a184738b5f6795a342a47d4f128cc14e",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "primary",
+      "colour": "#353B78",
+      "format": "png",
+      "width": 2048,
+      "height": 2048,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/opfin-symbol-reverse.svg": {
+      "sha256": "8414bd64ddcee5bd35b7ba45422255cb778aa78d0d9ba394adbe08c081cabcd6",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "reverse",
+      "colour": "#FAF8F2",
+      "format": "svg"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-reverse-64.png": {
+      "sha256": "72fc3aedb512f57b00838c47e436a33a9f9f2dbdaa852849919c17ad660ccfc6",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "reverse",
+      "colour": "#FAF8F2",
+      "format": "png",
+      "width": 64,
+      "height": 64,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-reverse-128.png": {
+      "sha256": "495519abfc76a81893ec19cf4acc8e988cea887bed1ebfcd1ad434cbe0219647",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "reverse",
+      "colour": "#FAF8F2",
+      "format": "png",
+      "width": 128,
+      "height": 128,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-reverse-256.png": {
+      "sha256": "ebf74255ea6c9f42aa35f7be1bed0ac5bb8cc83aa7605ae3f9eeb9b2c1281a4e",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "reverse",
+      "colour": "#FAF8F2",
+      "format": "png",
+      "width": 256,
+      "height": 256,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-reverse-512.png": {
+      "sha256": "7db002e29619d8bebbfae48a6901b9a6ef5b63676ff88483c42b52e4829399e4",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "reverse",
+      "colour": "#FAF8F2",
+      "format": "png",
+      "width": 512,
+      "height": 512,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-reverse-1024.png": {
+      "sha256": "48aa9692a2f44eb6f7b3dfc0f1f9d4c27417873f60b019d00867fc24c5275d9f",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "reverse",
+      "colour": "#FAF8F2",
+      "format": "png",
+      "width": 1024,
+      "height": 1024,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-reverse-2048.png": {
+      "sha256": "b36df404f9ac00057cbc085d815845c1135d2127c8569495d48ae2073da26269",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "reverse",
+      "colour": "#FAF8F2",
+      "format": "png",
+      "width": 2048,
+      "height": 2048,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/opfin-symbol-mono-dark.svg": {
+      "sha256": "82da1559678fcba7ed7ff63036141780fdf416cf0fc123ea58452eefa0fd153c",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-dark",
+      "colour": "#202436",
+      "format": "svg"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-dark-64.png": {
+      "sha256": "c10568e22c1ab6985b2aa88135d227f62738653ddfa79ff1e0f8ed67f94ad57d",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-dark",
+      "colour": "#202436",
+      "format": "png",
+      "width": 64,
+      "height": 64,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-dark-128.png": {
+      "sha256": "41c5a03835bcd8e9ca6bd810e6b21f410f633fddf275132bba3bf436ad73dbcf",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-dark",
+      "colour": "#202436",
+      "format": "png",
+      "width": 128,
+      "height": 128,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-dark-256.png": {
+      "sha256": "1a17d158fa55817ae386c326e51204645a8ec68e9b1c2af298c550c7b8d1f95d",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-dark",
+      "colour": "#202436",
+      "format": "png",
+      "width": 256,
+      "height": 256,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-dark-512.png": {
+      "sha256": "bdd8b11c3153f042f58ed0134ba936f455ea30aba5461f7977861055a0f59c8c",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-dark",
+      "colour": "#202436",
+      "format": "png",
+      "width": 512,
+      "height": 512,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-dark-1024.png": {
+      "sha256": "6a2a61d950b07d73000a710f311fe68fd279883703d4644ec56422d9580b2b57",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-dark",
+      "colour": "#202436",
+      "format": "png",
+      "width": 1024,
+      "height": 1024,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-dark-2048.png": {
+      "sha256": "c0fbc6cb08e38655170660d374bb1d5614a597694f3dd01a9b6d29a11591f3c4",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-dark",
+      "colour": "#202436",
+      "format": "png",
+      "width": 2048,
+      "height": 2048,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/opfin-symbol-mono-light.svg": {
+      "sha256": "8c70b0dd957fff68a9a4b1f678dc9afde3ded361de50e64d9828ff790bbe3eb6",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-light",
+      "colour": "#FFFFFF",
+      "format": "svg"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-light-64.png": {
+      "sha256": "f428914939744e2ce9208909b5152047086d2f30f74a98a745d67daa3eb2fdbb",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-light",
+      "colour": "#FFFFFF",
+      "format": "png",
+      "width": 64,
+      "height": 64,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-light-128.png": {
+      "sha256": "febbd06299ccf9bc7cb717570e4b93eb9bb1feecb01a575d583236110ab84c1f",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-light",
+      "colour": "#FFFFFF",
+      "format": "png",
+      "width": 128,
+      "height": 128,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-light-256.png": {
+      "sha256": "447745e2b1fe976b04abbde5eb158c8254370fa4e6a5384fa8388baf351a70a5",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-light",
+      "colour": "#FFFFFF",
+      "format": "png",
+      "width": 256,
+      "height": 256,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-light-512.png": {
+      "sha256": "a75ee364a6891fd2fbf82de37610bf1fd9f81d5e1aaa190789411a4dcb8f6999",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-light",
+      "colour": "#FFFFFF",
+      "format": "png",
+      "width": 512,
+      "height": 512,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-light-1024.png": {
+      "sha256": "94039468658a321952f7aa49c3655619726aa973a8db279f585c8510d5c032fe",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-light",
+      "colour": "#FFFFFF",
+      "format": "png",
+      "width": 1024,
+      "height": 1024,
+      "background": "transparent"
+    },
+    "brand/v3/exports/symbol/png/opfin-symbol-mono-light-2048.png": {
+      "sha256": "76c99daaf552303940cf802fea3136fd08e9f72f829262e6b7248f0fda372cde",
+      "source": "brand/v3/assets/opfin-symbol-master.svg",
+      "variant": "mono-light",
+      "colour": "#FFFFFF",
+      "format": "png",
+      "width": 2048,
+      "height": 2048,
+      "background": "transparent"
+    },
+    "brand/v3/exports/app-icon/opfin-app-icon-1024.png": {
+      "sha256": "148c381e64679152af3e5f5bfa8a57685f6691887ae13f40628995d65593dcdf",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 1024,
+      "height": 1024,
+      "use": "app or store icon"
+    },
+    "brand/v3/exports/app-icon/opfin-app-icon-512.png": {
+      "sha256": "d018c25c6aa5be0b72e400e93960f939600d6a8fba5c0b07f04987605e1a1127",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 512,
+      "height": 512,
+      "use": "app or store icon"
+    },
+    "brand/v3/exports/app-icon/opfin-app-icon-192.png": {
+      "sha256": "88b8b73feb9509353f891f81eab20fffdb5abbeb12b8edc99b27a489f74472c0",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 192,
+      "height": 192,
+      "use": "app or store icon"
+    },
+    "brand/v3/exports/app-icon/opfin-app-icon-180.png": {
+      "sha256": "635702296355ca123295281782110dced766851314f83c0dc7090ee2de9b7ee5",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 180,
+      "height": 180,
+      "use": "apple-touch-icon"
+    },
+    "brand/v3/exports/app-icon/opfin-app-icon-152.png": {
+      "sha256": "89ef5a5174fe399ffb3f37cb1e74d6ea3fd0d064ac56a060e9cb68a096e4d56b",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 152,
+      "height": 152,
+      "use": "app or store icon"
+    },
+    "brand/v3/exports/app-icon/opfin-app-icon-120.png": {
+      "sha256": "abe5904ff2bc3ef97ea12acc49ef96f5bac7b823b6ba4929bf7ddd0a993eb312",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 120,
+      "height": 120,
+      "use": "app or store icon"
+    },
+    "brand/v3/exports/favicon/favicon-16.png": {
+      "sha256": "a796201842e60bbf09485745bc08547d95f87a3a166802d81b8952b6a20c4e2e",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 16,
+      "height": 16,
+      "use": "favicon"
+    },
+    "brand/v3/exports/favicon/favicon-32.png": {
+      "sha256": "5bec0a79fc813c9370a831703d50be7fefa41290ede6bcadb820db2e86d5d47b",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 32,
+      "height": 32,
+      "use": "favicon"
+    },
+    "brand/v3/exports/favicon/favicon-48.png": {
+      "sha256": "f6f8b66f00b0c06d921cf651835eb487ae02e0f2c35e089649c0f2a4a5791d29",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 48,
+      "height": 48,
+      "use": "favicon"
+    },
+    "brand/v3/exports/favicon/favicon.ico": {
+      "sha256": "901ac7c2faa87dc0fb062fe8d31a41e351d515a2a36607ec2787bef710e89a22",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "ico",
+      "sizes": [
+        16,
+        32,
+        48
+      ],
+      "use": "favicon"
+    },
+    "brand/v3/exports/profile/opfin-profile-400.png": {
+      "sha256": "0369d9c5a4052ca8545f491352886afb9160960751319010b4a47d3dc195db7b",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 400,
+      "height": 400,
+      "use": "social or messaging profile image; check the circular crop"
+    },
+    "brand/v3/exports/profile/opfin-profile-800.png": {
+      "sha256": "e770848b16ad088d7ab9bd7ab876139a8984538d6e60d16c58e0446d58998bd6",
+      "source": "brand/v3/assets/opfin-app-icon-master.svg",
+      "format": "png",
+      "width": 800,
+      "height": 800,
+      "use": "social or messaging profile image; check the circular crop"
+    },
+    "brand/v3/exports/motif/opfin-progress-path-720.png": {
+      "sha256": "00b8ec18e485272fc68f7200cac3a57f5a529d1afc6396cb484aa5b393dfa66a",
+      "source": "brand/v3/assets/opfin-progress-path.svg",
+      "format": "png",
+      "width": 720,
+      "height": 420,
+      "background": "transparent"
+    },
+    "brand/v3/exports/motif/opfin-progress-path-1440.png": {
+      "sha256": "0594700dc95ae244407a4e6072a37a9eb434a480c2b9163b1fcba8eb0ead9e1e",
+      "source": "brand/v3/assets/opfin-progress-path.svg",
+      "format": "png",
+      "width": 1440,
+      "height": 840,
+      "background": "transparent"
+    }
+  }
+}
