@@ -117,7 +117,9 @@ To resubmit, upload a new statement with `supersedes_statement_id` set to one of
 
 The statement detail now includes `reviews`, `next_action`, `can_appeal`, `permitted_decisions` and `supersedes_statement_id`. The uploader's view omits reviewer notes and roles.
 
-Not yet in place: antivirus scanning (needs an approved scanner service), issuer-specific layout readers validated against authorised samples, issuer source verification, member notifications for review decisions, and the Flutter journey.
+Not yet in place: antivirus scanning (needs an approved scanner service), issuer-specific layout readers validated against authorised samples, issuer source verification, and member notifications for review decisions.
+
+The Flutter App journey exists in source. It shows a Provider statements card only when `/issuers` answers for the Space, and covers upload through the system document picker, plain-language results, appeal, replacement and withdrawal. Android compiles locally; the iOS build (minimum iOS 14) is verified by CI. Device acceptance on real phones is still needed.
 
 ## Web integration
 

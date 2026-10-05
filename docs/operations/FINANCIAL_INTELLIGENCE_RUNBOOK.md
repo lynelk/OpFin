@@ -54,7 +54,7 @@ PDF parsing, structural screening and retention purging now exist in source and 
 - account and source-verification evidence;
 - a legal-hold management interface;
 - member notifications for statement review decisions (the queue, decisions, appeals and resubmission exist in source and need acceptance);
-- supported customer and mobile journeys;
+- acceptance of the App statement journey on real Android and iOS devices (the journey exists in source);
 - production-like security, performance and accessibility evidence;
 - real integration contracts.
 
