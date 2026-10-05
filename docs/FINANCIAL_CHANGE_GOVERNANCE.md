@@ -1,7 +1,7 @@
 # Financial Change Governance
 
 Status: Controlled internal mandatory control  
-Updated: 23 September 2026  
+Updated: 5 October 2026  
 Language: English (United Kingdom)
 
 Financial-control code is treated as higher-risk than ordinary product code.
@@ -19,6 +19,12 @@ The independent review gate applies to pricing, affordability and repayment math
 5. After deployment, the financial-integrity audit and provider reconciliation controls remain required.
 
 The CI gate also checks commits associated with `main`. Financial-control changes that cannot be associated with a reviewed pull request fail the release gate.
+
+## Temporary pause (from 5 October 2026)
+
+The repository owner has paused step 3 until further notice. The repository has one maintainer, and GitHub does not allow an author to approve their own pull request, so the check could never pass. The CI job still lists every changed financial-control file and records a "Financial-control review paused" warning on the run, but it no longer fails.
+
+During the pause the owner is accountable for each financial-control change. Changes must still reach `main` through a pull request with the other gates green. To end the pause, delete the marked block in the `financial-control-review` job of `.github/workflows/ci.yml` and remove this section.
 
 ## Branch protection
 

@@ -1,13 +1,49 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:http/http.dart' as http;
+
 import 'package:opfin/constants.dart';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/services/user_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OfflineSyncService {
-  static const _queueKey = 'opfin_offline_event_queue_v1';
+  static const _queueKey = 'opfin_offline_event_queue_v2';
+  static const _legacyQueueKey = 'opfin_offline_event_queue_v1';
   static const _deviceKey = 'opfin_device_reference_v1';
+  static const _lastSyncKey = 'opfin_offline_last_successful_sync_v1';
+
+  static const int maxEventBytes = 64 * 1024;
+  static const int maxBatchBytes = 256 * 1024;
+  static const int maxQueuedBytes = 2 * 1024 * 1024;
+  static const int maxEventsPerBatch = 50;
+
+  static const _forbiddenKeys = <String>{
+    'pin',
+    'password',
+    'otp',
+    'access_token',
+    'refresh_token',
+    'token',
+    'national_id',
+    'nin',
+    'selfie',
+    'image',
+    'photo',
+    'document_bytes',
+    'raw_document',
+    'provider_payload',
+  };
+
+  static const _forbiddenKeyTokens = <String>{
+    'pin',
+    'password',
+    'otp',
+    'token',
+    'nin',
+    'selfie',
+    'image',
+    'photo',
+  };
 
   static Future<String> deviceReference() async {
     final prefs = await SharedPreferences.getInstance();
@@ -20,30 +56,58 @@ class OfflineSyncService {
   }
 
   static Future<void> queueEvent(
-      String type, Map<String, dynamic> payload) async {
-    final prefs = await SharedPreferences.getInstance();
-    final queue = await pendingEvents();
-    queue.add({
+    String type,
+    Map<String, dynamic> payload,
+  ) async {
+    _assertSafePayload(payload);
+
+    final event = <String, dynamic>{
       'event_id':
           'evt-${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 31)}',
       'occurred_at': DateTime.now().toUtc().toIso8601String(),
       'type': type,
       'payload': payload,
-    });
-    await prefs.setString(_queueKey, jsonEncode(queue));
+    };
+    final eventBytes = utf8.encode(jsonEncode(event)).length;
+    if (eventBytes > maxEventBytes) {
+      throw Exception(
+        'This offline action is too large. Reconnect before submitting it.',
+      );
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final queue = await pendingEvents();
+    queue.add(event);
+    final encoded = jsonEncode(queue);
+    if (utf8.encode(encoded).length > maxQueuedBytes) {
+      throw Exception(
+        'Offline storage is full. Reconnect and sync saved actions before adding more.',
+      );
+    }
+    await prefs.setString(_queueKey, encoded);
   }
 
   static Future<void> clearLocalData() async {
     final prefs = await SharedPreferences.getInstance();
     await Future.wait([
       prefs.remove(_queueKey),
+      prefs.remove(_legacyQueueKey),
       prefs.remove(_deviceKey),
+      prefs.remove(_lastSyncKey),
     ]);
   }
 
   static Future<List<Map<String, dynamic>>> pendingEvents() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_queueKey);
+    var raw = prefs.getString(_queueKey);
+    if ((raw == null || raw.isEmpty) &&
+        (prefs.getString(_legacyQueueKey)?.isNotEmpty ?? false)) {
+      raw = prefs.getString(_legacyQueueKey);
+      if (raw != null && raw.isNotEmpty) {
+        await prefs.setString(_queueKey, raw);
+        await prefs.remove(_legacyQueueKey);
+      }
+    }
     if (raw == null || raw.isEmpty) return <Map<String, dynamic>>[];
     try {
       final decoded = jsonDecode(raw) as List<dynamic>;
@@ -56,47 +120,159 @@ class OfflineSyncService {
     }
   }
 
+  static Future<Map<String, dynamic>> pendingSummary() async {
+    final prefs = await SharedPreferences.getInstance();
+    final events = await pendingEvents();
+    final encoded = jsonEncode(events);
+    return <String, dynamic>{
+      'event_count': events.length,
+      'queued_bytes': utf8.encode(encoded).length,
+      'last_successful_sync': prefs.getString(_lastSyncKey),
+    };
+  }
+
   static Future<Map<String, dynamic>?> sync() async {
     final events = await pendingEvents();
     if (events.isEmpty) return null;
+
     final token = await UserSession.getAccessToken();
     if (token == null || token.isEmpty) {
       throw Exception(
-          'Secure session is required before offline data can sync.');
+        'Secure session is required before offline data can sync.',
+      );
     }
-    final prefs = await SharedPreferences.getInstance();
+
     final device = await deviceReference();
-    final batchReference = _stableBatchReference(device, events);
-    final response = await http.post(
+    final selected = _boundedBatch(device, events);
+    if (selected.isEmpty) {
+      throw Exception('The next offline action cannot fit within the sync budget.');
+    }
+
+    final batchReference = _stableBatchReference(device, selected);
+    final body = jsonEncode({
+      'batch_reference': batchReference,
+      'device_reference': device,
+      'events': selected,
+    });
+    final response = await OpFinHttp.post(
       Uri.parse('$apiUrl/long-range/offline-sync'),
+      feature: 'offline_sync',
+      operation: 'offline_sync_batch',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token'
+        'Authorization': 'Bearer $token',
       },
-      body: jsonEncode({
-        'batch_reference': batchReference,
-        'device_reference': device,
-        'events': events
-      }),
+      body: body,
     );
+
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(decoded['message'] ?? 'Offline synchronization failed.');
+      throw Exception(
+        decoded['message'] ?? 'Offline synchronization failed.',
+      );
     }
-    final data = (decoded['data'] as Map?)?.cast<String, dynamic>() ??
-        <String, dynamic>{};
+
+    final data =
+        (decoded['data'] as Map?)?.cast<String, dynamic>() ??
+            <String, dynamic>{};
     final batch =
-        (data['batch'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+        (data['batch'] as Map?)?.cast<String, dynamic>() ??
+            <String, dynamic>{};
+
     if (batch['status'] == 'processed') {
-      await prefs.remove(_queueKey);
+      final sentIds = selected
+          .map((event) => event['event_id']?.toString())
+          .whereType<String>()
+          .toSet();
+      final remaining = events
+          .where((event) => !sentIds.contains(event['event_id']?.toString()))
+          .toList();
+      final prefs = await SharedPreferences.getInstance();
+      if (remaining.isEmpty) {
+        await prefs.remove(_queueKey);
+      } else {
+        await prefs.setString(_queueKey, jsonEncode(remaining));
+      }
+      batch['remaining_event_count'] = remaining.length;
+      await prefs.setString(
+        _lastSyncKey,
+        DateTime.now().toUtc().toIso8601String(),
+      );
     }
+
+    batch['sent_event_count'] = selected.length;
+    batch['client_batch_bytes'] = utf8.encode(body).length;
     return batch;
   }
 
+  static List<Map<String, dynamic>> _boundedBatch(
+    String device,
+    List<Map<String, dynamic>> events,
+  ) {
+    final selected = <Map<String, dynamic>>[];
+    for (final event in events.take(maxEventsPerBatch)) {
+      final candidate = [...selected, event];
+      final reference = _stableBatchReference(device, candidate);
+      final bytes = utf8.encode(jsonEncode({
+        'batch_reference': reference,
+        'device_reference': device,
+        'events': candidate,
+      })).length;
+      if (bytes > maxBatchBytes) break;
+      selected.add(event);
+    }
+    return selected;
+  }
+
+  static void _assertSafePayload(Object? value, [String path = 'payload']) {
+    if (value is Map) {
+      for (final entry in value.entries) {
+        final rawKey = entry.key.toString();
+        final key = _normaliseKey(rawKey);
+        final keyTokens = key
+            .split('_')
+            .where((token) => token.isNotEmpty)
+            .toSet();
+        if (_forbiddenKeys.contains(key) ||
+            keyTokens.any(_forbiddenKeyTokens.contains)) {
+          throw Exception(
+            'Sensitive field "$rawKey" cannot be stored in the offline queue.',
+          );
+        }
+        _assertSafePayload(entry.value, '$path.$key');
+      }
+      return;
+    }
+    if (value is Iterable) {
+      var index = 0;
+      for (final item in value) {
+        _assertSafePayload(item, '$path[$index]');
+        index++;
+      }
+    }
+  }
+
+  static String _normaliseKey(String raw) {
+    final separated = raw
+        .trim()
+        .replaceAllMapped(
+          RegExp(r'([a-z0-9])([A-Z])'),
+          (match) => '${match.group(1)}_${match.group(2)}',
+        )
+        .toLowerCase();
+    return separated
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+  }
+
   static String _stableBatchReference(
-      String device, List<Map<String, dynamic>> events) {
-    final source = '$device|${events.map((e) => e['event_id']).join('|')}';
+    String device,
+    List<Map<String, dynamic>> events,
+  ) {
+    final source =
+        '$device|${events.map((e) => e['event_id']).join('|')}';
     final bytes = utf8.encode(source);
     int a = 0x811c9dc5;
     int b = 0x01000193;

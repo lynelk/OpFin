@@ -1,4 +1,4 @@
-.PHONY: help test api-test web-test client-test layout docs-check publication-check docs-search api-search api-docs api-docs-check agent-docs-test
+.PHONY: help test api-test web-test client-test layout data-governance-check docs-check publication-check docs-search api-search api-docs api-docs-check agent-docs-test
 
 help:
 	@printf '%s\n' \
@@ -7,6 +7,7 @@ help:
 	  '  make api-test                     Run API tests' \
 	  '  make web-test                     Run web tests/build checks' \
 	  '  make client-test                  Run Flutter checks' \
+	  '  make data-governance-check        Verify lightweight/sponsored-data boundaries' \
 	  '  make docs-check                   Verify current documentation drift rules' \
 	  '  make publication-check            Verify publication-facing documentation' \
 	  '  make docs-search QUERY="receipt" Search current repository documentation' \
@@ -15,10 +16,13 @@ help:
 	  '  make api-docs-check               Check reviewed definitions; report coverage gaps' \
 	  '  make agent-docs-test              Test the documentation-only MCP bridge'
 
-test: layout api-test web-test client-test
+test: layout data-governance-check api-test web-test client-test
 
 layout:
 	sh scripts/verify-layout.sh
+
+data-governance-check:
+	python3 scripts/verify-sponsored-data-governance.py
 
 api-test:
 	sh scripts/test-api.sh

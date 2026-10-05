@@ -58,6 +58,14 @@ Second phone is explicitly optional.
 
 Mobile submits multipart KYC to `POST /api/kyc/cases`. Required evidence is NIN + National ID front/back + selfie holding ID.
 
+Current upload limits are part of the API contract:
+
+- each image file is limited to **2 MiB**;
+- for `capture_channel=app`, the three-image package is limited to **1.5 MiB total** after client-side resize/compression;
+- other channels still inherit the 2 MiB per-image server limit unless a separately published channel contract states otherwise.
+
+Clients should resize/compress before upload rather than relying on a 422 response after spending the customer's data. Evidence must remain legible; the data budget is not permission to accept unreadable identity material. Older clients that previously sent 2–8 MiB files must migrate to the current limits.
+
 The client may display sanitised check states returned by `/api/kyc/status`, but must not expect raw evidence paths/provider payloads.
 
 If disability or another access need prevents ordinary camera completion, create a support case for assisted identity verification. Do not lower identity controls and do not ask a helper to handle PIN/OTP.
@@ -142,6 +150,18 @@ Clients must:
 - keep touch targets accessible;
 - keep the primary screen simple and reveal technical detail only on request.
 
+
+## Investment-club treasury cashbook retry contract
+
+For `POST /api/financial-spaces/{space}/treasury/accounts/{account}/transactions`, every state-changing cashbook instruction must carry an explicit stable retry identity through the `Idempotency-Key` header or the compatibility `idempotency_key` body field.
+
+The retry semantics are:
+
+- exact replay with the same key and the same canonical financial instruction returns the original transaction and does not apply the balance delta twice;
+- reusing a key with any changed canonical financial instruction returns a conflict;
+- two genuinely separate transactions may be financially identical, including the same bank/reference text, amount, counterparty and dates, provided they have distinct idempotency keys;
+- a keyless write returns HTTP `422`. OpFin does not derive transaction identity from financial content because doing so can collapse two legitimate identical postings;
+- callers must not generate a new idempotency key merely because the network outcome is uncertain. Recover or retry the original instruction first.
 
 ## Financial-life space binding
 
@@ -303,6 +323,15 @@ Personal protection uses the existing approved-product and policy lifecycle. Cli
 
 For a non-Personal Financial Space, `GET /api/financial-spaces/{space}/protection/products` returns only products approved for group use (or both personal and group audiences) to active members. This endpoint is catalogue/readiness only. Clients must not invent group enrolment, premium collection or member coverage allocation until dedicated server contracts and activation controls are published.
 
+
+
+### Mobile Home transport contract
+
+The Flutter Home should normally use `GET /api/mobile/home` rather than independently loading Financial Compass, credit profile, protection policies and Financial Spaces. The aggregate response is transport/orchestration only: those underlying server domains remain authoritative.
+
+Clients retain the returned private `ETag` only in memory for the signed-in session and may send it as `If-None-Match` on refresh. HTTP `304` means the client may reuse its in-memory snapshot. Do not persist the complete Home financial payload merely to obtain cache hits across sign-in sessions.
+
+During a controlled rolling migration only, the mobile client may fall back to the established individual endpoints when `/api/mobile/home` returns `404` or `405`. The compatibility path must remain metered and should be removed after all supported API environments expose the aggregate contract.
 
 ## Location Context contract
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
 
@@ -18,7 +19,7 @@ class LocationContextApi {
   }
 
   static Future<Map<String, dynamic>> status() async {
-    final response = await http.get(
+    final response = await OpFinHttp.get(
       Uri.parse('$apiUrl/location/status'),
       headers: await _headers(),
     );
@@ -33,7 +34,7 @@ class LocationContextApi {
       'subject_type': subjectType,
       'subject_id': subjectId.toString(),
     });
-    final response = await http.get(uri, headers: await _headers());
+    final response = await OpFinHttp.get(uri, headers: await _headers());
     final data = _decode(response, 'Unable to load location.');
     return (data['locations'] as List? ?? const [])
         .whereType<Map>()
@@ -80,7 +81,7 @@ class LocationContextApi {
     if (adminArea2 != null) body['admin_area_2'] = adminArea2;
     if (locality != null) body['locality'] = locality;
 
-    final response = await http.post(
+    final response = await OpFinHttp.post(
       Uri.parse('$apiUrl/location-contexts'),
       headers: await _headers(),
       body: jsonEncode(body),
@@ -99,7 +100,7 @@ class LocationContextApi {
     if (countryCode != null) body['country_code'] = countryCode;
     if (sessionToken != null) body['session_token'] = sessionToken;
 
-    final response = await http.post(
+    final response = await OpFinHttp.post(
       Uri.parse('$apiUrl/location/places/autocomplete'),
       headers: await _headers(),
       body: jsonEncode(body),
@@ -123,7 +124,7 @@ class LocationContextApi {
         'radius_km': radiusKm.toString(),
       },
     );
-    final response = await http.get(uri, headers: await _headers());
+    final response = await OpFinHttp.get(uri, headers: await _headers());
     final data = _decode(response, 'Unable to load nearby services.');
     return (data['service_points'] as List? ?? const [])
         .whereType<Map>()
@@ -138,7 +139,7 @@ class LocationContextApi {
   static Future<Map<String, String>> imageHeaders() => _headers();
 
   static Future<void> delete(int contextId) async {
-    final response = await http.delete(
+    final response = await OpFinHttp.delete(
       Uri.parse('$apiUrl/location-contexts/$contextId'),
       headers: await _headers(),
     );

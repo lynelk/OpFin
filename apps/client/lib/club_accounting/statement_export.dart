@@ -3,18 +3,18 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:opfin/constants.dart';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/services/club_accounting_api.dart';
 import 'package:opfin/services/user_session.dart';
 
 class ClubStatementExport {
-  ClubStatementExport(
-      {http.Client? client,
-      Future<String?> Function()? token,
-      MethodChannel? channel})
-      : _client = client ?? http.Client(),
+  ClubStatementExport({http.Client? client, Future<String?> Function()? token, MethodChannel? channel})
+      : _client = OpFinMeteredClient(
+          feature: 'club_statement_export',
+          inner: client ?? http.Client(),
+        ),
         _token = token ?? UserSession.getAccessToken,
-        _channel =
-            channel ?? const MethodChannel('co.opfin/club_statement_export');
+        _channel = channel ?? const MethodChannel('co.opfin/club_statement_export');
   final http.Client _client;
   final Future<String?> Function() _token;
   final MethodChannel _channel;

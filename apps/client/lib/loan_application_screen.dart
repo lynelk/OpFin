@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:opfin/services/distribution_channel.dart';
+import 'package:opfin/services/opfin_http.dart';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/constants.dart';
@@ -78,7 +78,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
 
   Future<Map<String, dynamic>> _loadData({int? amount, String? reason}) async {
     final profile = await CreditProfileApi.load();
-    final response = await http.get(
+    final response = await OpFinHttp.get(
       Uri.parse('$apiUrl/credit/options').replace(queryParameters: {
         'distribution_channel': _channel,
         if (amount != null) 'amount_minor': amount.toString(),
@@ -231,7 +231,7 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen> {
     if (confirmed != true) return;
     setState(() => _submitting = true);
     try {
-      final response = await http.post(
+      final response = await OpFinHttp.post(
         Uri.parse('$apiUrl/credit/applications'),
         headers: await _headers(),
         body: jsonEncode({

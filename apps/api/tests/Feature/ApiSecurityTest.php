@@ -86,13 +86,13 @@ class ApiSecurityTest extends TestCase
             ->assertJsonPath('success', false);
     }
 
-    public function test_legacy_manual_transaction_approval_route_is_retired_for_non_admins(): void
+    public function test_non_admin_cannot_approve_transactions(): void
     {
         $user = User::factory()->create(['role' => 'Member']);
         Sanctum::actingAs($user);
 
         $this->patchJson('/api/transactions/1/approve')
-            ->assertStatus(410)
+            ->assertStatus(403)
             ->assertJsonPath('success', false);
     }
 

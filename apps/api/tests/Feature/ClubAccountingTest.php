@@ -282,8 +282,8 @@ class ClubAccountingTest extends TestCase
         Sanctum::actingAs($this->owner);
         $id = $this->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
             'transaction_date' => '2026-09-02', 'direction' => 'credit', 'amount_minor' => 1000,
-            'idempotency_key' => 'club-existing-cashbook-receipt',
-            'description' => 'Synthetic bank interest', 'transaction_reference' => 'SYNTHETIC-INTEREST'])->assertCreated()->json('data.transaction.id');
+            'description' => 'Synthetic bank interest', 'transaction_reference' => 'SYNTHETIC-INTEREST',
+            'idempotency_key' => (string) Str::uuid()])->assertCreated()->json('data.transaction.id');
         $payload = ['direction' => 'credit', 'amount_minor' => 1000, 'treasury_account_id' => $this->treasury->id,
             'treasury_transaction_id' => $id, 'allocations' => [['account_code' => 'INVESTMENT_INCOME', 'amount_minor' => 1000]]];
         $this->applyInstruction('cash_entry', $payload, '2026-09-02');
@@ -298,8 +298,8 @@ class ClubAccountingTest extends TestCase
         $this->opening();
         Sanctum::actingAs($this->owner);
         $this->postJson('/api/financial-spaces/'.$this->space->id.'/treasury/accounts/'.$this->treasury->id.'/transactions', [
-            'transaction_date' => '2026-09-02', 'direction' => 'credit', 'amount_minor' => 1000,
-            'idempotency_key' => 'club-unclassified-earlier-cash', 'description' => 'Unclassified receipt'])->assertCreated();
+            'transaction_date' => '2026-09-02', 'direction' => 'credit', 'amount_minor' => 1000, 'description' => 'Unclassified receipt',
+            'idempotency_key' => (string) Str::uuid()])->assertCreated();
         $this->assertApprovalRejected($this->submit('contribution', ['member_user_id' => $this->member->id,
             'amount_minor' => 100, 'treasury_account_id' => $this->treasury->id], '2026-09-03'));
     }

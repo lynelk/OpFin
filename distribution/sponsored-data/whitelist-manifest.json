@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "status": "candidate",
+  "updated": "2026-09-27",
+  "purpose": "OpFin mobile/web sponsored-data and whitelisting boundary",
+  "client_whitelist_hosts": [
+    {
+      "host": "opfin-production.up.railway.app",
+      "scheme": "https",
+      "ports": [
+        443
+      ],
+      "purpose": "Canonical OpFin API origin used by the Flutter release baseline",
+      "sponsorship_state": "candidate"
+    }
+  ],
+  "client_direct_external_hosts": [],
+  "explicitly_not_sponsored": [
+    "Google Play / App Store / AppGallery downloads and updates",
+    "WhatsApp and external browser destinations",
+    "The user's installed mapping/navigation application",
+    "Any provider, analytics, CDN or media host not listed in client_whitelist_hosts"
+  ],
+  "server_side_only_integrations": [
+    "Cito",
+    "CPay",
+    "gnuGrid/CRB through Cito where required",
+    "identity/biometric providers",
+    "Google Maps Platform server APIs",
+    "approved lender, insurer, savings, investment and biller providers"
+  ],
+  "approval": {
+    "operator": null,
+    "operator_reference": null,
+    "effective_from": null,
+    "effective_to": null
+  },
+  "rules": [
+    "A candidate host is not described to customers as sponsored until operator confirmation is configured.",
+    "New client-facing hosts require security, privacy, data-budget and MNO-whitelist review before release.",
+    "Third-party provider calls should remain server-side unless a separately reviewed client requirement exists.",
+    "Whitelisted traffic must not silently redirect to a non-whitelisted host."
+  ]
+}

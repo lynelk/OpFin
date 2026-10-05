@@ -305,10 +305,10 @@ class FinancialSpaceStatementsTest extends TestCase
             'direction' => 'credit',
             'amount_minor' => 90000,
             'description' => 'Contribution recorded earlier',
-            'transaction_date' => '2026-09-01',
+            'transaction_date' => '2026-09-15',
         ])->assertCreated()->json('data.transaction.id');
 
-        $csv = "Date,Description,Reference,Debit,Credit\n2026-09-05,Contribution,BANK-XYZ,,90000\n";
+        $csv = "Date,Description,Reference,Debit,Credit\n2026-09-20,Contribution,BANK-XYZ,,90000\n";
         $import = $this->post(
             "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/statement-imports",
             [
@@ -714,6 +714,118 @@ class FinancialSpaceStatementsTest extends TestCase
             25000,
             (int) FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->current_balance_minor,
         );
+    }
+
+    public function test_cashbook_rejects_keyless_writes_instead_of_guessing_instruction_identity(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($owner);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'investment_club',
+            'name' => 'Explicit Retry Club',
+        ])->assertCreated()->json('data.space.id');
+
+        $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'Explicit Retry Account',
+            'account_type' => 'bank',
+            'currency' => 'UGX',
+        ])->assertCreated()->json('data.account.id');
+
+        $this->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
+            [
+                'transaction_reference' => 'GENERIC-BANK-REF',
+                'transaction_type' => 'other',
+                'direction' => 'credit',
+                'amount_minor' => 25000,
+                'description' => 'Legitimate entry',
+                'counterparty_name' => 'Member A',
+                'transaction_date' => '2026-09-04',
+            ],
+        )->assertStatus(422);
+
+        $this->assertDatabaseCount('financial_space_transactions', 0);
+        $this->assertSame(
+            0,
+            (int) FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->current_balance_minor,
+        );
+    }
+
+    public function test_distinct_explicit_keys_preserve_identical_legitimate_cashbook_entries(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($owner);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'investment_club',
+            'name' => 'Identical Entry Club',
+        ])->assertCreated()->json('data.space.id');
+
+        $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'Identical Entry Account',
+            'account_type' => 'bank',
+            'currency' => 'UGX',
+        ])->assertCreated()->json('data.account.id');
+
+        $payload = [
+            'transaction_reference' => 'GENERIC-BANK-REF',
+            'transaction_type' => 'other',
+            'direction' => 'credit',
+            'amount_minor' => 25000,
+            'description' => 'Two legitimate identical bank rows',
+            'counterparty_name' => 'Member A',
+            'transaction_date' => '2026-09-04',
+        ];
+
+        $first = $this->withHeader('Idempotency-Key', 'identical-entry-001')->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
+            $payload,
+        )->assertCreated();
+
+        $second = $this->withHeader('Idempotency-Key', 'identical-entry-002')->postJson(
+            "/api/financial-spaces/{$spaceId}/treasury/accounts/{$accountId}/transactions",
+            $payload,
+        )->assertCreated();
+
+        $this->assertNotSame($first->json('data.transaction.id'), $second->json('data.transaction.id'));
+        $this->assertDatabaseCount('financial_space_transactions', 2);
+        $this->assertSame(
+            50000,
+            (int) FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->current_balance_minor,
+        );
+    }
+
+    public function test_opening_balance_is_immutable_immediately_after_account_creation(): void
+    {
+        $owner = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        Sanctum::actingAs($owner);
+
+        $spaceId = (int) $this->postJson('/api/financial-spaces', [
+            'type' => 'investment_club',
+            'name' => 'Fixed Baseline Club',
+        ])->assertCreated()->json('data.space.id');
+
+        $accountId = (int) $this->postJson("/api/financial-spaces/{$spaceId}/treasury/accounts", [
+            'account_name' => 'Fixed Baseline Account',
+            'account_type' => 'bank',
+            'currency' => 'UGX',
+            'opening_balance_minor' => 50000,
+            'balance_as_of' => '2026-09-01',
+        ])->assertCreated()->json('data.account.id');
+
+        try {
+            FinancialSpaceTreasuryAccount::query()->findOrFail($accountId)->update([
+                'opening_balance_minor' => 40000,
+            ]);
+            $this->fail('Opening balance must be immutable immediately after creation.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('fixed at treasury-account creation', $exception->getMessage());
+        }
+
+        $account = FinancialSpaceTreasuryAccount::query()->findOrFail($accountId);
+        $this->assertSame(50000, (int) $account->opening_balance_minor);
+        $this->assertSame(50000, (int) $account->current_balance_minor);
     }
 
     public function test_opening_balance_variance_blocks_confirmation_even_when_closing_balance_matches(): void

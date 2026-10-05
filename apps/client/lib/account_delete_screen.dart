@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/login_screen.dart';
 import 'package:opfin/services/offline_sync_service.dart';
@@ -53,7 +53,7 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
   Future<void> _loadReadiness() async {
     setState(() => _loading = true);
     try {
-      final response = await http.get(
+      final response = await OpFinHttp.get(
         Uri.parse('$apiUrl/account/deletion-readiness'),
         headers: await _headers(),
       );
@@ -99,7 +99,7 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
 
     setState(() => _submitting = true);
     try {
-      final response = await http.delete(
+      final response = await OpFinHttp.delete(
         Uri.parse('$apiUrl/account'),
         headers: await _headers(),
         body: jsonEncode({'pin': _pin.text, 'confirmation': 'DELETE'}),
@@ -157,7 +157,7 @@ class _AccountDeleteScreenState extends State<AccountDeleteScreen> {
 
     setState(() => _submitting = true);
     try {
-      final response = await http.delete(
+      final response = await OpFinHttp.delete(
         Uri.parse('$apiUrl/account/data'),
         headers: await _headers(),
         body: jsonEncode({

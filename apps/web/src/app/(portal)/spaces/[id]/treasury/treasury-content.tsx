@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import {
   confirmTreasuryReconciliationAction,
@@ -81,6 +82,9 @@ export default async function TreasuryPage({
       accounts[0] ??
       null;
     const canManage = managerRoles.has(space.role);
+    // One key per rendered form: a resubmitted form replays safely, and the
+    // post-save redirect renders a fresh key for the next entry.
+    const cashbookKey = `cashbook-${randomUUID()}`;
 
     let transactions: Awaited<
       ReturnType<typeof financialSpaceStatementsApi.transactions>
@@ -988,6 +992,11 @@ export default async function TreasuryPage({
                   className="form-grid"
                 >
                   <input type="hidden" name="space_id" value={spaceId} />
+                  <input
+                    type="hidden"
+                    name="idempotency_key"
+                    value={cashbookKey}
+                  />
                   <input
                     type="hidden"
                     name="account_id"

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/user_session.dart';
 
@@ -18,7 +19,7 @@ class CreditProfileApi {
   }
 
   static Future<Map<String, dynamic>> load() async {
-    final response = await http.get(
+    final response = await OpFinHttp.get(
       Uri.parse('$apiUrl/credit/profile'),
       headers: await _headers(),
     );
@@ -26,7 +27,7 @@ class CreditProfileApi {
   }
 
   static Future<Map<String, dynamic>> refresh() async {
-    final response = await http.post(
+    final response = await OpFinHttp.post(
       Uri.parse('$apiUrl/credit/profile/refresh'),
       headers: await _headers(),
     );
@@ -35,7 +36,7 @@ class CreditProfileApi {
 
   static Future<List<Map<String, dynamic>>> wallets() async {
     final response =
-        await http.get(Uri.parse('$apiUrl/wallets'), headers: await _headers());
+        await OpFinHttp.get(Uri.parse('$apiUrl/wallets'), headers: await _headers());
     final data = _decode(response, 'Unable to load wallets.');
     return (data['wallets'] as List? ?? const [])
         .whereType<Map>()

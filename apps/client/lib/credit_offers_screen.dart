@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/credit_profile_api.dart';
 import 'package:opfin/services/user_session.dart';
@@ -31,7 +31,7 @@ class _CreditOffersScreenState extends State<CreditOffersScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final response = await http.get(Uri.parse('$apiUrl/credit/offers'), headers: await _headers());
+    final response = await OpFinHttp.get(Uri.parse('$apiUrl/credit/offers'), headers: await _headers());
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode != 200 || decoded['success'] != true) throw Exception(decoded['message'] ?? 'Unable to load offers.');
     final data = (decoded['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
@@ -43,7 +43,7 @@ class _CreditOffersScreenState extends State<CreditOffersScreen> {
 
   Future<void> _review(Map<String, dynamic> summary) async {
     final id = _amount(summary['id']);
-    final response = await http.get(Uri.parse('$apiUrl/credit/offers/$id'), headers: await _headers());
+    final response = await OpFinHttp.get(Uri.parse('$apiUrl/credit/offers/$id'), headers: await _headers());
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode != 200 || decoded['success'] != true) {
       _message(decoded['message']?.toString() ?? 'Unable to load offer.');
@@ -138,7 +138,7 @@ class _CreditOfferDetailState extends State<_CreditOfferDetail> {
     setState(() => _submitting = true);
     try {
       final token = await UserSession.getAccessToken();
-      final response = await http.post(
+      final response = await OpFinHttp.post(
         Uri.parse('$apiUrl/credit/offers/${widget.offer['id']}/accept'),
         headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json', 'Content-Type': 'application/json'},
         body: jsonEncode({

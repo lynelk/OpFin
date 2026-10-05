@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\CustomerPhoneController;
 use App\Http\Controllers\Api\CustomerSupportController;
 use App\Http\Controllers\Api\CustomerWalletController;
 use App\Http\Controllers\Api\EarlySettlementController;
+use App\Http\Controllers\Api\EssentialsBillPlanningController;
 use App\Http\Controllers\Api\EssentialsController;
 use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\Api\LoanRepaymentController;
 use App\Http\Controllers\Api\LocationContextController;
 use App\Http\Controllers\Api\LongRangeGovernanceController;
 use App\Http\Controllers\Api\LongRangePlatformController;
+use App\Http\Controllers\Api\MobileHomeController;
 use App\Http\Controllers\Api\NinValidationController;
 use App\Http\Controllers\Api\OrganisationJourneyController;
 use App\Http\Controllers\Api\PartnerEssentialsController;
@@ -82,6 +84,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/account/deletion-readiness', [AccountController::class, 'deletionReadiness']);
     Route::delete('/account/data', [AccountController::class, 'deleteData']);
     Route::get('/profile', [ProfileController::class, 'show'])->middleware('audit.sensitive:profile.viewed');
+    Route::get('/mobile/home', [MobileHomeController::class, 'show']);
     Route::get('/capabilities', [CapabilityController::class, 'index']);
     Route::get('/location/status', [LocationContextController::class, 'status']);
     Route::get('/location-contexts', [LocationContextController::class, 'index']);
@@ -147,6 +150,15 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/financing-applications', [FinancingController::class, 'apply']);
 
     Route::get('/essentials', [EssentialsController::class, 'summary']);
+    Route::get('/essentials/bill-plans', [EssentialsBillPlanningController::class, 'plans']);
+    Route::post('/essentials/bill-plans', [EssentialsBillPlanningController::class, 'createPlan']);
+    Route::patch('/essentials/bill-plans/{plan}', [EssentialsBillPlanningController::class, 'updatePlan']);
+    Route::delete('/essentials/bill-plans/{plan}', [EssentialsBillPlanningController::class, 'deletePlan']);
+    Route::post('/essentials/affordability', [EssentialsBillPlanningController::class, 'assess']);
+    Route::get('/essentials/own-money-payments', [EssentialsBillPlanningController::class, 'payments']);
+    Route::post('/essentials/own-money-payments', [EssentialsBillPlanningController::class, 'pay']);
+    Route::post('/essentials/own-money-payments/{payment}/reconcile', [EssentialsBillPlanningController::class, 'reconcile']);
+
     Route::get('/essentials/catalogue', [EssentialsController::class, 'catalogue']);
     Route::get('/essentials/partner-authorisations', [EssentialsController::class, 'partnerAuthorisations']);
     Route::post('/essentials/partner-authorisations', [EssentialsController::class, 'authorisePartnerPlatform']);
@@ -429,3 +441,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/compliance-reports', [ProductionOperationsController::class, 'createComplianceReport']);
     Route::post('/admin/compliance-reports/{report}/exports', [ProductionOperationsController::class, 'createComplianceExport']);
 });
+
+require __DIR__.'/financial_space_operations.php';
+require __DIR__.'/sacco_core.php';
+require __DIR__.'/audmon.php';

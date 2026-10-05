@@ -132,10 +132,11 @@ class ProductionReadinessApiTest extends TestCase
 
         $this->patchJson("/api/admin/reconciliation-items/{$itemId}", [
             'status' => 'exception',
-            'notes' => 'Provider statement evidence requires operations follow-up.',
+            'notes' => 'Provider evidence still requires governed matching or maker-checker write-off.',
         ])
             ->assertOk()
-            ->assertJsonPath('data.item.status', 'exception');
+            ->assertJsonPath('data.item.status', 'exception')
+            ->assertJsonPath('data.item.resolved_at', null);
 
         $this->postJson('/api/admin/support-cases', [
             'customer_id' => $operations->id,

@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/connected_financial_life_screen.dart';
 import 'package:opfin/faq_screen.dart';
@@ -102,7 +102,7 @@ class _SaveMobileScreenState extends State<SaveMobileScreen> {
     if (token == null || token.isEmpty) {
       throw Exception('Secure session is required.');
     }
-    final response = await http.get(Uri.parse('$apiUrl/savings/goals'),
+    final response = await OpFinHttp.get(Uri.parse('$apiUrl/savings/goals'),
         headers: {
           'Accept': 'application/json',
           'Authorization': 'Bearer $token'
@@ -223,7 +223,7 @@ class _GrowMobileScreenState extends State<GrowMobileScreen> {
     if (token == null || token.isEmpty) {
       throw Exception('Secure session is required.');
     }
-    final response = await http.get(Uri.parse('$apiUrl/investments/workspace'),
+    final response = await OpFinHttp.get(Uri.parse('$apiUrl/investments/workspace'),
         headers: {
           'Accept': 'application/json',
           'Authorization': 'Bearer $token'

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/services/distribution_channel.dart';
 
 import 'package:http/http.dart' as http;
@@ -26,13 +27,16 @@ class EssentialsApi {
     late http.Response response;
     switch (method) {
       case 'POST':
-        response = await http.post(uri, headers: headers, body: jsonEncode(body ?? const {}));
+        response = await OpFinHttp.post(uri, headers: headers, body: jsonEncode(body ?? const {}));
+        break;
+      case 'PATCH':
+        response = await OpFinHttp.patch(uri, headers: headers, body: jsonEncode(body ?? const {}));
         break;
       case 'DELETE':
-        response = await http.delete(uri, headers: headers);
+        response = await OpFinHttp.delete(uri, headers: headers, body: body == null ? null : jsonEncode(body));
         break;
       default:
-        response = await http.get(uri, headers: headers);
+        response = await OpFinHttp.get(uri, headers: headers);
     }
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode < 200 ||
@@ -94,6 +98,78 @@ class EssentialsApi {
         'amount_minor': amountMinor,
         'idempotency_key': 'android-$advanceId-${DateTime.now().microsecondsSinceEpoch}',
       });
+
+
+  static Future<List<Map<String, dynamic>>> billPlans({int? financialSpaceId}) async {
+    final suffix = financialSpaceId == null ? '' : '?financial_space_id=$financialSpaceId';
+    final data = await _request('/essentials/bill-plans$suffix');
+    return (data['plans'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
+  }
+
+  static Future<Map<String, dynamic>> createBillPlan({
+    required int accountId,
+    required int expectedAmountMinor,
+    required String frequency,
+    required String nextDueDate,
+    int? financialSpaceId,
+    bool necessary = true,
+  }) =>
+      _request('/essentials/bill-plans', method: 'POST', body: {
+        'essentials_account_id': accountId,
+        'expected_amount_minor': expectedAmountMinor,
+        'currency': 'UGX',
+        'frequency': frequency,
+        'next_due_date': nextDueDate,
+        'necessary': necessary,
+        if (financialSpaceId != null) 'financial_space_id': financialSpaceId,
+      });
+
+  static Future<Map<String, dynamic>> assessBill({
+    required int accountId,
+    required int amountMinor,
+    required String dueDate,
+    int? billPlanId,
+    int? financialSpaceId,
+    String? horizonEnd,
+  }) =>
+      _request('/essentials/affordability', method: 'POST', body: {
+        'essentials_account_id': accountId,
+        'bill_amount_minor': amountMinor,
+        'bill_due_date': dueDate,
+        'currency': 'UGX',
+        if (billPlanId != null) 'bill_plan_id': billPlanId,
+        if (financialSpaceId != null) 'financial_space_id': financialSpaceId,
+        if (horizonEnd != null) 'horizon_end': horizonEnd,
+      });
+
+  static Future<Map<String, dynamic>> payBillFromOwnMoney({
+    required int accountId,
+    required int assessmentId,
+    required int amountMinor,
+    int? financialSpaceId,
+  }) =>
+      _request('/essentials/own-money-payments', method: 'POST', body: {
+        'essentials_account_id': accountId,
+        'affordability_assessment_id': assessmentId,
+        'amount_minor': amountMinor,
+        'idempotency_key': 'app-own-$accountId-\${DateTime.now().microsecondsSinceEpoch}',
+        if (financialSpaceId != null) 'financial_space_id': financialSpaceId,
+      });
+
+  static Future<List<Map<String, dynamic>>> ownMoneyPayments({int? financialSpaceId}) async {
+    final suffix = financialSpaceId == null ? '' : '?financial_space_id=$financialSpaceId';
+    final data = await _request('/essentials/own-money-payments$suffix');
+    return (data['payments'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
+  }
+
+  static Future<Map<String, dynamic>> reconcileOwnMoneyPayment(int paymentId) =>
+      _request('/essentials/own-money-payments/$paymentId/reconcile', method: 'POST');
 
   static Future<Map<String, dynamic>> authorisePartnerPlatform({
     required int partnerAccountId,

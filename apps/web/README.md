@@ -18,7 +18,7 @@ Operations navigation groups Overview & automation, Finance & risk, Customer ser
 
 ## Current capabilities and limitations
 
-Financial management, credit, programmes, impact, partner access, commercial performance, governance and compliance consume the same server-authoritative domain. Treasury adds detailed CSV import/reconciliation and statement workflows on Web; App statement access does not demonstrate complete mobile administration.
+Financial management, credit, programmes, impact, partner access, commercial performance, governance and compliance consume the same server-authoritative domain. Treasury adds detailed CSV import/reconciliation and statement workflows on Web; App statement access does not demonstrate complete mobile administration. The cashbook entry form sends a per-form `idempotency_key`, which the API requires for every cashbook write: resubmitting the same form replays the original entry instead of recording the cash twice.
 
 Essentials adds named-lender bill/rent orchestration and connected-platform permissions. Its current internal accounting, authorisation, deletion, concurrency and reservation findings remain acceptance blockers. A Web surface is not approval to activate financing. See the [current capability contracts](../api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) and [delivery evidence](../../docs/operations/DELIVERY_EVIDENCE_2026-09-24.md).
 

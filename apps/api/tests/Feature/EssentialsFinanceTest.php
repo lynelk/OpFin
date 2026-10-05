@@ -10,6 +10,7 @@ use App\Models\EssentialsBiller;
 use App\Models\Institution;
 use App\Models\User;
 use App\Services\CitoEssentialsLendingClient;
+use App\Services\CustomerCreditProfileService;
 use App\Services\ExternalScoringService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -407,24 +408,9 @@ class EssentialsFinanceTest extends TestCase
             (string) DB::table('essentials_advances')->where('id', $advanceId)->value('fulfilment_payload')
         );
 
-        $walletId = DB::table('customer_wallets')->insertGetId([
-            'user_id' => $customer->id,
-            'phone_number_id' => null,
-            'provider' => 'mobile_money',
-            'msisdn' => $customer->phone,
-            'status' => 'active',
-            'is_default_disbursement' => false,
-            'is_default_repayment' => true,
-            'verified_at' => now(),
-            'metadata' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
         $this->postJson('/api/essentials/advances/'.$advanceId.'/repay', [
             'amount_minor' => 50000,
             'idempotency_key' => 'ESS-REPAY-TEST-001',
-            'wallet_id' => $walletId,
         ])
             ->assertCreated()
             ->assertJsonPath('data.repayment.status', 'successful')
@@ -589,6 +575,7 @@ class EssentialsFinanceTest extends TestCase
         ]);
         $space = ['id' => $spaceId, 'type' => 'personal', 'name' => 'My money'];
         Sanctum::actingAs($customer);
+        app(CustomerCreditProfileService::class)->ensurePrimaryPhone($customer->fresh());
 
         CreditProfile::create([
             'user_id' => $customer->id,

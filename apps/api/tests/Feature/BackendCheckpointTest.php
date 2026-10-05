@@ -73,6 +73,43 @@ class BackendCheckpointTest extends TestCase
         ]);
     }
 
+    public function test_operations_user_can_approve_pending_transaction_when_legacy_compatibility_is_explicitly_enabled(): void
+    {
+        config()->set('opfin.credit.legacy_manual_transaction_approval_enabled', true);
+        $operations = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
+        Sanctum::actingAs($operations);
+
+        $transaction = Transaction::create([
+            'user_id' => $operations->id,
+            'institution_id' => Institution::create([
+                'name' => 'Checkpoint Institution',
+                'address' => 'Kampala',
+                'phone' => '256700000099',
+                'email' => 'checkpoint@example.test',
+            ])->id,
+            'loan_application_id' => $this->createLoanApplication()->id,
+            'loan_id' => null,
+            'type' => 'Disbursement',
+            'amount' => 100000,
+            'phone' => '256700000099',
+            'reference' => 'checkpoint-reference',
+            'status' => 'Pending',
+        ]);
+
+        $this->mock(LoanService::class)
+            ->shouldReceive('processSuccessfulTransaction')
+            ->once();
+
+        $this->patchJson("/api/transactions/{$transaction->id}/approve")
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'event' => 'transaction.approved',
+            'actor_id' => $operations->id,
+        ]);
+    }
+
     public function test_successful_disbursement_processing_is_idempotent(): void
     {
         $application = $this->createLoanApplication();
