@@ -125,6 +125,16 @@ Read [book and instruction contracts](CLUB_ACCOUNTING.md) and [client recovery a
 
 Instruction recovery rechecks maker authority; statement history retains own-member access after leaving a club. Server-side encryption, exact-key replay and one unresolved slot per user/book/purpose prevent a reload from silently creating another economic instruction. Native exports receive document bytes, not credentials.
 
+## 16F. Universal Asset Registry (Asset Passports)
+
+Read the [asset registry contract](ASSET_REGISTRY_CONTRACT.md). Space managers register devices, vehicles and productive assets under `/api/financial-spaces/{space}/asset-passports`, and can record theft reports and disposals there. Platform admin and operations verify identity (never the person who registered the asset), clear reviews, register and release liens, record recovery and check an identifier's registry state under `/api/admin/asset-passports` and `/api/admin/asset-encumbrances/{encumbrance}/release`.
+
+Identifiers are stored only as a keyed HMAC and a masked form. A conflicting identifier sends the passport to review without revealing the other Space. The registry returns HTTP 503 until `OPFIN_ASSET_IDENTIFIER_KEY` is configured. It is separate from the balance-sheet assets at `/api/financial-spaces/{space}/assets`.
+
+## 16G. Financing Product Factory
+
+Read the [Product Factory contract](PRODUCT_FACTORY_CONTRACT.md). Platform admin and operations configure versioned financing products under `/api/admin/financing-factory`: templates and their guardrails, Legal Product Passports, and products (draft, update, submit, approve, reject, activate, retire, revise). Approvals need a second person, and products must name the actual lender, funder and principal. Activation needs an approved, current passport and, for Islamic products, an approved Sharia approval from the governance record. The generic V5 product definitions at `/api/admin/product-factory/products` are unchanged.
+
 ## 17. Financial Spaces and multi-entity membership
 
 Read [Financial Spaces](domain-endpoints.md#17-financial-spaces-and-multi-entity-membership). Membership in one Space does not disclose another.

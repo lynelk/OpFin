@@ -69,6 +69,28 @@ Keep providers unactivated until genuine configuration, contracts and certificat
 
 Provider acknowledgement is not finality. Preserve pending state and original references, reconcile before retry, and change route only under an explicit safe policy. Apply payload-bound idempotency and appropriate concurrency controls. Confirmed, expected financial events must produce the required accounting and receipts.
 
+## Asset passports, liens and theft reports
+
+The asset registry is off until `OPFIN_ASSET_IDENTIFIER_KEY` is set. Use the review queue (`/api/admin/asset-passports/review-queue`) daily.
+
+- **Review.** A passport reaches the queue when one of its identifiers is already active on another passport or belongs to a reported-stolen asset. Contact the customer for evidence. Never tell them about the other Space. Clear the review only after the other passport has been disposed of or rejected; otherwise reject it, with a reason.
+- **Verification.** Verify only with first-hand evidence: a physical inspection, a dealer invoice, an OEM record or a registry extract. You cannot verify an asset you registered. Verification confirms identifiers, not ownership or value.
+- **Liens.** Register a lien only against an open financing arrangement in the same Space. Release it after settlement. Releasing before settlement needs a platform administrator and a recorded lender instruction.
+- **Theft and recovery.** A theft report blocks new liens; existing liens stay in place. Record recovery only on evidence such as a police or partner confirmation.
+- **Device controls.** Remote device controls are not available. Never promise or attempt device locking.
+
+Before quoting asset-backed finance, lenders' staff use the identifier check. It shows only registry state, never the owner or Space.
+
+## Financing Product Factory
+
+Configure financing products only through `/api/admin/financing-factory`. Nothing configured there is a production launch on its own.
+
+- **Templates.** A platform administrator drafts the template from the approved credit or product policy and cites it in `policy_reference`. A different administrator approves it. To change bounds, draft the next version; never ask for an approved template to be edited.
+- **Passports.** Draft a Legal Product Passport only from legal's written opinion or the licence record. A different administrator approves it with the licence and evidence references. If a licence lapses or legal withdraws approval, revoke the passport at once: every product relying on it stops matching.
+- **Products.** Name the actual lender, funder and contracting principal exactly as in the partner agreement. Disclosures must be the approved customer wording. Approval needs an administrator who neither made nor submitted the product.
+- **Islamic products.** Activation needs an approved, current Sharia approval recorded through governance. Staff cannot create or override one. Never describe a product as Sharia-compliant before that approval exists.
+- **Changes.** Revise a live product to create the next version. Activating the new version retires the old one; agreements already made keep their own snapshot.
+
 ## Essentials operations and activation hold
 
 The intended capability covers verified bill/rental beneficiaries, named third-party lenders, funding capacity, quotes, purpose-bound fulfilment and repayment servicing. OpFin must not be configured or described as the primary Essentials lender.

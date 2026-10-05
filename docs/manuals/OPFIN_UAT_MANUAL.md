@@ -152,3 +152,28 @@ Automated regression results and remaining mobile/PostgreSQL/reviewer gates are 
 - With affiliated credit withheld, or independent-first with an eligible independent lender, verify no eligibility request or new credit line is created for the affiliate. Then request a genuinely underserved amount/category and verify permitted fallback.
 - Suspend an Essentials product for one channel and verify eligibility, displayed limit, quote and acceptance agree while another authorised channel remains available.
 - Verify legacy loan default-interest caps continue under the configured/snapshotted licence class and each new offer uses one distribution revision in pricing and disclosures.
+
+## Asset registry
+
+Use synthetic identifiers only (for example a computed check-digit IMEI). IDs UAT-67 to UAT-83 are reserved for suites in review.
+
+| ID | Area | Action | Expected result |
+|---|---|---|---|
+| UAT-84 | Registration | Register a phone with a valid IMEI, then try an IMEI with a wrong check digit and a laptop without a serial | The valid phone is `registered` and only its masked identifier is shown. The other two are refused with plain guidance. |
+| UAT-85 | Duplicate identifier | Register the same IMEI in a second Space | The second passport is `review_required`. Its user sees no information about the first Space. Operations see the reason in the review queue. |
+| UAT-86 | Verification | Verify as the registrant, then as a different operations user | The first is refused. The second records the method and evidence reference. |
+| UAT-87 | Liens | Register a lien, try a second, release before and after settlement | Only one lien is active. Early release needs a platform administrator. After release the passport is `verified`. |
+| UAT-88 | Theft and resale | Report the asset stolen and try a new lien, then recover it; separately dispose of an asset and register its IMEI in another Space | The stolen asset is refused a lien and the identifier check shows "reported stolen". Recovery restores the prior state. After disposal the new registration is `registered`. |
+
+## Financing Product Factory
+
+Use synthetic partners, licence references and wording only.
+
+| ID | Area | Action | Expected result |
+|---|---|---|---|
+| UAT-92 | Templates | Draft a device template, approve it as the same administrator, then as a different one; draft an Islamic template with `HIRE_PURCHASE` | Self-approval is refused and the second approval makes it `active`. The Islamic template is refused with the allowed contract types. |
+| UAT-93 | Guardrails | Draft products above the price cap, with a car on a phone template, with a fee above the cap, without a required disclosure and without a funder | Each is refused with one plain-language reason. An Islamic template's message says "profit rate", not "APR". |
+| UAT-94 | Maker-checker | Submit a product, then approve it as its maker, as operations and as a different administrator | Only the different administrator can approve. A change to the approved product is refused; a revision creates version 2. |
+| UAT-95 | Passport gate | Activate a product whose passport is still a draft, approve the passport, activate, then revoke the passport | Activation is refused until the passport is approved. After revocation the product no longer appears in product matching. |
+| UAT-96 | Sharia gate | Activate an Islamic product without a Sharia approval, then with a governance-recorded approval; attach that approval to a conventional product | The first activation is refused and says the factory cannot create one. The second succeeds. The conventional product is refused. |
+| UAT-97 | Versions | Activate version 2 of a live product | Version 1 becomes `retired` with its approved parameters unchanged; only version 2 matches. |
