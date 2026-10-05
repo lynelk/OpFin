@@ -71,6 +71,16 @@ The asset registry is off until `OPFIN_ASSET_IDENTIFIER_KEY` is set. Use the rev
 
 Before quoting asset-backed finance, lenders' staff use the identifier check. It shows only registry state, never the owner or Space.
 
+## Financing Product Factory
+
+Configure financing products only through `/api/admin/financing-factory`. Nothing configured there is a production launch on its own.
+
+- **Templates.** A platform administrator drafts the template from the approved credit or product policy and cites it in `policy_reference`. A different administrator approves it. To change bounds, draft the next version; never ask for an approved template to be edited.
+- **Passports.** Draft a Legal Product Passport only from legal's written opinion or the licence record. A different administrator approves it with the licence and evidence references. If a licence lapses or legal withdraws approval, revoke the passport at once: every product relying on it stops matching.
+- **Products.** Name the actual lender, funder and contracting principal exactly as in the partner agreement. Disclosures must be the approved customer wording. Approval needs an administrator who neither made nor submitted the product.
+- **Islamic products.** Activation needs an approved, current Sharia approval recorded through governance. Staff cannot create or override one. Never describe a product as Sharia-compliant before that approval exists.
+- **Changes.** Revise a live product to create the next version. Activating the new version retires the old one; agreements already made keep their own snapshot.
+
 ## Essentials operations and activation hold
 
 The intended capability covers verified bill/rental beneficiaries, named third-party lenders, funding capacity, quotes, purpose-bound fulfilment and repayment servicing. OpFin must not be configured or described as the primary Essentials lender.

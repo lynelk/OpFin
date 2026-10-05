@@ -169,7 +169,9 @@ Source status, 4 October 2026: the Universal Asset Registry foundation exists in
 - AST-001: solar, machinery and agricultural classes;
 - DEV-002: duplicate-identifier review, one active lien per asset, and stolen assets refused for new liens.
 
-See the [asset registry contract](../../apps/api/docs/api/ASSET_REGISTRY_CONTRACT.md). Valuation, inspection, protection/warranty, supplier settlement, the Product Factory and the App/Web journeys remain open.
+See the [asset registry contract](../../apps/api/docs/api/ASSET_REGISTRY_CONTRACT.md). Valuation, inspection, protection/warranty, supplier settlement and the App/Web journeys remain open.
+
+Source status, 5 October 2026: the PF-001 Product Factory foundation exists in source and is under review, with no acceptance evidence yet. It covers versioned templates with DEV-003 bounds (tenor, APR or profit rate, deposit, LTV, fees, asset classes, disclosures), Legal Product Passport approval and revocation, and a maker-checker product lifecycle with explicit lender, funder and principal. See the [Product Factory contract](../../apps/api/docs/api/PRODUCT_FACTORY_CONTRACT.md). Partner APIs (PF-002), customer pricing, supplier settlement and the App/Web screens remain open.
 - **DGT-001**: Provider-neutral cryptographic anchoring of selected agreements and lifecycle events; no customer PII on public chain.
 - **DGT-002**: Approved digital investment interests reconcile to enforceable legal records and the OpFin ledger.
 - **DGT-003**: Stablecoin funding/settlement only through approved jurisdiction, VASP/custodian, AML, custody, FX and accounting controls.
