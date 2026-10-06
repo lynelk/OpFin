@@ -47,7 +47,10 @@ class StatementPdfPipelineTest extends TestCase
     {
         parent::setUp();
         Carbon::setTestNow('2026-09-26 08:00:00');
-        config(['financial_intelligence.enabled' => true]);
+        config([
+            'financial_intelligence.enabled' => true,
+            'financial_intelligence.statement_disk' => 'local',
+        ]);
         Storage::fake('local');
         Queue::fake();
         $this->owner = User::factory()->create();
