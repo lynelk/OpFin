@@ -67,6 +67,8 @@ class User extends Authenticatable
         'email',
         'phone_verified_at',
         'email_verified_at',
+        'password_change_required',
+        'password_changed_at',
         'national_id',
         'date_of_birth',
         'nin_status',
@@ -88,6 +90,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'accessibility_preferences' => 'array',
             'can_manage_platform_credit' => 'boolean',
+            'password_change_required' => 'boolean',
+            'password_changed_at' => 'datetime',
         ];
     }
 

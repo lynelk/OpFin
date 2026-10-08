@@ -1,3 +1,4 @@
+import { identityFields } from "./credentials";
 import {
   mockApplications,
   mockComplianceReports,
@@ -388,10 +389,10 @@ export const financialSpacesApi = {
 };
 
 export const opfinApi = {
-  login: (phone: string, password: string) =>
+  login: (identifier: string, password: string) =>
     request<LoginResponse>("/login", {
       method: "POST",
-      bodyJson: { phone, password }
+      bodyJson: { ...identityFields(identifier), password }
     }),
   logout: (token?: string) => request<Record<string, never>>("/logout", { method: "POST", token }),
   profile: (token?: string) => request<Profile>("/profile", { token }),

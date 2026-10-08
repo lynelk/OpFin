@@ -15,6 +15,7 @@ export type ApiEnvelope<T> = {
 export type LoginResponse = {
   access_token: string;
   token_type: "Bearer" | string;
+  password_change_required?: boolean;
   user: {
     id: number;
     name: string;

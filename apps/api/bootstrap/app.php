@@ -3,6 +3,8 @@
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\RecordNetworkUsage;
 use App\Http\Middleware\RecordSensitiveAction;
+use App\Http\Middleware\RequireCurrentPassword;
+use App\Http\Middleware\RequireCurrentPasswordForSession;
 use App\Support\ApiResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -29,6 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->use([HandleCors::class, RecordNetworkUsage::class]);
+        $middleware->appendToGroup('api', RequireCurrentPassword::class);
+        $middleware->appendToGroup('web', RequireCurrentPasswordForSession::class);
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'audit.sensitive' => RecordSensitiveAction::class,

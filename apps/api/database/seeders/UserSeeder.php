@@ -13,12 +13,14 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // First, create the 'Super' user
+        // First, create a platform administrator
         User::create([
             'name' => 'Super Admin',
             'phone' => '+256776911458',
             'email' => 'admin@opfin.com',
-            'role' => 'Super',
+            'role' => User::ROLE_PLATFORM_ADMIN,
+            // Development only. Set a known password with opfin:admin:reset-password when needed.
+            'password' => Str::password(32),
             'remember_token' => Str::random(10),
         ]);
         // Then, create the 'Member' users
