@@ -19,7 +19,7 @@ The script writes `dist/brand/opfin-brand-system-<version>.zip`, using `git arch
 | Part | Location in the package | Status |
 |---|---|---|
 | Tokens: colour, type and source pointers | `brand/opfin.tokens.json` | Approved v3 direction |
-| Editable vector masters | `brand/v3/assets/` | The monogram, app icon and Progress Path are approved masters. The wordmark and lock-ups are pending: outline their live text before freeze. |
+| Editable vector masters | `brand/v3/assets/` | The monogram, app icon, Progress Path, wordmark and lock-ups are path-only vector masters. The wordmark and lock-ups were outlined from the licensed Inter SemiBold on 8 October 2026. |
 | Generated exports with manifest | `brand/v3/exports/` and `EXPORT_MANIFEST.json` | Generated 4 October 2026. Visual review against the masters is pending (release gate 4). |
 | Starter templates | `brand/v3/templates/` | Starters. Build production files in the design tool from these. |
 | Brand standard and change policy | `brand/v3/OPFIN_BRAND_SYSTEM_V3.md`, `BRAND_CHANGE_POLICY.md` | Current |
