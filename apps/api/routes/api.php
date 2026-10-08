@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AdminEssentialsController;
+use App\Http\Controllers\Api\AssetFinanceLifecycleController;
 use App\Http\Controllers\Api\AssetRegistryController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CapabilityController;
@@ -110,6 +111,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/financial-spaces/{space}/asset-passports/{asset}', [AssetRegistryController::class, 'show']);
     Route::post('/financial-spaces/{space}/asset-passports/{asset}/report-stolen', [AssetRegistryController::class, 'reportStolen']);
     Route::post('/financial-spaces/{space}/asset-passports/{asset}/dispose', [AssetRegistryController::class, 'dispose']);
+    Route::get('/financial-spaces/{space}/asset-finance-cases', [AssetFinanceLifecycleController::class, 'index']);
+    Route::post('/financial-spaces/{space}/asset-finance-cases', [AssetFinanceLifecycleController::class, 'store']);
+    Route::get('/financial-spaces/{space}/asset-finance-cases/{case}', [AssetFinanceLifecycleController::class, 'show'])->whereNumber('case');
+    Route::post('/financial-spaces/{space}/asset-finance-cases/{case}/evidence', [AssetFinanceLifecycleController::class, 'evidence'])->whereNumber('case');
     Route::get('/financial-spaces/{space}/treasury/accounts', [FinancialSpaceStatementController::class, 'accounts']);
     Route::post('/financial-spaces/{space}/treasury/accounts', [FinancialSpaceStatementController::class, 'createAccount']);
     Route::get('/financial-spaces/{space}/treasury/accounts/{account}/transactions', [FinancialSpaceStatementController::class, 'transactions']);
@@ -302,6 +307,13 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/asset-passports/{asset}/encumbrances', [AssetRegistryController::class, 'encumber']);
     Route::post('/admin/asset-passports/{asset}/recover', [AssetRegistryController::class, 'recover']);
     Route::post('/admin/asset-encumbrances/{encumbrance}/release', [AssetRegistryController::class, 'release'])->whereNumber('encumbrance');
+    Route::get('/admin/asset-finance-cases/work-queue', [AssetFinanceLifecycleController::class, 'workQueue']);
+    Route::post('/admin/asset-finance-cases/{case}/evidence/{evidence}/verify', [AssetFinanceLifecycleController::class, 'verifyEvidence'])->whereNumber('case')->whereNumber('evidence');
+    Route::post('/admin/asset-finance-cases/{case}/review', [AssetFinanceLifecycleController::class, 'review'])->whereNumber('case');
+    Route::post('/admin/asset-finance-cases/{case}/settlements', [AssetFinanceLifecycleController::class, 'createSettlement'])->whereNumber('case');
+    Route::post('/admin/asset-finance-settlements/{settlement}/transition', [AssetFinanceLifecycleController::class, 'transitionSettlement'])->whereNumber('settlement');
+    Route::post('/admin/asset-finance-cases/{case}/activate', [AssetFinanceLifecycleController::class, 'activate'])->whereNumber('case');
+    Route::post('/admin/asset-finance-cases/{case}/transition', [AssetFinanceLifecycleController::class, 'transition'])->whereNumber('case');
     Route::prefix('admin/financing-factory')->group(function () {
         Route::get('/templates', [ProductFactoryController::class, 'templates']);
         Route::post('/templates', [ProductFactoryController::class, 'createTemplate']);
