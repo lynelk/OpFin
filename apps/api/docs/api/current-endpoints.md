@@ -41,6 +41,13 @@ The API, worker and scheduler must share one cache store and prefix. `CACHE_PREF
 
 Read [authentication, registration and closure](domain-endpoints.md#2-account-authentication). New App registration remains phone, OTP, names and six-digit PIN; migrated Web-password compatibility is separate.
 
+### Staff sign-in and password recovery (8 October 2026)
+
+- `POST /api/login` also accepts `email` + `password` for staff accounts (any role other than `customer`). Customers keep `phone` + `pin`. An unknown email gets the same answer as a wrong password, and five failures lock the email for 10 minutes. The response includes `password_change_required`.
+- `POST /api/account/password` (authenticated, staff only): `current_password`, `password`, `password_confirmation`. The new password needs 12+ characters with mixed case, a number and a symbol. It clears `password_change_required`, revokes the account's other tokens and is audited as `auth.password_changed`.
+- `POST /api/generate-otp` accepts `channel=email` with `email` for staff. The code is emailed; the answer is the same whether or not the email belongs to a staff account. `POST /api/reset-password` accepts `email` + `otp` + `password` + `password_confirmation`.
+- While `password_change_required` is set, every other authenticated API route returns HTTP 403 with `code: password_change_required`, except `GET /api/profile` and `POST /api/logout`.
+
 ## 3. Phone numbers and wallets
 
 Read [phone/wallet contracts](domain-endpoints.md#3-phone-numbers-and-wallets). A new wallet does not multiply profile-level credit exposure.

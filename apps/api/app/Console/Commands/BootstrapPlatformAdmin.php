@@ -40,6 +40,11 @@ class BootstrapPlatformAdmin extends Command
             return self::FAILURE;
         }
         $user = $byEmail ?? $byPhone;
+        if ($user !== null && $user->email !== null && mb_strtolower($user->email) !== $email) {
+            $this->error('The account with this phone already uses a different email. Run the command with that email, or correct it first.');
+
+            return self::FAILURE;
+        }
         if ($user === null && $phone === null) {
             $this->error('No account has this email. Give --phone to create one: every OpFin account needs a phone number.');
 

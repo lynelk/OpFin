@@ -35,14 +35,14 @@ function redirectWith(path: string, params: Record<string, string>) {
 }
 
 export async function loginAction(formData: FormData) {
-  const phone = value(formData, "phone");
+  const identifier = value(formData, "identifier") || value(formData, "phone");
   const password = value(formData, "password");
   const requestedNext = value(formData, "next");
   const context = value(formData, "context");
   let next = safeInternalPath(requestedNext || "/dashboard");
 
   try {
-    const response = await opfinApi.login(phone, password);
+    const response = await opfinApi.login(identifier, password);
     const data = response.data;
     const cookieStore = await cookies();
 
@@ -53,6 +53,13 @@ export async function loginAction(formData: FormData) {
     const roleHome = homeForRole(data.user.role);
     if (!requestedNext || !canRoleOpenPath(data.user.role, next)) {
       next = roleHome;
+    }
+    if (data.password_change_required) {
+      // The API refuses everything else until a one-time password is replaced.
+      cookieStore.set("opfin_password_change_required", "1", SESSION_COOKIE_OPTIONS);
+      next = "/account/change-password";
+    } else {
+      cookieStore.delete("opfin_password_change_required");
     }
   } catch (error) {
     const preserved: Record<string, string> = context ? { next, context } : { next };
@@ -77,6 +84,7 @@ export async function logoutAction() {
   cookieStore.delete("opfin_role");
   cookieStore.delete("opfin_name");
   cookieStore.delete("opfin_demo_consent");
+  cookieStore.delete("opfin_password_change_required");
 
   redirect("/login");
 }

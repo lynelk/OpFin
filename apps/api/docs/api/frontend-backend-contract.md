@@ -38,6 +38,8 @@ Login uses `phone + pin`. Legacy `password` remains accepted temporarily for mig
 
 Never send PINs into analytics, logs, WhatsApp or USSD.
 
+Staff may sign in to the Web app with `email + password`. When the login response has `password_change_required: true`, send the user to change their password (`POST /api/account/password`) before anything else: the API refuses other authenticated calls with HTTP 403 `code: password_change_required` until then. Staff recover a password with `POST /api/generate-otp` (`channel=email` or the SMS default), then `POST /api/reset-password`. Never show whether an email or phone has an account.
+
 ## 3. Progressive setup
 
 After login, clients call `GET /api/credit/profile`.

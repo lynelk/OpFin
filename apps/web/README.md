@@ -73,3 +73,9 @@ Local lint uses the TypeScript 6 compatibility procedure already present in `.gi
 ## Release-candidate contract update
 
 Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/frontend-backend-contract.md`. Full deletion is immediately rejected while obligations remain; optional deletion keeps the account. Payroll undertaking and reservation are atomic and case-bound. External reservation release is evidenced before closure. No production activation is implied.
+
+## Staff sign-in and password recovery (8 October 2026)
+
+- The sign-in form takes a phone number or a staff email. `identityFields` in `src/lib/api/credentials.ts` sends `email` for anything containing `@` and otherwise normalises the phone to the app's `256XXXXXXXXX` form.
+- A login with `password_change_required` sets the `opfin_password_change_required` cookie and opens `/account/change-password`. `src/proxy.ts` keeps the user there until the change succeeds; the API enforces the same rule.
+- `/forgot-password` sends a code by email (staff) or SMS, and `/reset-password` sets the new password. The identifier is held only in a 10-minute HTTP-only cookie, never in the URL. Error messages are plain language and never echo a code or password.

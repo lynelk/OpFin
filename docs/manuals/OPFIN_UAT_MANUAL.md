@@ -180,3 +180,13 @@ Use synthetic partners, licence references and wording only.
 | UAT-95 | Passport gate | Activate a product whose passport is still a draft, approve the passport, activate, then revoke the passport | Activation is refused until the passport is approved. After revocation the product no longer appears in product matching. |
 | UAT-96 | Sharia gate | Activate an Islamic product without a Sharia approval, then with a governance-recorded approval; attach that approval to a conventional product | The first activation is refused and says the factory cannot create one. The second succeeds. The conventional product is refused. |
 | UAT-97 | Versions | Activate version 2 of a live product | Version 1 becomes `retired` with its approved parameters unchanged; only version 2 matches. |
+
+## Staff sign-in and password recovery
+
+| ID | Area | Action | Expected result |
+|---|---|---|---|
+| UAT-98 | Owner bootstrap | Run `opfin:admin:bootstrap` with an email and phone, type a weak one-time password, then a valid one twice | The weak password is refused. The account is created as platform administrator. Running the command again changes nothing. |
+| UAT-99 | Forced change | Sign in on the Web with the email and one-time password, then open another page | You land on "Choose a new password" and cannot open other pages until a 12+ character password is set. Other sessions are signed out. |
+| UAT-100 | Email sign-in scope | Try to sign in with a customer's email, and with an unknown email | Both get "Email or password is incorrect." Five failures lock the email for 10 minutes. |
+| UAT-101 | Email recovery | Use **Forgot password?** with the staff email, enter the emailed code and a new password; reuse the code | The password changes once. The reused code is refused. An unknown email shows the same confirmation and sends nothing. |
+| UAT-102 | Owner recovery | Run `opfin:admin:reset-password` for the administrator | Existing sessions end and the next sign-in requires a new password. The audit trail shows the reset. |

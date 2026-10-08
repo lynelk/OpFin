@@ -91,6 +91,13 @@ Configure financing products only through `/api/admin/financing-factory`. Nothin
 - **Islamic products.** Activation needs an approved, current Sharia approval recorded through governance. Staff cannot create or override one. Never describe a product as Sharia-compliant before that approval exists.
 - **Changes.** Revise a live product to create the next version. Activating the new version retires the old one; agreements already made keep their own snapshot.
 
+## Platform administrator account and password recovery
+
+- **First administrator.** In the `OpFin` Railway service shell, run `php artisan opfin:admin:bootstrap --email=<email> --phone=<phone> --first-name=<first> --last-name=<last>` and type a one-time password at the hidden prompt (8+ characters with mixed case, a number and a symbol). Never pass a password on the command line, in a variable, in a ticket or in chat. The administrator must choose a new password (12+ characters) at first sign-in.
+- **Recovery.** Staff use **Forgot password?** on the Web sign-in page: an emailed code for their work email, or an SMS code for their phone. If both fail, the owner runs `php artisan opfin:admin:reset-password --email=<email>` in the service shell. It sets a one-time password, ends every session for that account and is audited.
+- **Email.** Email codes need a mail provider. Set `MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS` and `MAIL_FROM_NAME` on the `OpFin` and `opfin-worker` services. Codes are sent from the queue, so the worker must be running. Until a provider is set, use the SMS code or the owner command.
+- **Default credential removed.** User accounts no longer default to the password "password". Any staff account that still had it was given a random password, signed out and flagged to change its password after recovery.
+
 ## Essentials operations and activation hold
 
 The intended capability covers verified bill/rental beneficiaries, named third-party lenders, funding capacity, quotes, purpose-bound fulfilment and repayment servicing. OpFin must not be configured or described as the primary Essentials lender.

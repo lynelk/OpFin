@@ -12,7 +12,7 @@ const contextEyebrow: Record<string, string> = {
 export default async function LoginPage({
   searchParams
 }: {
-  searchParams?: Promise<{ error?: string; message?: string; next?: string; context?: string }>;
+  searchParams?: Promise<{ error?: string; message?: string; next?: string; context?: string; status?: string }>;
 }) {
   const params = await searchParams;
   const requestedNext = params?.next ?? "";
@@ -27,7 +27,7 @@ export default async function LoginPage({
 
   const description = deletingAccount
     ? "Use your OpFin phone number and PIN to verify that this deletion request belongs to you. Legacy Web accounts may use their existing password."
-    : "Use your OpFin phone number and PIN. Legacy Web accounts may use their existing password. OpFin then opens the workspace your account is authorised to use.";
+    : "Use your OpFin phone number and PIN. OpFin staff can also use their work email and password. OpFin then opens the workspace your account is authorised to use.";
 
   const sandboxNext =
     requestedNext ||
@@ -47,10 +47,18 @@ export default async function LoginPage({
       footer={
         <div className="auth-help-row">
           <Link href="/">Back to OpFin</Link>
+          <Link href="/forgot-password">Forgot password?</Link>
           {!deletingAccount ? <Link href="/programme-partner/activate">Activate programme invitation</Link> : null}
         </div>
       }
     >
+      {params?.status === "password-reset" ? (
+        <div className="placeholder state-success auth-notice" role="status">
+          <strong>Password changed</strong>
+          <p>Sign in with your new password.</p>
+        </div>
+      ) : null}
+
       {params?.message ? (
         <div className={"placeholder state-" + (params.error ?? "server") + " auth-notice"} role="alert">
           <strong>Sign-in problem</strong>
@@ -62,12 +70,11 @@ export default async function LoginPage({
         <input type="hidden" name="next" value={requestedNext} />
         <input type="hidden" name="context" value={context} />
         <div className="field">
-          <label htmlFor="phone">Phone number</label>
+          <label htmlFor="identifier">Phone number or staff email</label>
           <input
-            id="phone"
-            name="phone"
-            inputMode="tel"
-            autoComplete="tel"
+            id="identifier"
+            name="identifier"
+            autoComplete="username"
             placeholder="+256 700 000 001"
             required
           />
