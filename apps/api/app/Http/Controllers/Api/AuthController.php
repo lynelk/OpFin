@@ -3,17 +3,22 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PasswordResetCode;
 use App\Models\Otp;
 use App\Models\User;
 use App\Services\CommercialInsightsService;
 use App\Services\CustomerCreditProfileService;
+use App\Services\AuditLogger;
 use App\Services\PersonalFinancialSpaceService;
 use App\Services\SmsService;
+use App\Services\StaffCredentialService;
 use App\Support\ApiResponse;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -157,7 +162,8 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone' => 'required|string',
+            'phone' => 'required_without:email|nullable|string',
+            'email' => 'required_without:phone|nullable|email|max:254',
             'pin' => ['nullable', 'string', 'regex:/^\d{6}$/'],
             'password' => 'nullable|string',
         ]);
@@ -166,24 +172,30 @@ class AuthController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
+        // Staff may sign in with their email and password; customers always use phone and PIN.
+        $email = $request->filled('email') ? mb_strtolower(trim((string) $request->input('email'))) : null;
         $credential = (string) ($request->input('pin') ?: $request->input('password'));
         if ($credential === '') {
-            return ApiResponse::error('Enter your 6-digit PIN.', 422, ['pin' => ['PIN is required.']]);
+            return $email !== null
+                ? ApiResponse::error('Enter your password.', 422, ['password' => ['Password is required.']])
+                : ApiResponse::error('Enter your 6-digit PIN.', 422, ['pin' => ['PIN is required.']]);
         }
 
-        $key = 'opfin-login:'.sha1((string) $request->phone.'|'.(string) $request->ip());
+        $key = 'opfin-login:'.sha1(($email !== null ? 'email:'.$email : (string) $request->phone).'|'.(string) $request->ip());
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return ApiResponse::error('Too many sign-in attempts. Try again shortly or reset your PIN.', 429, [
                 'retry_after_seconds' => RateLimiter::availableIn($key),
             ]);
         }
 
-        $user = User::where('phone', $request->phone)->first();
+        $user = $email !== null ? $this->staffByEmail($email) : User::where('phone', $request->phone)->first();
 
         if (! $user || ! Hash::check($credential, $user->password)) {
             RateLimiter::hit($key, 600);
 
-            return ApiResponse::error('Phone number or PIN is incorrect.', 401);
+            return $email !== null
+                ? ApiResponse::error('Email or password is incorrect.', 401)
+                : ApiResponse::error('Phone number or PIN is incorrect.', 401);
         }
 
         RateLimiter::clear($key);
@@ -199,13 +211,52 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'user' => $this->authUserPayload($user),
             'credit_profile' => $this->profiles->status($user),
+            'password_change_required' => (bool) $user->password_change_required,
+        ]);
+    }
+
+    /** Signed-in staff replace their password, including a one-time password set by the owner. */
+    public function changePassword(Request $request, AuditLogger $audit)
+    {
+        $user = $request->user();
+        if (! StaffCredentialService::isStaff($user)) {
+            return ApiResponse::error('Customers change their PIN in the OpFin app.', 403);
+        }
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'password' => ['required', 'string', 'confirmed', $this->passwordRule()],
+        ]);
+        if ($validator->fails()) {
+            return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
+        }
+        if (! Hash::check((string) $request->input('current_password'), $user->password)) {
+            return ApiResponse::error('Your current password is incorrect.', 422, ['current_password' => ['Your current password is incorrect.']]);
+        }
+        if (Hash::check((string) $request->input('password'), $user->password)) {
+            return ApiResponse::error('Choose a password different from your current one.', 422, ['password' => ['Choose a different password.']]);
+        }
+
+        $forced = (bool) $user->password_change_required;
+        $user->forceFill([
+            'password' => Hash::make((string) $request->input('password')),
+            'password_change_required' => false,
+            'password_changed_at' => now(),
+        ])->save();
+        $currentTokenId = $user->currentAccessToken()?->id;
+        $user->tokens()->when($currentTokenId !== null, fn ($query) => $query->where('id', '!=', $currentTokenId))->delete();
+        $audit->record('auth.password_changed', $user, $user, ['forced' => $forced], $request);
+
+        return ApiResponse::success('Your password has been changed. Other sessions have been signed out.', [
+            'user' => $this->authUserPayload($user->fresh()),
+            'password_change_required' => false,
         ]);
     }
 
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone' => 'required|string',
+            'phone' => 'required_without:email|nullable|string',
+            'email' => 'required_without:phone|nullable|email|max:254',
             'otp' => 'required|string|size:6',
             'pin' => ['nullable', 'string', 'regex:/^\d{6}$/'],
             'pin_confirmation' => 'nullable|string|same:pin',
@@ -216,6 +267,10 @@ class AuthController extends Controller
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
         }
 
+        $email = $request->filled('email') ? mb_strtolower(trim((string) $request->input('email'))) : null;
+        if ($email !== null && ! $request->filled('password')) {
+            return ApiResponse::error('Choose a new password.', 422, ['password' => ['Password is required.']]);
+        }
         $credential = (string) ($request->input('pin') ?: $request->input('password'));
         if ($credential === '') {
             return ApiResponse::error('Create a new 6-digit PIN.', 422, ['pin' => ['PIN is required.']]);
@@ -232,17 +287,27 @@ class AuthController extends Controller
             }
         }
 
-        $user = User::where('phone', $request->phone)->first();
-        if (! $user) {
-            return ApiResponse::error('Invalid reset request', 404);
+        if ($email !== null) {
+            // An email code is bound to the staff account's phone record; unknown emails get the same answer as a wrong code.
+            $user = $this->staffByEmail($email);
+            if (! $user) {
+                return ApiResponse::error('Invalid or expired OTP', 400);
+            }
+        } else {
+            $user = User::where('phone', $request->phone)->first();
+            if (! $user) {
+                return ApiResponse::error('Invalid reset request', 404);
+            }
         }
 
-        $otpRecord = Otp::where('phone', $request->phone)->first();
+        $otpRecord = Otp::where('phone', $user->phone)->first();
         if (! $this->otpMatches($otpRecord, (string) $request->otp)) {
             return ApiResponse::error('Invalid or expired OTP', 400);
         }
 
         $user->password = Hash::make($credential);
+        $user->password_change_required = false;
+        $user->password_changed_at = now();
         if ($user->save()) {
             $otpRecord?->delete();
             $user->tokens()->delete();
@@ -263,7 +328,9 @@ class AuthController extends Controller
     public function generateOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone' => 'required|string|max:32',
+            'channel' => 'nullable|in:sms,email',
+            'phone' => 'required_unless:channel,email|nullable|string|max:32',
+            'email' => 'required_if:channel,email|nullable|email|max:254',
             'app_signature' => 'nullable|string|max:32',
         ]);
 
@@ -273,6 +340,10 @@ class AuthController extends Controller
 
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $expiresAt = Carbon::now()->addMinutes(5);
+
+        if ($request->input('channel') === 'email') {
+            return $this->emailResetCode(mb_strtolower(trim((string) $request->input('email'))), $otp, $expiresAt);
+        }
 
         Otp::updateOrCreate(
             ['phone' => $request->phone],
@@ -337,6 +408,40 @@ class AuthController extends Controller
             'verification_token' => $verificationToken,
             'verification_expires_at' => now()->addMinutes(10)->toIso8601String(),
         ]);
+    }
+
+    /**
+     * Sends a reset code to a staff account's email. The answer is the same whether or not the
+     * email belongs to a staff account, so the endpoint cannot be used to discover accounts.
+     */
+    private function emailResetCode(string $email, string $otp, Carbon $expiresAt)
+    {
+        $user = $this->staffByEmail($email);
+        if ($user !== null && ! $user->hasRole(User::ROLE_STAFF_PENDING_REVIEW)) {
+            Otp::updateOrCreate(['phone' => $user->phone], [
+                'otp' => Hash::make($otp),
+                'attempts' => 0,
+                'expires_at' => $expiresAt,
+                'verified_at' => null,
+                'verification_token_hash' => null,
+            ]);
+            if (app()->environment('production') && in_array(config('mail.default'), ['log', 'array'], true)) {
+                Log::warning('Password reset email requested but no mail provider is configured (MAIL_MAILER).');
+            }
+            Mail::to($user->email)->queue(new PasswordResetCode($otp, 5));
+        }
+
+        return ApiResponse::success('If an OpFin staff account uses this email, a code has been sent to it.', [
+            'expires_at' => $expiresAt->toIso8601String(),
+            'max_attempts' => 3,
+        ]);
+    }
+
+    private function staffByEmail(string $email): ?User
+    {
+        $user = User::whereRaw('lower(email) = ?', [$email])->first();
+
+        return $user !== null && StaffCredentialService::isStaff($user) ? $user : null;
     }
 
     private function weakPin(string $pin): bool
@@ -408,7 +513,9 @@ class AuthController extends Controller
             'last_name' => $user->last_name,
             'phone' => $user->phone,
             'phone_verified_at' => $user->phone_verified_at,
+            'email' => $user->email,
             'role' => $user->role,
+            'password_change_required' => (bool) $user->password_change_required,
             'nin_status' => $user->nin_status,
             'national_id' => $user->national_id,
             'date_of_birth' => $user->date_of_birth,

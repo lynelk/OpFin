@@ -81,6 +81,7 @@ Route::post('/programme-partner/invitations/accept', [ProgrammeCompletionControl
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/account/password', [AuthController::class, 'changePassword'])->middleware(['throttle:auth', 'audit.sensitive:auth.password_change_attempted']);
     Route::delete('/account', [AccountController::class, 'destroy']);
     Route::get('/account/deletion-readiness', [AccountController::class, 'deletionReadiness']);
     Route::delete('/account/data', [AccountController::class, 'deleteData']);
