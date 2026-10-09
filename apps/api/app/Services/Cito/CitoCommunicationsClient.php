@@ -18,13 +18,17 @@ class CitoCommunicationsClient
         ]);
     }
 
-    public function verifyOtpChallenge(string $challengeId, array $verification): array
+    public function verifyOtpChallenge(string $challengeId, string $code): array
     {
         if (! preg_match('/^[A-Za-z0-9_-]{1,128}$/', $challengeId)) {
             throw new InvalidArgumentException('Invalid OTP challenge reference.');
         }
-        // Callers must use the exact verification body defined by the deployed contract.
-        return $this->post('/api/v2/communication/otp/challenges/'.$challengeId.'/verify', $verification);
+        if (! preg_match('/^[0-9A-Za-z]{4,10}$/', $code)) {
+            throw new InvalidArgumentException('Invalid OTP code format.');
+        }
+        return $this->post('/api/v2/communication/otp/challenges/'.$challengeId.'/verify', [
+            'merchantNumber' => $this->merchant(), 'code' => $code,
+        ]);
     }
 
     public function sendSms(string $recipient, string $content, string $purpose = 'NOTIFICATION'): array
