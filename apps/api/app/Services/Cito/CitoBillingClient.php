@@ -15,6 +15,16 @@ class CitoBillingClient
 {
     private const PREFIX = '/api/v2/native/billing/baas';
 
+    public function customers(): array
+    {
+        return $this->get('/customers');
+    }
+
+    public function usageSummary(): array
+    {
+        return $this->get('/usage/summary');
+    }
+
     public function catalogue(): array
     {
         return $this->get('/catalog');
@@ -35,7 +45,35 @@ class CitoBillingClient
         return $this->get('/invoices');
     }
 
+    public function quote(array $request): array
+    {
+        return $this->call('POST', '/pricing/quotes', $request);
+    }
+
+    public function chargeStatus(string $reference): array
+    {
+        return $this->get('/charges/'.rawurlencode($this->reference($reference)));
+    }
+
+    public function invoice(string $number): array
+    {
+        return $this->get('/invoices/'.rawurlencode($this->reference($number)));
+    }
+
+    private function reference(string $reference): string
+    {
+        if (! preg_match('/^[A-Za-z0-9_-]{1,128}$/', $reference)) {
+            throw new InvalidArgumentException('Invalid Cito billing reference.');
+        }
+        return $reference;
+    }
+
     private function get(string $path): array
+    {
+        return $this->call('GET', $path);
+    }
+
+    private function call(string $method, string $path, array $body = []): array
     {
         $base = trim((string) config('services.cito.base_url'));
         $key = trim((string) config('services.cito.baas_api_key'));
@@ -50,12 +88,13 @@ class CitoBillingClient
             throw new InvalidArgumentException('Cito BaaS requires an approved HTTPS origin.');
         }
 
-        $response = Http::withHeaders([
+        $request = Http::withOptions(['allow_redirects' => false])->withHeaders([
             'Accept' => 'application/json',
             'X-Cito-Api-Key' => $key,
             'X-Cito-Environment' => $environment,
-        ])->timeout((int) config('services.cito.timeout_seconds', 15))
-            ->get(rtrim($base, '/').self::PREFIX.$path);
+        ])->timeout((int) config('services.cito.timeout_seconds', 15));
+        $url = rtrim($base, '/').self::PREFIX.$path;
+        $response = $method === 'GET' ? $request->get($url) : $request->post($url, $body);
 
         if (! $response->successful()) {
             throw new RuntimeException('Cito BaaS read failed (HTTP '.$response->status().').');
