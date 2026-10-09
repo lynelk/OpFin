@@ -71,6 +71,8 @@ return [
         'environment' => env('CITO_ENVIRONMENT', env('CPAY_ENVIRONMENT', 'sandbox')),
         'timeout_seconds' => (int) env('CITO_TIMEOUT_SECONDS', 15),
         'financial_data_certified' => (bool) env('CITO_FINANCIAL_DATA_CERTIFIED', false),
+        // Independently scoped BaaS service account; never use merchant RSA credentials.
+        'baas_api_key' => env('CITO_BAAS_API_KEY'),
         'essentials_lending_path' => env('CITO_ESSENTIALS_LENDING_PATH'),
         'essentials_drawdown_path' => env('CITO_ESSENTIALS_DRAWDOWN_PATH'),
         'essentials_drawdown_status_path' => env('CITO_ESSENTIALS_DRAWDOWN_STATUS_PATH'),
