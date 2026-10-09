@@ -153,8 +153,11 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
         }
 
         $request = Http::withHeaders($headers)
-            ->timeout((int) config('services.cpay.timeout_seconds', 30))
-            ->retry((int) config('services.cpay.connect_retries', 1), (int) config('services.cpay.retry_delay_ms', 250), throw: false);
+            // Financial requests are deliberately single-attempt. A network timeout is an
+            // UNKNOWN outcome, not permission to repeat a payout or collection. The caller
+            // must reconcile the original reference before any deliberate retry, which
+            // then requires a fresh signed nonce and timestamp.
+            ->timeout((int) config('services.cpay.timeout_seconds', 30));
 
         $url = rtrim((string) config('services.cpay.base_url'), '/').$path;
         if ($canonicalQuery !== '') {
