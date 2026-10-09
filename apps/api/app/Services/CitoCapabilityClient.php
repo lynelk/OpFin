@@ -19,6 +19,18 @@ class CitoCapabilityClient
             && trim((string) config('services.cito.private_key')) !== '';
     }
 
+    public function creditReport(User $user, ConsentRecord $consent, string $capability = 'CREDIT_REPORT_CRB'): array
+    {
+        return $this->executeCapability(
+            path: '/api/v2/credit/reports',
+            user: $user,
+            nationalId: (string) $user->national_id,
+            capability: $capability,
+            purpose: $consent->purpose,
+            consentReference: 'consent:'.$consent->id,
+        );
+    }
+
     public function creditScore(User $user, ConsentRecord $consent, string $capability = 'CREDIT_SCORE_CRB'): array
     {
         return $this->executeCapability(
