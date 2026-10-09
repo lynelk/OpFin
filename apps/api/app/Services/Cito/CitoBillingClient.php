@@ -47,6 +47,14 @@ class CitoBillingClient
 
     public function quote(array $request): array
     {
+        foreach (['billingAccountReference', 'serviceCode', 'meterCode', 'ratingBaseAmount', 'sourceCurrency'] as $field) {
+            if (! isset($request[$field]) || ! is_string($request[$field]) || trim($request[$field]) === '') {
+                throw new InvalidArgumentException('Missing or invalid Cito price quote field: '.$field);
+            }
+        }
+        if (! preg_match('/^-?\\d+(?:\\.\\d+)?$/', $request['ratingBaseAmount'])) {
+            throw new InvalidArgumentException('Quote amounts must be exact decimal strings.');
+        }
         return $this->call('POST', '/pricing/quotes', $request);
     }
 
@@ -84,7 +92,7 @@ class CitoBillingClient
         }
         $parts = parse_url($base);
         if (! is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || empty($parts['host'])
-            || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment'])) {
+            || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])) {
             throw new InvalidArgumentException('Cito BaaS requires an approved HTTPS origin.');
         }
 
@@ -97,7 +105,7 @@ class CitoBillingClient
         $response = $method === 'GET' ? $request->get($url) : $request->post($url, $body);
 
         if (! $response->successful()) {
-            throw new RuntimeException('Cito BaaS read failed (HTTP '.$response->status().').');
+            throw new RuntimeException('Cito BaaS request failed (HTTP '.$response->status().').');
         }
 
         $json = $response->json();
