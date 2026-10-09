@@ -14,7 +14,7 @@ class CitoOtpAuthFlowTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function enableCito(): void
+    private function enableCito(bool $simulateOutage = false): void
     {
         $pair = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
         openssl_pkey_export($pair, $private);
@@ -25,7 +25,10 @@ class CitoOtpAuthFlowTest extends TestCase
         Config::set('services.cito.feature_flags.otp', true);
 
         Http::preventStrayRequests();
-        Http::fake(function ($request) {
+        Http::fake(function ($request) use ($simulateOutage) {
+            if ($simulateOutage) {
+                return Http::response(['code' => 'PROVIDER_DOWN'], 503);
+            }
             if (str_ends_with($request->url(), '/verify')) {
                 return Http::response(['challengeId' => 'OTP-test', 'status' => 'VERIFIED'], 200);
             }
@@ -75,8 +78,7 @@ class CitoOtpAuthFlowTest extends TestCase
 
     public function test_provider_outage_does_not_generate_an_untracked_fallback_otp(): void
     {
-        $this->enableCito();
-        Http::fake(['https://cito.example.test/*' => Http::response(['code' => 'PROVIDER_DOWN'], 503)]);
+        $this->enableCito(true);
         $this->postJson('/api/generate-otp', [
             'phone' => '256700000003', 'purpose' => 'REGISTRATION',
         ])->assertStatus(503);
