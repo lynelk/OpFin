@@ -171,8 +171,11 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
     {
         $payload = $response->json() ?: [];
         $status = strtoupper((string) ($payload['status'] ?? ''));
+        // HTTP 202 is admission, never provider or settlement finality.
         if ($response->successful()) {
-            $normalizedStatus = $this->normalizeStatus($status ?: 'PENDING');
+            $normalizedStatus = $response->status() === 202
+                ? MobileMoneyTransaction::STATUS_PENDING
+                : $this->normalizeStatus($status ?: 'PENDING');
 
             return new MobileMoneyProviderResponse(
                 provider: 'cpay',
@@ -184,6 +187,13 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
                 reconciliationStatus: $this->reconciliationStatus($normalizedStatus),
                 raw: $this->safePayload($payload, $response->status()),
             );
+        }
+
+        // Provider-side failure and throttling may occur after an operation was
+        // admitted. Throw into MobileMoneyService's durable AMBIGUOUS state;
+        // it must query/reconcile the original reference before resubmission.
+        if ($response->serverError() || $response->status() === 429) {
+            throw new RuntimeException('CPay outcome unknown (HTTP '.$response->status().'); reconcile original reference.');
         }
 
         return MobileMoneyProviderResponse::failed(
@@ -236,17 +246,8 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
 
     private function sign(string $canonical): string
     {
-        $privateKeyValue = str_replace('\\n', "\n", (string) config('services.cpay.private_key'));
-        $privateKey = openssl_pkey_get_private($privateKeyValue);
-        if ($privateKey === false) {
-            throw new RuntimeException('CPay private key is invalid or unreadable.');
-        }
-        $signed = openssl_sign($canonical, $signature, $privateKey, OPENSSL_ALGO_SHA256);
-        if (! $signed) {
-            throw new RuntimeException('Unable to sign CPay v2 request.');
-        }
-
-        return base64_encode($signature);
+        return app(\App\Services\Cito\RsaV2Signer::class)
+            ->sign($canonical, (string) config('services.cpay.private_key'));
     }
 
     private function formatAmount(int $amountMinor): string

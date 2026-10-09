@@ -38,11 +38,8 @@ class SignedCitoTransport
         $body = $method === 'GET' ? '' : json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $timestamp = now('UTC')->format('Y-m-d\\TH:i:s\\Z');
         $nonce = (string) Str::uuid();
-        $canonical = implode("\n", [$method, $path, $canonicalQuery, $timestamp, $nonce, hash('sha256', $body)]);
-        $key = openssl_pkey_get_private($privateKey);
-        if ($key === false || ! openssl_sign($canonical, $signature, $key, OPENSSL_ALGO_SHA256)) {
-            throw new RuntimeException('Cito request signing failed.');
-        }
+        $signer = app(RsaV2Signer::class);
+        $canonical = $signer->canonical($method, $path, $canonicalQuery, $timestamp, $nonce, $body);
         $headers = [
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
@@ -50,7 +47,7 @@ class SignedCitoTransport
             'X-CPay-Signature-Version' => 'v2',
             'X-CPay-Timestamp' => $timestamp,
             'X-CPay-Nonce' => $nonce,
-            'X-CPay-Signature' => base64_encode($signature),
+            'X-CPay-Signature' => $signer->sign($canonical, $privateKey),
             'X-CPay-Environment' => $environment,
         ];
         if ($idempotencyKey !== null) {

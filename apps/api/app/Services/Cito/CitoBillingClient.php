@@ -58,6 +58,81 @@ class CitoBillingClient
         return $this->call('POST', '/pricing/quotes', $request);
     }
 
+    /**
+     * Financial writes are separately enabled and require a scoped BaaS account.
+     * Unknown outcomes must be resolved using the original reference, never an automatic retry.
+     */
+    public function authorizeCharge(array $request): array
+    {
+        $this->requireWrite();
+        $this->requiredStrings($request, [
+            'billingAccountReference', 'serviceCode', 'usageQuantity',
+            'netAmount', 'currency', 'idempotencyKey',
+        ]);
+        $this->decimal($request, 'usageQuantity');
+        $this->decimal($request, 'netAmount');
+        return $this->call('POST', '/charges', $request);
+    }
+
+    public function chargeCommit(string $reference): array
+    {
+        $this->requireWrite();
+        return $this->call('POST', '/charges/'.$this->reference($reference).'/commit');
+    }
+
+    public function chargeRelease(string $reference): array
+    {
+        $this->requireWrite();
+        return $this->call('POST', '/charges/'.$this->reference($reference).'/release');
+    }
+
+    public function usageEvent(array $request): array
+    {
+        $this->requireWrite();
+        $this->requiredStrings($request, ['serviceCode', 'meterCode', 'quantity', 'sourceReference', 'idempotencyKey']);
+        $this->decimal($request, 'quantity');
+        return $this->call('POST', '/usage/events', $request);
+    }
+
+    public function createSubscription(array $request): array
+    {
+        $this->requireWrite();
+        $this->requiredStrings($request, [
+            'customerReference', 'accountReference', 'contractReference',
+            'subscriptionReference', 'serviceCode', 'planCode',
+        ]);
+        return $this->call('POST', '/subscriptions', $request);
+    }
+
+    public function activateSubscription(string $reference): array
+    {
+        $this->requireWrite();
+        return $this->call('POST', '/subscriptions/'.$this->reference($reference).'/activate');
+    }
+
+    private function requiredStrings(array $request, array $fields): void
+    {
+        foreach ($fields as $field) {
+            if (! isset($request[$field]) || ! is_string($request[$field]) || trim($request[$field]) === '') {
+                throw new InvalidArgumentException('Missing or invalid Cito BaaS field: '.$field);
+            }
+        }
+    }
+
+    private function decimal(array $request, string $field): void
+    {
+        if (! preg_match('/^-?\d+(?:\.\d+)?$/', (string) $request[$field])) {
+            throw new InvalidArgumentException('Cito BaaS '.$field.' must be an exact decimal string.');
+        }
+    }
+
+    private function requireWrite(): void
+    {
+        if (! (bool) config('services.cito.baas_write_enabled', false)) {
+            throw new RuntimeException('Cito BaaS writes require separately approved activation.');
+        }
+    }
+
     public function chargeStatus(string $reference): array
     {
         return $this->get('/charges/'.rawurlencode($this->reference($reference)));
@@ -83,6 +158,7 @@ class CitoBillingClient
 
     private function call(string $method, string $path, array $body = []): array
     {
+        app(CitoFeatureGate::class)->requireEnabled('billing');
         $base = trim((string) config('services.cito.base_url'));
         $key = trim((string) config('services.cito.baas_api_key'));
         $environment = strtoupper(trim((string) config('services.cito.environment', 'SANDBOX')));

@@ -21,6 +21,7 @@ class CitoCapabilityClient
 
     public function creditReport(User $user, ConsentRecord $consent, string $capability = 'CREDIT_REPORT_CRB'): array
     {
+        $this->assertCreditConsent($user, $consent);
         return $this->executeCapability(
             path: '/api/v2/credit/reports',
             user: $user,
@@ -33,6 +34,7 @@ class CitoCapabilityClient
 
     public function creditScore(User $user, ConsentRecord $consent, string $capability = 'CREDIT_SCORE_CRB'): array
     {
+        $this->assertCreditConsent($user, $consent);
         return $this->executeCapability(
             path: '/api/v2/credit/scores',
             user: $user,
@@ -41,6 +43,18 @@ class CitoCapabilityClient
             purpose: $consent->purpose,
             consentReference: 'consent:'.$consent->id,
         );
+    }
+
+    private function assertCreditConsent(User $user, ConsentRecord $consent): void
+    {
+        if ((int) $consent->user_id !== (int) $user->getKey()
+            || $consent->purpose !== ConsentRecord::PURPOSE_CREDIT_PROCESSING
+            || $consent->status !== ConsentRecord::STATUS_GRANTED
+            || $consent->revoked_at !== null
+            || $consent->granted_at === null
+            || $consent->granted_at->isFuture()) {
+            throw new InvalidArgumentException('Current customer credit-processing consent is required.');
+        }
     }
 
     public function identityCheck(User $user, KycCase $case, string $capability, bool $forceRefresh = false, bool $systemInitiated = false): array

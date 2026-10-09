@@ -27,6 +27,7 @@ class SmsService
 
             return match ($smsGateway) {
                 'CPAY' => $this->cpay($recipients, $content),
+                'CITO' => $this->cito($recipients, $content),
                 'YO' => $this->yo($recipients, $content),
                 default => throw new Exception('Unsupported SMS gateway configured.'),
             };
@@ -42,6 +43,27 @@ class SmsService
                 'code' => 500,
             ];
         }
+    }
+
+    public function cito($recipients, $content): array
+    {
+        app(\App\Services\Cito\CitoFeatureGate::class)->requireEnabled('sms');
+        if (! is_string($recipients) || str_contains($recipients, ',')) {
+            throw new Exception('Cito SMS gateway currently requires one recipient per message.');
+        }
+        $recipient = trim($recipients);
+        if (preg_match('/^256[0-9]{9}$/', $recipient)) {
+            $recipient = '+'.$recipient;
+        } elseif (preg_match('/^0[0-9]{9}$/', $recipient)) {
+            $recipient = '+256'.substr($recipient, 1);
+        }
+        $response = app(\App\Services\Cito\CitoCommunicationsClient::class)
+            ->sendSms($recipient, (string) $content);
+        return [
+            'success' => true,
+            'message' => 'Cito SMS accepted for processing; not confirmed delivered.',
+            'reference' => $response['reference'] ?? $response['messageReference'] ?? null,
+        ];
     }
 
     public function yo($recipients, $content)

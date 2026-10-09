@@ -73,6 +73,7 @@ return [
         'financial_data_certified' => (bool) env('CITO_FINANCIAL_DATA_CERTIFIED', false),
         // Independently scoped BaaS service account; never use merchant RSA credentials.
         'baas_api_key' => env('CITO_BAAS_API_KEY'),
+        'baas_write_enabled' => (bool) env('CITO_BAAS_WRITE_ENABLED', false),
         'feature_flags' => [
             'sms' => (bool) env('CITO_ENABLE_SMS', false),
             'otp' => (bool) env('CITO_ENABLE_OTP', false),
