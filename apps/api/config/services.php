@@ -73,6 +73,23 @@ return [
         'financial_data_certified' => (bool) env('CITO_FINANCIAL_DATA_CERTIFIED', false),
         // Independently scoped BaaS service account; never use merchant RSA credentials.
         'baas_api_key' => env('CITO_BAAS_API_KEY'),
+        'feature_flags' => [
+            'sms' => (bool) env('CITO_ENABLE_SMS', false),
+            'otp' => (bool) env('CITO_ENABLE_OTP', false),
+            'identity' => (bool) env('CITO_ENABLE_IDENTITY', false),
+            'credit' => (bool) env('CITO_ENABLE_CREDIT', false),
+            'payments' => (bool) env('CITO_ENABLE_PAYMENTS', false),
+            'billing' => (bool) env('CITO_ENABLE_BILLING', false),
+        ],
+        // Production acceptance is a separately governed release decision.
+        'accepted_capabilities' => [
+            'sms' => (bool) env('CITO_ACCEPTED_SMS', false),
+            'otp' => (bool) env('CITO_ACCEPTED_OTP', false),
+            'identity' => (bool) env('CITO_ACCEPTED_IDENTITY', false),
+            'credit' => (bool) env('CITO_ACCEPTED_CREDIT', false),
+            'payments' => (bool) env('CITO_ACCEPTED_PAYMENTS', false),
+            'billing' => (bool) env('CITO_ACCEPTED_BILLING', false),
+        ],
         'essentials_lending_path' => env('CITO_ESSENTIALS_LENDING_PATH'),
         'essentials_drawdown_path' => env('CITO_ESSENTIALS_DRAWDOWN_PATH'),
         'essentials_drawdown_status_path' => env('CITO_ESSENTIALS_DRAWDOWN_STATUS_PATH'),
