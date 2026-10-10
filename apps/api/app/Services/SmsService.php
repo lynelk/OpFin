@@ -4,13 +4,15 @@ namespace App\Services;
 
 use App\Jobs\SendSms;
 use App\Models\SmsMessage;
+use App\Services\Cito\CitoCommunicationsClient;
+use App\Services\Cito\CitoFeatureGate;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class SmsService
 {
-    public function sendSms($recipients, $content)
+    public function sendSms($recipients, $content, ?string $idempotencyKey = null)
     {
         try {
             if (config('app.env') === 'local') {
@@ -27,13 +29,14 @@ class SmsService
 
             return match ($smsGateway) {
                 'CPAY' => $this->cpay($recipients, $content),
+                'CITO' => $this->cito($recipients, $content, $idempotencyKey),
                 'YO' => $this->yo($recipients, $content),
                 default => throw new Exception('Unsupported SMS gateway configured.'),
             };
         } catch (Exception $exception) {
             Log::error('SMS sending failed', [
                 'error' => $exception->getMessage(),
-                'recipients' => $recipients,
+                'recipient_fingerprint' => hash('sha256', (string) $recipients),
             ]);
 
             return [
@@ -42,6 +45,29 @@ class SmsService
                 'code' => 500,
             ];
         }
+    }
+
+    public function cito($recipients, $content, ?string $idempotencyKey = null): array
+    {
+        app(CitoFeatureGate::class)->requireEnabled('sms');
+        if (! is_string($recipients) || str_contains($recipients, ',')) {
+            throw new Exception('Cito SMS gateway currently requires one recipient per message.');
+        }
+        $recipient = trim($recipients);
+        if (preg_match('/^256[0-9]{9}$/', $recipient)) {
+            $recipient = '+'.$recipient;
+        } elseif (preg_match('/^0[0-9]{9}$/', $recipient)) {
+            $recipient = '+256'.substr($recipient, 1);
+        }
+        $response = app(CitoCommunicationsClient::class)
+            ->sendSms($recipient, (string) $content, 'NOTIFICATION', $idempotencyKey);
+
+        return [
+            'success' => true,
+            'message' => 'Cito SMS accepted for processing; not confirmed delivered.',
+            'reference' => $response['reference'] ?? $response['messageReference'] ?? null,
+            'delivery_confirmed' => false,
+        ];
     }
 
     public function yo($recipients, $content)
@@ -97,7 +123,7 @@ class SmsService
             'Accept' => 'application/json',
         ])->post($baseUrl.'/'.ltrim($smsPath, '/'), [
             'merchant_number' => $merchantNumber,
-            'recipients' => $recipients,
+            'recipient_fingerprint' => hash('sha256', (string) $recipients),
             'signature' => base64_encode($signature),
             'content' => $content,
         ]);

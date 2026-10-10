@@ -7,6 +7,8 @@ use App\Mail\PasswordResetCode;
 use App\Models\Otp;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Cito\CitoFeatureGate;
+use App\Services\Cito\CitoOtpAuthService;
 use App\Services\CommercialInsightsService;
 use App\Services\CustomerCreditProfileService;
 use App\Services\PersonalFinancialSpaceService;
@@ -16,6 +18,7 @@ use App\Support\ApiResponse;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -108,6 +111,20 @@ class AuthController extends Controller
                 return ApiResponse::error('Phone verification is required before registration.', 422);
             }
 
+            if (app(CitoFeatureGate::class)->enabled('otp')) {
+                $registrationChallenge = DB::table('cito_otp_challenges')
+                    ->where('phone', (string) $request->phone)
+                    ->where('purpose', 'REGISTRATION')
+                    ->where('environment', strtoupper((string) config('services.cito.environment', 'SANDBOX')))
+                    ->whereNotNull('verified_at')
+                    ->whereNull('consumed_at')
+                    ->where('expires_at', '>', now())
+                    ->first();
+                if (! $registrationChallenge) {
+                    return ApiResponse::error('A registration-specific OTP challenge is required.', 422);
+                }
+            }
+
             $name = $legacyName !== ''
                 ? $legacyName
                 : trim(implode(' ', array_filter([$first, $other, $last])));
@@ -126,6 +143,11 @@ class AuthController extends Controller
             ]);
 
             $otpRecord?->delete();
+            if (app(CitoFeatureGate::class)->enabled('otp')) {
+                DB::table('cito_otp_challenges')->where('phone', (string) $request->phone)
+                    ->where('purpose', 'REGISTRATION')->whereNull('consumed_at')
+                    ->update(['consumed_at' => now(), 'updated_at' => now()]);
+            }
             try {
                 $this->commercialInsights->recordAttribution($user, [
                     'acquisition_channel' => $request->input('acquisition_channel', 'other'),
@@ -258,6 +280,7 @@ class AuthController extends Controller
             'phone' => 'required_without:email|nullable|string',
             'email' => 'required_without:phone|nullable|email|max:254',
             'otp' => 'required|string|size:6',
+            'verification_token' => 'nullable|string|size:64',
             'pin' => ['nullable', 'string', 'regex:/^\d{6}$/'],
             'pin_confirmation' => 'nullable|string|same:pin',
             'password' => 'nullable|string',
@@ -301,7 +324,18 @@ class AuthController extends Controller
         }
 
         $otpRecord = Otp::where('phone', $user->phone)->first();
-        if (! $this->otpMatches($otpRecord, (string) $request->otp)) {
+        if ($email === null && app(CitoFeatureGate::class)->enabled('otp')) {
+            try {
+                app(CitoOtpAuthService::class)->verifyReset(
+                    (string) $user->phone, (string) $request->otp,
+                    $request->filled('verification_token') ? (string) $request->input('verification_token') : null,
+                );
+            } catch (\InvalidArgumentException $exception) {
+                return ApiResponse::error('Invalid or expired OTP', 400);
+            } catch (\Throwable $exception) {
+                return ApiResponse::error('OTP verification temporarily unavailable.', 503);
+            }
+        } elseif (! $this->otpMatches($otpRecord, (string) $request->otp)) {
             return ApiResponse::error('Invalid or expired OTP', 400);
         }
 
@@ -332,10 +366,34 @@ class AuthController extends Controller
             'phone' => 'required_unless:channel,email|nullable|string|max:32',
             'email' => 'required_if:channel,email|nullable|email|max:254',
             'app_signature' => 'nullable|string|max:32',
+            'purpose' => 'nullable|in:LOGIN,REGISTRATION,PASSWORD_RESET',
+            'otp_channel' => 'nullable|in:sms,whatsapp',
         ]);
 
         if ($validator->fails()) {
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
+        }
+
+        if ($request->input('channel') !== 'email' && app(CitoFeatureGate::class)->enabled('otp')) {
+            try {
+                $result = app(CitoOtpAuthService::class)->start(
+                    (string) $request->input('phone'), (string) $request->input('purpose', 'LOGIN'),
+                    strtoupper((string) $request->input('otp_channel', 'sms'))
+                );
+
+                return ApiResponse::success('OTP challenge requested', [
+                    'expires_at' => $result['expires_at'],
+                    'max_attempts' => 3,
+                ]);
+            } catch (\InvalidArgumentException $exception) {
+                return ApiResponse::error('Invalid OTP request.', 422);
+            } catch (\Throwable $exception) {
+                return ApiResponse::error('OTP service temporarily unavailable.', 503);
+            }
+        }
+
+        if ($request->input('otp_channel') === 'whatsapp') {
+            return ApiResponse::error('WhatsApp OTP requires an entitled Cito integration.', 503);
         }
 
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -378,6 +436,23 @@ class AuthController extends Controller
 
         if ($validator->fails()) {
             return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
+        }
+
+        if (app(CitoFeatureGate::class)->enabled('otp')) {
+            try {
+                $token = app(CitoOtpAuthService::class)->verify(
+                    (string) $request->input('phone'), (string) $request->input('otp')
+                );
+
+                return ApiResponse::success('OTP verified successfully', [
+                    'verification_token' => $token,
+                    'verification_expires_at' => now()->addMinutes(10)->toIso8601String(),
+                ]);
+            } catch (\InvalidArgumentException $exception) {
+                return ApiResponse::error('Invalid or expired OTP', 400);
+            } catch (\Throwable $exception) {
+                return ApiResponse::error('OTP verification temporarily unavailable.', 503);
+            }
         }
 
         $otpRecord = Otp::where('phone', $request->phone)->first();

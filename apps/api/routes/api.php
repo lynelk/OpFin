@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\AssetFinanceLifecycleController;
 use App\Http\Controllers\Api\AssetRegistryController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CapabilityController;
+use App\Http\Controllers\Api\CitoBaasGovernanceController;
+use App\Http\Controllers\Api\CitoOperationsController;
 use App\Http\Controllers\Api\CpayWebhookController;
 use App\Http\Controllers\Api\CustomerCreditProfileController;
 use App\Http\Controllers\Api\CustomerPhoneController;
@@ -18,6 +20,7 @@ use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\FinancialSpaceController;
 use App\Http\Controllers\Api\FinancialSpaceCredentialController;
+use App\Http\Controllers\Api\FinancialSpacePayoutMandateController;
 use App\Http\Controllers\Api\FinancialSpaceStatementController;
 use App\Http\Controllers\Api\FinancialWellbeingController;
 use App\Http\Controllers\Api\FinancingController;
@@ -81,6 +84,13 @@ Route::post('/guarantors/confirm', [GuarantorController::class, 'confirm'])->mid
 Route::post('/programme-partner/invitations/accept', [ProgrammeCompletionController::class, 'acceptPartnerInvitation'])->middleware('throttle:auth');
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    Route::post('/admin/cito-baas/intents', [CitoBaasGovernanceController::class, 'draft']);
+    Route::get('/admin/cito-operations/snapshot', CitoOperationsController::class);
+    Route::post('/admin/financial-spaces/{space}/payout-mandates', [FinancialSpacePayoutMandateController::class, 'store']);
+    Route::post('/admin/financial-spaces/{space}/payout-mandates/{mandate}/approve', [FinancialSpacePayoutMandateController::class, 'approve']);
+    Route::get('/admin/cito-baas/intents/{intent}', [CitoBaasGovernanceController::class, 'show']);
+    Route::post('/admin/cito-baas/intents/{intent}/approve', [CitoBaasGovernanceController::class, 'approve']);
+
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/account/password', [AuthController::class, 'changePassword'])->middleware(['throttle:auth', 'audit.sensitive:auth.password_change_attempted']);
     Route::delete('/account', [AccountController::class, 'destroy']);

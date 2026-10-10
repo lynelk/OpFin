@@ -169,6 +169,8 @@ class PaymentReconciliationService
                         'statement_reconciled_at' => now(),
                         'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
                     ]);
+                    app(FinancialSpaceActionSettlementService::class)
+                        ->recordProviderStatementMatch($systemTransaction->fresh());
                     if ($systemTransaction->provider_reference) {
                         DB::table('revenue_events')->where('cpay_reference', $systemTransaction->provider_reference)->update([
                             'statement_reconciliation_status' => 'matched',
