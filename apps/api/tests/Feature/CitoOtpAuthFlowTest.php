@@ -61,6 +61,27 @@ class CitoOtpAuthFlowTest extends TestCase
         ])->assertStatus(400);
     }
 
+    public function test_login_otp_cannot_authorise_registration(): void
+    {
+        $this->enableCito();
+        $this->postJson('/api/generate-otp', [
+            'phone' => '256700000004', 'purpose' => 'LOGIN',
+        ])->assertOk();
+        $verified = $this->postJson('/api/verify-otp', [
+            'phone' => '256700000004', 'otp' => '123456',
+        ])->assertOk();
+        $this->postJson('/api/register', [
+            'first_name' => 'Cito', 'last_name' => 'Customer',
+            'phone' => '256700000004',
+            'verification_token' => $verified->json('data.verification_token'),
+            'pin' => '826419', 'pin_confirmation' => '826419',
+            'terms_accepted' => true,
+        ])->assertStatus(422)->assertJsonFragment([
+            'message' => 'A registration-specific OTP challenge is required.',
+        ]);
+        $this->assertDatabaseMissing('users', ['phone' => '256700000004']);
+    }
+
     public function test_pin_reset_consumes_provider_challenge_once(): void
     {
         $this->enableCito();

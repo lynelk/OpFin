@@ -18,6 +18,7 @@ use App\Support\ApiResponse;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -110,6 +111,20 @@ class AuthController extends Controller
                 return ApiResponse::error('Phone verification is required before registration.', 422);
             }
 
+            if (app(CitoFeatureGate::class)->enabled('otp')) {
+                $registrationChallenge = DB::table('cito_otp_challenges')
+                    ->where('phone', (string) $request->phone)
+                    ->where('purpose', 'REGISTRATION')
+                    ->where('environment', strtoupper((string) config('services.cito.environment', 'SANDBOX')))
+                    ->whereNotNull('verified_at')
+                    ->whereNull('consumed_at')
+                    ->where('expires_at', '>', now())
+                    ->first();
+                if (! $registrationChallenge) {
+                    return ApiResponse::error('A registration-specific OTP challenge is required.', 422);
+                }
+            }
+
             $name = $legacyName !== ''
                 ? $legacyName
                 : trim(implode(' ', array_filter([$first, $other, $last])));
@@ -128,6 +143,11 @@ class AuthController extends Controller
             ]);
 
             $otpRecord?->delete();
+            if (app(CitoFeatureGate::class)->enabled('otp')) {
+                DB::table('cito_otp_challenges')->where('phone', (string) $request->phone)
+                    ->where('purpose', 'REGISTRATION')->whereNull('consumed_at')
+                    ->update(['consumed_at' => now(), 'updated_at' => now()]);
+            }
             try {
                 $this->commercialInsights->recordAttribution($user, [
                     'acquisition_channel' => $request->input('acquisition_channel', 'other'),

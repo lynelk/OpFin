@@ -286,6 +286,8 @@ The [P0–P2 implementation and acceptance register](../../../../docs/integratio
 
 The existing `POST /api/generate-otp` optionally accepts `purpose` (`LOGIN`, `REGISTRATION`, `PASSWORD_RESET`) and `otp_channel` (`sms`, `whatsapp`). Under `CITO_ENABLE_OTP`, Cito returns a challenge reference, which OpFin persists server-side. WhatsApp is **OTP delivery only**, and also requires `CITO_ENABLE_OTP_WHATSAPP`, an approved template and provider entitlement. Generic WhatsApp and USSD messaging remain separate existing OpFin channels; no Cito external v2 contract is asserted for them.
 
+Registration also verifies that the Cito challenge was explicitly issued for `REGISTRATION`, was verified for this phone/environment, has not expired and has not been consumed. A `LOGIN` or `PASSWORD_RESET` challenge cannot be used to create a new customer account. On successful registration the provider challenge is consumed.
+
 An existing Financial Space action must retain its original idempotency key, owner, space, amount, direction and payment destination. A separately approved payout mandate and provider-release flag are required for disbursement. Provider statement matching moves an external action to `statement_matched_unallocated`, not to a club ledger or NAV adjustment. Accounting requires an independently approved club instruction; reversals and mismatches require review.
 
 SMS acceptance is stored as `Submitted`, not `Sent`. The persisted SMS message identity is the idempotency key for repeat delivery attempts. CPay HTTP 202 and provider outages are not finality.
