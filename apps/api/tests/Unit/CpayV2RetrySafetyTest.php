@@ -29,7 +29,7 @@ class CpayV2RetrySafetyTest extends TestCase
             throw new ConnectionException('Simulated unknown financial outcome');
         });
 
-        $transaction = new MobileMoneyTransaction();
+        $transaction = new MobileMoneyTransaction;
         $transaction->internal_reference = 'retry-safety-1';
         $transaction->idempotency_key = 'retry-safety-1';
         $transaction->direction = 'collection';
@@ -39,7 +39,7 @@ class CpayV2RetrySafetyTest extends TestCase
         $transaction->metadata = [];
 
         try {
-            (new CpayV2Adapter())->collect($transaction);
+            (new CpayV2Adapter)->collect($transaction);
             $this->fail('Connection failure must propagate for reconciliation.');
         } catch (ConnectionException $exception) {
             $this->assertSame(1, $attempts, 'Never automatically resubmit signed money movement.');

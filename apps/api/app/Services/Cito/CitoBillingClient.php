@@ -2,7 +2,6 @@
 
 namespace App\Services\Cito;
 
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 use RuntimeException;
@@ -55,6 +54,7 @@ class CitoBillingClient
         if (! preg_match('/^-?\\d+(?:\\.\\d+)?$/', $request['ratingBaseAmount'])) {
             throw new InvalidArgumentException('Quote amounts must be exact decimal strings.');
         }
+
         return $this->call('POST', '/pricing/quotes', $request);
     }
 
@@ -71,18 +71,21 @@ class CitoBillingClient
         ]);
         $this->decimal($request, 'usageQuantity');
         $this->decimal($request, 'netAmount');
+
         return $this->call('POST', '/charges', $request);
     }
 
     public function chargeCommit(string $reference): array
     {
         $this->requireWrite();
+
         return $this->call('POST', '/charges/'.$this->reference($reference).'/commit');
     }
 
     public function chargeRelease(string $reference): array
     {
         $this->requireWrite();
+
         return $this->call('POST', '/charges/'.$this->reference($reference).'/release');
     }
 
@@ -91,6 +94,7 @@ class CitoBillingClient
         $this->requireWrite();
         $this->requiredStrings($request, ['serviceCode', 'meterCode', 'quantity', 'sourceReference', 'idempotencyKey']);
         $this->decimal($request, 'quantity');
+
         return $this->call('POST', '/usage/events', $request);
     }
 
@@ -101,12 +105,14 @@ class CitoBillingClient
             'customerReference', 'accountReference', 'contractReference',
             'subscriptionReference', 'serviceCode', 'planCode',
         ]);
+
         return $this->call('POST', '/subscriptions', $request);
     }
 
     public function activateSubscription(string $reference): array
     {
         $this->requireWrite();
+
         return $this->call('POST', '/subscriptions/'.$this->reference($reference).'/activate');
     }
 
@@ -148,6 +154,7 @@ class CitoBillingClient
         if (! preg_match('/^[A-Za-z0-9_-]{1,128}$/', $reference)) {
             throw new InvalidArgumentException('Invalid Cito billing reference.');
         }
+
         return $reference;
     }
 

@@ -31,8 +31,7 @@ class CitoContractSafetyTest extends TestCase
         $this->configureSigning();
         Http::fake(['https://cito.example.test/*' => Http::response(['challengeId' => 'OTP-123', 'status' => 'PENDING'], 201)]);
         app(CitoCommunicationsClient::class)->createOtpChallenge('+256700000001');
-        Http::assertSent(fn ($r) =>
-            $r->hasHeader('X-CPay-Idempotency-Key')
+        Http::assertSent(fn ($r) => $r->hasHeader('X-CPay-Idempotency-Key')
             && strlen((string) ($r->header('X-CPay-Idempotency-Key')[0] ?? '')) > 8
             && $r->data()['merchantNumber'] === 'OPFIN-1'
             && $r->data()['recipient'] === '+256700000001'
@@ -110,8 +109,8 @@ class CitoContractSafetyTest extends TestCase
         Config::set('services.cito.baas_api_key', 'fake-private-test-key');
         $this->expectException(InvalidArgumentException::class);
         app(CitoBillingClient::class)->quote([
-            'billingAccountReference'=>'acct1', 'serviceCode'=>'SMS', 'meterCode'=>'API',
-            'ratingBaseAmount'=>'not-a-number', 'sourceCurrency'=>'UGX',
+            'billingAccountReference' => 'acct1', 'serviceCode' => 'SMS', 'meterCode' => 'API',
+            'ratingBaseAmount' => 'not-a-number', 'sourceCurrency' => 'UGX',
         ]);
     }
 
@@ -123,8 +122,8 @@ class CitoContractSafetyTest extends TestCase
         Config::set('services.cpay.private_key', $private);
         Config::set('services.cpay.merchant_number', 'OPFIN-1');
         Config::set('services.cpay.callback_url', 'https://opfin.example.test/webhook');
-        Http::fake(['https://cito.example.test/*' => Http::response(['status'=>'SUCCESSFUL','reference'=>'ref-1'],202)]);
-        $tx = new MobileMoneyTransaction();
+        Http::fake(['https://cito.example.test/*' => Http::response(['status' => 'SUCCESSFUL', 'reference' => 'ref-1'], 202)]);
+        $tx = new MobileMoneyTransaction;
         $tx->direction = 'collection';
         $tx->amount_minor = 5000;
         $tx->currency = 'UGX';
@@ -144,8 +143,8 @@ class CitoContractSafetyTest extends TestCase
         Config::set('services.cpay.private_key', $private);
         Config::set('services.cpay.merchant_number', 'OPFIN-1');
         Config::set('services.cpay.callback_url', 'https://opfin.example.test/webhook');
-        Http::fake(['https://cito.example.test/*' => Http::response(['status'=>'FAILED'],503)]);
-        $tx = new MobileMoneyTransaction();
+        Http::fake(['https://cito.example.test/*' => Http::response(['status' => 'FAILED'], 503)]);
+        $tx = new MobileMoneyTransaction;
         $tx->direction = 'collection';
         $tx->amount_minor = 5000;
         $tx->currency = 'UGX';

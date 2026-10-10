@@ -32,6 +32,7 @@ class CitoOtpAuthFlowTest extends TestCase
             if (str_ends_with($request->url(), '/verify')) {
                 return Http::response(['challengeId' => 'OTP-test', 'status' => 'VERIFIED'], 200);
             }
+
             return Http::response([
                 'challengeId' => 'OTP-test',
                 'status' => 'PENDING',

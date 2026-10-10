@@ -7,12 +7,12 @@ use App\Mail\PasswordResetCode;
 use App\Models\Otp;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Cito\CitoFeatureGate;
+use App\Services\Cito\CitoOtpAuthService;
 use App\Services\CommercialInsightsService;
 use App\Services\CustomerCreditProfileService;
 use App\Services\PersonalFinancialSpaceService;
 use App\Services\SmsService;
-use App\Services\Cito\CitoFeatureGate;
-use App\Services\Cito\CitoOtpAuthService;
 use App\Services\StaffCredentialService;
 use App\Support\ApiResponse;
 use Carbon\Carbon;
@@ -360,6 +360,7 @@ class AuthController extends Controller
                     (string) $request->input('phone'), (string) $request->input('purpose', 'LOGIN'),
                     strtoupper((string) $request->input('otp_channel', 'sms'))
                 );
+
                 return ApiResponse::success('OTP challenge requested', [
                     'expires_at' => $result['expires_at'],
                     'max_attempts' => 3,
@@ -422,6 +423,7 @@ class AuthController extends Controller
                 $token = app(CitoOtpAuthService::class)->verify(
                     (string) $request->input('phone'), (string) $request->input('otp')
                 );
+
                 return ApiResponse::success('OTP verified successfully', [
                     'verification_token' => $token,
                     'verification_expires_at' => now()->addMinutes(10)->toIso8601String(),

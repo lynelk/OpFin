@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\Cito\CitoBaasGovernanceService;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -27,6 +26,7 @@ class CitoBaasGovernanceController extends Controller
                 $request->user(), $data['operation'], $data['idempotency_key'], $data['payload']
             );
             unset($intent->request_payload);
+
             return response()->json(['data' => ['intent' => $intent]], 201);
         } catch (InvalidArgumentException $exception) {
             return response()->json(['message' => $exception->getMessage()], 409);

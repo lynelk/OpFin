@@ -6,7 +6,7 @@ use App\Models\FinancialSpace;
 use App\Models\User;
 use App\Services\FinancialSpacePayoutMandateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -17,7 +17,7 @@ class FinancialSpacePayoutMandateTest extends TestCase
     private function space(): FinancialSpace
     {
         return FinancialSpace::create([
-            'public_id' => (string) \Illuminate\Support\Str::uuid(),
+            'public_id' => (string) Str::uuid(),
             'type' => 'investment_club', 'name' => 'Mandate Test Club',
             'country' => 'UG', 'currency' => 'UGX', 'status' => 'active',
         ]);

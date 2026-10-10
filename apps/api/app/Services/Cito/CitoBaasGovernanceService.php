@@ -3,6 +3,8 @@
 namespace App\Services\Cito;
 
 use App\Models\User;
+use App\Services\AuditLogger;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -43,6 +45,7 @@ class CitoBaasGovernanceService
             throw new InvalidArgumentException('Production billing account is not independently authorised.');
         }
         $hash = hash('sha256', json_encode([$environment, $operation, $account, $payload], JSON_THROW_ON_ERROR));
+
         return DB::transaction(function () use ($maker, $operation, $idempotencyKey, $payload, $account, $environment, $hash) {
             $existing = DB::table('cito_baas_operation_intents')
                 ->where('idempotency_key', $idempotencyKey)->lockForUpdate()->first();
@@ -50,6 +53,7 @@ class CitoBaasGovernanceService
                 if ($existing->instruction_hash !== $hash || (int) $existing->maker_user_id !== (int) $maker->id) {
                     throw new InvalidArgumentException('BaaS key belongs to a different instruction or actor.');
                 }
+
                 return $existing;
             }
             $id = DB::table('cito_baas_operation_intents')->insertGetId([
@@ -59,10 +63,11 @@ class CitoBaasGovernanceService
                 'maker_user_id' => $maker->id, 'status' => 'pending_approval',
                 'created_at' => now(), 'updated_at' => now(),
             ]);
-            app(\App\Services\AuditLogger::class)->record('cito.baas.intent_drafted', $maker, $maker, [
+            app(AuditLogger::class)->record('cito.baas.intent_drafted', $maker, $maker, [
                 'intent_id' => $id, 'operation' => $operation,
                 'environment' => $environment, 'instruction_hash' => $hash,
             ]);
+
             return DB::table('cito_baas_operation_intents')->find($id);
         });
     }
@@ -93,11 +98,12 @@ class CitoBaasGovernanceService
                 'checker_user_id' => $checker->id, 'status' => 'submission_started',
                 'approved_at' => now(), 'updated_at' => now(),
             ]);
-            app(\App\Services\AuditLogger::class)->record('cito.baas.intent_approved', $checker, $checker, [
+            app(AuditLogger::class)->record('cito.baas.intent_approved', $checker, $checker, [
                 'intent_id' => $id, 'operation' => $row->operation,
                 'environment' => $row->environment,
                 'instruction_hash' => $row->instruction_hash,
             ]);
+
             return $row;
         });
         if ($intent === null) {
@@ -120,7 +126,7 @@ class CitoBaasGovernanceService
                 'provider_status' => substr((string) ($response['status'] ?? 'ACCEPTED'), 0, 48),
                 'submitted_at' => now(), 'updated_at' => now(),
             ]);
-            app(\App\Services\AuditLogger::class)->record('cito.baas.submitted_unconfirmed', $checker, $checker, [
+            app(AuditLogger::class)->record('cito.baas.submitted_unconfirmed', $checker, $checker, [
                 'intent_id' => $id, 'provider_reference' => is_string($reference) ? $reference : null,
             ]);
         } catch (Throwable $exception) {
@@ -129,10 +135,11 @@ class CitoBaasGovernanceService
             DB::table('cito_baas_operation_intents')->where('id', $id)->update([
                 'status' => 'submission_unknown', 'updated_at' => now(),
             ]);
-            app(\App\Services\AuditLogger::class)->record('cito.baas.submission_unknown', $checker, $checker, [
+            app(AuditLogger::class)->record('cito.baas.submission_unknown', $checker, $checker, [
                 'intent_id' => $id, 'exception_type' => $exception::class,
             ]);
         }
+
         return $this->find($checker, $id);
     }
 
@@ -145,22 +152,23 @@ class CitoBaasGovernanceService
         }
         // Omit request bodies from management API output: they may contain customer references.
         unset($row->request_payload);
+
         return $row;
     }
 
     private function authorised(User $user): void
     {
         if (! $user->hasRole(User::ROLE_PLATFORM_ADMIN) || $user->trashed()) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Platform billing authority is required.');
+            throw new AuthorizationException('Platform billing authority is required.');
         }
     }
 
     private function assertFields(string $operation, array $payload): void
     {
         $required = match ($operation) {
-            'charge' => ['billingAccountReference','serviceCode','usageQuantity','netAmount','currency','idempotencyKey'],
-            'usage' => ['billingAccountReference','serviceCode','meterCode','quantity','sourceReference','idempotencyKey'],
-            'subscription' => ['customerReference','accountReference','contractReference','subscriptionReference','serviceCode','planCode'],
+            'charge' => ['billingAccountReference', 'serviceCode', 'usageQuantity', 'netAmount', 'currency', 'idempotencyKey'],
+            'usage' => ['billingAccountReference', 'serviceCode', 'meterCode', 'quantity', 'sourceReference', 'idempotencyKey'],
+            'subscription' => ['customerReference', 'accountReference', 'contractReference', 'subscriptionReference', 'serviceCode', 'planCode'],
         };
         // Preserve the versioned external contract and reject unexpected
         // fields so customer secrets or loan data cannot be smuggled into Cito.
@@ -191,7 +199,7 @@ class CitoBaasGovernanceService
                 throw new InvalidArgumentException('Missing BaaS contract field: '.$field);
             }
         }
-        foreach (['netAmount','quantity','usageQuantity'] as $amount) {
+        foreach (['netAmount', 'quantity', 'usageQuantity'] as $amount) {
             if (isset($payload[$amount]) && ! preg_match('/^\d+(?:\.\d+)?$/', (string) $payload[$amount])) {
                 throw new InvalidArgumentException('BaaS quantities and amounts must use nonnegative decimal strings.');
             }

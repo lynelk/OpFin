@@ -6,7 +6,6 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
-use RuntimeException;
 
 /**
  * Single-attempt Cito RSA v2 transport. Side effects are never retried implicitly.
@@ -60,6 +59,7 @@ class SignedCitoTransport
         // Disallow redirect following and automatic retries for signed operations.
         $request = Http::withOptions(['allow_redirects' => false])
             ->withHeaders($headers)->timeout((int) config('services.cito.timeout_seconds', 15));
+
         return $request->withBody($body, 'application/json')->send($method, $url);
     }
 }

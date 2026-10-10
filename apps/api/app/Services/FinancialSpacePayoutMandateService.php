@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\FinancialSpace;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -15,7 +16,7 @@ class FinancialSpacePayoutMandateService
         $this->admin($maker);
         $env = strtoupper((string) config('services.cito.environment', 'SANDBOX'));
         $currency = strtoupper((string) ($data['currency'] ?? ''));
-        $expires = \Illuminate\Support\Carbon::parse($data['expires_at'] ?? 'yesterday');
+        $expires = Carbon::parse($data['expires_at'] ?? 'yesterday');
         $document = strtolower(trim((string) ($data['document_sha256'] ?? '')));
         foreach (['custody_agreement_reference', 'segregated_settlement_account_reference'] as $field) {
             if (! is_string($data[$field] ?? null) || ! preg_match('/^[A-Za-z0-9:._-]{6,128}$/', $data[$field])) {
@@ -38,12 +39,14 @@ class FinancialSpacePayoutMandateService
         app(AuditLogger::class)->record('financial_space.payout_mandate_requested', $maker, $space, [
             'mandate_id' => $id, 'environment' => $env, 'document_sha256' => $document,
         ]);
+
         return DB::table('financial_space_payout_mandates')->find($id);
     }
 
     public function approve(FinancialSpace $space, User $checker, int $mandateId): object
     {
         $this->admin($checker);
+
         return DB::transaction(function () use ($space, $checker, $mandateId) {
             $row = DB::table('financial_space_payout_mandates')
                 ->where('financial_space_id', $space->id)->where('id', $mandateId)->lockForUpdate()->first();
@@ -63,6 +66,7 @@ class FinancialSpacePayoutMandateService
                 'mandate_id' => $row->id, 'maker_user_id' => $row->maker_user_id,
                 'environment' => $row->environment, 'document_sha256' => $row->document_sha256,
             ]);
+
             return DB::table('financial_space_payout_mandates')->find($row->id);
         });
     }

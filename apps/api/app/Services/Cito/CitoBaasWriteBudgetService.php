@@ -41,6 +41,7 @@ class CitoBaasWriteBudgetService
         $environment = strtoupper((string) config('services.cito.environment', 'SANDBOX'));
         $row = DB::table('cito_baas_daily_write_limits')
             ->where('environment', $environment)->where('business_date', now('UTC')->toDateString())->first();
+
         return [
             'environment' => $environment,
             'limit' => (int) config('services.cito.baas_daily_write_limit', 0),

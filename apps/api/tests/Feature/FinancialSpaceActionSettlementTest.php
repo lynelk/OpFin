@@ -49,6 +49,7 @@ class FinancialSpaceActionSettlementTest extends TestCase
                 'source_id' => $id,
             ],
         ]);
+
         return [$id, $tx];
     }
 

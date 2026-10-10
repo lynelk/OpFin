@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Models\FinancialSpace;
 use App\Models\User;
-use App\Services\MobileMoney\MobileMoneyService;
 use App\Services\CommunityFinance\CommunityFinanceReadinessService;
+use App\Services\MobileMoney\MobileMoneyService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -27,6 +27,7 @@ class FinancialSpaceActionService
         $existing = DB::table('financial_space_action_intents')->where('idempotency_key', $data['idempotency_key'])->first();
         if ($existing) {
             $this->assertSameAction($existing, $space, $actor, $data);
+
             return $existing;
         }
 
@@ -58,6 +59,7 @@ class FinancialSpaceActionService
         ]);
         $intent = DB::table('financial_space_action_intents')->find($id);
         $this->audit->record('financial_space.action.created', $actor, $space, ['action_intent_id' => $id, 'action_type' => $data['action_type']]);
+
         return $intent;
     }
 
@@ -106,6 +108,7 @@ class FinancialSpaceActionService
                 'status' => 'submission_started',
                 'updated_at' => now(),
             ]);
+
             return true;
         });
         if (! $claimed) {
@@ -175,14 +178,27 @@ class FinancialSpaceActionService
         }
     }
 
-    private function assertSupportedSpace(FinancialSpace $space): void {
-        if (! in_array($space->type, ['investment_club','sacco','savings_group'], true)) throw new InvalidArgumentException('This action layer is limited to governed community Financial Spaces.');
-        if ($space->type === 'sacco') $this->communityFinance->assertCanActivate();
+    private function assertSupportedSpace(FinancialSpace $space): void
+    {
+        if (! in_array($space->type, ['investment_club', 'sacco', 'savings_group'], true)) {
+            throw new InvalidArgumentException('This action layer is limited to governed community Financial Spaces.');
+        }
+        if ($space->type === 'sacco') {
+            $this->communityFinance->assertCanActivate();
+        }
     }
-    private function assertMember(FinancialSpace $space, User $user): void {
-        if (! DB::table('financial_space_memberships')->where('financial_space_id',$space->id)->where('user_id',$user->id)->where('status','active')->whereNull('deleted_at')->exists()) throw new InvalidArgumentException('Active Space membership is required.');
+
+    private function assertMember(FinancialSpace $space, User $user): void
+    {
+        if (! DB::table('financial_space_memberships')->where('financial_space_id', $space->id)->where('user_id', $user->id)->where('status', 'active')->whereNull('deleted_at')->exists()) {
+            throw new InvalidArgumentException('Active Space membership is required.');
+        }
     }
-    private function assertOfficer(FinancialSpace $space, User $user): void {
-        if (! DB::table('financial_space_memberships')->where('financial_space_id',$space->id)->where('user_id',$user->id)->where('status','active')->whereNull('deleted_at')->whereIn('role',['owner','administrator','chairperson','treasurer','director'])->exists()) throw new InvalidArgumentException('An authorised Space officer must approve this action.');
+
+    private function assertOfficer(FinancialSpace $space, User $user): void
+    {
+        if (! DB::table('financial_space_memberships')->where('financial_space_id', $space->id)->where('user_id', $user->id)->where('status', 'active')->whereNull('deleted_at')->whereIn('role', ['owner', 'administrator', 'chairperson', 'treasurer', 'director'])->exists()) {
+            throw new InvalidArgumentException('An authorised Space officer must approve this action.');
+        }
     }
 }

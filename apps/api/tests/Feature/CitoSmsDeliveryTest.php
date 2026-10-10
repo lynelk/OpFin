@@ -15,7 +15,7 @@ class CitoSmsDeliveryTest extends TestCase
 
     public function test_accepted_cito_sms_is_submitted_not_falsely_confirmed_delivered(): void
     {
-        $key = openssl_pkey_new(['private_key_bits'=>2048, 'private_key_type'=>OPENSSL_KEYTYPE_RSA]);
+        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
         openssl_pkey_export($key, $pem);
         config([
             'app.env' => 'testing',

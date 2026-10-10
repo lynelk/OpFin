@@ -19,6 +19,7 @@ class FinancialSpaceActionSettlementService
             || ! isset($metadata['source_id'])) {
             return null;
         }
+
         return DB::transaction(function () use ($money, $metadata) {
             $action = DB::table('financial_space_action_intents')
                 ->where('id', (int) $metadata['source_id'])->lockForUpdate()->first();
@@ -44,6 +45,7 @@ class FinancialSpaceActionSettlementService
                     'provider_statement_status' => 'instruction_mismatch',
                     'updated_at' => now(),
                 ]);
+
                 return DB::table('financial_space_action_intents')->find($action->id);
             }
             if ($money->statement_reconciliation_status !== MobileMoneyTransaction::STATEMENT_MATCHED) {
@@ -61,6 +63,7 @@ class FinancialSpaceActionSettlementService
                 'provider_statement_matched_at' => now(),
                 'updated_at' => now(),
             ]);
+
             return DB::table('financial_space_action_intents')->find($action->id);
         });
     }

@@ -7,6 +7,7 @@ use App\Models\EssentialsAdvance;
 use App\Models\EssentialsBiller;
 use App\Models\EssentialsOwnMoneyPayment;
 use App\Models\EssentialsRepayment;
+use App\Services\Cito\RsaV2Signer;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -18,6 +19,7 @@ class CpayEssentialsClient
     {
         $path = $this->path('bill_lookup_path');
         $biller = EssentialsBiller::query()->findOrFail($account->biller_id);
+
         return $this->sendSigned($path, [
             'merchantNumber' => $this->merchantNumber(),
             'country' => strtoupper((string) config('services.cpay.country', 'UG')),
@@ -31,6 +33,7 @@ class CpayEssentialsClient
     {
         $path = $this->path($biller->route === 'manual_verification' ? 'beneficiary_payment_path' : 'bill_payment_path');
         $metadata = (array) $account->metadata;
+
         return $this->sendSigned($path, [
             'merchantNumber' => $this->merchantNumber(), 'country' => strtoupper((string) config('services.cpay.country', 'UG')),
             'currency' => $advance->currency, 'billerCode' => $biller->code, 'accountReference' => $account->account_reference,
@@ -48,8 +51,7 @@ class CpayEssentialsClient
         EssentialsAccount $account,
         EssentialsBiller $biller,
         string $collectionReference,
-    ): array
-    {
+    ): array {
         $path = $this->path($biller->route === 'manual_verification' ? 'beneficiary_payment_path' : 'bill_payment_path');
         $metadata = (array) $account->metadata;
 
@@ -118,6 +120,7 @@ class CpayEssentialsClient
         if (str_contains($path, '://') || str_contains($path, '..') || strpbrk($path, "?#\r\n") !== false) {
             throw new RuntimeException('The configured CPay capability path is invalid.');
         }
+
         return $path;
     }
 
@@ -142,6 +145,7 @@ class CpayEssentialsClient
             'X-CPay-Environment' => strtoupper((string) config('services.cpay.environment', 'sandbox')),
         ])->connectTimeout(10)->timeout((int) config('services.cpay.timeout_seconds', 30))
             ->withBody($body, 'application/json')->send('POST', $base.$path);
+
         return $this->decode($response);
     }
 
@@ -154,12 +158,13 @@ class CpayEssentialsClient
         if (! is_array($result)) {
             throw new RuntimeException('CPay Essentials response was not valid JSON.');
         }
+
         return $result;
     }
 
     private function sign(string $canonical): string
     {
-        return app(\App\Services\Cito\RsaV2Signer::class)
+        return app(RsaV2Signer::class)
             ->sign($canonical, (string) config('services.cpay.private_key'));
     }
 

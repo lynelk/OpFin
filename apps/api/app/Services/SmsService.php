@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Jobs\SendSms;
 use App\Models\SmsMessage;
+use App\Services\Cito\CitoCommunicationsClient;
+use App\Services\Cito\CitoFeatureGate;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -47,7 +49,7 @@ class SmsService
 
     public function cito($recipients, $content, ?string $idempotencyKey = null): array
     {
-        app(\App\Services\Cito\CitoFeatureGate::class)->requireEnabled('sms');
+        app(CitoFeatureGate::class)->requireEnabled('sms');
         if (! is_string($recipients) || str_contains($recipients, ',')) {
             throw new Exception('Cito SMS gateway currently requires one recipient per message.');
         }
@@ -57,8 +59,9 @@ class SmsService
         } elseif (preg_match('/^0[0-9]{9}$/', $recipient)) {
             $recipient = '+256'.substr($recipient, 1);
         }
-        $response = app(\App\Services\Cito\CitoCommunicationsClient::class)
+        $response = app(CitoCommunicationsClient::class)
             ->sendSms($recipient, (string) $content, 'NOTIFICATION', $idempotencyKey);
+
         return [
             'success' => true,
             'message' => 'Cito SMS accepted for processing; not confirmed delivered.',

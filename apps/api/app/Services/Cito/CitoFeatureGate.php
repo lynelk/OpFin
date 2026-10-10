@@ -31,6 +31,7 @@ class CitoFeatureGate
         if ($environment === 'PRODUCTION' && ! (bool) config('services.cito.accepted_capabilities.'.$capability, false)) {
             return false;
         }
+
         return true;
     }
 

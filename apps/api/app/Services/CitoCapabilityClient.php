@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ConsentRecord;
 use App\Models\KycCase;
 use App\Models\User;
+use App\Services\Cito\SignedCitoTransport;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
@@ -22,6 +23,7 @@ class CitoCapabilityClient
     public function creditReport(User $user, ConsentRecord $consent, string $capability = 'CREDIT_REPORT_CRB'): array
     {
         $this->assertCreditConsent($user, $consent);
+
         return $this->executeCapability(
             path: '/api/v2/credit/reports',
             user: $user,
@@ -35,6 +37,7 @@ class CitoCapabilityClient
     public function creditScore(User $user, ConsentRecord $consent, string $capability = 'CREDIT_SCORE_CRB'): array
     {
         $this->assertCreditConsent($user, $consent);
+
         return $this->executeCapability(
             path: '/api/v2/credit/scores',
             user: $user,
@@ -160,7 +163,7 @@ class CitoCapabilityClient
 
     private function sendSigned(string $path, array $payload): Response
     {
-        return app(\App\Services\Cito\SignedCitoTransport::class)->request('POST', $path, $payload);
+        return app(SignedCitoTransport::class)->request('POST', $path, $payload);
     }
 
     private function merchantNumber(): string

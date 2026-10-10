@@ -24,6 +24,7 @@ final class RsaV2Signer
         if ($key === false || ! openssl_sign($canonical, $signature, $key, OPENSSL_ALGO_SHA256)) {
             throw new RuntimeException('Cito/CPay RSA v2 signing failed.');
         }
+
         return base64_encode($signature);
     }
 }

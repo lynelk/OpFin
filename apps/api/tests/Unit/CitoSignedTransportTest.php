@@ -30,6 +30,7 @@ class CitoSignedTransportTest extends TestCase
                 $request->header('X-CPay-Nonce')[0],
                 hash('sha256', $request->body()),
             ]);
+
             return $request->hasHeader('X-CPay-Idempotency-Key', 'stable-1')
                 && $request->hasHeader('X-CPay-Environment', 'SANDBOX')
                 && openssl_verify(

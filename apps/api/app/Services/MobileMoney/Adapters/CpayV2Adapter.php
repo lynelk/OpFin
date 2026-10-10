@@ -4,6 +4,7 @@ namespace App\Services\MobileMoney\Adapters;
 
 use App\Contracts\MobileMoneyProviderInterface;
 use App\Models\MobileMoneyTransaction;
+use App\Services\Cito\RsaV2Signer;
 use App\Services\MobileMoney\MobileMoneyProviderResponse;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -246,7 +247,7 @@ class CpayV2Adapter implements MobileMoneyProviderInterface
 
     private function sign(string $canonical): string
     {
-        return app(\App\Services\Cito\RsaV2Signer::class)
+        return app(RsaV2Signer::class)
             ->sign($canonical, (string) config('services.cpay.private_key'));
     }
 

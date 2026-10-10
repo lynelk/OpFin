@@ -75,6 +75,7 @@ class CitoOtpAuthService
                     'verified_at' => null, 'verification_token_hash' => null,
                 ]);
             });
+
             return ['expires_at' => $expires->toIso8601String()];
         } finally {
             $lock->release();
@@ -85,6 +86,7 @@ class CitoOtpAuthService
     {
         app(CitoFeatureGate::class)->requireEnabled('otp');
         $result = $this->checkAndConsume($phone, $code, false);
+
         return $result;
     }
 
@@ -108,6 +110,7 @@ class CitoOtpAuthService
             if ($changed !== 1) {
                 throw new InvalidArgumentException('OTP already consumed.');
             }
+
             return;
         }
         $this->checkAndConsume($phone, $code, true);
@@ -156,6 +159,7 @@ class CitoOtpAuthService
                     }
                 }
             });
+
             return $token;
         } finally {
             $lock->release();
@@ -173,6 +177,7 @@ class CitoOtpAuthService
         if (! preg_match('/^\\+[1-9][0-9]{7,14}$/', $p)) {
             throw new InvalidArgumentException('Invalid OTP phone format.');
         }
+
         return $p;
     }
 }

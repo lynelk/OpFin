@@ -38,6 +38,7 @@ class CitoCapabilityDiscoveryClient
         if (! $response->successful() || ! is_array($response->json())) {
             throw new RuntimeException('Cito capability discovery is unavailable (HTTP '.$response->status().').');
         }
+
         return $response->json();
     }
 }
