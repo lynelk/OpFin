@@ -5,10 +5,9 @@ namespace App\Services;
 use App\Models\ConsentRecord;
 use App\Models\KycCase;
 use App\Models\User;
+use App\Services\Cito\SignedCitoTransport;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -21,8 +20,24 @@ class CitoCapabilityClient
             && trim((string) config('services.cito.private_key')) !== '';
     }
 
+    public function creditReport(User $user, ConsentRecord $consent, string $capability = 'CREDIT_REPORT_CRB'): array
+    {
+        $this->assertCreditConsent($user, $consent);
+
+        return $this->executeCapability(
+            path: '/api/v2/credit/reports',
+            user: $user,
+            nationalId: (string) $user->national_id,
+            capability: $capability,
+            purpose: $consent->purpose,
+            consentReference: 'consent:'.$consent->id,
+        );
+    }
+
     public function creditScore(User $user, ConsentRecord $consent, string $capability = 'CREDIT_SCORE_CRB'): array
     {
+        $this->assertCreditConsent($user, $consent);
+
         return $this->executeCapability(
             path: '/api/v2/credit/scores',
             user: $user,
@@ -31,6 +46,18 @@ class CitoCapabilityClient
             purpose: $consent->purpose,
             consentReference: 'consent:'.$consent->id,
         );
+    }
+
+    private function assertCreditConsent(User $user, ConsentRecord $consent): void
+    {
+        if ((int) $consent->user_id !== (int) $user->getKey()
+            || $consent->purpose !== ConsentRecord::PURPOSE_CREDIT_PROCESSING
+            || $consent->status !== ConsentRecord::STATUS_GRANTED
+            || $consent->revoked_at !== null
+            || $consent->granted_at === null
+            || $consent->granted_at->isFuture()) {
+            throw new InvalidArgumentException('Current customer credit-processing consent is required.');
+        }
     }
 
     public function identityCheck(User $user, KycCase $case, string $capability, bool $forceRefresh = false, bool $systemInitiated = false): array
@@ -136,38 +163,7 @@ class CitoCapabilityClient
 
     private function sendSigned(string $path, array $payload): Response
     {
-        $body = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-        $timestamp = now('UTC')->format('Y-m-d\TH:i:s\Z');
-        $nonce = (string) Str::uuid();
-        $canonical = implode("\n", ['POST', $path, '', $timestamp, $nonce, hash('sha256', $body)]);
-
-        return Http::withHeaders([
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-            'X-CPay-Merchant-Number' => $this->merchantNumber(),
-            'X-CPay-Signature-Version' => 'v2',
-            'X-CPay-Timestamp' => $timestamp,
-            'X-CPay-Nonce' => $nonce,
-            'X-CPay-Signature' => $this->sign($canonical),
-            'X-CPay-Environment' => strtoupper((string) config('services.cito.environment', 'SANDBOX')),
-        ])
-            ->timeout((int) config('services.cito.timeout_seconds', 15))
-            ->withBody($body, 'application/json')
-            ->send('POST', rtrim((string) config('services.cito.base_url'), '/').$path);
-    }
-
-    private function sign(string $canonical): string
-    {
-        $privateKeyValue = str_replace('\\n', "\n", (string) config('services.cito.private_key'));
-        $privateKey = openssl_pkey_get_private($privateKeyValue);
-        if ($privateKey === false) {
-            throw new RuntimeException('Cito private key is invalid or unreadable.');
-        }
-        if (! openssl_sign($canonical, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
-            throw new RuntimeException('Unable to sign Cito capability request.');
-        }
-
-        return base64_encode($signature);
+        return app(SignedCitoTransport::class)->request('POST', $path, $payload);
     }
 
     private function merchantNumber(): string

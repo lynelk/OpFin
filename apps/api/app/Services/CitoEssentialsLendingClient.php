@@ -6,6 +6,7 @@ use App\Models\CreditProfile;
 use App\Models\EssentialsAdvance;
 use App\Models\EssentialsQuote;
 use App\Models\User;
+use App\Services\Cito\RsaV2Signer;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -190,15 +191,7 @@ class CitoEssentialsLendingClient
 
     private function sign(string $canonical): string
     {
-        $privateKeyValue = str_replace('\\n', "\n", (string) config('services.cito.private_key'));
-        $privateKey = openssl_pkey_get_private($privateKeyValue);
-        if ($privateKey === false) {
-            throw new RuntimeException('Cito private key is invalid or unreadable.');
-        }
-        if (! openssl_sign($canonical, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
-            throw new RuntimeException('Unable to sign Cito Essentials lending request.');
-        }
-
-        return base64_encode($signature);
+        return app(RsaV2Signer::class)
+            ->sign($canonical, (string) config('services.cito.private_key'));
     }
 }

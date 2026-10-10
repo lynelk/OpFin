@@ -270,3 +270,24 @@ The opening-balance baseline is fixed and immutable from treasury-account creati
 - Response includes `freshness.observed_at`, `freshness.window_seconds=300` and `freshness.server_authoritative=true`.
 - The endpoint returns a private `ETag`. A matching `If-None-Match` returns HTTP `304` with no replacement financial payload.
 - This is a read-orchestration endpoint only. It does not create a second financial source of truth; underlying domain services and Space permissions remain authoritative.
+
+## Cito External API v2.0 integration controls (10 October 2026)
+
+The [P0–P2 implementation and acceptance register](../../../../docs/integrations/CITO_V2_P0_P2_COMPLETION_REGISTER.md) identifies the contract, internal accounting ownership, non-destructive migrations, feature flags and remaining provider release evidence. The implementation is on a **draft branch**, not a certified production release.
+
+| Method | OpFin API endpoint | Authorisation and contract |
+| --- | --- | --- |
+| POST | `/api/admin/cito-baas/intents` | `platform_admin` only; creates an immutable charge/usage/subscription draft with a stable idempotency key, exact external fields and no customer-loan ledger posting |
+| GET | `/api/admin/cito-baas/intents/{intent}` | `platform_admin` only; returns redacted submission state, excluding the raw BaaS request payload |
+| POST | `/api/admin/cito-baas/intents/{intent}/approve` | Different `platform_admin` as checker, plus BaaS account scope and daily write reservation. `submitted_unconfirmed` does **not** mean charge earned or invoice settled |
+| GET | `/api/admin/cito-operations/snapshot` | `platform_admin` or `operations`; locally recorded external-cost totals and missing cost events, approved write limit, capability release gates, no secret values |
+| POST | `/api/admin/financial-spaces/{space}/payout-mandates` | `platform_admin` proposes segregated settlement/custody evidence tied to the correct space, currency and environment |
+| POST | `/api/admin/financial-spaces/{space}/payout-mandates/{mandate}/approve` | Independent `platform_admin` checks an unexpired mandate; external provider certification and Financial Space payout feature gate remain separate requirements |
+
+The existing `POST /api/generate-otp` optionally accepts `purpose` (`LOGIN`, `REGISTRATION`, `PASSWORD_RESET`) and `otp_channel` (`sms`, `whatsapp`). Under `CITO_ENABLE_OTP`, Cito returns a challenge reference, which OpFin persists server-side. WhatsApp is **OTP delivery only**, and also requires `CITO_ENABLE_OTP_WHATSAPP`, an approved template and provider entitlement. Generic WhatsApp and USSD messaging remain separate existing OpFin channels; no Cito external v2 contract is asserted for them.
+
+Registration also verifies that the Cito challenge was explicitly issued for `REGISTRATION`, was verified for this phone/environment, has not expired and has not been consumed. A `LOGIN` or `PASSWORD_RESET` challenge cannot be used to create a new customer account. On successful registration the provider challenge is consumed.
+
+An existing Financial Space action must retain its original idempotency key, owner, space, amount, direction and payment destination. A separately approved payout mandate and provider-release flag are required for disbursement. Provider statement matching moves an external action to `statement_matched_unallocated`, not to a club ledger or NAV adjustment. Accounting requires an independently approved club instruction; reversals and mismatches require review.
+
+SMS acceptance is stored as `Submitted`, not `Sent`. The persisted SMS message identity is the idempotency key for repeat delivery attempts. CPay HTTP 202 and provider outages are not finality.

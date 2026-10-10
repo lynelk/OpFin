@@ -14,7 +14,7 @@
         "bootstrap": "^5.3.8",
         "concurrently": "^10.0.5",
         "laravel-vite-plugin": "^3.2",
-        "postcss": "^8.4.47",
+        "postcss": "^8.5.29",
         "sass": "^1.105.1",
         "tailwindcss": "^4.3.3",
         "vite": "^8.3"

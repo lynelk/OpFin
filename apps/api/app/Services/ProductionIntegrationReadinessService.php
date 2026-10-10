@@ -63,6 +63,15 @@ class ProductionIntegrationReadinessService
             ], true, 'OTP and customer security notifications');
         }
 
+        if ($gateway === 'CITO') {
+            return $this->check([
+                'gateway' => $gateway,
+                'base_url' => config('services.cito.base_url'),
+                'merchant_number' => config('services.cito.merchant_number'),
+                'private_key' => config('services.cito.private_key'),
+            ], true, 'Cito SMS provisioned, activation still requires entitlement and release acceptance');
+        }
+
         if ($gateway === 'CPAY') {
             return $this->check([
                 'gateway' => $gateway,
