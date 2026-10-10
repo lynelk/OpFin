@@ -75,7 +75,7 @@ final class MerchantStockFinanceHandoff
             throw new InvalidArgumentException('Passport evidence coverage or freshness is invalid.');
         }
         $level = $passport['evidenceLevel'] ?? null;
-        if (! in_array($level, ['recorded', 'reconciled', 'externally_corroborated'], true)) {
+        if (!in_array($level, ['recorded', 'reconciled', 'externally_corroborated'], true)) {
             throw new InvalidArgumentException('Unknown evidence level.');
         }
 
@@ -108,7 +108,7 @@ final class MerchantStockFinanceHandoff
     /** @return array<string, mixed> */
     private static function object(mixed $value, string $name): array
     {
-        if (! is_array($value) || array_is_list($value)) {
+        if (!is_array($value) || array_is_list($value)) {
             throw new InvalidArgumentException($name.' must be an object.');
         }
 
@@ -128,7 +128,7 @@ final class MerchantStockFinanceHandoff
 
     private static function id(mixed $value, string $name): string
     {
-        if (! is_string($value) || strlen($value) < 1 || strlen($value) > 128 ||
+        if (!is_string($value) || strlen($value) < 1 || strlen($value) > 128 ||
             preg_match('/^[A-Za-z0-9._:-]+$/D', $value) !== 1) {
             throw new InvalidArgumentException($name.' must be a non-empty opaque reference.');
         }
@@ -138,7 +138,7 @@ final class MerchantStockFinanceHandoff
 
     private static function time(mixed $value, string $name): int
     {
-        if (! is_string($value) ||
+        if (!is_string($value) ||
             preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/D', $value) !== 1) {
             throw new InvalidArgumentException($name.' must be a UTC ISO 8601 timestamp.');
         }
@@ -151,7 +151,7 @@ final class MerchantStockFinanceHandoff
 
     private static function minor(mixed $value, string $name, bool $positive = false): int
     {
-        if (! is_int($value) || $value < ($positive ? 1 : 0) ||
+        if (!is_int($value) || $value < ($positive ? 1 : 0) ||
             $value > self::MAX_SAFE_INTEGER) {
             throw new InvalidArgumentException($name.' must be a safe integer in UGX minor units.');
         }
