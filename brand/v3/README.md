@@ -34,7 +34,6 @@ The source-controlled visual system is ready for engineering review. It must not
 2. completed official trademark/name searches and legal disposition for launch/expansion markets;
 3. representative mobile, desktop, print, reverse-background and accessibility visual sign-off;
 4. generated production assets reviewed against the vector masters (toolkit exports generated on 4 October 2026, with visual review pending);
-5. Google Play listing and graphics actually updated in Play Console;
-6. the wordmark and lock-ups outlined from the licensed Inter SemiBold, because they currently use live text that renders in fallback fonts.
+5. Google Play listing and graphics actually updated in Play Console.
 
-Until then, use **OpFin Brand System 3.0.0-rc.1**. This avoids the ancient corporate ritual of declaring something complete because the PDF has a date on it.
+The wordmark and lock-ups were converted to path-only vector masters from the licensed Inter SemiBold on 8 October 2026, removing the runtime/fallback-font dependency. Until the external evidence gates above are complete, use **OpFin Brand System 3.0.0-rc.1**. This avoids the ancient corporate ritual of declaring something complete because the PDF has a date on it.

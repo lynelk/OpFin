@@ -38,9 +38,7 @@ The v3 vector source files are under `brand/v3/assets/`:
 
 Web renders the vector monogram directly. Mobile and store raster exports remain provenance-controlled through `brand/asset-manifest.json` and the asset-generation scripts. The wider toolkit (monogram variants, favicons, profile images and motif exports) is generated into `brand/v3/exports/` with its own `EXPORT_MANIFEST.json`.
 
-The wordmark and lock-ups set "OpFin" as live Inter text rather than outlined paths. Where Inter is not installed they render in a fallback font, so they must be outlined before the v3.0 freeze and are not yet exported.
-
-Inter is self-hosted and bundled from the pinned official source recorded in `brand/opfin.tokens.json`. Applications do not rely on a runtime external font CDN.
+The wordmark and lock-ups are path-only vector masters derived from the licensed Inter SemiBold. They therefore do not depend on a recipient having Inter installed and cannot fall back to a different font. Inter remains self-hosted and bundled from the pinned official source recorded in `brand/opfin.tokens.json` for application typography; applications do not rely on a runtime external font CDN.
 
 ## Product visual language
 

@@ -19,10 +19,12 @@ Record every brand-system change here, newest first. Never silently overwrite a 
 
 ### Found, pending before freeze
 
-- The wordmark and both lock-ups set "OpFin" as live Inter `<text>`, not outlined paths. Where Inter is not installed they render in a fallback font, usually Arial, so they are not yet true vector masters. Outline them from the licensed Inter SemiBold before the v3.0 freeze. Their exports are withheld until then.
+- Representative real-screen/mobile, desktop, print and accessibility visual sign-off remains an external release gate.
+- Official trademark disposition and store-listing/signed-release evidence remain external release gates.
 
 ### Resolved
 
+- On 8 October 2026 the wordmark and both lock-ups were converted from live Inter text to path-only vector artwork derived from the licensed Inter SemiBold. The masters no longer depend on a recipient having Inter installed and cannot silently fall back to Arial.
 - `docs/BRAND_IMPLEMENTATION.md` no longer presents one fixed navigation menu as universal; channel-specific navigation and activation state are described in product documentation.
 
 ### Unchanged

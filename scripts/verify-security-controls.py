@@ -86,6 +86,17 @@ for path, expected in assets['files'].items():
     require(target.is_relative_to(ROOT), 'Invalid asset path')
     require(target.is_file() and provenance_hash(target) == expected, f'Brand asset changed without provenance update: {path}')
 
+# Brand identity masters used for the frozen package must be deterministic path-only artwork.
+# A live <text> node can silently fall back to a different font on another machine.
+for relative in (
+    'brand/v3/assets/opfin-wordmark.svg',
+    'brand/v3/assets/opfin-lockup-horizontal.svg',
+    'brand/v3/assets/opfin-lockup-stacked.svg',
+):
+    identity_svg = (ROOT / relative).read_text().lower()
+    require('<text' not in identity_svg, f'Brand identity master still contains live text: {relative}')
+    require('<path' in identity_svg, f'Brand identity master must contain outlined path artwork: {relative}')
+
 # Brand toolkit exports (issue #103) must match their manifest, and must be regenerated when a master changes.
 export_root = (ROOT / 'brand/v3/exports').resolve()
 toolkit = json.loads((export_root / 'EXPORT_MANIFEST.json').read_text())

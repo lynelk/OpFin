@@ -1,9 +1,10 @@
 // Generates the OpFin brand toolkit export set (issue #103) from the path-only v3 vector masters.
 //
 // Platform assets (app icons, Web/mobile symbols, fonts) stay with scripts/prepare-brand-assets.mjs;
-// this script never rewrites them. The wordmark and lock-ups use live Inter <text>, so they are not
-// rasterised here: their output would depend on the fonts installed on the machine. Outline them
-// from the licensed font before the v3.0 freeze, then add them to this export set.
+// this script never rewrites them. The wordmark and lock-ups are path-only masters derived from the
+// licensed Inter SemiBold, so their geometry is deterministic and does not depend on installed fonts.
+// They remain source masters here; distribution of additional wordmark/lock-up raster variants is
+// separately governed by visual acceptance rather than by a host font dependency.
 //
 // Run from the repository root after `npm ci` in apps/web (which provides sharp):
 //   node scripts/prepare-brand-toolkit.mjs
@@ -32,7 +33,6 @@ const manifest = {
   generator: { script: 'scripts/prepare-brand-toolkit.mjs', sharp: sharp.versions.sharp, libvips: sharp.versions.vips },
   status: 'Generated from the vector masters; pending visual review (v3 release gate 4). Not a frozen v3.0 release.',
   pending: [
-    'Wordmark and lock-up exports: outline the live Inter text from the licensed font first.',
     'Representative mobile, desktop, print and reverse-background visual sign-off.',
   ],
   masters: {},
