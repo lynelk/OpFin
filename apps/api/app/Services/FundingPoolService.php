@@ -247,12 +247,35 @@ class FundingPoolService
             throw new InvalidArgumentException('The selected funding pool is not available for new credit.');
         }
 
+        $policy = json_decode((string) ($pool->investment_policy ?? '{}'), true);
+        $policy = is_array($policy) ? $policy : [];
+        $maxSingleMinor = (int) ($policy['max_single_exposure_minor'] ?? 0);
+        if ($maxSingleMinor > 0 && $principalMinor > $maxSingleMinor) {
+            throw new InvalidArgumentException('The requested principal exceeds the capital mandate single-exposure limit.');
+        }
+        $maxSingleBps = (int) ($policy['max_single_exposure_bps'] ?? 0);
+        if ($maxSingleBps > 0 && (int) $pool->committed_capital_minor > 0
+            && ($principalMinor * 10000) > ((int) $pool->committed_capital_minor * $maxSingleBps)) {
+            throw new InvalidArgumentException('The requested principal exceeds the capital mandate concentration limit.');
+        }
+        $minimumUndeployedBps = (int) ($policy['minimum_undeployed_capital_bps'] ?? 0);
+        if ($minimumUndeployedBps < 0 || $minimumUndeployedBps > 10000 || $maxSingleBps < 0 || $maxSingleBps > 10000) {
+            throw new InvalidArgumentException('The capital mandate contains an invalid concentration policy.');
+        }
+
         $available = (int) $pool->committed_capital_minor
             - (int) $pool->deployed_capital_minor
             - (int) ($pool->reserved_capital_minor ?? 0);
 
         if ($available < $principalMinor) {
             throw new InvalidArgumentException('The selected funding pool does not have enough unreserved capital for this offer.');
+        }
+        if ($minimumUndeployedBps > 0) {
+            $remaining = $available - $principalMinor;
+            $minimum = intdiv(((int) $pool->committed_capital_minor * $minimumUndeployedBps) + 9999, 10000);
+            if ($remaining < $minimum) {
+                throw new InvalidArgumentException('The requested principal would breach the capital mandate minimum undeployed-capital buffer.');
+            }
         }
     }
 }
