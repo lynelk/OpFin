@@ -9,6 +9,8 @@ return [
         'external_service_route' => env('OPFIN_EXTERNAL_SERVICE_ROUTE', 'auto'),
         'direct_provider_fallback_enabled' => (bool) env('OPFIN_DIRECT_PROVIDER_FALLBACK_ENABLED', true),
         'silent_failover_enabled' => false,
+        // Live cash withdrawals require independently approved custody and settlement mandates.
+        'financial_space_payouts_accepted' => (bool) env('OPFIN_FINANCIAL_SPACE_PAYOUTS_ACCEPTED', false),
     ],
 
     'credit' => [
