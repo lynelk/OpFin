@@ -37,8 +37,15 @@ class SendSms implements ShouldBeEncrypted, ShouldQueue
 
     public function handle(SmsService $smsService)
     {
-        $response = $smsService->sendSms($this->smsMessage->to, $this->content());
-        $this->smsMessage->status = $response['success'] ? 'Sent' : 'Failed';
+        if (in_array($this->smsMessage->fresh()->status, ['Submitted', 'Sent'], true)) {
+            return;
+        }
+        $response = $smsService->sendSms(
+            $this->smsMessage->to, $this->content(),
+            'sms-message:'.$this->smsMessage->getKey()
+        );
+        $this->smsMessage->status = ! $response['success'] ? 'Failed'
+            : (array_key_exists('delivery_confirmed', $response) && ! $response['delivery_confirmed'] ? 'Submitted' : 'Sent');
         $this->smsMessage->save();
     }
 }

@@ -57,6 +57,44 @@ class CitoContractSafetyTest extends TestCase
         Http::assertSent(fn ($r) => str_contains($r->url(), 'merchantNumber=OPFIN-1'));
     }
 
+    public function test_whatsapp_otp_requires_separate_entitlement_and_approved_template(): void
+    {
+        $this->configureSigning();
+        Config::set('services.cito.feature_flags.otp_whatsapp', false);
+        Http::fake(['https://cito.example.test/*' => Http::response(['status' => 'PENDING'], 201)]);
+        try {
+            app(CitoCommunicationsClient::class)->createOtpChallenge(
+                '+256700000001', 'REGISTRATION', 'en-UG', 'whatsapp-test-key', 'WHATSAPP'
+            );
+            $this->fail('WhatsApp OTP must be separately entitled.');
+        } catch (RuntimeException) {
+            Http::assertNothingSent();
+        }
+
+        Config::set('services.cito.feature_flags.otp_whatsapp', true);
+        Config::set('services.cito.whatsapp_otp_template', '');
+        $this->expectException(InvalidArgumentException::class);
+        app(CitoCommunicationsClient::class)->createOtpChallenge(
+            '+256700000001', 'REGISTRATION', 'en-UG', 'whatsapp-test-key', 'WHATSAPP'
+        );
+    }
+
+    public function test_entitled_whatsapp_otp_uses_only_published_otp_contract(): void
+    {
+        $this->configureSigning();
+        Config::set('services.cito.feature_flags.otp_whatsapp', true);
+        Config::set('services.cito.whatsapp_otp_template', 'approved_signup_otp');
+        Http::fake(['https://cito.example.test/*' => Http::response(['status' => 'PENDING'], 201)]);
+
+        app(CitoCommunicationsClient::class)->createOtpChallenge(
+            '+256700000001', 'REGISTRATION', 'en-UG', 'whatsapp-test-key', 'WHATSAPP'
+        );
+        Http::assertSent(fn ($r) => $r->data()['channels'] === ['WHATSAPP']
+            && $r->data()['template'] === 'approved_signup_otp'
+            && str_contains($r->url(), '/communication/otp/challenges')
+            && $r->hasHeader('X-CPay-Idempotency-Key', 'whatsapp-test-key'));
+    }
+
     public function test_billing_write_fails_closed_even_with_service_key(): void
     {
         Config::set('services.cito.base_url', 'https://cito.example.test');

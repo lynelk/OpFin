@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 
 class SmsService
 {
-    public function sendSms($recipients, $content)
+    public function sendSms($recipients, $content, ?string $idempotencyKey = null)
     {
         try {
             if (config('app.env') === 'local') {
@@ -27,14 +27,14 @@ class SmsService
 
             return match ($smsGateway) {
                 'CPAY' => $this->cpay($recipients, $content),
-                'CITO' => $this->cito($recipients, $content),
+                'CITO' => $this->cito($recipients, $content, $idempotencyKey),
                 'YO' => $this->yo($recipients, $content),
                 default => throw new Exception('Unsupported SMS gateway configured.'),
             };
         } catch (Exception $exception) {
             Log::error('SMS sending failed', [
                 'error' => $exception->getMessage(),
-                'recipients' => $recipients,
+                'recipient_fingerprint' => hash('sha256', (string) $recipients),
             ]);
 
             return [
@@ -45,7 +45,7 @@ class SmsService
         }
     }
 
-    public function cito($recipients, $content): array
+    public function cito($recipients, $content, ?string $idempotencyKey = null): array
     {
         app(\App\Services\Cito\CitoFeatureGate::class)->requireEnabled('sms');
         if (! is_string($recipients) || str_contains($recipients, ',')) {
@@ -58,11 +58,12 @@ class SmsService
             $recipient = '+256'.substr($recipient, 1);
         }
         $response = app(\App\Services\Cito\CitoCommunicationsClient::class)
-            ->sendSms($recipient, (string) $content);
+            ->sendSms($recipient, (string) $content, 'NOTIFICATION', $idempotencyKey);
         return [
             'success' => true,
             'message' => 'Cito SMS accepted for processing; not confirmed delivered.',
             'reference' => $response['reference'] ?? $response['messageReference'] ?? null,
+            'delivery_confirmed' => false,
         ];
     }
 
@@ -119,7 +120,7 @@ class SmsService
             'Accept' => 'application/json',
         ])->post($baseUrl.'/'.ltrim($smsPath, '/'), [
             'merchant_number' => $merchantNumber,
-            'recipients' => $recipients,
+            'recipient_fingerprint' => hash('sha256', (string) $recipients),
             'signature' => base64_encode($signature),
             'content' => $content,
         ]);

@@ -8,16 +8,30 @@ use RuntimeException;
 
 class CitoCommunicationsClient
 {
-    public function createOtpChallenge(string $phone, string $purpose = 'LOGIN', string $locale = 'en-UG', ?string $idempotencyKey = null): array
+    public function createOtpChallenge(string $phone, string $purpose = 'LOGIN', string $locale = 'en-UG', ?string $idempotencyKey = null, string $channel = 'SMS'): array
     {
         app(CitoFeatureGate::class)->requireEnabled('otp');
         if (! preg_match('/^\\+[1-9][0-9]{7,14}$/', $phone)) {
             throw new InvalidArgumentException('OTP recipient must be an international phone number.');
         }
-        return $this->post('/api/v2/communication/otp/challenges', [
+        $channel = strtoupper(trim($channel));
+        if (! in_array($channel, ['SMS', 'WHATSAPP'], true)) {
+            throw new InvalidArgumentException('Cito OTP delivery channel is unsupported.');
+        }
+        $body = [
             'merchantNumber' => $this->merchant(), 'recipient' => $phone,
             'purpose' => $purpose, 'locale' => $locale,
-        ], $idempotencyKey ?? (string) Str::uuid());
+            'channels' => [$channel],
+        ];
+        if ($channel === 'WHATSAPP') {
+            app(CitoFeatureGate::class)->requireEnabled('otp_whatsapp');
+            $template = trim((string) config('services.cito.whatsapp_otp_template', ''));
+            if ($template === '') {
+                throw new InvalidArgumentException('Approved WhatsApp OTP template is required.');
+            }
+            $body['template'] = $template;
+        }
+        return $this->post('/api/v2/communication/otp/challenges', $body, $idempotencyKey ?? (string) Str::uuid());
     }
 
     public function verifyOtpChallenge(string $challengeId, string $code): array
@@ -34,7 +48,7 @@ class CitoCommunicationsClient
         ]);
     }
 
-    public function sendSms(string $recipient, string $content, string $purpose = 'NOTIFICATION'): array
+    public function sendSms(string $recipient, string $content, string $purpose = 'NOTIFICATION', ?string $idempotencyKey = null): array
     {
         app(CitoFeatureGate::class)->requireEnabled('sms');
         if (! preg_match('/^\\+[1-9][0-9]{7,14}$/', $recipient) || trim($content) === '') {
@@ -44,7 +58,7 @@ class CitoCommunicationsClient
             'merchantNumber' => $this->merchant(), 'recipient' => $recipient,
             'content' => $content, 'purpose' => $purpose, 'currencyCode' => 'UGX',
             'requireDeliveryReceipts' => true,
-        ]);
+        ], $idempotencyKey);
     }
 
     public function messageStatus(string $reference): array

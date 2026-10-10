@@ -13,8 +13,11 @@ class CitoFeatureGate
     public function enabled(string $capability): bool
     {
         $capability = strtolower(trim($capability));
-        $supported = ['sms', 'otp', 'identity', 'credit', 'payments', 'billing'];
+        $supported = ['sms', 'otp', 'otp_whatsapp', 'identity', 'credit', 'payments', 'billing'];
         if (! in_array($capability, $supported, true)) {
+            return false;
+        }
+        if ($capability === 'otp_whatsapp' && ! $this->enabled('otp')) {
             return false;
         }
         if (! (bool) config('services.cito.feature_flags.'.$capability, false)) {

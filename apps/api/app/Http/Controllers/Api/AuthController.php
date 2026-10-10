@@ -347,6 +347,7 @@ class AuthController extends Controller
             'email' => 'required_if:channel,email|nullable|email|max:254',
             'app_signature' => 'nullable|string|max:32',
             'purpose' => 'nullable|in:LOGIN,REGISTRATION,PASSWORD_RESET',
+            'otp_channel' => 'nullable|in:sms,whatsapp',
         ]);
 
         if ($validator->fails()) {
@@ -356,7 +357,8 @@ class AuthController extends Controller
         if ($request->input('channel') !== 'email' && app(CitoFeatureGate::class)->enabled('otp')) {
             try {
                 $result = app(CitoOtpAuthService::class)->start(
-                    (string) $request->input('phone'), (string) $request->input('purpose', 'LOGIN')
+                    (string) $request->input('phone'), (string) $request->input('purpose', 'LOGIN'),
+                    strtoupper((string) $request->input('otp_channel', 'sms'))
                 );
                 return ApiResponse::success('OTP challenge requested', [
                     'expires_at' => $result['expires_at'],
@@ -367,6 +369,10 @@ class AuthController extends Controller
             } catch (\Throwable $exception) {
                 return ApiResponse::error('OTP service temporarily unavailable.', 503);
             }
+        }
+
+        if ($request->input('otp_channel') === 'whatsapp') {
+            return ApiResponse::error('WhatsApp OTP requires an entitled Cito integration.', 503);
         }
 
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);

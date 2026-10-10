@@ -74,9 +74,14 @@ return [
         // Independently scoped BaaS service account; never use merchant RSA credentials.
         'baas_api_key' => env('CITO_BAAS_API_KEY'),
         'baas_write_enabled' => (bool) env('CITO_BAAS_WRITE_ENABLED', false),
+        'baas_daily_write_limit' => (int) env('CITO_BAAS_DAILY_WRITE_LIMIT', 0),
+        'daily_cost_alert_minor' => (int) env('CITO_DAILY_COST_ALERT_UGX_MINOR', 0),
+        'baas_allowed_accounts' => array_values(array_filter(array_map('trim', explode(',', (string) env('CITO_BAAS_ALLOWED_ACCOUNTS', ''))))),
+        'whatsapp_otp_template' => env('CITO_WHATSAPP_OTP_TEMPLATE', ''),
         'feature_flags' => [
             'sms' => (bool) env('CITO_ENABLE_SMS', false),
             'otp' => (bool) env('CITO_ENABLE_OTP', false),
+            'otp_whatsapp' => (bool) env('CITO_ENABLE_OTP_WHATSAPP', false),
             'identity' => (bool) env('CITO_ENABLE_IDENTITY', false),
             'credit' => (bool) env('CITO_ENABLE_CREDIT', false),
             'payments' => (bool) env('CITO_ENABLE_PAYMENTS', false),
@@ -86,6 +91,7 @@ return [
         'accepted_capabilities' => [
             'sms' => (bool) env('CITO_ACCEPTED_SMS', false),
             'otp' => (bool) env('CITO_ACCEPTED_OTP', false),
+            'otp_whatsapp' => (bool) env('CITO_ACCEPTED_OTP_WHATSAPP', false),
             'identity' => (bool) env('CITO_ACCEPTED_IDENTITY', false),
             'credit' => (bool) env('CITO_ACCEPTED_CREDIT', false),
             'payments' => (bool) env('CITO_ACCEPTED_PAYMENTS', false),

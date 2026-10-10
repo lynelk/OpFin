@@ -13,10 +13,17 @@ use RuntimeException;
 
 class CitoOtpAuthService
 {
-    public function start(string $phone, string $purpose): array
+    public function start(string $phone, string $purpose, string $channel = 'SMS'): array
     {
         app(CitoFeatureGate::class)->requireEnabled('otp');
         $purpose = strtoupper(trim($purpose));
+        $channel = strtoupper(trim($channel));
+        if (! in_array($channel, ['SMS', 'WHATSAPP'], true)) {
+            throw new InvalidArgumentException('Unsupported OTP delivery channel.');
+        }
+        if ($channel === 'WHATSAPP') {
+            app(CitoFeatureGate::class)->requireEnabled('otp_whatsapp');
+        }
         if (! in_array($purpose, ['LOGIN', 'REGISTRATION', 'PASSWORD_RESET'], true)) {
             throw new InvalidArgumentException('Unsupported OTP purpose.');
         }
@@ -28,24 +35,24 @@ class CitoOtpAuthService
         }
         try {
             $row = DB::table('cito_otp_challenges')->where('phone', $phone)->first();
-            if ($row && $row->purpose === $purpose && $row->environment === $env
+            if ($row && $row->purpose === $purpose && $row->channel === $channel && $row->environment === $env
                 && $row->consumed_at === null && $row->verified_at === null && Carbon::parse($row->expires_at)->isFuture()
                 && $row->challenge_reference !== null) {
                 return ['expires_at' => Carbon::parse($row->expires_at)->toIso8601String()];
             }
-            $key = $row && $row->purpose === $purpose && $row->environment === $env
+            $key = $row && $row->purpose === $purpose && $row->channel === $channel && $row->environment === $env
                 && $row->challenge_reference === null && Carbon::parse($row->expires_at)->isFuture()
                 ? $row->idempotency_key : (string) Str::uuid();
 
             DB::table('cito_otp_challenges')->updateOrInsert(['phone' => $phone], [
-                'purpose' => $purpose, 'environment' => $env, 'idempotency_key' => $key,
+                'purpose' => $purpose, 'channel' => $channel, 'environment' => $env, 'idempotency_key' => $key,
                 'challenge_reference' => null, 'status' => 'created',
                 'expires_at' => now()->addMinutes(5), 'verified_at' => null,
                 'consumed_at' => null, 'attempts' => 0,
                 'updated_at' => now(), 'created_at' => now(),
             ]);
 
-            $result = app(CitoCommunicationsClient::class)->createOtpChallenge($recipient, $purpose, 'en-UG', $key);
+            $result = app(CitoCommunicationsClient::class)->createOtpChallenge($recipient, $purpose, 'en-UG', $key, $channel);
             $challenge = $result['challengeId'] ?? null;
             $expires = isset($result['expiresAt']) ? Carbon::parse($result['expiresAt']) : null;
             if (! is_string($challenge) || ! preg_match('/^[A-Za-z0-9_-]{1,128}$/', $challenge)

@@ -11,6 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->string('phone', 32)->unique();
             $table->string('purpose', 64);
+            $table->string('channel', 12)->default('SMS');
             $table->string('environment', 16);
             $table->string('idempotency_key', 128)->unique();
             $table->string('challenge_reference', 128)->nullable();
