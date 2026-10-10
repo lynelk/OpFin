@@ -291,3 +291,23 @@ Registration also verifies that the Cito challenge was explicitly issued for `RE
 An existing Financial Space action must retain its original idempotency key, owner, space, amount, direction and payment destination. A separately approved payout mandate and provider-release flag are required for disbursement. Provider statement matching moves an external action to `statement_matched_unallocated`, not to a club ledger or NAV adjustment. Accounting requires an independently approved club instruction; reversals and mismatches require review.
 
 SMS acceptance is stored as `Submitted`, not `Sent`. The persisted SMS message identity is the idempotency key for repeat delivery attempts. CPay HTTP 202 and provider outages are not finality.
+
+## Governed asset and device finance lifecycle (10 October 2026)
+
+The asset-finance routes are a reviewed candidate implementation, **not** an assertion of lender, supplier or provider production certification. A submitted case must be tied to a financial Space, its asset passport, approved supplier and product, the actual capital mandate, amount, currency, term and original idempotency key. Internal maker/checker reviews and externally confirmed settlement are separate control events.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| GET | `/api/financial-spaces/{space}/asset-finance-cases` | List current user's authorised Space cases |
+| POST | `/api/financial-spaces/{space}/asset-finance-cases` | Submit one priced asset/device/productive-asset case with a stable idempotency key |
+| GET | `/api/financial-spaces/{space}/asset-finance-cases/{case}` | Read one scoped case and evidence state |
+| POST | `/api/financial-spaces/{space}/asset-finance-cases/{case}/evidence` | Add verification evidence, not supplier settlement |
+| GET | `/api/admin/asset-finance-cases/work-queue` | Staff/governance review queue |
+| POST | `/api/admin/asset-finance-cases/{case}/evidence/{evidence}/verify` | Record distinct evidence verification or rejection |
+| POST | `/api/admin/asset-finance-cases/{case}/review` | Accept/decline under an identified financing arrangement |
+| POST | `/api/admin/asset-finance-cases/{case}/settlements` | Create a pending customer-contribution or supplier-settlement instruction |
+| POST | `/api/admin/asset-finance-settlements/{settlement}/transition` | Record provider-confirmed, reconciled or reversed external settlement evidence |
+| POST | `/api/admin/asset-finance-cases/{case}/activate` | Activate only a case that passes all finance and settlement guards |
+| POST | `/api/admin/asset-finance-cases/{case}/transition` | Advance asset finance lifecycle according to allowed transitions |
+
+Do not infer custody, provider success or loan disbursement from application approval alone. The Finance Product Factory, independent settlement controls, safeguarding rules and all applicable lender mandates remain authoritative. For request field validation and error handling, see `AssetFinanceLifecycleController` and the corresponding feature tests.
