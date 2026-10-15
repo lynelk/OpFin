@@ -90,13 +90,126 @@ final class InstitutionalEclService
         });
     }
 
-    public function stageExternal(int $institutionId, array $data, User $actor): int
+
+    /**
+     * Bulk portfolio evidence intake is not a disbursement, loan origination or GL event.
+     * CSV batches have exact source control totals and mandatory independent review.
+     */
+    public function stageExternalCsv(
+        int $institutionId, string $asOf, string $currency, string $sourceEvidence,
+        string $csv, int $expectedCount, int $expectedPrincipal, User $actor
+    ): int {
+        if ($expectedCount < 1 || $expectedCount > 2000 || $expectedPrincipal < 0
+            || strlen($csv) > 2 * 1024 * 1024 || $csv === '') {
+            throw new InvalidArgumentException('CSV batch must contain 1–2,000 loans and be at most 2 MiB.');
+        }
+        $file = fopen('php://temp', 'w+');
+        if (! $file) {
+            throw new InvalidArgumentException('Unable to read the supplied CSV.');
+        }
+        fwrite($file, $csv);
+        rewind($file);
+        $header = fgetcsv($file, 0, ',', '"', '');
+        if ($header !== ['external_loan_reference', 'principal_outstanding_minor', 'days_past_due', 'sicr', 'credit_impaired', 'contractual_maturity_date']) {
+            fclose($file);
+            throw new InvalidArgumentException('CSV header must match the published canonical loan observation template.');
+        }
+        $rows = [];
+        $refs = [];
+        $sum = 0;
+        try {
+            while (($fields = fgetcsv($file, 0, ',', '"', '')) !== false) {
+                if ($fields === [null]) {
+                    continue;
+                }
+                if (count($fields) !== 6 || count($rows) >= 2000) {
+                    throw new InvalidArgumentException('CSV column count or 2,000-loan limit exceeded.');
+                }
+                [$reference, $principal, $dpd, $sicr, $impaired, $maturity] = array_map('trim', $fields);
+                if ($reference === '' || strlen($reference) > 160
+                    || preg_match('/[\\x00-\\x1F\\x7F]/', $reference)
+                    || isset($refs[$reference])) {
+                    throw new InvalidArgumentException('A loan reference is empty, duplicated or contains invalid control characters.');
+                }
+                foreach ([$principal, $dpd] as $numeric) {
+                    if (! preg_match('/^(0|[1-9][0-9]*)$/D', $numeric) || strlen($numeric) > 13) {
+                        throw new InvalidArgumentException('Principal and DPD must be non-negative integer source values.');
+                    }
+                }
+                if ((int) $principal > 1000000000000 || (int) $dpd > 65535
+                    || ! in_array($sicr, ['0', '1'], true) || ! in_array($impaired, ['0', '1'], true)
+                    || ! preg_match('/^\\d{4}-\\d{2}-\\d{2}$/D', $maturity)
+                    || ! checkdate((int) substr($maturity, 5, 2), (int) substr($maturity, 8, 2), (int) substr($maturity, 0, 4))) {
+                    throw new InvalidArgumentException('CSV risk, maturity or monetary input is invalid.');
+                }
+                $refs[$reference] = true;
+                $sum += (int) $principal;
+                $rows[] = [
+                    'external_loan_reference' => $reference,
+                    'as_of_date' => $asOf, 'currency' => $currency,
+                    'principal_outstanding_minor' => (int) $principal,
+                    'days_past_due' => (int) $dpd, 'sicr' => $sicr === '1',
+                    'credit_impaired' => $impaired === '1',
+                    'contractual_maturity_date' => $maturity,
+                    'source_evidence' => $sourceEvidence,
+                ];
+            }
+        } finally {
+            fclose($file);
+        }
+        if (count($rows) !== $expectedCount || $sum !== $expectedPrincipal) {
+            throw new InvalidArgumentException('CSV rows and principal do not reconcile with source control totals.');
+        }
+        if ($asOf > now()->toDateString()) {
+            throw new InvalidArgumentException('An external portfolio source cannot have a future reporting cut-off.');
+        }
+        return DB::transaction(function () use ($institutionId, $asOf, $currency, $sourceEvidence, $csv, $rows, $sum, $actor) {
+            $batchId = DB::table('institution_ecl_import_batches')->insertGetId([
+                'institution_id' => $institutionId, 'as_of_date' => $asOf,
+                'currency' => $currency, 'source_evidence' => $sourceEvidence,
+                'file_hash' => hash('sha256', $csv), 'loan_count' => count($rows),
+                'principal_total_minor' => $sum, 'status' => 'staged',
+                'submitted_by' => $actor->id, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            foreach ($rows as $row) {
+                $this->stageExternal($institutionId, $row, $actor, $batchId);
+            }
+            return $batchId;
+        });
+    }
+
+    public function approveExternalBatch(int $batchId, User $actor): int
+    {
+        return DB::transaction(function () use ($batchId, $actor) {
+            $batch = DB::table('institution_ecl_import_batches')->where('id', $batchId)->lockForUpdate()->first();
+            if (! $batch || $batch->status !== 'staged' || (int) $batch->submitted_by === (int) $actor->id) {
+                throw new InvalidArgumentException('An independent checker must approve a staged source batch.');
+            }
+            $rows = DB::table('institution_ecl_external_snapshots')
+                ->where('import_batch_id', $batchId)->lockForUpdate()->get();
+            if ($rows->count() !== (int) $batch->loan_count
+                || (int) $rows->sum('principal_outstanding_minor') !== (int) $batch->principal_total_minor
+                || $rows->contains(fn ($r) => $r->status !== 'staged')) {
+                throw new InvalidArgumentException('Batch evidence differs from its source manifest.');
+            }
+            DB::table('institution_ecl_external_snapshots')->where('import_batch_id', $batchId)
+                ->update(['status' => 'approved', 'approved_by' => $actor->id,
+                    'approved_at' => now(), 'updated_at' => now()]);
+            DB::table('institution_ecl_import_batches')->where('id', $batchId)
+                ->update(['status' => 'approved', 'approved_by' => $actor->id,
+                    'approved_at' => now(), 'updated_at' => now()]);
+            return $rows->count();
+        });
+    }
+
+    public function stageExternal(int $institutionId, array $data, User $actor, ?int $batchId = null): int
     {
         if ($data['as_of_date'] > now()->toDateString()) {
             throw new InvalidArgumentException('Future portfolio observations cannot be approved.');
         }
         $source = [
             'institution_id' => $institutionId,
+            'import_batch_id' => $batchId,
             'external_loan_reference' => $data['external_loan_reference'],
             'as_of_date' => $data['as_of_date'],
             'currency' => $data['currency'],
