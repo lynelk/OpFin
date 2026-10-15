@@ -191,7 +191,7 @@ final class InstitutionalEclService
             $months = max(0, (int) ceil($date->diffInDays($termEnd, false) / 30));
             $rows[] = $this->item(
                 'opfin:'.$loan->id, (int) $loan->id, null, $ownership->owner_type,
-                (int) $ownership->opfin_share_bps, $gross, $dpd, false, false,
+                (int) $ownership->opfin_share_bps, $gross, $dpd, false, (bool) $loan->non_performing_at || $writtenOff,
                 $months, $policy, $scenarios
             );
         }
@@ -203,6 +203,9 @@ final class InstitutionalEclService
                 (bool) $observation->sicr, (bool) $observation->credit_impaired,
                 $months, $policy, $scenarios
             );
+        }
+        if (count($rows) > 50000) {
+            throw new InvalidArgumentException('ECL batch exceeds the reviewed 50,000 exposure limit. Partition by approved institution/subportfolio.');
         }
         $references = array_column($rows, 'loan_reference');
         if (count($references) !== count(array_unique($references))) {
@@ -288,8 +291,16 @@ final class InstitutionalEclService
                     throw new InvalidArgumentException('Credit ownership changed since the ECL snapshot.');
                 }
                 $platformJournalCount++;
+                $liveLoan = Loan::withoutGlobalScopes()->findOrFail($item->loan_id);
+                $writtenOff = DB::table('credit_write_offs')->where('loan_id', $liveLoan->id)->exists();
+                if ($writtenOff && (int) $item->gross_exposure_minor === 0) {
+                    continue; // Its approved allowance was already consumed by the original write-off.
+                }
+                if ($this->impairment->grossRecordedExposureMinor($liveLoan) !== (int) $item->gross_exposure_minor) {
+                    throw new InvalidArgumentException('Loan balance changed after ECL cut-off; rebuild from verified accounting evidence.');
+                }
                 $assessment = $this->impairment->assess(
-                    Loan::withoutGlobalScopes()->findOrFail($item->loan_id),
+                    $liveLoan,
                     Carbon::parse($run->as_of_date),
                     (int) $item->expected_credit_loss_minor,
                     $item->stage, $policy->version,
