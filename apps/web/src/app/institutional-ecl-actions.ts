@@ -64,7 +64,7 @@ export async function institutionalEclAction(form: FormData) {
           const data = await response.json().catch(() => ({}));
           throw new Error(data.message ?? "CSV intake rejected. Check exact source and control totals.");
         }
-        redirect(`/admin/institutional-ecl?institution_id=${institutionId}&saved=true`);
+        break;
       }
       case "run":
         path = "/runs";
@@ -77,7 +77,7 @@ export async function institutionalEclAction(form: FormData) {
       case "run-post": path = `/runs/${n(form, "record_id")}/post`; break;
       default: throw new Error("Unknown provisioning action.");
     }
-    await eclRequest(path, await getAccessToken(), body);
+    if (kind !== "external-csv") await eclRequest(path, await getAccessToken(), body);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to perform provisioning action.";
     redirect(`/admin/institutional-ecl?institution_id=${institutionId}&error=${encodeURIComponent(message)}`);
