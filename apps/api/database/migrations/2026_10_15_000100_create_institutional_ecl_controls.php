@@ -40,9 +40,26 @@ return new class extends Migration
             $t->timestamp('approved_at')->nullable();
             $t->timestamps();
         });
+        Schema::create('institution_ecl_import_batches', function (Blueprint $t) {
+            $t->id();
+            $t->foreignId('institution_id')->constrained('institutions')->restrictOnDelete();
+            $t->date('as_of_date');
+            $t->string('currency', 3);
+            $t->string('source_evidence', 255);
+            $t->char('file_hash', 64);
+            $t->unsignedInteger('loan_count');
+            $t->unsignedBigInteger('principal_total_minor');
+            $t->string('status', 20)->default('staged');
+            $t->foreignId('submitted_by')->constrained('users')->restrictOnDelete();
+            $t->foreignId('approved_by')->nullable()->constrained('users')->restrictOnDelete();
+            $t->timestamp('approved_at')->nullable();
+            $t->timestamps();
+            $t->unique(['institution_id', 'as_of_date', 'file_hash'], 'ecl_batch_source_unique');
+        });
         Schema::create('institution_ecl_external_snapshots', function (Blueprint $t) {
             $t->id();
             $t->foreignId('institution_id')->constrained('institutions')->restrictOnDelete();
+            $t->foreignId('import_batch_id')->nullable()->constrained('institution_ecl_import_batches')->restrictOnDelete();
             $t->string('external_loan_reference', 160);
             $t->date('as_of_date');
             $t->string('currency', 3);
@@ -120,8 +137,12 @@ return new class extends Migration
                 'loan_id', 'institution_id', 'owner_type', 'opfin_share_bps',
                 'agreement_reference', 'created_by',
             ],
+            'institution_ecl_import_batches' => [
+                'institution_id', 'as_of_date', 'currency', 'source_evidence',
+                'file_hash', 'loan_count', 'principal_total_minor', 'submitted_by',
+            ],
             'institution_ecl_external_snapshots' => [
-                'institution_id', 'external_loan_reference', 'as_of_date', 'currency',
+                'institution_id', 'import_batch_id', 'external_loan_reference', 'as_of_date', 'currency',
                 'principal_outstanding_minor', 'days_past_due', 'sicr',
                 'credit_impaired', 'contractual_maturity_date', 'source_hash',
                 'source_evidence', 'submitted_by',
@@ -168,11 +189,11 @@ return new class extends Migration
                 }
             }
         }
-        foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'loan_ecl_ownerships', 'institution_ecl_policies'] as $table) {
+        foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_import_batches', 'loan_ecl_ownerships', 'institution_ecl_policies'] as $table) {
             Schema::dropIfExists($table);
         }
         if (DB::getDriverName() === 'pgsql') {
-            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'loan_ecl_ownerships', 'institution_ecl_policies'] as $table) {
+            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_import_batches', 'loan_ecl_ownerships', 'institution_ecl_policies'] as $table) {
                 DB::unprepared("DROP FUNCTION IF EXISTS {$table}_lock_ecl_source()");
             }
         }
