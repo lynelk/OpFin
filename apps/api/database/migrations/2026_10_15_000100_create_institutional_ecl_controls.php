@@ -168,7 +168,8 @@ return new class extends Migration
                         ? "OLD.{$column}::text IS DISTINCT FROM NEW.{$column}::text"
                         : "OLD.{$column} IS DISTINCT FROM NEW.{$column}", $columns
                 ));
-                DB::unprepared("CREATE FUNCTION {$table}_lock_ecl_source() RETURNS trigger LANGUAGE plpgsql AS $ BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Institutional ECL evidence cannot be deleted'; END IF; IF {$changed} THEN RAISE EXCEPTION 'Institutional ECL source fields are immutable'; END IF; RETURN NEW; END; $");
+                $tag = chr(36).chr(36);
+                DB::unprepared("CREATE FUNCTION {$table}_lock_ecl_source() RETURNS trigger LANGUAGE plpgsql AS {$tag} BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Institutional ECL evidence cannot be deleted'; END IF; IF {$changed} THEN RAISE EXCEPTION 'Institutional ECL source fields are immutable'; END IF; RETURN NEW; END; {$tag}");
                 DB::unprepared("CREATE TRIGGER {$table}_lock_ecl_source BEFORE UPDATE OR DELETE ON {$table} FOR EACH ROW EXECUTE FUNCTION {$table}_lock_ecl_source()");
             } elseif ($driver === 'sqlite') {
                 $changed = implode(' OR ', array_map(
@@ -183,7 +184,7 @@ return new class extends Migration
     public function down(): void
     {
         if (! app()->environment('testing')) {
-            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'loan_ecl_ownerships', 'institution_ecl_external_snapshots', 'institution_ecl_policies'] as $table) {
+            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_import_batches', 'loan_ecl_ownerships', 'institution_ecl_policies'] as $table) {
                 if (DB::table($table)->exists()) {
                     throw new LogicException('Institutional ECL evidence exists; rollback requires a reviewed forward migration.');
                 }
