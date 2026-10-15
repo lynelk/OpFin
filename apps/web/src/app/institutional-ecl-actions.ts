@@ -43,6 +43,29 @@ export async function institutionalEclAction(form: FormData) {
           contractual_maturity_date: str(form, "contractual_maturity_date"), source_evidence: str(form, "source_evidence") };
         break;
       case "external-approve": path = `/external-snapshots/${n(form, "record_id")}/approve`; break;
+      case "batch-approve": path = `/import-batches/${n(form, "record_id")}/approve`; break;
+      case "external-csv": {
+        const file = form.get("file");
+        if (!(file instanceof File) || file.size === 0 || file.size > 2097152)
+          throw new Error("Select a CSV under 2 MiB.");
+        const base = process.env.NEXT_PUBLIC_OPFIN_API_URL;
+        const token = await getAccessToken();
+        if (!base || !token) throw new Error("Authenticated OpFin API required.");
+        const multipart = new FormData();
+        for (const key of ["institution_id", "as_of_date", "currency", "source_evidence", "expected_loan_count", "expected_principal_minor"]) {
+          multipart.set(key, str(form, key));
+        }
+        multipart.set("file", file);
+        const response = await fetch(`${base}/admin/institutional-ecl/external-csv`, {
+          method: "POST", headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+          body: multipart, cache: "no-store",
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.message ?? "CSV intake rejected. Check exact source and control totals.");
+        }
+        redirect(`/admin/institutional-ecl?institution_id=${institutionId}&saved=true`);
+      }
       case "run":
         path = "/runs";
         body = { institution_id: institutionId, as_of_date: str(form, "as_of_date"),
