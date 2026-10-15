@@ -1,0 +1,326 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Loan;
+use App\Models\User;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+
+final class InstitutionalEclService
+{
+    public function __construct(
+        private readonly InstitutionalEclCalculator $calculator,
+        private readonly LoanImpairmentService $impairment
+    ) {}
+
+    public function stagePolicy(int $institutionId, array $input, User $actor): int
+    {
+        $this->calculator->validateScenarios($input['scenarios']);
+        if ($input['stage2_dpd'] >= $input['stage3_dpd']) {
+            throw new InvalidArgumentException('Stage 3 DPD must exceed stage 2 DPD.');
+        }
+        return DB::table('institution_ecl_policies')->insertGetId([
+            'institution_id' => $institutionId,
+            'version' => $input['version'],
+            'effective_from' => $input['effective_from'],
+            'currency' => $input['currency'],
+            'stage2_dpd' => $input['stage2_dpd'],
+            'stage3_dpd' => $input['stage3_dpd'],
+            'discount_bps' => $input['discount_bps'],
+            'scenarios' => json_encode($input['scenarios'], JSON_THROW_ON_ERROR),
+            'methodology_reference' => $input['methodology_reference'],
+            'status' => 'draft',
+            'created_by' => $actor->id,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
+    public function approvePolicy(int $policyId, User $actor): void
+    {
+        DB::transaction(function () use ($policyId, $actor) {
+            $policy = DB::table('institution_ecl_policies')->where('id', $policyId)->lockForUpdate()->first();
+            if (! $policy || $policy->status !== 'draft') {
+                throw new InvalidArgumentException('Policy must be a pending draft.');
+            }
+            if ((int) $policy->created_by === (int) $actor->id) {
+                throw new InvalidArgumentException('Policy maker cannot approve their own ECL policy.');
+            }
+            DB::table('institution_ecl_policies')->where('id', $policyId)->update([
+                'status' => 'approved', 'approved_by' => $actor->id,
+                'approved_at' => now(), 'updated_at' => now(),
+            ]);
+        });
+    }
+
+    public function registerOwnership(int $institutionId, int $loanId, array $input, User $actor): int
+    {
+        $loan = Loan::withoutGlobalScopes()->findOrFail($loanId);
+        if ((int) $loan->institution_id !== $institutionId) {
+            throw new InvalidArgumentException('Loan is not owned by the selected lender record.');
+        }
+        $share = (int) $input['opfin_share_bps'];
+        $kind = $input['owner_type'];
+        if (($kind === 'opfin' && $share !== 10000)
+            || ($kind === 'partner' && $share !== 0)
+            || ($kind === 'shared' && ($share <= 0 || $share >= 10000))) {
+            throw new InvalidArgumentException('Exposure ownership and platform risk share do not agree.');
+        }
+        return DB::table('loan_ecl_ownerships')->insertGetId([
+            'loan_id' => $loanId, 'institution_id' => $institutionId,
+            'owner_type' => $kind, 'opfin_share_bps' => $share,
+            'agreement_reference' => $input['agreement_reference'],
+            'status' => 'draft', 'created_by' => $actor->id,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
+    public function approveOwnership(int $id, User $actor): void
+    {
+        DB::transaction(function () use ($id, $actor) {
+            $row = DB::table('loan_ecl_ownerships')->where('id', $id)->lockForUpdate()->first();
+            if (! $row || $row->status !== 'draft' || (int) $row->created_by === (int) $actor->id) {
+                throw new InvalidArgumentException('Ownership requires a different independent approver.');
+            }
+            DB::table('loan_ecl_ownerships')->where('id', $id)->update([
+                'status' => 'approved', 'approved_by' => $actor->id,
+                'approved_at' => now(), 'updated_at' => now(),
+            ]);
+        });
+    }
+
+    public function stageExternal(int $institutionId, array $data, User $actor): int
+    {
+        if ($data['as_of_date'] > now()->toDateString()) {
+            throw new InvalidArgumentException('Future portfolio observations cannot be approved.');
+        }
+        $source = [
+            'institution_id' => $institutionId,
+            'external_loan_reference' => $data['external_loan_reference'],
+            'as_of_date' => $data['as_of_date'],
+            'currency' => $data['currency'],
+            'principal_outstanding_minor' => $data['principal_outstanding_minor'],
+            'days_past_due' => $data['days_past_due'],
+            'sicr' => (bool) $data['sicr'],
+            'credit_impaired' => (bool) $data['credit_impaired'],
+            'contractual_maturity_date' => $data['contractual_maturity_date'],
+            'source_evidence' => $data['source_evidence'],
+        ];
+        return DB::table('institution_ecl_external_snapshots')->insertGetId($source + [
+            'source_hash' => hash('sha256', json_encode($source, JSON_THROW_ON_ERROR)),
+            'status' => 'staged', 'submitted_by' => $actor->id,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
+    public function approveExternal(int $id, User $actor): void
+    {
+        DB::transaction(function () use ($id, $actor) {
+            $source = DB::table('institution_ecl_external_snapshots')->where('id', $id)->lockForUpdate()->first();
+            if (! $source || $source->status !== 'staged' || (int) $source->submitted_by === (int) $actor->id) {
+                throw new InvalidArgumentException('An independent reviewer must approve an unchanged external observation.');
+            }
+            DB::table('institution_ecl_external_snapshots')->where('id', $id)->update([
+                'status' => 'approved', 'approved_by' => $actor->id,
+                'approved_at' => now(), 'updated_at' => now(),
+            ]);
+        });
+    }
+
+    public function build(int $institutionId, string $asOf, User $actor): int
+    {
+        $date = Carbon::parse($asOf);
+        if ($date->toDateString() > now()->toDateString()) {
+            throw new InvalidArgumentException('Cannot run a future portfolio cut-off.');
+        }
+        $policy = DB::table('institution_ecl_policies')
+            ->where('institution_id', $institutionId)->where('status', 'approved')
+            ->where('effective_from', '<=', $asOf)->orderByDesc('effective_from')->orderByDesc('id')->first();
+        if (! $policy) {
+            throw new InvalidArgumentException('No independently approved effective ECL policy.');
+        }
+        $scenarios = json_decode($policy->scenarios, true, 512, JSON_THROW_ON_ERROR);
+        $this->calculator->validateScenarios($scenarios);
+        $approvedOwnerships = DB::table('loan_ecl_ownerships')
+            ->where('institution_id', $institutionId)->where('status', 'approved')->get();
+        $allEligibleLoans = Loan::withoutGlobalScopes()->where('institution_id', $institutionId)
+            ->whereDate('created_at', '<=', $asOf)->whereNotIn('status', ['Cancelled', 'Rejected', 'Reversed'])->pluck('id')->map(fn ($id) => (int) $id);
+        $approvedIds = $approvedOwnerships->pluck('loan_id')->map(fn ($id) => (int) $id);
+        if ($allEligibleLoans->diff($approvedIds)->isNotEmpty()) {
+            throw new InvalidArgumentException('An institution loan has no independently approved ownership attestation.');
+        }
+        $external = DB::table('institution_ecl_external_snapshots')
+            ->where('institution_id', $institutionId)->where('as_of_date', $asOf)
+            ->where('status', 'approved')->orderBy('id')->get();
+        if ($approvedOwnerships->isEmpty() && $external->isEmpty()) {
+            throw new InvalidArgumentException('No reviewed exposures to provision.');
+        }
+        if ($approvedOwnerships->isNotEmpty() && $date->toDateString() !== now()->toDateString()) {
+            throw new InvalidArgumentException('Historical managed-loan balances cannot be reconstructed from current schedules. Capture at cut-off date.');
+        }
+        if ($external->contains(fn ($item) => $item->currency !== $policy->currency)) {
+            throw new InvalidArgumentException('External snapshot currency differs from the approved policy.');
+        }
+
+        $rows = [];
+        foreach ($approvedOwnerships as $ownership) {
+            $loan = Loan::withoutGlobalScopes()->findOrFail($ownership->loan_id);
+            if ($loan->created_at && $loan->created_at->toDateString() > $asOf) {
+                continue;
+            }
+            $gross = $this->impairment->grossRecordedExposureMinor($loan);
+            $dpd = $this->daysPastDue($loan, $date);
+            $termEnd = $loan->disbursed_at
+                ? Carbon::parse($loan->disbursed_at)->addDays((int) $loan->duration)
+                : $date->copy()->addDays((int) $loan->duration);
+            $months = max(0, (int) ceil($date->diffInDays($termEnd, false) / 30));
+            $rows[] = $this->item(
+                'opfin:'.$loan->id, (int) $loan->id, null, $ownership->owner_type,
+                (int) $ownership->opfin_share_bps, $gross, $dpd, false, false,
+                $months, $policy, $scenarios
+            );
+        }
+        foreach ($external as $observation) {
+            $months = max(0, (int) ceil($date->diffInDays(Carbon::parse($observation->contractual_maturity_date), false) / 30));
+            $rows[] = $this->item(
+                'external:'.$observation->external_loan_reference, null, (int) $observation->id,
+                'partner', 0, (int) $observation->principal_outstanding_minor, (int) $observation->days_past_due,
+                (bool) $observation->sicr, (bool) $observation->credit_impaired,
+                $months, $policy, $scenarios
+            );
+        }
+        $references = array_column($rows, 'loan_reference');
+        if (count($references) !== count(array_unique($references))) {
+            throw new InvalidArgumentException('Duplicate exposure references in monthly cut-off.');
+        }
+        $previous = DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
+            ->where('as_of_date', '<', $asOf)->whereIn('status', ['approved', 'posted'])
+            ->orderByDesc('as_of_date')->orderByDesc('revision')->first();
+        $previousAmounts = $previous ? DB::table('institution_ecl_run_items')
+            ->where('run_id', $previous->id)->pluck('expected_credit_loss_minor', 'loan_reference') : collect();
+        foreach ($rows as &$row) {
+            $row['movement_minor'] = $row['expected_credit_loss_minor'] - (int) ($previousAmounts[$row['loan_reference']] ?? 0);
+        }
+        unset($row);
+        $totalExposure = array_sum(array_column($rows, 'gross_exposure_minor'));
+        $totalEcl = array_sum(array_column($rows, 'expected_credit_loss_minor'));
+        $platformEcl = array_sum(array_column($rows, 'platform_ecl_minor'));
+        $previousTotal = (int) ($previous?->total_ecl_minor ?? 0);
+        $revision = ((int) DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
+            ->where('as_of_date', $asOf)->max('revision')) + 1;
+        $hash = hash('sha256', json_encode([$institutionId, $asOf, $policy->id, $rows, $previous?->id], JSON_THROW_ON_ERROR));
+        return DB::transaction(function () use ($institutionId, $asOf, $policy, $actor, $rows, $totalExposure, $totalEcl, $platformEcl, $previousTotal, $hash, $revision) {
+            if (DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
+                ->where('as_of_date', $asOf)->whereIn('status', ['approved', 'posted'])->exists()) {
+                throw new InvalidArgumentException('A signed-off cut-off already exists. Use a controlled restatement process.');
+            }
+            $runId = DB::table('institution_ecl_runs')->insertGetId([
+                'institution_id' => $institutionId, 'policy_id' => $policy->id,
+                'as_of_date' => $asOf, 'revision' => $revision, 'currency' => $policy->currency,
+                'status' => 'draft', 'total_exposure_minor' => $totalExposure,
+                'total_ecl_minor' => $totalEcl, 'platform_ecl_minor' => $platformEcl,
+                'ecl_movement_minor' => $totalEcl - $previousTotal, 'content_hash' => $hash,
+                'created_by' => $actor->id, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            foreach ($rows as $row) {
+                DB::table('institution_ecl_run_items')->insert($row + [
+                    'run_id' => $runId, 'created_at' => now(), 'updated_at' => now(),
+                ]);
+            }
+            return $runId;
+        });
+    }
+
+    public function approveRun(int $runId, User $actor): void
+    {
+        DB::transaction(function () use ($runId, $actor) {
+            $run = DB::table('institution_ecl_runs')->where('id', $runId)->lockForUpdate()->first();
+            if (! $run || $run->status !== 'draft' || (int) $run->created_by === (int) $actor->id) {
+                throw new InvalidArgumentException('Independent approval is required for a draft monthly ECL run.');
+            }
+            DB::table('institution_ecl_runs')->where('id', $runId)->update([
+                'status' => 'approved', 'approved_by' => $actor->id,
+                'approved_at' => now(), 'updated_at' => now(),
+            ]);
+        });
+    }
+
+    public function postRun(int $runId, User $actor): void
+    {
+        DB::transaction(function () use ($runId, $actor) {
+            $run = DB::table('institution_ecl_runs')->where('id', $runId)->lockForUpdate()->first();
+            if (! $run || $run->status !== 'approved') {
+                throw new InvalidArgumentException('An independently approved ECL run is required.');
+            }
+            $policy = DB::table('institution_ecl_policies')->find($run->policy_id);
+            foreach (DB::table('institution_ecl_run_items')->where('run_id', $runId)->orderBy('id')->get() as $item) {
+                // Never book another lender's exposure, nor a shared claim whose receivable ownership
+                // has not yet been reconciled in the canonical loan subledger.
+                if ($item->owner_type !== 'opfin' || ! $item->loan_id) {
+                    continue;
+                }
+                $ownership = DB::table('loan_ecl_ownerships')->where('loan_id', $item->loan_id)->first();
+                if (! $ownership || $ownership->status !== 'approved'
+                    || $ownership->owner_type !== 'opfin' || (int) $ownership->opfin_share_bps !== 10000) {
+                    throw new InvalidArgumentException('Credit ownership changed since the ECL snapshot.');
+                }
+                $assessment = $this->impairment->assess(
+                    Loan::withoutGlobalScopes()->findOrFail($item->loan_id),
+                    Carbon::parse($run->as_of_date),
+                    (int) $item->expected_credit_loss_minor,
+                    $item->stage, $policy->version,
+                    ['institutional_run' => $runId, 'calculation' => json_decode($item->calculation_evidence, true, 512, JSON_THROW_ON_ERROR)],
+                    $actor
+                );
+                DB::table('institution_ecl_run_items')->where('id', $item->id)
+                    ->update(['impairment_assessment_id' => $assessment->id, 'updated_at' => now()]);
+            }
+            DB::table('institution_ecl_runs')->where('id', $runId)->update([
+                'status' => 'posted', 'posted_at' => now(), 'updated_at' => now(),
+            ]);
+        });
+    }
+
+    public function details(int $runId): array
+    {
+        $run = DB::table('institution_ecl_runs')->find($runId);
+        if (! $run) {
+            throw new InvalidArgumentException('ECL run not found.');
+        }
+        return ['run' => $run, 'items' => DB::table('institution_ecl_run_items')
+            ->where('run_id', $runId)->orderBy('loan_reference')->get()];
+    }
+
+    private function item(
+        string $reference, ?int $loanId, ?int $snapshotId, string $owner, int $shareBps,
+        int $gross, int $dpd, bool $sicr, bool $impaired, int $months,
+        object $policy, array $scenarios
+    ): array {
+        $result = $this->calculator->calculate($gross, $dpd, $sicr, $impaired, $months,
+            (int) $policy->stage2_dpd, (int) $policy->stage3_dpd, (int) $policy->discount_bps, $scenarios);
+        return [
+            'loan_id' => $loanId, 'external_snapshot_id' => $snapshotId,
+            'loan_reference' => $reference, 'owner_type' => $owner,
+            'opfin_share_bps' => $shareBps, 'gross_exposure_minor' => $gross,
+            'days_past_due' => $dpd, 'stage' => $result['stage'],
+            'expected_credit_loss_minor' => $result['expected_credit_loss_minor'],
+            'platform_ecl_minor' => (int) round($result['expected_credit_loss_minor'] * $shareBps / 10000),
+            'calculation_evidence' => json_encode($result['evidence'], JSON_THROW_ON_ERROR),
+        ];
+    }
+
+    private function daysPastDue(Loan $loan, Carbon $asOf): int
+    {
+        $table = $loan->credit_offer_id ? 'credit_repayment_schedule_items' : 'loan_schedules';
+        $due = DB::table($table)->where('loan_id', $loan->id)
+            ->where('due_date', '<', $asOf->toDateString())
+            ->where('principal_outstanding_minor', '>', 0)->orderBy('due_date')->value('due_date');
+        if (! $loan->credit_offer_id) {
+            $due = DB::table('loan_schedules')->where('loan_id', $loan->id)
+                ->where('due_date', '<', $asOf->toDateString())
+                ->where('total_outstanding', '>', 0)->orderBy('due_date')->value('due_date');
+        }
+        return $due ? min(65535, (int) Carbon::parse($due)->diffInDays($asOf)) : 0;
+    }
+}
