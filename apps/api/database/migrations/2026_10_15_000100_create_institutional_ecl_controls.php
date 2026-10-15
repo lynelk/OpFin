@@ -102,6 +102,59 @@ return new class extends Migration
             $t->timestamps();
             $t->unique(['run_id', 'loan_reference']);
         });
+        $this->protectEvidence();
+    }
+
+    /**
+     * Keep financial source and calculation facts immutable, while allowing explicitly
+     * reviewed state changes (draft -> approved -> posted/finalised).
+     */
+    private function protectEvidence(): void
+    {
+        $protected = [
+            'institution_ecl_policies' => [
+                'institution_id', 'version', 'effective_from', 'currency', 'stage2_dpd',
+                'stage3_dpd', 'scenarios', 'discount_bps', 'methodology_reference', 'created_by',
+            ],
+            'loan_ecl_ownerships' => [
+                'loan_id', 'institution_id', 'owner_type', 'opfin_share_bps',
+                'agreement_reference', 'created_by',
+            ],
+            'institution_ecl_external_snapshots' => [
+                'institution_id', 'external_loan_reference', 'as_of_date', 'currency',
+                'principal_outstanding_minor', 'days_past_due', 'sicr',
+                'credit_impaired', 'contractual_maturity_date', 'source_hash',
+                'source_evidence', 'submitted_by',
+            ],
+            'institution_ecl_runs' => [
+                'institution_id', 'policy_id', 'as_of_date', 'revision', 'currency',
+                'total_exposure_minor', 'total_ecl_minor', 'platform_ecl_minor',
+                'ecl_movement_minor', 'content_hash', 'expected_external_count',
+                'expected_external_principal_minor', 'coverage_reference', 'created_by',
+            ],
+            'institution_ecl_run_items' => [
+                'run_id', 'loan_id', 'external_snapshot_id', 'loan_reference',
+                'owner_type', 'opfin_share_bps', 'gross_exposure_minor',
+                'days_past_due', 'stage', 'expected_credit_loss_minor',
+                'platform_ecl_minor', 'movement_minor', 'calculation_evidence',
+            ],
+        ];
+        $driver = DB::getDriverName();
+        foreach ($protected as $table => $columns) {
+            if ($driver === 'pgsql') {
+                $changed = implode(' OR ', array_map(
+                    fn (string $column) => "OLD.{$column} IS DISTINCT FROM NEW.{$column}", $columns
+                ));
+                DB::unprepared("CREATE FUNCTION {$table}_lock_ecl_source() RETURNS trigger LANGUAGE plpgsql AS $ BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Institutional ECL evidence cannot be deleted'; END IF; IF {$changed} THEN RAISE EXCEPTION 'Institutional ECL source fields are immutable'; END IF; RETURN NEW; END; $");
+                DB::unprepared("CREATE TRIGGER {$table}_lock_ecl_source BEFORE UPDATE OR DELETE ON {$table} FOR EACH ROW EXECUTE FUNCTION {$table}_lock_ecl_source()");
+            } elseif ($driver === 'sqlite') {
+                $changed = implode(' OR ', array_map(
+                    fn (string $column) => "OLD.{$column} IS NOT NEW.{$column}", $columns
+                ));
+                DB::unprepared("CREATE TRIGGER {$table}_ecl_update BEFORE UPDATE ON {$table} WHEN {$changed} BEGIN SELECT RAISE(ABORT, 'Institutional ECL source fields are immutable'); END");
+                DB::unprepared("CREATE TRIGGER {$table}_ecl_delete BEFORE DELETE ON {$table} BEGIN SELECT RAISE(ABORT, 'Institutional ECL evidence cannot be deleted'); END");
+            }
+        }
     }
 
     public function down(): void
@@ -115,6 +168,11 @@ return new class extends Migration
         }
         foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'loan_ecl_ownerships', 'institution_ecl_policies'] as $table) {
             Schema::dropIfExists($table);
+        }
+        if (DB::getDriverName() === 'pgsql') {
+            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'loan_ecl_ownerships', 'institution_ecl_policies'] as $table) {
+                DB::unprepared("DROP FUNCTION IF EXISTS {$table}_lock_ecl_source()");
+            }
         }
     }
 };
