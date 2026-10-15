@@ -263,6 +263,13 @@ final class InstitutionalEclService
             if (! $run || $run->status !== 'draft' || (int) $run->created_by === (int) $actor->id) {
                 throw new InvalidArgumentException('Independent approval is required for a draft monthly ECL run.');
             }
+            DB::table('institutions')->where('id', $run->institution_id)->lockForUpdate()->first();
+            $alreadySigned = DB::table('institution_ecl_runs')
+                ->where('institution_id', $run->institution_id)->where('as_of_date', $run->as_of_date)
+                ->where('id', '!=', $runId)->whereIn('status', ['approved', 'posted', 'finalised'])->exists();
+            if ($alreadySigned) {
+                throw new InvalidArgumentException('Another revision for this institution and cut-off has already been signed off.');
+            }
             DB::table('institution_ecl_runs')->where('id', $runId)->update([
                 'status' => 'approved', 'approved_by' => $actor->id,
                 'approved_at' => now(), 'updated_at' => now(),
