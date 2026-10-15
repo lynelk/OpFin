@@ -89,7 +89,7 @@ export default async function InstitutionalEclPage({ searchParams }: { searchPar
             <td>{batch.loan_count}</td><td>{batch.currency} {batch.principal_total_minor.toLocaleString("en-GB")}</td><td>{batch.status}</td>
             <td>{batch.status === "staged" ? <Action kind="batch-approve" institution={institutionId} id={batch.id} label="Approve entire batch" /> : "Reviewed"}</td></tr>)}</tbody></table>
         <details><summary>Upload institution-issued loan book CSV</summary>
-          <form action={institutionalEclAction} className="form-grid" encType="multipart/form-data">{hidden}
+          <form action={institutionalEclAction} className="form-grid">{hidden}
             <input type="hidden" name="kind" value="external-csv" />
             <Field label="Reporting date" name="as_of_date" type="date" />
             <Field label="Currency" name="currency" value="UGX" />
