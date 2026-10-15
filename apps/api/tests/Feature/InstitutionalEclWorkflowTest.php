@@ -127,9 +127,9 @@ class InstitutionalEclWorkflowTest extends TestCase
         $checker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
         $service = app(InstitutionalEclService::class);
         $asOf = now()->toDateString();
-        $csv = 'external_loan_reference,principal_outstanding_minor,days_past_due,sicr,credit_impaired,contractual_maturity_date'."\\n"
-            .'CSV-1,100000,35,1,0,2027-12-31'."\\n"
-            .'CSV-2,50000,0,0,0,2027-12-31'."\\n";
+        $csv = 'external_loan_reference,principal_outstanding_minor,days_past_due,sicr,credit_impaired,contractual_maturity_date'."\n"
+            .'CSV-1,100000,35,1,0,2027-12-31'."\n"
+            .'CSV-2,50000,0,0,0,2027-12-31'."\n";
         try {
             $service->stageExternalCsv($institution->id, $asOf, 'UGX', 'TEST-MIS-CONTROLS', $csv, 2, 149999, $maker);
             $this->fail('An unmatched source control total must fail closed.');
@@ -149,10 +149,10 @@ class InstitutionalEclWorkflowTest extends TestCase
         $this->assertSame('approved', DB::table('institution_ecl_import_batches')->find($batch)->status);
 
         $this->expectException(\\Illuminate\\Database\\QueryException::class);
+        $snapshotId = DB::table('institution_ecl_external_snapshots')
+            ->where('import_batch_id', $batch)->value('id');
         DB::table('institution_ecl_external_snapshots')
-            ->where('import_batch_id', $batch)->first();
-        DB::table('institution_ecl_external_snapshots')
-            ->where('import_batch_id', $batch)->limit(1)->update(['principal_outstanding_minor' => 9999]);
+            ->where('id', $snapshotId)->update(['principal_outstanding_minor' => 9999]);
     }
 
     public function test_policy_approval_cannot_be_replayed(): void
