@@ -114,6 +114,47 @@ class InstitutionalEclWorkflowTest extends TestCase
         $this->actingAs($maker)->getJson('/api/admin/institutional-ecl/runs/'.$run)->assertOk();
     }
 
+
+    public function test_csv_batch_is_atomic_requires_source_totals_and_has_immutable_evidence(): void
+    {
+        $institution = Institution::create([
+            'name' => 'CSV Credit Partner', 'address' => 'Kampala',
+            'phone' => '256700009993', 'email' => 'csv-ecl-test@example.com',
+            'authority_basis' => 'licensed', 'authority_reference' => 'TEST-NOT-LIVE',
+            'regulator_code' => 'TEST',
+        ]);
+        $maker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $checker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $service = app(InstitutionalEclService::class);
+        $asOf = now()->toDateString();
+        $csv = 'external_loan_reference,principal_outstanding_minor,days_past_due,sicr,credit_impaired,contractual_maturity_date'."\\n"
+            .'CSV-1,100000,35,1,0,2027-12-31'."\\n"
+            .'CSV-2,50000,0,0,0,2027-12-31'."\\n";
+        try {
+            $service->stageExternalCsv($institution->id, $asOf, 'UGX', 'TEST-MIS-CONTROLS', $csv, 2, 149999, $maker);
+            $this->fail('An unmatched source control total must fail closed.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('reconcile', $e->getMessage());
+        }
+        $this->assertSame(0, DB::table('institution_ecl_import_batches')->count());
+        $batch = $service->stageExternalCsv($institution->id, $asOf, 'UGX', 'TEST-MIS-CONTROLS', $csv, 2, 150000, $maker);
+        $this->assertSame(2, DB::table('institution_ecl_external_snapshots')->where('import_batch_id', $batch)->count());
+        try {
+            $service->approveExternalBatch($batch, $maker);
+            $this->fail('Batch source creator must not be their own checker.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('independent', $e->getMessage());
+        }
+        $this->assertSame(2, $service->approveExternalBatch($batch, $checker));
+        $this->assertSame('approved', DB::table('institution_ecl_import_batches')->find($batch)->status);
+
+        $this->expectException(\\Illuminate\\Database\\QueryException::class);
+        DB::table('institution_ecl_external_snapshots')
+            ->where('import_batch_id', $batch)->first();
+        DB::table('institution_ecl_external_snapshots')
+            ->where('import_batch_id', $batch)->limit(1)->update(['principal_outstanding_minor' => 9999]);
+    }
+
     public function test_policy_approval_cannot_be_replayed(): void
     {
         $institution = Institution::create([
