@@ -420,6 +420,8 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/institutional-ecl/ownerships', [InstitutionalEclController::class, 'ownership']);
     Route::post('/admin/institutional-ecl/ownerships/{id}/approve', [InstitutionalEclController::class, 'approveOwnership']);
     Route::post('/admin/institutional-ecl/external-snapshots', [InstitutionalEclController::class, 'external']);
+    Route::post('/admin/institutional-ecl/external-csv', [InstitutionalEclController::class, 'uploadExternalCsv']);
+    Route::post('/admin/institutional-ecl/import-batches/{id}/approve', [InstitutionalEclController::class, 'approveExternalBatch']);
     Route::post('/admin/institutional-ecl/external-snapshots/{id}/approve', [InstitutionalEclController::class, 'approveExternal']);
     Route::post('/admin/institutional-ecl/runs', [InstitutionalEclController::class, 'build']);
     Route::post('/admin/institutional-ecl/runs/{id}/approve', [InstitutionalEclController::class, 'approveRun']);
