@@ -176,7 +176,8 @@ final class InstitutionalEclService
             if ($loan->created_at && $loan->created_at->toDateString() > $asOf) {
                 continue;
             }
-            $gross = $this->impairment->grossRecordedExposureMinor($loan);
+            $writtenOff = DB::table('credit_write_offs')->where('loan_id', $loan->id)->exists();
+            $gross = $writtenOff ? 0 : $this->impairment->grossRecordedExposureMinor($loan);
             $loanCurrency = $loan->credit_offer_id
                 ? DB::table('credit_offers')->where('id', $loan->credit_offer_id)->value('currency')
                 : config('services.mobile_money.currency', 'UGX');
