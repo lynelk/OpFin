@@ -655,6 +655,26 @@ class FinancialIntegrityService
         $maxAgeDays = max(1, (int) config('opfin.accounting.impairment_max_age_days', 31));
         $allowanceExpected = [];
 
+        // Disbursement events are platform GL facts, even when OpFin is only the servicer.
+        // Track unreversed original postings so partner-owned principal is not silently
+        // treated as an OpFin recognised receivable.
+        $originalDisbursementReferences = [];
+        $reversedDisbursementReferences = [];
+        foreach (DB::table('ledger_transactions')
+            ->whereIn('event_type', ['loan.disbursement', 'loan.disbursement.reversal'])
+            ->get(['reference', 'event_type', 'metadata']) as $entry) {
+            $meta = is_array($entry->metadata) ? $entry->metadata : json_decode((string) $entry->metadata, true);
+            if (! is_array($meta)) {
+                continue;
+            }
+            if ($entry->event_type === 'loan.disbursement.reversal') {
+                if (! empty($meta['reverses_reference'])) {
+                    $reversedDisbursementReferences[(string) $meta['reverses_reference']] = true;
+                }
+            } elseif (! empty($meta['loan_id'])) {
+                $originalDisbursementReferences[(int) $meta['loan_id']][] = (string) $entry->reference;
+            }
+        }
         $ownerships = Schema::hasTable('loan_ecl_ownerships')
             ? DB::table('loan_ecl_ownerships')->get()->keyBy('loan_id') : collect();
         $institutionsWithPolicies = Schema::hasTable('institution_ecl_policies')
@@ -687,6 +707,17 @@ class FinancialIntegrityService
                     $findings[] = $this->alert($runId, 'high', 'partner_impairment_report_missing', (string) $loan->id,
                         'Partner-owned or shared serviced credit lacks a current approved advisory ECL statement.', [
                             'loan_id' => $loan->id, 'risk_owner' => $ownership->owner_type,
+                        ]);
+                }
+                $unreversedPrincipalPostings = array_values(array_filter(
+                    $originalDisbursementReferences[(int) $loan->id] ?? [],
+                    fn (string $reference) => ! isset($reversedDisbursementReferences[$reference])
+                ));
+                if ($unreversedPrincipalPostings !== []) {
+                    $findings[] = $this->alert($runId, 'critical', 'partner_principal_recognised_by_platform', (string) $loan->id,
+                        'An unreversed disbursement journal may recognise a partner-owned facility as an OpFin loan receivable; reconcile and reclassify with signed accounting evidence.', [
+                            'loan_id' => $loan->id,
+                            'disbursement_references' => $unreversedPrincipalPostings,
                         ]);
                 }
                 if ($assessment && $assessment->ledger_transaction_id) {
