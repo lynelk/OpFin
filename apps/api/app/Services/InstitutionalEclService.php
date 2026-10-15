@@ -110,6 +110,9 @@ final class InstitutionalEclService
         fwrite($file, $csv);
         rewind($file);
         $header = fgetcsv($file, 0, ',', '"', '');
+        if (is_array($header) && isset($header[0])) {
+            $header[0] = preg_replace('/^\\xEF\\xBB\\xBF/', '', $header[0]);
+        }
         if ($header !== ['external_loan_reference', 'principal_outstanding_minor', 'days_past_due', 'sicr', 'credit_impaired', 'contractual_maturity_date']) {
             fclose($file);
             throw new InvalidArgumentException('CSV header must match the published canonical loan observation template.');
