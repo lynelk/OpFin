@@ -53,6 +53,11 @@ class LoanImpairmentService
             $lockedLoan = Loan::query()->lockForUpdate()->findOrFail($loan->id);
             if (Schema::hasTable('loan_ecl_ownerships')) {
                 $ownership = DB::table('loan_ecl_ownerships')->where('loan_id', $lockedLoan->id)->first();
+                if (! $ownership && Schema::hasTable('institution_ecl_policies')
+                    && DB::table('institution_ecl_policies')->where('institution_id', $lockedLoan->institution_id)
+                        ->where('status', 'approved')->exists()) {
+                    throw new InvalidArgumentException('Approved institutional ECL policy requires explicit credit-risk ownership before a platform journal.');
+                }
                 if ($ownership && ($ownership->status !== 'approved' || $ownership->owner_type !== 'opfin'
                     || (int) $ownership->opfin_share_bps !== 10000)) {
                     throw new InvalidArgumentException(
