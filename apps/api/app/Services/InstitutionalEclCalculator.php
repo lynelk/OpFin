@@ -63,7 +63,7 @@ final class InstitutionalEclCalculator
         };
         // This is an approved, scenario-weighted simplified ECL model, not a generic IFRS 9 certification.
         // Discounted using the contractual remaining term proxy. Entity validation is still mandatory.
-        $years = min($monthsRemaining, $stage === 'stage_1' ? 12 : 600) / 12;
+        $years = $monthsRemaining / 12;
         $discountFactor = pow(1 + $discountBps / 10000, $years);
         $expected = 0.0;
         foreach ($scenarios as $scenario) {
