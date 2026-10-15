@@ -33,6 +33,15 @@ class CreditWriteOffService
 
         return DB::transaction(function () use ($loan, $policyVersion, $evidence, $actor) {
             $lockedLoan = Loan::withoutGlobalScopes()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
+            if (\Illuminate\Support\Facades\Schema::hasTable('loan_ecl_ownerships')) {
+                $ownership = DB::table('loan_ecl_ownerships')->where('loan_id', $lockedLoan->id)->first();
+                if ($ownership && ($ownership->status !== 'approved' || $ownership->owner_type !== 'opfin'
+                    || (int) $ownership->opfin_share_bps !== 10000)) {
+                    throw new InvalidArgumentException(
+                        'Cannot debit an OpFin allowance or receivable for an unapproved, partner-owned or shared write-off.'
+                    );
+                }
+            }
             if (in_array((string) $lockedLoan->status, ['Cleared', 'Reversed'], true)) {
                 throw new InvalidArgumentException('Cleared or reversed loans cannot be written off.');
             }
