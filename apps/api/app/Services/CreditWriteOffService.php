@@ -35,6 +35,11 @@ class CreditWriteOffService
             $lockedLoan = Loan::withoutGlobalScopes()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
             if (\Illuminate\Support\Facades\Schema::hasTable('loan_ecl_ownerships')) {
                 $ownership = DB::table('loan_ecl_ownerships')->where('loan_id', $lockedLoan->id)->first();
+                if (! $ownership && \Illuminate\Support\Facades\Schema::hasTable('institution_ecl_policies')
+                    && DB::table('institution_ecl_policies')->where('institution_id', $lockedLoan->institution_id)
+                        ->where('status', 'approved')->exists()) {
+                    throw new InvalidArgumentException('Write-off requires explicit credit-risk ownership under an approved institutional ECL policy.');
+                }
                 if ($ownership && ($ownership->status !== 'approved' || $ownership->owner_type !== 'opfin'
                     || (int) $ownership->opfin_share_bps !== 10000)) {
                     throw new InvalidArgumentException(
