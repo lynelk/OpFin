@@ -80,6 +80,27 @@ export default async function InstitutionalEclPage({ searchParams }: { searchPar
           <button className="button">Submit ownership for review</button>
         </form></details>
       </section>
+      <section className="panel"><h2>Reviewed institutional CSV loan books</h2>
+        <p>Use the canonical six-column CSV format. Each batch is staged against an independently checked loan count and total outstanding principal, then approved by a different administrator. No batch imports create OpFin loans or accounting receivables.</p>
+        <p><code>external_loan_reference,principal_outstanding_minor,days_past_due,sicr,credit_impaired,contractual_maturity_date</code></p>
+        <p>Use 1 or 0 for the two risk flags and YYYY-MM-DD for maturity. Maximum 2,000 loans or 2 MiB per file. For the reporting date, aggregate the complete set of approved batches in the stated control totals.</p>
+        <table className="table"><thead><tr><th>Cut-off / reference</th><th>Loans</th><th>Principal</th><th>Status</th><th>Review</th></tr></thead>
+          <tbody>{register.import_batches.map(batch => <tr key={batch.id}><td>{batch.as_of_date} · {batch.source_evidence}</td>
+            <td>{batch.loan_count}</td><td>{batch.currency} {batch.principal_total_minor.toLocaleString("en-GB")}</td><td>{batch.status}</td>
+            <td>{batch.status === "staged" ? <Action kind="batch-approve" institution={institutionId} id={batch.id} label="Approve entire batch" /> : "Reviewed"}</td></tr>)}</tbody></table>
+        <details><summary>Upload institution-issued loan book CSV</summary>
+          <form action={institutionalEclAction} className="form-grid" encType="multipart/form-data">{hidden}
+            <input type="hidden" name="kind" value="external-csv" />
+            <Field label="Reporting date" name="as_of_date" type="date" />
+            <Field label="Currency" name="currency" value="UGX" />
+            <Field label="MIS source, legal permission and reconciliation reference" name="source_evidence" />
+            <Field label="Declared number of loans in this file" name="expected_loan_count" type="number" />
+            <Field label="Declared outstanding principal in this file (minor units)" name="expected_principal_minor" type="number" />
+            <label className="field">Canonical UTF-8 CSV file<input name="file" type="file" accept=".csv,text/csv" required /></label>
+            <button className="button">Stage loan-book file</button>
+          </form>
+        </details>
+      </section>
       <section className="panel"><h2>Institution-issued loans (not OpFin assets)</h2>
         <p>Supply independent source loan observations with a dated control-total statement. Upload and review are separate. For a settled loan, include a zero-balance observation to reconcile movements.</p>
         <table className="table"><thead><tr><th>Loan reference</th><th>As of</th><th>Principal</th><th>Status</th><th>Review</th></tr></thead>
