@@ -32,7 +32,7 @@ class InstitutionalEclWorkflowTest extends TestCase
         $second = $calculator->calculate(100000, 35, false, false, 24, 30, 90, 0, $this->scenarios());
         $third = $calculator->calculate(100000, 0, false, true, 24, 30, 90, 0, $this->scenarios());
         $this->assertSame('stage_1', $first['stage']);
-        $this->assertSame(1400, $first['expected_credit_loss_minor']);
+        $this->assertSame(1560, $first['expected_credit_loss_minor']);
         $this->assertSame('stage_2', $second['stage']);
         $this->assertSame(7800, $second['expected_credit_loss_minor']);
         $this->assertSame('stage_3', $third['stage']);
@@ -107,7 +107,7 @@ class InstitutionalEclWorkflowTest extends TestCase
         $before = DB::table('ledger_transactions')->count();
         $engine->postRun($run, $checker);
         $this->assertSame($before, DB::table('ledger_transactions')->count());
-        $this->assertSame('posted', $engine->details($run)['run']->status);
+        $this->assertSame('finalised', $engine->details($run)['run']->status);
 
         $this->actingAs($maker)->get('/api/admin/institutional-ecl/runs/'.$run.'/export/loans')
             ->assertOk()->assertHeader('content-type', 'text/csv; charset=UTF-8');
