@@ -135,8 +135,12 @@ final class InstitutionalEclController extends Controller
         $v = $request->validate([
             'institution_id' => 'required|integer|exists:institutions,id',
             'as_of_date' => 'required|date_format:Y-m-d',
+            'expected_external_count' => 'required|integer|min:0|max:1000000',
+            'expected_external_principal_minor' => 'required|integer|min:0',
+            'coverage_reference' => 'required|string|max:255',
         ]);
-        $id = $this->handled(fn () => $this->service->build($v['institution_id'], $v['as_of_date'], $request->user()));
+        $id = $this->handled(fn () => $this->service->build($v['institution_id'], $v['as_of_date'],
+            $v['expected_external_count'], $v['expected_external_principal_minor'], $v['coverage_reference'], $request->user()));
         return ApiResponse::success('Draft monthly ECL snapshot created; no journals posted.', ['id' => $id], 201);
     }
 
