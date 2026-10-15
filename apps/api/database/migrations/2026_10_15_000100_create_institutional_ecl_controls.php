@@ -143,7 +143,9 @@ return new class extends Migration
         foreach ($protected as $table => $columns) {
             if ($driver === 'pgsql') {
                 $changed = implode(' OR ', array_map(
-                    fn (string $column) => "OLD.{$column} IS DISTINCT FROM NEW.{$column}", $columns
+                    fn (string $column) => in_array($column, ['scenarios', 'calculation_evidence'], true)
+                        ? "OLD.{$column}::text IS DISTINCT FROM NEW.{$column}::text"
+                        : "OLD.{$column} IS DISTINCT FROM NEW.{$column}", $columns
                 ));
                 DB::unprepared("CREATE FUNCTION {$table}_lock_ecl_source() RETURNS trigger LANGUAGE plpgsql AS $ BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Institutional ECL evidence cannot be deleted'; END IF; IF {$changed} THEN RAISE EXCEPTION 'Institutional ECL source fields are immutable'; END IF; RETURN NEW; END; $");
                 DB::unprepared("CREATE TRIGGER {$table}_lock_ecl_source BEFORE UPDATE OR DELETE ON {$table} FOR EACH ROW EXECUTE FUNCTION {$table}_lock_ecl_source()");
