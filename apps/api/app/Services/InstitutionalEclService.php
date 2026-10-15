@@ -128,9 +128,12 @@ final class InstitutionalEclService
         });
     }
 
-    public function build(int $institutionId, string $asOf, User $actor): int
+    public function build(int $institutionId, string $asOf, int $expectedExternalCount, int $expectedExternalPrincipal, string $coverageReference, User $actor): int
     {
         $date = Carbon::parse($asOf);
+        if ($expectedExternalCount < 0 || $expectedExternalPrincipal < 0 || trim($coverageReference) === '') {
+            throw new InvalidArgumentException('Source completeness totals and evidence reference are required.');
+        }
         if ($date->toDateString() > now()->toDateString()) {
             throw new InvalidArgumentException('Cannot run a future portfolio cut-off.');
         }
@@ -159,6 +162,10 @@ final class InstitutionalEclService
         if ($approvedOwnerships->isNotEmpty() && $date->toDateString() !== now()->toDateString()) {
             throw new InvalidArgumentException('Historical managed-loan balances cannot be reconstructed from current schedules. Capture at cut-off date.');
         }
+        $staged = DB::table('institution_ecl_external_snapshots')->where('institution_id', $institutionId)->where('as_of_date', $asOf)->where('status', 'staged')->exists();
+        if ($staged || $external->count() !== $expectedExternalCount || (int) $external->sum('principal_outstanding_minor') !== $expectedExternalPrincipal) {
+            throw new InvalidArgumentException('Unreviewed external source or submitted counts/principal do not match signed-off source controls.');
+        }
         if ($external->contains(fn ($item) => $item->currency !== $policy->currency)) {
             throw new InvalidArgumentException('External snapshot currency differs from the approved policy.');
         }
@@ -170,6 +177,12 @@ final class InstitutionalEclService
                 continue;
             }
             $gross = $this->impairment->grossRecordedExposureMinor($loan);
+            $loanCurrency = $loan->credit_offer_id
+                ? DB::table('credit_offers')->where('id', $loan->credit_offer_id)->value('currency')
+                : config('services.mobile_money.currency', 'UGX');
+            if (strtoupper((string) $loanCurrency) !== $policy->currency) {
+                throw new InvalidArgumentException('Managed exposure currency does not match the institution ECL policy.');
+            }
             $dpd = $this->daysPastDue($loan, $date);
             $termEnd = $loan->disbursed_at
                 ? Carbon::parse($loan->disbursed_at)->addDays((int) $loan->duration)
@@ -210,7 +223,7 @@ final class InstitutionalEclService
         $revision = ((int) DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
             ->where('as_of_date', $asOf)->max('revision')) + 1;
         $hash = hash('sha256', json_encode([$institutionId, $asOf, $policy->id, $rows, $previous?->id], JSON_THROW_ON_ERROR));
-        return DB::transaction(function () use ($institutionId, $asOf, $policy, $actor, $rows, $totalExposure, $totalEcl, $platformEcl, $previousTotal, $hash, $revision) {
+        return DB::transaction(function () use ($institutionId, $asOf, $policy, $actor, $rows, $totalExposure, $totalEcl, $platformEcl, $previousTotal, $hash, $revision, $expectedExternalCount, $expectedExternalPrincipal, $coverageReference) {
             if (DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
                 ->where('as_of_date', $asOf)->whereIn('status', ['approved', 'posted'])->exists()) {
                 throw new InvalidArgumentException('A signed-off cut-off already exists. Use a controlled restatement process.');
@@ -221,6 +234,9 @@ final class InstitutionalEclService
                 'status' => 'draft', 'total_exposure_minor' => $totalExposure,
                 'total_ecl_minor' => $totalEcl, 'platform_ecl_minor' => $platformEcl,
                 'ecl_movement_minor' => $totalEcl - $previousTotal, 'content_hash' => $hash,
+                'expected_external_count' => $expectedExternalCount,
+                'expected_external_principal_minor' => $expectedExternalPrincipal,
+                'coverage_reference' => $coverageReference,
                 'created_by' => $actor->id, 'created_at' => now(), 'updated_at' => now(),
             ]);
             foreach ($rows as $row) {
@@ -312,15 +328,11 @@ final class InstitutionalEclService
 
     private function daysPastDue(Loan $loan, Carbon $asOf): int
     {
-        $table = $loan->credit_offer_id ? 'credit_repayment_schedule_items' : 'loan_schedules';
-        $due = DB::table($table)->where('loan_id', $loan->id)
-            ->where('due_date', '<', $asOf->toDateString())
-            ->where('principal_outstanding_minor', '>', 0)->orderBy('due_date')->value('due_date');
-        if (! $loan->credit_offer_id) {
-            $due = DB::table('loan_schedules')->where('loan_id', $loan->id)
-                ->where('due_date', '<', $asOf->toDateString())
-                ->where('total_outstanding', '>', 0)->orderBy('due_date')->value('due_date');
-        }
+        $query = $loan->credit_offer_id
+            ? DB::table('credit_repayment_schedule_items')->where('total_outstanding_minor', '>', 0)
+            : DB::table('loan_schedules')->where('total_outstanding', '>', 0);
+        $due = $query->where('loan_id', $loan->id)->where('due_date', '<', $asOf->toDateString())
+            ->orderBy('due_date')->value('due_date');
         return $due ? min(65535, (int) Carbon::parse($due)->diffInDays($asOf)) : 0;
     }
 }
