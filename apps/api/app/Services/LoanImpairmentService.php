@@ -51,6 +51,15 @@ class LoanImpairmentService
             $loan, $asOf, $expectedCreditLossMinor, $stage, $policyVersion, $evidence, $actor
         ) {
             $lockedLoan = Loan::query()->lockForUpdate()->findOrFail($loan->id);
+            if (Schema::hasTable('loan_ecl_ownerships')) {
+                $ownership = DB::table('loan_ecl_ownerships')->where('loan_id', $lockedLoan->id)->first();
+                if ($ownership && ($ownership->status !== 'approved' || $ownership->owner_type !== 'opfin'
+                    || (int) $ownership->opfin_share_bps !== 10000)) {
+                    throw new InvalidArgumentException(
+                        'Platform impairment journals are prohibited for unapproved, partner-owned or shared exposures.'
+                    );
+                }
+            }
             if (Schema::hasTable('credit_write_offs')
                 && DB::table('credit_write_offs')->where('loan_id', $lockedLoan->id)->exists()) {
                 throw new InvalidArgumentException(
