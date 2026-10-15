@@ -72,6 +72,9 @@ return new class extends Migration
             $t->unsignedBigInteger('total_ecl_minor');
             $t->unsignedBigInteger('platform_ecl_minor');
             $t->bigInteger('ecl_movement_minor');
+            $t->unsignedInteger('expected_external_count');
+            $t->unsignedBigInteger('expected_external_principal_minor');
+            $t->string('coverage_reference', 255);
             $t->char('content_hash', 64);
             $t->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $t->foreignId('approved_by')->nullable()->constrained('users')->restrictOnDelete();
