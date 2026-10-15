@@ -208,10 +208,14 @@ final class InstitutionalEclService
             throw new InvalidArgumentException('Duplicate exposure references in monthly cut-off.');
         }
         $previous = DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
-            ->where('as_of_date', '<', $asOf)->whereIn('status', ['approved', 'posted'])
+            ->where('as_of_date', '<', $asOf)->whereIn('status', ['approved', 'posted', 'finalised'])
             ->orderByDesc('as_of_date')->orderByDesc('revision')->first();
         $previousAmounts = $previous ? DB::table('institution_ecl_run_items')
             ->where('run_id', $previous->id)->pluck('expected_credit_loss_minor', 'loan_reference') : collect();
+        $missing = array_diff($previousAmounts->keys()->all(), $references);
+        if ($missing !== []) {
+            throw new InvalidArgumentException('Previous-period exposures are missing from the current extract; submit explicit zero-balance closures before sign-off.');
+        }
         foreach ($rows as &$row) {
             $row['movement_minor'] = $row['expected_credit_loss_minor'] - (int) ($previousAmounts[$row['loan_reference']] ?? 0);
         }
@@ -270,6 +274,7 @@ final class InstitutionalEclService
                 throw new InvalidArgumentException('An independently approved ECL run is required.');
             }
             $policy = DB::table('institution_ecl_policies')->find($run->policy_id);
+            $platformJournalCount = 0;
             foreach (DB::table('institution_ecl_run_items')->where('run_id', $runId)->orderBy('id')->get() as $item) {
                 // Never book another lender's exposure, nor a shared claim whose receivable ownership
                 // has not yet been reconciled in the canonical loan subledger.
@@ -281,6 +286,7 @@ final class InstitutionalEclService
                     || $ownership->owner_type !== 'opfin' || (int) $ownership->opfin_share_bps !== 10000) {
                     throw new InvalidArgumentException('Credit ownership changed since the ECL snapshot.');
                 }
+                $platformJournalCount++;
                 $assessment = $this->impairment->assess(
                     Loan::withoutGlobalScopes()->findOrFail($item->loan_id),
                     Carbon::parse($run->as_of_date),
@@ -293,7 +299,8 @@ final class InstitutionalEclService
                     ->update(['impairment_assessment_id' => $assessment->id, 'updated_at' => now()]);
             }
             DB::table('institution_ecl_runs')->where('id', $runId)->update([
-                'status' => 'posted', 'posted_at' => now(), 'updated_at' => now(),
+                'status' => $platformJournalCount > 0 ? 'posted' : 'finalised',
+                'posted_at' => $platformJournalCount > 0 ? now() : null, 'updated_at' => now(),
             ]);
         });
     }
