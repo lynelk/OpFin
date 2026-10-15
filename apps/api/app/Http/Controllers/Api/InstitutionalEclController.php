@@ -45,6 +45,8 @@ final class InstitutionalEclController extends Controller
         return ApiResponse::success('Institutional ECL register.', [
             'policies' => DB::table('institution_ecl_policies')->where('institution_id', $institution)->orderByDesc('id')->get(),
             'ownerships' => DB::table('loan_ecl_ownerships')->where('institution_id', $institution)->orderByDesc('id')->get(),
+            'import_batches' => DB::table('institution_ecl_import_batches')->where('institution_id', $institution)
+                ->orderByDesc('as_of_date')->orderByDesc('id')->limit(300)->get(),
             'external_snapshots' => DB::table('institution_ecl_external_snapshots')
                 ->where('institution_id', $institution)->orderByDesc('as_of_date')->limit(500)->get(),
             'runs' => DB::table('institution_ecl_runs')->where('institution_id', $institution)
@@ -120,6 +122,37 @@ final class InstitutionalEclController extends Controller
         ]);
         $id = $this->handled(fn () => $this->service->stageExternal($v['institution_id'], $v, $request->user()));
         return ApiResponse::success('External loan evidence staged, not an OpFin accounting asset.', ['id' => $id], 201);
+    }
+
+
+    public function uploadExternalCsv(Request $request): JsonResponse
+    {
+        $this->requireRead($request);
+        $v = $request->validate([
+            'institution_id' => 'required|integer|exists:institutions,id',
+            'as_of_date' => 'required|date_format:Y-m-d',
+            'currency' => 'required|regex:/^[A-Z]{3}$/',
+            'source_evidence' => 'required|string|max:255',
+            'expected_loan_count' => 'required|integer|min:1|max:2000',
+            'expected_principal_minor' => 'required|integer|min:0',
+            'file' => 'required|file|max:2048',
+        ]);
+        $content = file_get_contents($request->file('file')->getRealPath());
+        if ($content === false) {
+            throw ValidationException::withMessages(['file' => 'Unable to load CSV content.']);
+        }
+        $id = $this->handled(fn () => $this->service->stageExternalCsv(
+            $v['institution_id'], $v['as_of_date'], $v['currency'], $v['source_evidence'],
+            $content, $v['expected_loan_count'], $v['expected_principal_minor'], $request->user()
+        ));
+        return ApiResponse::success('Loan-book CSV staged with source controls; independent approval is required.', ['id' => $id], 201);
+    }
+
+    public function approveExternalBatch(Request $request, int $id): JsonResponse
+    {
+        $this->requireChecker($request);
+        $count = $this->handled(fn () => $this->service->approveExternalBatch($id, $request->user()));
+        return ApiResponse::success('Institutional source batch approved.', ['id' => $id, 'approved_loans' => $count]);
     }
 
     public function approveExternal(Request $request, int $id): JsonResponse
