@@ -9,7 +9,7 @@ import { capabilityLabel } from "@/lib/capabilities";
 import { formatUgx } from "@/lib/format";
 
 function money(value: number | null): string {
-  return value === null ? "Add balance" : formatUgx(value);
+  return value === null ? "Unavailable" : formatUgx(value);
 }
 
 export default async function DashboardPage() {
@@ -54,20 +54,46 @@ export default async function DashboardPage() {
         title={`Welcome, ${user.name}`}
         description="Understand, manage, plan and improve your money. Your Financial Compass separates recorded facts from estimates and keeps each Financial Space private."
       >
-        <section className="panel">
-          <div className="case-card-head"><div><h2>Your financial spaces</h2><p className="muted">Personal money, households, savings groups and organisations under one identity.</p></div><Link href="/spaces">Open spaces</Link></div>
-        </section>
-        <section className="financial-compass" aria-labelledby="financial-compass-title">
-          <p className="eyebrow">Financial Compass</p>
-          <h2 className="financial-compass-title" id="financial-compass-title">See the position. Understand the next move.</h2>
-          <p className="muted">Recorded facts, estimates and unavailable information stay distinct so guidance never looks more certain than the underlying evidence.</p>
-        </section>
-        <section className="panel compass-next-action opfin-next-step">
-          <p className="eyebrow">Recommended next step</p>
-          <h2>{nextAction.title}</h2>
-          <p className="muted">{nextAction.text}</p>
-          <Link className="button compass-action" href={nextAction.href}>{nextAction.action}</Link>
-        </section>
+        <div className="opfin-home">
+          <section className="financial-compass" aria-labelledby="financial-compass-title">
+            <p className="eyebrow">Your Financial Compass</p>
+            <h2 className="financial-compass-title" id="financial-compass-title">Your money, clearly in view</h2>
+            <p className="muted">A view of your recorded financial position. Estimates, missing information and upcoming commitments are shown separately.</p>
+            <div className="compass-primary-grid" aria-label="Financial position at a glance">
+              <div>
+                <h3>Available money</h3>
+                <p className="stat">{money(position.available_money_minor)}</p>
+                <p className="muted">{position.available_money_confidence ? `Source confidence: ${position.available_money_confidence.replaceAll("_", " ")}.` : "No current balance source is recorded."}</p>
+              </div>
+              <div>
+                <h3>Committed in the next 30 days</h3>
+                <p className="stat">{formatUgx(position.committed_money_minor)}</p>
+                <p className="muted">Recorded and scheduled obligations, not necessarily settled payments.</p>
+              </div>
+              <div>
+                <h3>Safe to spend</h3>
+                <p className="stat">{money(position.safe_to_spend_minor)}</p>
+                <p className="muted">{position.safe_to_spend_explanation}</p>
+              </div>
+            </div>
+          </section>
+
+          <div className="home-next-row">
+            <section className="panel compass-next-action opfin-next-step">
+              <p className="eyebrow">Recommended next step</p>
+              <h2>{nextAction.title}</h2>
+              <p className="muted">{nextAction.text}</p>
+              <Link className="button compass-action" href={nextAction.href}>{nextAction.action}</Link>
+            </section>
+            <section className="panel home-space-card">
+              <div>
+                <p className="eyebrow">Your financial spaces</p>
+                <h2>One identity. Distinct spaces.</h2>
+                <p className="muted">Keep personal, household, savings-group and organisation records in their authorised contexts.</p>
+              </div>
+              <Link href="/spaces">Explore your spaces</Link>
+            </section>
+          </div>
 
         {!activation.activation_complete ? (
           <section className="panel" style={{ marginBottom: 16 }}>
@@ -78,29 +104,15 @@ export default async function DashboardPage() {
               </div>
               <span className="badge ok">{activation.activation_percent}%</span>
             </div>
-            <div className="setup-progress"><span style={{ width: `${activation.activation_percent}%` }} /></div>
+            <div className="setup-progress" role="progressbar" aria-label="Account setup completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={activation.activation_percent}><span style={{ width: `${activation.activation_percent}%` }} /></div>
           </section>
         ) : null}
 
-        <div className="grid grid-3 compass-grid">
-          <section className="panel">
-            <h2>Available money</h2>
-            <div className="stat">{money(position.available_money_minor)}</div>
-            <p className="muted">{position.available_money_confidence ? `Source confidence: ${position.available_money_confidence.replaceAll("_", " ")}.` : "No current balance source is recorded."}</p>
-          </section>
-          <section className="panel">
-            <h2>Committed money</h2>
-            <div className="stat">{formatUgx(position.committed_money_minor)}</div>
-            <p className="muted">Confirmed and scheduled obligations in the next 30 days.</p>
-          </section>
-          <section className="panel">
-            <h2>Safe to spend</h2>
-            <div className="stat">{money(position.safe_to_spend_minor)}</div>
-            <p className="muted">{position.safe_to_spend_explanation}</p>
-          </section>
+        <div className="home-section-head">
+          <h2>More about your position</h2>
+          <p className="muted">Only confirmed values are shown as confirmed. Service availability is independent of a displayed balance.</p>
         </div>
-
-        <div className="grid grid-3 compass-grid">
+        <div className="compass-secondary-grid">
           <section className="panel">
             <h2>Debt obligations</h2>
             <div className="stat">{formatUgx(position.debt_obligations_minor)}</div>
@@ -114,7 +126,7 @@ export default async function DashboardPage() {
           <section className="panel">
             <h2>Payments</h2>
             <div className="stat stat-text">{capabilityLabel(paymentCapability)}</div>
-            <p className="muted">Money movement is executed through CPay when enabled.</p>
+            <p className="muted">Availability depends on the configured service and its confirmation state.</p>
           </section>
         </div>
 
@@ -203,6 +215,7 @@ export default async function DashboardPage() {
             <div><strong>Credit data permission</strong><p className="muted">{activeCreditConsent ? "Active" : "Review needed"}</p></div>
           </div>
         </section>
+        </div>
       </Screen>
     );
   } catch (error) {
