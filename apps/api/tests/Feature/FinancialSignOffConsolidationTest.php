@@ -333,6 +333,24 @@ class FinancialSignOffConsolidationTest extends TestCase
         $treasury->approveAndPostFundingReceipt($draft, $checker);
     }
 
+    public function test_shared_risk_contract_attestation_cannot_automatically_unblock_untested_origination(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        $offer = \App\Models\CreditOffer::query()->findOrFail($loan->credit_offer_id);
+        $second = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        DB::table('credit_offer_ecl_ownerships')->insert([
+            'credit_offer_id' => $offer->id, 'institution_id' => $offer->institution_id,
+            'owner_type' => 'shared', 'opfin_share_bps' => 4000,
+            'agreement_reference' => 'SYNTHETIC-UNVERIFIED-JOINT-CREDIT',
+            'status' => 'approved', 'created_by' => $operations->id,
+            'approved_by' => $second->id, 'approved_at' => now(),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Shared exposure origination is blocked');
+        app(\App\Services\InstitutionalExposureAccountingService::class)->approved($offer);
+    }
+
     public function test_partner_fiduciary_liability_cannot_be_spent_without_prior_verified_cash(): void
     {
         $actor = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
