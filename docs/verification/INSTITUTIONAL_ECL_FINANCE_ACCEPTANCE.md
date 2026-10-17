@@ -27,7 +27,7 @@ All activity below was conducted against **a temporary, isolated checkout of PR 
 
 | Check | Executed evidence | Outcome |
 | --- | --- | --- |
-| PHP syntax | Native PHP 8.4 `php -l` on 16 originally modified PHP files, plus source parse on core revised files | **16 passed, 0 errors** in initial run; later PostgreSQL migration edits separately reviewed |
+| PHP syntax | Native PHP 8.4 `php -l` on 16 originally modified PHP files, plus source parse on core revised files | **16 passed, 0 errors** initially; all five edited PostgreSQL migration files separately passed native lint |
 | Laravel institutional ECL (SQLite) | `php artisan test --filter=InstitutionalEclWorkflowTest` | **7 passed, 41 assertions** |
 | Laravel finance sign-off (SQLite) | `php artisan test --filter=FinancialSignOffConsolidationTest` | **10 passed, 51 assertions** |
 | Entire Laravel API suite (SQLite) | `php artisan test` on PHP 8.5 + GD isolated QA runtime | **620 passed, 23,264 assertions, 0 failures** |
@@ -36,7 +36,7 @@ All activity below was conducted against **a temporary, isolated checkout of PR 
 | Web unit suite | `npm run test`, Node **22.23.3** | **68 passed across 11 suites** |
 | Web build | `npm run build`, Node **22.23.3** | **Passed** |
 | PostgreSQL 16 governance | Both institutional ECL and financial sign-off suites in one ephemeral, non-exposed PostgreSQL 16 database | **17 passed, 92 assertions**, confirmed |
-| Repeat PostgreSQL schema rebuild | Two separate suite invocations against the same isolated database | See final repeated-run evidence below; do not presume success before completion |
+| Repeat PostgreSQL schema rebuild | Two separate suite invocations against the same isolated database | **Two consecutive runs passed**, 7 tests and 41 assertions each; same PostgreSQL instance and repeat schema reset |
 
 **Found and repaired during actual testing:**
 - An invalid PHP namespace in an ECL test, corrected and native-linted.
