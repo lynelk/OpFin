@@ -140,12 +140,39 @@ export default async function InstitutionalEclPage({ searchParams }: { searchPar
           <button className="button">Stage observation</button>
         </form></details>
       </section>
+      <section className="panel"><h2>Immutable source corrections</h2>
+        <p>Do not edit imported source balances. A correction creates a reviewed new revision; the original loan observation remains intact. A historical signed statement requires a linked restatement and a documented explanation. Posted OpFin impairment journals may only be corrected in an open accounting period.</p>
+        <table className="table"><thead><tr><th>Loan reference</th><th>Revision</th><th>Adjusted principal</th><th>Status</th><th>Review</th></tr></thead><tbody>
+          {register.source_corrections.map(correction => <tr key={correction.id}>
+            <td>{correction.external_loan_reference}</td><td>{correction.revision}</td>
+            <td>{correction.principal_outstanding_minor.toLocaleString("en-GB")}</td>
+            <td>{correction.status}</td>
+            <td>{correction.status === "draft" ?
+              <Action institution={institutionId} kind="source-correction-approve" id={correction.id} label="Approve correction" />
+              : "Reviewed"}</td>
+          </tr>)}
+        </tbody></table>
+        <details><summary>Propose a corrected lender observation</summary><form action={institutionalEclAction} className="form-grid">
+          {hidden}<input type="hidden" name="kind" value="source-correct" />
+          <Field label="Original source snapshot ID" name="snapshot_id" type="number" />
+          <Field label="Corrected principal outstanding (minor units)" name="principal_outstanding_minor" type="number" />
+          <Field label="Corrected days past due" name="days_past_due" type="number" />
+          <label className="field">Significant increase in credit risk?<select name="sicr"><option value="false">No</option><option value="true">Yes</option></select></label>
+          <label className="field">Credit impaired?<select name="credit_impaired"><option value="false">No</option><option value="true">Yes</option></select></label>
+          <Field label="Corrected contractual maturity" name="contractual_maturity_date" type="date" />
+          <Field label="MIS source correction evidence reference" name="source_evidence" />
+          <Field label="Reason for correction" name="reason" />
+          <button className="button">Submit correction to independent checker</button>
+        </form></details>
+      </section>
       <section className="panel"><h2>Monthly ECL control and statements</h2><p>A draft requires source loan counts and principal control totals. A different administrator must approve it before any posting. Historical managed-loan snapshots cannot be invented from current live schedules.</p>
         <form action={institutionalEclAction} className="form-grid">{hidden}<input type="hidden" name="kind" value="run" />
           <Field label="Reporting cut-off date" name="as_of_date" type="date" />
           <Field label="External loans in complete extract" name="expected_external_count" type="number" value="0" />
           <Field label="External outstanding principal control total" name="expected_external_principal_minor" type="number" value="0" />
           <Field label="Approved source completeness / reconciliation evidence" name="coverage_reference" />
+          <Field label="Signed report ID being restated (advisory-only; optional)" name="restates_run_id" type="number" required={false} />
+          <Field label="Why this signed month is being restated (required for restatement)" name="restatement_reason" required={false} />
           <button className="button">Calculate draft ECL</button>
         </form>
         <table className="table"><thead><tr><th>Cut-off</th><th>Exposure</th><th>ECL</th><th>Movement</th><th>State</th><th>Statements / approval</th></tr></thead><tbody>
