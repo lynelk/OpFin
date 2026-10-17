@@ -93,3 +93,12 @@ Record:
 - defect disposition.
 
 Do not mark this checklist complete based only on source inspection. Physical rendering has an irritating habit of finding problems that CSS felt strongly should not exist.
+
+## Automated master outline audit (17 October 2026)
+
+- [x] `python3 scripts/verify-brand-vector-masters.py`: four core vector masters have outlined path geometry without live-font text, raster image embeds or scripts.
+- [ ] Actual rendered mobile, print and accessibility QA remains pending.
+- [ ] Trademark register/counsel clearance remains **NOT CLEARED**.
+- [ ] App-store signed screenshot approval remains pending.
+
+Static SVG inspection is evidence about **source geometry only**, not visual sign-off or legal clearance.

@@ -70,3 +70,9 @@ The following remain **not done** by this branch: service authentication, author
 Initial cohort: suitably vetted Ugandan retailers and suppliers with actual POS history, an independent comparable control group, clear merchant benefit and agreed risk limits. Judge expansion by net merchant value, stock availability, cash stress, PAR 7/30, losses, complaints and risk-adjusted contribution. Stolets subscriptions and OpFin lending economics remain modelled separately; the Stolets base-case plan must not be retroactively filled with unverified lending commissions.
 
 **Infrastructure:** no new Railway project, service, database, volume, validation environment or ongoing cloud cost is authorised by this programme. Retain Stolets single project and OpFin's independent approved infrastructure.
+
+## Signed envelope preflight (17 October 2026)
+
+OpFin's internal `SignedMerchantEvidencePreflight` now checks an exact raw bounded JSON packet against an independently provisioned 256-bit-or-longer shared key, a `sha256=<lowercase 64-hex>` signature, a five-minute timestamp window and an atomic cache nonce. It then performs the existing typed merchant-stock-finance validation. Its result **explicitly states that merchant consent is NOT independently verified and that credit/payment are NOT authorised**.
+
+Do not expose this helper as a public Stolets ingress route until a per-partner authenticated service channel, reliable distributed replay store, independently checked revocable purpose-bound consent, merchant legal ownership and credit provider authority are wired in. No direct database sharing, unrestricted raw customer data or money movement is introduced.

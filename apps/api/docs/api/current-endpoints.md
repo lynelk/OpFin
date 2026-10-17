@@ -343,3 +343,11 @@ The following endpoints extend the existing restricted administrative institutio
 | POST | `/api/admin/institutional-assurance/shared-accounting-preview` | **Non-production only:** synthetic, admin-scoped, read-only; uses `contract_form`, `currency`, `principal_amount_minor`, `cash_disbursement_minor` and `opfin_share_bps` to illustrate distinct funding legs; refuses `production` regardless of environment flag and never writes a ledger, provider command, signature or borrower record |
 
 Production requires real documentary evidence and specific certified accounting models for any shared-originated credit, regardless of management's temporary development deferral. Shared origination remains fail-closed. See `docs/finance/INSTITUTIONAL_RECONCILIATION_AND_SHARED_EXPOSURE_DECISION.md` and `docs/verification/INSTITUTIONAL_ECL_FINANCE_ACCEPTANCE.md`.
+
+## Growth configuration inventory and evidence trust boundaries (17 October 2026)
+
+| Method | Route | Authority | Behaviour |
+| --- | --- | --- | --- |
+| GET | `/api/admin/growth-readiness` | Authenticated platform administrator only | Read-only country/product/mandate configuration; remaining committed nominal capital; explicit unknown verification fields; Uganda statement-provider readiness. No investor personally identifiable information or financial transaction. |
+
+A configured product or capital mandate is **not** asserted to have certified payment custody, actual settlement, current lender authority or investor rights. The new signed Stolets merchant evidence preflight is **internal only**: it requires exact raw HMAC signature, freshness and replay rejection. It is not a public API route, credit decision, verified consent or payment instruction.
