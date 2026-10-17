@@ -6,6 +6,7 @@ import "./globals.css";
 import "./marketing.css";
 import "./experience.css";
 import "./opfin-brand.css";
+import "./opfin-today.css";
 import "./premium-experience.css";
 
 export const metadata: Metadata = {
