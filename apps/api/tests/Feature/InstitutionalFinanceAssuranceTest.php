@@ -126,6 +126,35 @@ class InstitutionalFinanceAssuranceTest extends TestCase
         $service->approve($id, $checker);
     }
 
+    public function test_independent_review_cannot_be_duplicated_by_one_person(): void
+    {
+        [$institution, $maker, $checker, $run, $date] = $this->evidence();
+        $service = app(InstitutionalFinanceAssuranceService::class);
+        $id = $service->stage($this->input($institution->id, $run, $date), $maker);
+        $service->approve($id, $checker);
+        $reviewer = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $statement = 'I independently reviewed this synthetic finance record solely for repeatability testing.';
+        $service->sign($id, 'finance', 'QA-REVIEW-FINANCE-REFERENCE', str_repeat('c', 64), $statement, $reviewer);
+        $this->expectException(InvalidArgumentException::class);
+        $service->sign($id, 'risk', 'QA-REVIEW-RISK-REFERENCE', str_repeat('d', 64), $statement, $reviewer);
+    }
+
+    public function test_approval_rechecks_ledgers_after_new_cash_posting(): void
+    {
+        [$institution, $maker, $checker, $run, $date] = $this->evidence();
+        $service = app(InstitutionalFinanceAssuranceService::class);
+        $id = $service->stage($this->input($institution->id, $run, $date), $maker);
+        $custody = app(\\App\\Services\\InstitutionalExposureAccountingService::class);
+        $cash = $custody->partnerProviderCashAccount($institution->id, 'providerqa', 'UGX');
+        $held = $custody->partnerFundsAccount($institution->id, 'UGX');
+        app(ProductionLedgerService::class)->post('qa:cash-posting-after-source', 'partner.funds.received', $maker, [
+            ['account_id' => $cash->id, 'direction' => 'debit', 'amount_minor' => 100],
+            ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => 100],
+        ], $maker, 'UGX');
+        $this->expectException(InvalidArgumentException::class);
+        $service->approve($id, $checker);
+    }
+
     public function test_two_institution_provider_prefixes_never_cross_contaminate(): void
     {
         [$institution, $maker, $checker, $run, $date] = $this->evidence();
