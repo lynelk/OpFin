@@ -45,6 +45,29 @@ class ProductionLedgerService
         $this->accountingPeriods->assertPostingAllowed(now());
 
         return DB::transaction(function () use ($reference, $eventType, $source, $entries, $actor, $currency, $metadata) {
+            // Account row locks serialise competing partner-held-funds withdrawals.
+            // Immutable GL lines must not create a negative custodial liability.
+            $affectedAccounts = LedgerAccount::query()->whereIn('id', array_column($entries, 'account_id'))
+                ->orderBy('id')->lockForUpdate()->get();
+            foreach ($affectedAccounts as $account) {
+                if (! str_starts_with((string) $account->code, 'liability.partner_funds_held.institution_')) {
+                    continue;
+                }
+                $balance = (int) DB::table('ledger_entries')
+                    ->where('ledger_account_id', $account->id)
+                    ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_minor ELSE -amount_minor END), 0) AS amount")
+                    ->value('amount');
+                $movement = 0;
+                foreach ($entries as $entry) {
+                    if ((int) $entry['account_id'] === (int) $account->id) {
+                        $movement += $entry['direction'] === 'credit'
+                            ? (int) $entry['amount_minor'] : - (int) $entry['amount_minor'];
+                    }
+                }
+                if ($balance + $movement < 0) {
+                    throw new InvalidArgumentException('Partner fiduciary funds cannot be overdrawn.');
+                }
+            }
             $transaction = LedgerTransaction::create([
                 'reference' => $reference,
                 'event_type' => $eventType,
