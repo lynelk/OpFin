@@ -26,6 +26,60 @@ class FinancialWellbeingTest extends TestCase
             ->assertJsonPath('data.next_best_action.code', 'record_balance');
     }
 
+    public function test_compass_shortfall_guidance_is_factual_and_offers_planning_not_additional_credit(): void
+    {
+        $user = $this->customer();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/financial-accounts', [
+            'display_name' => 'Current cash',
+            'account_type' => 'cash',
+            'balance_minor' => 100000,
+            'currency' => 'UGX',
+        ])->assertCreated();
+
+        $this->postJson('/api/financial-calendar/events', [
+            'title' => 'School fees',
+            'event_type' => 'bill',
+            'direction' => 'expense',
+            'amount_minor' => 180000,
+            'scheduled_for' => now()->addDays(5)->format('Y-m-d H:i:s'),
+            'certainty' => 'scheduled',
+            'category' => 'School Fees',
+        ])->assertCreated();
+
+        $response = $this->getJson('/api/financial-compass')
+            ->assertOk()
+            ->assertJsonPath('data.next_best_action.code', 'cashflow_shortfall')
+            ->assertJsonPath('data.next_best_action.href', '/calendar')
+            ->assertJsonPath('data.position.committed_money_minor', 180000);
+
+        $message = strtolower((string) $response->json('data.next_best_action.text'));
+        $this->assertStringContainsString('recorded available money', $message);
+        $this->assertStringContainsString('review priorities', $message);
+        $this->assertStringNotContainsString('take another loan', $message);
+    }
+
+    public function test_compass_does_not_claim_every_obligation_is_funded_from_incomplete_records(): void
+    {
+        $user = $this->customer();
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/financial-accounts', [
+            'display_name' => 'Recorded cash',
+            'account_type' => 'cash',
+            'balance_minor' => 100000,
+            'currency' => 'UGX',
+        ])->assertCreated();
+
+        $response = $this->getJson('/api/financial-compass')
+            ->assertOk()
+            ->assertJsonPath('data.next_best_action.code', 'review_position');
+
+        $this->assertStringNotContainsString('funded', strtolower((string) $response->json('data.next_best_action.title')));
+        $this->assertStringContainsString('recorded position', strtolower((string) $response->json('data.next_best_action.text')));
+    }
+
     public function test_budget_cash_flow_calendar_and_safe_to_spend_are_integrated(): void
     {
         $user = $this->customer();
