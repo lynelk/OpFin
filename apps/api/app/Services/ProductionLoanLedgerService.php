@@ -453,7 +453,8 @@ class ProductionLoanLedgerService
         // The approved hold is established before provider payout and consumed in the
         // same DB transaction as this journal. Never turn a lender's loan into our asset.
         if (! DB::table('partner_ecl_cash_reservations')->where('credit_offer_id', $offer->id)
-            ->where('status', 'reserved')->where('cash_minor', $cashMinor)->exists()) {
+            ->where('status', 'reserved')->where('cash_minor', $cashMinor)
+            ->where('provider', strtolower((string) $mobileMoney->provider))->exists()) {
             throw new \InvalidArgumentException('No verified partner-funded cash reserve backs the completed payout.');
         }
         return $this->ledgerService->post($reference, 'loan.disbursement', $mobileMoney, [
