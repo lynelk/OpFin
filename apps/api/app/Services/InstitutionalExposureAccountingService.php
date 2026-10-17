@@ -106,14 +106,18 @@ final class InstitutionalExposureAccountingService
         }
         DB::transaction(function () use ($offer) {
             $currency = strtoupper((string) $offer->currency);
+            $provider = strtolower((string) config('services.mobile_money.default_provider', ''));
             $account = $this->partnerFundsAccount((int) $offer->institution_id, $currency);
-            // Serialise across offers sharing this institution/currency; PostgreSQL row lock
-            // enforces the same held-cash constraint across concurrent customer acceptance.
-            LedgerAccount::query()->whereKey($account->id)->lockForUpdate()->firstOrFail();
+            $custody = $this->partnerProviderCashAccount((int) $offer->institution_id, $provider, $currency);
+            // Both the lender's payable and the actual payout-provider cash must
+            // be locked BEFORE the payment instruction, in the GL's account-ID order.
+            LedgerAccount::query()->whereIn('id', [$account->id, $custody->id])
+                ->orderBy('id')->lockForUpdate()->get();
             $reservation = DB::table('partner_ecl_cash_reservations')->where('credit_offer_id', $offer->id)->first();
             if ($reservation) {
-                if ($reservation->status !== 'reserved') {
-                    throw new InvalidArgumentException('This offer has a completed/released partner cash reservation.');
+                if ($reservation->status !== 'reserved' || $reservation->provider !== $provider
+                    || (int) $reservation->cash_minor !== (int) $offer->net_disbursement_minor) {
+                    throw new InvalidArgumentException('This offer has an incompatible or completed partner cash reservation.');
                 }
                 return;
             }
@@ -125,12 +129,22 @@ final class InstitutionalExposureAccountingService
                     ->where('institution_id', $offer->institution_id)->where('currency', $currency)
                     ->where('status', 'reserved')->sum('cash_minor');
             $cash = (int) $offer->net_disbursement_minor;
+            $providerBalance = (int) DB::table('ledger_entries')->where('ledger_account_id', $custody->id)
+                ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'debit' THEN amount_minor ELSE -amount_minor END),0) AS amount")
+                ->value('amount');
+            $reservedProviderCash = (int) DB::table('partner_ecl_cash_reservations')
+                ->where('institution_id', $offer->institution_id)->where('currency', $currency)
+                ->where('provider', $provider)->where('status', 'reserved')->sum('cash_minor');
             if ($cash <= 0 || $available < $cash) {
                 throw new InvalidArgumentException('Verified partner funds held are insufficient. Capital mandates alone are not bank cash receipts.');
             }
+            if ($providerBalance - $reservedProviderCash < $cash) {
+                throw new InvalidArgumentException('The actual payout provider lacks sufficient ring-fenced institutional cash; first reconcile a treasury transfer.');
+            }
             DB::table('partner_ecl_cash_reservations')->insert([
                 'credit_offer_id' => $offer->id, 'institution_id' => $offer->institution_id,
-                'currency' => $currency, 'cash_minor' => $cash, 'status' => 'reserved',
+                'currency' => $currency, 'provider' => $provider,
+                'cash_minor' => $cash, 'status' => 'reserved',
                 'created_at' => now(), 'updated_at' => now(),
             ]);
         });
