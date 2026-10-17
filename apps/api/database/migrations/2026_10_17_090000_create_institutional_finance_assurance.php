@@ -66,7 +66,9 @@ return new class extends Migration {
                 'institution_finance_reviews' => ['reconciliation_id','capacity','reviewed_by','report_sha256','report_reference','signed_statement','reviewed_at'],
                 'institution_shared_classifications' => ['credit_offer_id','institution_id','reconciliation_id','contract_form','opfin_share_bps','contract_reference','signed_contract_sha256','accounting_policy_reference','technical_memo_sha256','created_by'],
             ] as $table => $fields) {
-                $checks = implode(' OR ', array_map(fn ($field) => "OLD.{$field} IS DISTINCT FROM NEW.{$field}", $fields));
+                $checks = implode(' OR ', array_map(fn ($field) => in_array($field, ['provider_statements','control_results'], true)
+                    ? "(OLD.{$field})::jsonb IS DISTINCT FROM (NEW.{$field})::jsonb"
+                    : "OLD.{$field} IS DISTINCT FROM NEW.{$field}", $fields));
                 DB::unprepared("CREATE OR REPLACE FUNCTION {$table}_guard_original() RETURNS trigger LANGUAGE plpgsql AS \$ecl\$ BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Institutional assurance records are append-only'; END IF; IF {$checks} THEN RAISE EXCEPTION 'Institutional assurance source and approvals are immutable'; END IF; RETURN NEW; END; \$ecl\$");
                 DB::unprepared("CREATE TRIGGER {$table}_guard_original BEFORE UPDATE OR DELETE ON {$table} FOR EACH ROW EXECUTE FUNCTION {$table}_guard_original()");
             }
