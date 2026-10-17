@@ -311,3 +311,20 @@ The asset-finance routes are a reviewed candidate implementation, **not** an ass
 | POST | `/api/admin/asset-finance-cases/{case}/transition` | Advance asset finance lifecycle according to allowed transitions |
 
 Do not infer custody, provider success or loan disbursement from application approval alone. The Finance Product Factory, independent settlement controls, safeguarding rules and all applicable lender mandates remain authoritative. For request field validation and error handling, see `AssetFinanceLifecycleController` and the corresponding feature tests.
+
+
+## Institutional finance assurance (17 October 2026)
+
+The following endpoints extend the existing restricted administrative institution-ECL route group. They do not waive provider reconciliation, legal ownership or production accounting controls. The documented deferral is limited to clearly synthetic non-production exercises. All money fields are integers in currency minor units.
+
+| Method | Path | Authorisation, scope and effect |
+| --- | --- | --- |
+| GET | `/api/admin/institutional-assurance` | Restricted platform or delegated institution administrator; lists institution-scoped reconciliations, sign-off register and classified contracts; `external_evidence_requirement` distinguishes QA deferral from live proof |
+| POST | `/api/admin/institutional-assurance/reconciliations` | Stages immutable institution/provider statement declarations and matched lender/ECL source totals; genuine bank and lender documents are still mandatory for real certification |
+| POST | `/api/admin/institutional-assurance/reconciliations/{id}/approve` | Different checker may approve only matched, unchanged treasury and lender controls |
+| POST | `/api/admin/institutional-assurance/reconciliations/{id}/sign` | Appends capacity-specific Treasury, Finance, Risk, Legal or independent-model review record; login identity is not independent proof of professional authorisation |
+| POST | `/api/admin/institutional-assurance/shared-classifications` | Drafts contract-form assessment for a scoped credit offer; does not create approved shared-loan postings |
+| POST | `/api/admin/institutional-assurance/shared-classifications/{id}/review` | Appends independent review by capacity; classification remains `classified_pending_ledger_certification`, never activates shared loan origination |
+| POST | `/api/admin/institutional-assurance/shared-accounting-preview` | **Non-production only:** synthetic, admin-scoped, read-only; uses `contract_form`, `currency`, `principal_amount_minor`, `cash_disbursement_minor` and `opfin_share_bps` to illustrate distinct funding legs; refuses `production` regardless of environment flag and never writes a ledger, provider command, signature or borrower record |
+
+Production requires real documentary evidence and specific certified accounting models for any shared-originated credit, regardless of management's temporary development deferral. Shared origination remains fail-closed. See `docs/finance/INSTITUTIONAL_RECONCILIATION_AND_SHARED_EXPOSURE_DECISION.md` and `docs/verification/INSTITUTIONAL_ECL_FINANCE_ACCEPTANCE.md`.
