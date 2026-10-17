@@ -76,3 +76,7 @@ npm run build
 **Required browser test matrix:** customer (new setup, verified and unverified), operations, platform admin, support, employer admin and programme partner; at minimum 1440x900, 768x1024 and 390x844. Verify selected nav, mobile menu open/close, expected role-specific links, reduced motion, zoom to 200%, keyboard navigation, screen-reader announcement of active link and progress, empty/null Compass figures, API failure state, Space privacy and credit disclosure journey.
 
 **Release decision:** HOLD. Reference mock-ups have been rendered separately, but no actual application render or end-to-end acceptance is established in this record.
+
+## 7. Age-inclusive service access and coaching
+
+The product philosophy now explicitly requires that **age-restricted financial products must not restrict access to appropriate financial education and safe guidance**. Before implementing account-level support for minors, complete the legal, privacy, safeguarding, guardian authority and server-side entitlement gates documented in [Age-inclusive financial wellbeing](../product/AGE_INCLUSIVE_FINANCIAL_WELLBEING.md). This is a proposal, not a confirmed current capability or authorisation to activate regulated services for children.
