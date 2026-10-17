@@ -431,6 +431,7 @@ class ProductionLoanLedgerService
                 'loan_id' => $transaction->loan_id,
                 'legacy_transaction_id' => $transaction->id,
                 'original_ledger_transaction_id' => $original->id,
+                'ownership_type' => ($original->metadata['ownership_type'] ?? null),
             ],
         );
 
