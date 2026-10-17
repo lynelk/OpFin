@@ -59,6 +59,18 @@ final class InstitutionalExposureAccountingService
         });
     }
 
+    public function governed(CreditOffer $offer): bool
+    {
+        if (! Schema::hasTable('credit_offer_ecl_ownerships')) {
+            return false;
+        }
+        return (bool) config('opfin.accounting.enforce_credit_owner_at_origination', false)
+            || DB::table('credit_offer_ecl_ownerships')->where('credit_offer_id', $offer->id)->exists()
+            || DB::table('institution_ecl_policies')->where('institution_id', $offer->institution_id)
+                ->where('status', 'approved')->where('currency', strtoupper((string) $offer->currency))
+                ->where('effective_from', '<=', now()->toDateString())->exists();
+    }
+
     public function approved(CreditOffer $offer): object
     {
         if (! Schema::hasTable('credit_offer_ecl_ownerships')) {
@@ -77,6 +89,9 @@ final class InstitutionalExposureAccountingService
 
     public function reserveBeforePayout(CreditOffer $offer): void
     {
+        if (! $this->governed($offer)) {
+            return;
+        }
         $row = $this->approved($offer);
         if ($row->owner_type !== 'partner') {
             return;
@@ -115,6 +130,9 @@ final class InstitutionalExposureAccountingService
 
     public function settleReservation(CreditOffer $offer): void
     {
+        if (! $this->governed($offer)) {
+            return;
+        }
         $row = $this->approved($offer);
         if ($row->owner_type === 'partner') {
             $updated = DB::table('partner_ecl_cash_reservations')
@@ -136,6 +154,9 @@ final class InstitutionalExposureAccountingService
 
     public function attachLoan(CreditOffer $offer, Loan $loan): void
     {
+        if (! $this->governed($offer)) {
+            return;
+        }
         $row = $this->approved($offer);
         $existing = DB::table('loan_ecl_ownerships')->where('loan_id', $loan->id)->first();
         if ($existing) {
