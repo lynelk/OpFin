@@ -199,6 +199,48 @@ final class InstitutionalFinanceAssuranceService
         });
     }
 
+    public function reviewSharedClassification(int $classificationId, string $capacity, string $reference,
+        string $hash, string $conclusion, User $reviewer): void
+    {
+        DB::transaction(function () use ($classificationId, $capacity, $reference, $hash, $conclusion, $reviewer) {
+            $classification = DB::table('institution_shared_classifications')
+                ->where('id', $classificationId)->lockForUpdate()->first();
+            if (! $classification || ! in_array($classification->status,
+                ['proposed_pending_legal_review', 'classified_pending_ledger_certification'], true)
+                || ! in_array($capacity, self::CAPACITIES, true)
+                || (int) $classification->created_by === (int) $reviewer->id
+                || strlen(trim($reference)) < 12 || strlen(trim($conclusion)) < 50
+                || ! preg_match('/^[a-fA-F0-9]{64}$/D', $hash)) {
+                throw new InvalidArgumentException('Separate legal/financial reviewers must attest the specific contract and its classification.');
+            }
+            $cut = DB::table('institution_finance_reconciliations')->find($classification->reconciliation_id);
+            if (! $cut || $cut->status !== 'reconciled_pending_signoff') {
+                throw new InvalidArgumentException('Contract classification cannot outlive a rejected lender reconciliation.');
+            }
+            $cutReviews = DB::table('institution_finance_reviews')
+                ->where('reconciliation_id', $cut->id)->pluck('capacity')->all();
+            if (count(array_intersect(self::CAPACITIES, $cutReviews)) !== count(self::CAPACITIES)) {
+                throw new InvalidArgumentException('Every qualified assurance capacity must first sign the reconciled institution evidence.');
+            }
+            DB::table('institution_shared_classification_reviews')->insert([
+                'classification_id' => $classificationId, 'capacity' => $capacity,
+                'reviewed_by' => $reviewer->id, 'review_reference' => trim($reference),
+                'review_document_sha256' => strtolower($hash),
+                'technical_conclusion' => trim($conclusion),
+                'reviewed_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            $count = DB::table('institution_shared_classification_reviews')
+                ->where('classification_id', $classificationId)->distinct()->count('capacity');
+            if ($count === count(self::CAPACITIES)) {
+                DB::table('institution_shared_classifications')->where('id', $classificationId)
+                    ->update(['status' => 'classified_pending_ledger_certification', 'updated_at' => now()]);
+            }
+            // Never activate origination from a documentary sign-off. Direct joint creditors
+            // need correct economic splitting in principal, accrued interest, ECL, fees,
+            // cash custody, reverse postings and write-offs before the first live loan.
+        });
+    }
+
     public function proposeSharedClassification(CreditOffer $offer, int $reconciliationId, string $form,
         int $share, string $contractRef, string $contractHash, string $policyRef, string $memoHash, User $maker): int
     {
