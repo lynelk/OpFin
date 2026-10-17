@@ -73,6 +73,17 @@ export async function institutionalEclAction(form: FormData) {
         }
         break;
       }
+      case "source-correct":
+        path = `/external-snapshots/${n(form, "snapshot_id")}/corrections`;
+        body = {
+          principal_outstanding_minor: n(form, "principal_outstanding_minor"),
+          days_past_due: n(form, "days_past_due"), sicr: str(form, "sicr") === "true",
+          credit_impaired: str(form, "credit_impaired") === "true",
+          contractual_maturity_date: str(form, "contractual_maturity_date"),
+          source_evidence: str(form, "source_evidence"), reason: str(form, "reason"),
+        };
+        break;
+      case "source-correction-approve": path = `/corrections/${n(form, "record_id")}/approve`; break;
       case "run":
         path = "/runs";
         body = { institution_id: institutionId, as_of_date: str(form, "as_of_date"),
