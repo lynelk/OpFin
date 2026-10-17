@@ -65,6 +65,24 @@ The follow-on draft PR implementation now includes `InstitutionalFinanceAssuranc
 
 See the accounting classification and acceptance matrix: `docs/finance/INSTITUTIONAL_RECONCILIATION_AND_SHARED_EXPOSURE_DECISION.md`.
 
+### Final expanded engineering verification
+
+The full accounting/regression suite was rerun with the institutional source reconciliation, five-capacity reviewer register, fail-closed shared classification workflow and distinct-provider liability tests:
+
+| Check | Verified outcome |
+| --- | --- |
+| Full Laravel API suite (SQLite, isolated PHP QA) | **626 passed, 23,284 assertions**; zero failures |
+| Focused Laravel finance/ECL/reconciliation on PostgreSQL 16 | **23 passed, 112 assertions**; zero failures |
+| Native PHP lint for new assurance service, tests and migrations | **Passed** |
+| Node 22 web typecheck, ESLint, Next.js production build | **Passed** |
+| Web unit tests including restricted assurance API client | **72 passed across 12 test suites** |
+| Independent processes contending on PostgreSQL fiduciary balance | **40 attempts / 20 rounds**, exactly one posting each round, no overdrafts |
+| Legacy ECL PostgreSQL repeated schema-rebuild checks | **7 passed twice on same database**, no audit-function collision |
+
+The PostgreSQL extension caught and corrected two additional SQLite-masked defects: the reconciliation status field was too short for a real approved state, and PL/pgSQL immutable audit triggers attempted plain JSON comparisons without converting to `jsonb`. Both were amended and the PostgreSQL finance/ECL/reconciliation test set passed. QA database containers and networks were destroyed afterwards.
+
+**This is not an independent IFRS 9 certification, audited source reconciliation or signed reviewer approval.** No actual bank/provider and lender GL originals or executed risk-sharing agreements were available. Shared origination remains blocked pending contract-specific receivable, income, ECL, guarantee and repayment journal implementation, and signed legal/accounting review.
+
 ## Required execution evidence
 
 ### 1. API and database
