@@ -89,7 +89,9 @@ export async function institutionalEclAction(form: FormData) {
         body = { institution_id: institutionId, as_of_date: str(form, "as_of_date"),
           expected_external_count: n(form, "expected_external_count"),
           expected_external_principal_minor: n(form, "expected_external_principal_minor"),
-          coverage_reference: str(form, "coverage_reference") };
+          coverage_reference: str(form, "coverage_reference"),
+          restates_run_id: number(form, "restates_run_id"),
+          restatement_reason: str(form, "restatement_reason") || null };
         break;
       case "run-approve": path = `/runs/${n(form, "record_id")}/approve`; break;
       case "run-post": path = `/runs/${n(form, "record_id")}/post`; break;
