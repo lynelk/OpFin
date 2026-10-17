@@ -321,14 +321,14 @@ class FinancialWellbeingService
     private function nextBestAction(?int $availableMinor, ?int $safeToSpendMinor, int $committedMinor, array $budgets, array $calendar, array $goals): array
     {
         if ($availableMinor === null) {
-            return ['code' => 'record_balance', 'title' => 'Add your current balance', 'text' => 'Record a current cash, mobile-money or bank balance so OpFin can calculate safe-to-spend without guessing.', 'href' => '/money', 'action' => 'Add balance'];
+            return ['code' => 'record_balance', 'title' => 'Build your money picture', 'text' => 'Start by recording a current cash, mobile-money or bank balance. OpFin will show what is known and what still needs checking.', 'href' => '/money', 'action' => 'Add balance'];
         }
         if ($committedMinor > $availableMinor) {
-            return ['code' => 'cashflow_shortfall', 'title' => 'Review an upcoming shortfall', 'text' => 'Confirmed and scheduled obligations in the next 30 days are greater than your recorded available money.', 'href' => '/calendar', 'action' => 'Review calendar'];
+            return ['code' => 'cashflow_shortfall', 'title' => 'Make a plan for your upcoming commitments', 'text' => 'Your recorded available money is below the confirmed and scheduled commitments in the next 30 days. Review priorities and available support, one step at a time.', 'href' => '/calendar', 'action' => 'Review calendar'];
         }
         $overBudget = collect($budgets)->firstWhere('status', 'over_budget');
         if ($overBudget) {
-            return ['code' => 'budget_overrun', 'title' => 'Review '.$overBudget['category'].' spending', 'text' => 'This category is above its monthly budget. Review recent entries before making new commitments.', 'href' => '/money', 'action' => 'Review budget'];
+            return ['code' => 'budget_overrun', 'title' => 'Review '.$overBudget['category'].' spending', 'text' => 'Your recorded spending is above the planned amount for this category. Review what changed and adjust the plan if needed.', 'href' => '/money', 'action' => 'Review budget'];
         }
         $debtDue = collect($calendar)->first(fn (array $event) => in_array($event['event_type'], ['loan', 'debt'], true));
         if ($debtDue) {
@@ -341,10 +341,10 @@ class FinancialWellbeingService
             ];
         }
         if ($goals !== []) {
-            return ['code' => 'build_goal', 'title' => 'Keep building '.$goals[0]['name'], 'text' => 'Your recorded safe-to-spend is '.($safeToSpendMinor ?? 0).' minor units after upcoming commitments.', 'href' => '/save', 'action' => 'View goal'];
+            return ['code' => 'build_goal', 'title' => 'Keep moving towards '.$goals[0]['name'], 'text' => 'Review this goal and choose a manageable next step alongside your upcoming commitments.', 'href' => '/save', 'action' => 'View goal'];
         }
 
-        return ['code' => 'review_position', 'title' => 'Your next 30 days are funded', 'text' => 'Review your budget and calendar before adding another recurring commitment.', 'href' => '/money', 'action' => 'Review money plan'];
+        return ['code' => 'review_position', 'title' => 'Keep your money plan moving', 'text' => 'Your recorded position does not show a shortfall for the next 30 days. Check that your balances and commitments are up to date before making another decision.', 'href' => '/money', 'action' => 'Review money plan'];
     }
 
     private function projectEvent($event, CarbonImmutable $from, CarbonImmutable $to): array
