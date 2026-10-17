@@ -444,7 +444,6 @@ class ProductionLoanLedgerService
         return $posted;
     }
 
-
     private function postAgencyDisbursement(
         MobileMoneyTransaction $mobileMoney, Loan $loan, CreditOffer $offer, int $cashMinor, string $reference
     ): LedgerTransaction {
@@ -457,12 +456,13 @@ class ProductionLoanLedgerService
             ->where('provider', strtolower((string) $mobileMoney->provider))->exists()) {
             throw new \InvalidArgumentException('No verified partner-funded cash reserve backs the completed payout.');
         }
+
         return $this->ledgerService->post($reference, 'loan.disbursement', $mobileMoney, [
             ['account_id' => $held->id, 'direction' => LedgerEntry::DIRECTION_DEBIT,
                 'amount_minor' => $cashMinor, 'memo' => 'Deploy lender funds held as agent; not an OpFin loan receivable'],
             ['account_id' => app(InstitutionalExposureAccountingService::class)->partnerProviderCashAccount(
-                    (int) $owner->institution_id, $mobileMoney->provider, $offer->currency
-                )->id,
+                (int) $owner->institution_id, $mobileMoney->provider, $offer->currency
+            )->id,
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $cashMinor, 'memo' => 'Provider-confirmed agency payout from ring-fenced institutional funds'],
         ], null, $offer->currency, [
@@ -480,6 +480,7 @@ class ProductionLoanLedgerService
         if (($original->metadata['ownership_type'] ?? null) !== 'partner') {
             throw new \InvalidArgumentException('An agency reversal cannot rewrite an original platform loan asset. Reconcile historic entries.');
         }
+
         return $this->ledgerService->post(
             $reference, 'loan.disbursement.reversal', $money,
             $original->entries->map(fn (LedgerEntry $entry) => [
@@ -509,14 +510,15 @@ class ProductionLoanLedgerService
             throw new \InvalidArgumentException('Agency collections need a verified partner mandate.');
         }
         $held = app(InstitutionalExposureAccountingService::class)->partnerFundsAccount((int) $owner->institution_id, $currency);
+
         return $this->ledgerService->post($reference, 'loan.repayment', $transaction, [
             ['account_id' => app(InstitutionalExposureAccountingService::class)->partnerProviderCashAccount(
-                    (int) $owner->institution_id, $provider, $currency
-                )->id,
+                (int) $owner->institution_id, $provider, $currency
+            )->id,
                 'direction' => LedgerEntry::DIRECTION_DEBIT, 'amount_minor' => $cash,
                 'memo' => 'Ring-fenced provider cash collected for institutional lender'],
             ['account_id' => $held->id, 'direction' => LedgerEntry::DIRECTION_CREDIT,
-                'amount_minor' => $cash, 'memo' => 'Lender funds held; not OpFin principal, fee or interest income'],
+            'amount_minor' => $cash, 'memo' => 'Lender funds held; not OpFin principal, fee or interest income'],
         ], null, $currency, [
             'loan_id' => $loan->id, 'ownership_type' => 'partner',
             'institution_id' => $owner->institution_id,

@@ -74,6 +74,7 @@ final class InstitutionalEclCalculator
                 / $discountFactor;
         }
         $ecl = min($grossMinor, (int) round($expected));
+
         return [
             'stage' => $stage,
             'expected_credit_loss_minor' => $ecl,

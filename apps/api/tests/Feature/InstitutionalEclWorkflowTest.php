@@ -6,6 +6,7 @@ use App\Models\Institution;
 use App\Models\User;
 use App\Services\InstitutionalEclCalculator;
 use App\Services\InstitutionalEclService;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -114,7 +115,6 @@ class InstitutionalEclWorkflowTest extends TestCase
         $this->actingAs($maker)->getJson('/api/admin/institutional-ecl/runs/'.$run)->assertOk();
     }
 
-
     public function test_csv_batch_is_atomic_requires_source_totals_and_has_immutable_evidence(): void
     {
         $institution = Institution::create([
@@ -148,7 +148,7 @@ class InstitutionalEclWorkflowTest extends TestCase
         $this->assertSame(2, $service->approveExternalBatch($batch, $checker));
         $this->assertSame('approved', DB::table('institution_ecl_import_batches')->find($batch)->status);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         $snapshotId = DB::table('institution_ecl_external_snapshots')
             ->where('import_batch_id', $batch)->value('id');
         DB::table('institution_ecl_external_snapshots')

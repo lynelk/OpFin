@@ -85,6 +85,7 @@ final class InstitutionalFinanceAssuranceService
             ->where('code', 'liability.partner_funds_held.institution_'.$institutionId)->first();
         $liability = $held ? $this->balance((int) $held->id, $date, 'credit') : 0;
         $cashTotal = array_sum(array_column($input, 'balance_minor'));
+
         return [
             'run_id' => $eclRunId, 'run_hash' => $run->content_hash,
             'provider_control' => $byProvider,
@@ -104,6 +105,7 @@ final class InstitutionalFinanceAssuranceService
             ->where('tx.posted_at', '<=', $date.' 23:59:59')
             ->selectRaw('COALESCE(SUM(CASE WHEN entry.direction = ? THEN entry.amount_minor ELSE -entry.amount_minor END),0) AS amount', [$positive])
             ->first();
+
         return (int) ($row->amount ?? 0);
     }
 
@@ -147,6 +149,7 @@ final class InstitutionalFinanceAssuranceService
             'control_results' => json_encode($control, JSON_THROW_ON_ERROR),
             'created_by' => $maker->id,
         ];
+
         return DB::table('institution_finance_reconciliations')->insertGetId($source + [
             'content_hash' => hash('sha256', json_encode($source, JSON_THROW_ON_ERROR)),
             'status' => 'draft', 'created_at' => now(), 'updated_at' => now(),
@@ -269,6 +272,7 @@ final class InstitutionalFinanceAssuranceService
         if ($offer->status !== CreditOffer::STATUS_OFFERED) {
             throw new InvalidArgumentException('Shared-contract classification must precede customer acceptance, not reclassify a live loan.');
         }
+
         // A financial guarantee or first-loss contract is NOT a percentage-owned
         // loan receivable. No variant automatically activates shared origination.
         return DB::table('institution_shared_classifications')->insertGetId([

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CreditOffer;
 use App\Models\LedgerTransaction;
 use App\Models\MobileMoneyTransaction;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -704,7 +705,7 @@ class FinancialIntegrityService
                         ->first()
                     : null;
                 if ($legalExposure > 0 && (! $advisory
-                    || \Carbon\Carbon::parse($advisory->as_of_date)->diffInDays(now()) > $maxAgeDays)) {
+                    || Carbon::parse($advisory->as_of_date)->diffInDays(now()) > $maxAgeDays)) {
                     $findings[] = $this->alert($runId, 'high', 'partner_impairment_report_missing', (string) $loan->id,
                         'Partner-owned or shared serviced credit lacks a current approved advisory ECL statement.', [
                             'loan_id' => $loan->id, 'risk_owner' => $ownership->owner_type,
@@ -733,6 +734,7 @@ class FinancialIntegrityService
                             'loan_id' => $loan->id, 'opfin_share_bps' => $ownership->opfin_share_bps,
                         ]);
                 }
+
                 continue;
             }
             if (! $ownership && in_array((int) $loan->institution_id, $institutionsWithPolicies, true)) {
@@ -755,6 +757,7 @@ class FinancialIntegrityService
                             'impairment_assessment_id' => $assessment?->id,
                         ]);
                 }
+
                 continue;
             }
 
@@ -764,6 +767,7 @@ class FinancialIntegrityService
                         'loan_id' => $loan->id,
                         'current_principal_exposure_minor' => $legalExposure,
                     ]);
+
                 continue;
             }
 
@@ -771,7 +775,7 @@ class FinancialIntegrityService
                 continue;
             }
 
-            $ageDays = \Carbon\Carbon::parse($assessment->as_of_date)->startOfDay()->diffInDays(now()->startOfDay());
+            $ageDays = Carbon::parse($assessment->as_of_date)->startOfDay()->diffInDays(now()->startOfDay());
             if ($legalExposure > 0 && $ageDays > $maxAgeDays) {
                 $findings[] = $this->alert($runId, 'high', 'credit_impairment_assessment_stale', (string) $loan->id,
                     'Outstanding credit exposure has a stale impairment assessment.', [
@@ -881,6 +885,7 @@ class FinancialIntegrityService
                             'collections_minor' => $collections,
                             'disbursements_minor' => $disbursements,
                         ]);
+
                     continue;
                 }
 

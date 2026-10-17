@@ -3,11 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Institution;
-use App\Models\LedgerAccount;
 use App\Models\User;
 use App\Services\InstitutionalEclService;
+use App\Services\InstitutionalExposureAccountingService;
 use App\Services\InstitutionalFinanceAssuranceService;
 use App\Services\ProductionLedgerService;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -50,7 +51,7 @@ class InstitutionalFinanceAssuranceTest extends TestCase
         $run = $ecl->build($institution->id, $date, 1, 200000, 'TEST-FULL-SOURCE-BOOK', $maker);
         $ecl->approveRun($run, $checker);
         $ecl->postRun($run, $checker);
-        $custody = app(\App\Services\InstitutionalExposureAccountingService::class);
+        $custody = app(InstitutionalExposureAccountingService::class);
         $cash = $custody->partnerProviderCashAccount($institution->id, 'providerqa', 'UGX');
         $held = $custody->partnerFundsAccount($institution->id, 'UGX');
         app(ProductionLedgerService::class)->post(
@@ -60,6 +61,7 @@ class InstitutionalFinanceAssuranceTest extends TestCase
                 ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => 150000],
             ], $maker, 'UGX'
         );
+
         return [$institution, $maker, $checker, $run, $date];
     }
 
@@ -107,7 +109,7 @@ class InstitutionalFinanceAssuranceTest extends TestCase
         $this->assertSame(5, DB::table('institution_finance_reviews')->where('reconciliation_id', $id)->count());
         $this->assertSame('reconciled_pending_signoff',
             DB::table('institution_finance_reconciliations')->find($id)->status);
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         DB::table('institution_finance_reconciliations')->where('id', $id)
             ->update(['external_payable_minor' => 123]);
     }
@@ -144,7 +146,7 @@ class InstitutionalFinanceAssuranceTest extends TestCase
         [$institution, $maker, $checker, $run, $date] = $this->evidence();
         $service = app(InstitutionalFinanceAssuranceService::class);
         $id = $service->stage($this->input($institution->id, $run, $date), $maker);
-        $custody = app(\App\Services\InstitutionalExposureAccountingService::class);
+        $custody = app(InstitutionalExposureAccountingService::class);
         $cash = $custody->partnerProviderCashAccount($institution->id, 'providerqa', 'UGX');
         $held = $custody->partnerFundsAccount($institution->id, 'UGX');
         app(ProductionLedgerService::class)->post('qa:cash-posting-after-source', 'partner.funds.received', $maker, [
@@ -164,9 +166,9 @@ class InstitutionalFinanceAssuranceTest extends TestCase
             'authority_basis' => 'licensed', 'authority_reference' => 'SYNTHETIC',
             'regulator_code' => 'TEST',
         ]);
-        $otherCash = app(\App\Services\InstitutionalExposureAccountingService::class)
+        $otherCash = app(InstitutionalExposureAccountingService::class)
             ->partnerProviderCashAccount($other->id, 'providerqa', 'UGX');
-        $otherHeld = app(\App\Services\InstitutionalExposureAccountingService::class)
+        $otherHeld = app(InstitutionalExposureAccountingService::class)
             ->partnerFundsAccount($other->id, 'UGX');
         app(ProductionLedgerService::class)->post('qa:separate-custody', 'partner.funds.received', $maker, [
             ['account_id' => $otherCash->id, 'direction' => 'debit', 'amount_minor' => 99999],

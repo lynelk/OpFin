@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\CreditOffer;
 use App\Models\MobileMoneyTransaction;
-use App\Services\InstitutionalExposureAccountingService;
+use App\Models\User;
 use App\Services\InstitutionalEclService;
+use App\Services\InstitutionalExposureAccountingService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,6 +55,7 @@ final class InstitutionalEclController extends Controller
         $this->requireRead($request);
         $institution = $request->validate(['institution_id' => 'required|integer|exists:institutions,id'])['institution_id'];
         $this->requireInstitution($request, (int) $institution);
+
         return ApiResponse::success('Institutional ECL register.', [
             'policies' => DB::table('institution_ecl_policies')->where('institution_id', $institution)->orderByDesc('id')->get(),
             'funding_receipts' => DB::table('institution_ecl_funding_receipts')->where('institution_id', $institution)->orderByDesc('id')->get(),
@@ -94,6 +95,7 @@ final class InstitutionalEclController extends Controller
         ]);
         $this->requireInstitution($request, (int) $v['institution_id']);
         $id = $this->handled(fn () => $this->service->stagePolicy($v['institution_id'], $v, $request->user()));
+
         return ApiResponse::success('Draft ECL policy created; independent review required.', ['id' => $id], 201);
     }
 
@@ -101,6 +103,7 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireChecker($request);
         $this->handled(fn () => $this->service->approvePolicy($id, $request->user()));
+
         return ApiResponse::success('ECL policy approved.', ['id' => $id]);
     }
 
@@ -116,6 +119,7 @@ final class InstitutionalEclController extends Controller
         $money = MobileMoneyTransaction::query()->findOrFail($v['mobile_money_transaction_id']);
         abort_unless((int) $money->institution_id === (int) $v['institution_id'], 422);
         $id = $this->handled(fn () => $accounting->stageFundingReceipt($money->id, $v['evidence_reference'], $request->user()));
+
         return ApiResponse::success('Statement-matched partner prefunding evidence staged for separate treasury review.', ['id' => $id], 201);
     }
 
@@ -123,6 +127,7 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireChecker($request);
         $journal = $this->handled(fn () => $accounting->approveAndPostFundingReceipt($id, $request->user()));
+
         return ApiResponse::success('Reconciled partner prefunding journal posted.', ['id' => $id, 'ledger_transaction_id' => $journal]);
     }
 
@@ -141,6 +146,7 @@ final class InstitutionalEclController extends Controller
         $this->requireInstitution($request, (int) $v['institution_id']);
         $id = $this->handled(fn () => $accounting->stage($offer, $v['owner_type'],
             $v['opfin_share_bps'], $v['agreement_reference'], $request->user()));
+
         return ApiResponse::success('Pre-origination credit owner awaiting independent approval.', ['id' => $id], 201);
     }
 
@@ -148,6 +154,7 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireChecker($request);
         $this->handled(fn () => $accounting->approve($id, $request->user()));
+
         return ApiResponse::success('Pre-origination credit ownership independently approved.', ['id' => $id]);
     }
 
@@ -163,6 +170,7 @@ final class InstitutionalEclController extends Controller
         ]);
         $this->requireInstitution($request, (int) $v['institution_id']);
         $id = $this->handled(fn () => $this->service->registerOwnership($v['institution_id'], $v['loan_id'], $v, $request->user()));
+
         return ApiResponse::success('Loan credit-risk ownership awaiting independent review.', ['id' => $id], 201);
     }
 
@@ -170,6 +178,7 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireChecker($request);
         $this->handled(fn () => $this->service->approveOwnership($id, $request->user()));
+
         return ApiResponse::success('Credit-risk ownership attested.', ['id' => $id]);
     }
 
@@ -190,9 +199,9 @@ final class InstitutionalEclController extends Controller
         ]);
         $this->requireInstitution($request, (int) $v['institution_id']);
         $id = $this->handled(fn () => $this->service->stageExternal($v['institution_id'], $v, $request->user()));
+
         return ApiResponse::success('External loan evidence staged, not an OpFin accounting asset.', ['id' => $id], 201);
     }
-
 
     public function uploadExternalCsv(Request $request): JsonResponse
     {
@@ -215,6 +224,7 @@ final class InstitutionalEclController extends Controller
             $v['institution_id'], $v['as_of_date'], $v['currency'], $v['source_evidence'],
             $content, $v['expected_loan_count'], $v['expected_principal_minor'], $request->user()
         ));
+
         return ApiResponse::success('Loan-book CSV staged with source controls; independent approval is required.', ['id' => $id], 201);
     }
 
@@ -222,6 +232,7 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireChecker($request);
         $count = $this->handled(fn () => $this->service->approveExternalBatch($id, $request->user()));
+
         return ApiResponse::success('Institutional source batch approved.', ['id' => $id, 'approved_loans' => $count]);
     }
 
@@ -229,6 +240,7 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireChecker($request);
         $this->handled(fn () => $this->service->approveExternal($id, $request->user()));
+
         return ApiResponse::success('External observation independently reviewed.', ['id' => $id]);
     }
 
@@ -248,6 +260,7 @@ final class InstitutionalEclController extends Controller
         abort_unless($institution, 404);
         $this->requireInstitution($request, (int) $institution);
         $newId = $this->handled(fn () => $this->service->stageSourceCorrection($id, $v, $request->user()));
+
         return ApiResponse::success('Immutable source correction awaiting independent review.', ['id' => $newId], 201);
     }
 
@@ -255,6 +268,7 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireChecker($request);
         $this->handled(fn () => $this->service->approveSourceCorrection($id, $request->user()));
+
         return ApiResponse::success('Source correction independently approved; original evidence retained.', ['id' => $id]);
     }
 
@@ -274,6 +288,7 @@ final class InstitutionalEclController extends Controller
         $id = $this->handled(fn () => $this->service->build($v['institution_id'], $v['as_of_date'],
             $v['expected_external_count'], $v['expected_external_principal_minor'], $v['coverage_reference'], $request->user(),
             $v['restates_run_id'] ?? null, $v['restatement_reason'] ?? null));
+
         return ApiResponse::success('Draft monthly ECL snapshot created; no journals posted.', ['id' => $id], 201);
     }
 
@@ -281,6 +296,7 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireChecker($request);
         $this->handled(fn () => $this->service->approveRun($id, $request->user()));
+
         return ApiResponse::success('Monthly ECL snapshot approved.', ['id' => $id]);
     }
 
@@ -288,6 +304,7 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireChecker($request);
         $this->handled(fn () => $this->service->postRun($id, $request->user()));
+
         return ApiResponse::success('OpFin-owned ECL entries posted through existing impairment service; partner/share exposures remain advisory.', ['id' => $id]);
     }
 
@@ -297,6 +314,7 @@ final class InstitutionalEclController extends Controller
         $institution = DB::table('institution_ecl_runs')->where('id', $id)->value('institution_id');
         abort_unless($institution, 404);
         $this->requireInstitution($request, (int) $institution);
+
         return ApiResponse::success('Loan and portfolio-level impairment statement.', $this->handled(fn () => $this->service->details($id)));
     }
 
@@ -312,23 +330,25 @@ final class InstitutionalEclController extends Controller
         $file = 'ecl-'.$run->institution_id.'-'.$run->as_of_date.'-'.$run->revision.'-'.$view.'.csv';
         $escape = static function (mixed $value): string {
             $s = (string) ($value ?? '');
+
             // Prevent Excel spreadsheet-formula injection from externally supplied references.
             return preg_match('/^[=+\-@\t\r]/u', $s) ? "'".$s : $s;
         };
+
         return response()->streamDownload(function () use ($details, $view, $escape) {
             $stream = fopen('php://output', 'w');
             if ($view === 'portfolio') {
-                fputcsv($stream, ['institution_id','as_of_date','revision','currency','status','gross_exposure_minor','ecl_minor','opfin_risk_share_ecl_minor','ecl_movement_minor','content_hash']);
+                fputcsv($stream, ['institution_id', 'as_of_date', 'revision', 'currency', 'status', 'gross_exposure_minor', 'ecl_minor', 'opfin_risk_share_ecl_minor', 'ecl_movement_minor', 'content_hash']);
                 $r = $details['run'];
-                fputcsv($stream, [$r->institution_id,$r->as_of_date,$r->revision,$r->currency,$r->status,
-                    $r->total_exposure_minor,$r->total_ecl_minor,$r->platform_ecl_minor,$r->ecl_movement_minor,$r->content_hash]);
+                fputcsv($stream, [$r->institution_id, $r->as_of_date, $r->revision, $r->currency, $r->status,
+                    $r->total_exposure_minor, $r->total_ecl_minor, $r->platform_ecl_minor, $r->ecl_movement_minor, $r->content_hash]);
             } else {
-                fputcsv($stream, ['institution_id','as_of_date','loan_reference','owner_type','platform_share_bps','gross_exposure_minor','dpd','stage','ecl_minor','platform_ecl_minor','movement_minor','impairment_assessment_id']);
+                fputcsv($stream, ['institution_id', 'as_of_date', 'loan_reference', 'owner_type', 'platform_share_bps', 'gross_exposure_minor', 'dpd', 'stage', 'ecl_minor', 'platform_ecl_minor', 'movement_minor', 'impairment_assessment_id']);
                 foreach ($details['items'] as $item) {
-                    fputcsv($stream, [$details['run']->institution_id,$details['run']->as_of_date,$escape($item->loan_reference),
-                        $item->owner_type,$item->opfin_share_bps,$item->gross_exposure_minor,$item->days_past_due,
-                        $item->stage,$item->expected_credit_loss_minor,$item->platform_ecl_minor,
-                        $item->movement_minor,$item->impairment_assessment_id]);
+                    fputcsv($stream, [$details['run']->institution_id, $details['run']->as_of_date, $escape($item->loan_reference),
+                        $item->owner_type, $item->opfin_share_bps, $item->gross_exposure_minor, $item->days_past_due,
+                        $item->stage, $item->expected_credit_loss_minor, $item->platform_ecl_minor,
+                        $item->movement_minor, $item->impairment_assessment_id]);
                 }
             }
             fclose($stream);

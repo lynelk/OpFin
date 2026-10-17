@@ -5,7 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('institution_shared_classification_reviews', function (Blueprint $t) {
@@ -18,12 +19,12 @@ return new class extends Migration {
             $t->text('technical_conclusion');
             $t->timestamp('reviewed_at');
             $t->timestamps();
-            $t->unique(['classification_id','capacity'], 'shared_classification_capacity_once');
-            $t->unique(['classification_id','reviewed_by'], 'shared_classification_distinct_signers');
+            $t->unique(['classification_id', 'capacity'], 'shared_classification_capacity_once');
+            $t->unique(['classification_id', 'reviewed_by'], 'shared_classification_distinct_signers');
         });
         if (DB::getDriverName() === 'pgsql') {
             DB::unprepared("CREATE OR REPLACE FUNCTION institution_shared_classification_reviews_append_only() RETURNS trigger LANGUAGE plpgsql AS \$assurance\$ BEGIN RAISE EXCEPTION 'Independent contractual classification reviews are append-only'; END; \$assurance\$");
-            DB::unprepared("CREATE TRIGGER shared_review_append_only BEFORE UPDATE OR DELETE ON institution_shared_classification_reviews FOR EACH ROW EXECUTE FUNCTION institution_shared_classification_reviews_append_only()");
+            DB::unprepared('CREATE TRIGGER shared_review_append_only BEFORE UPDATE OR DELETE ON institution_shared_classification_reviews FOR EACH ROW EXECUTE FUNCTION institution_shared_classification_reviews_append_only()');
         } elseif (DB::getDriverName() === 'sqlite') {
             DB::unprepared("CREATE TRIGGER shared_review_immutable BEFORE UPDATE ON institution_shared_classification_reviews BEGIN SELECT RAISE(ABORT,'Independent classification reviews are immutable'); END");
             DB::unprepared("CREATE TRIGGER shared_review_append_only BEFORE DELETE ON institution_shared_classification_reviews BEGIN SELECT RAISE(ABORT,'Independent classification reviews are append-only'); END");
@@ -38,7 +39,7 @@ return new class extends Migration {
         }
         Schema::dropIfExists('institution_shared_classification_reviews');
         if (DB::getDriverName() === 'pgsql') {
-            DB::unprepared("DROP FUNCTION IF EXISTS institution_shared_classification_reviews_append_only()");
+            DB::unprepared('DROP FUNCTION IF EXISTS institution_shared_classification_reviews_append_only()');
         }
     }
 };

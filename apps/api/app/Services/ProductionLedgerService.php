@@ -65,7 +65,7 @@ class ProductionLedgerService
                 foreach ($entries as $entry) {
                     if ((int) $entry['account_id'] === (int) $account->id) {
                         $movement += $entry['direction'] === ($partnerLiability ? 'credit' : 'debit')
-                            ? (int) $entry['amount_minor'] : - (int) $entry['amount_minor'];
+                            ? (int) $entry['amount_minor'] : -(int) $entry['amount_minor'];
                     }
                 }
                 if ($balance + $movement < 0) {

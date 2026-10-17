@@ -21,6 +21,7 @@ final class InstitutionalEclService
         if ($input['stage2_dpd'] >= $input['stage3_dpd']) {
             throw new InvalidArgumentException('Stage 3 DPD must exceed stage 2 DPD.');
         }
+
         return DB::table('institution_ecl_policies')->insertGetId([
             'institution_id' => $institutionId,
             'version' => $input['version'],
@@ -67,6 +68,7 @@ final class InstitutionalEclService
             || ($kind === 'shared' && ($share <= 0 || $share >= 10000))) {
             throw new InvalidArgumentException('Exposure ownership and platform risk share do not agree.');
         }
+
         return DB::table('loan_ecl_ownerships')->insertGetId([
             'loan_id' => $loanId, 'institution_id' => $institutionId,
             'owner_type' => $kind, 'opfin_share_bps' => $share,
@@ -89,7 +91,6 @@ final class InstitutionalEclService
             ]);
         });
     }
-
 
     /**
      * Bulk portfolio evidence intake is not a disbursement, loan origination or GL event.
@@ -166,6 +167,7 @@ final class InstitutionalEclService
         if ($asOf > now()->toDateString()) {
             throw new InvalidArgumentException('An external portfolio source cannot have a future reporting cut-off.');
         }
+
         return DB::transaction(function () use ($institutionId, $asOf, $currency, $sourceEvidence, $csv, $rows, $sum, $actor) {
             $batchId = DB::table('institution_ecl_import_batches')->insertGetId([
                 'institution_id' => $institutionId, 'as_of_date' => $asOf,
@@ -177,6 +179,7 @@ final class InstitutionalEclService
             foreach ($rows as $row) {
                 $this->stageExternal($institutionId, $row, $actor, $batchId);
             }
+
             return $batchId;
         });
     }
@@ -201,6 +204,7 @@ final class InstitutionalEclService
             DB::table('institution_ecl_import_batches')->where('id', $batchId)
                 ->update(['status' => 'approved', 'approved_by' => $actor->id,
                     'approved_at' => now(), 'updated_at' => now()]);
+
             return $rows->count();
         });
     }
@@ -223,6 +227,7 @@ final class InstitutionalEclService
             'contractual_maturity_date' => $data['contractual_maturity_date'],
             'source_evidence' => $data['source_evidence'],
         ];
+
         return DB::table('institution_ecl_external_snapshots')->insertGetId($source + [
             'source_hash' => hash('sha256', json_encode($source, JSON_THROW_ON_ERROR)),
             'status' => 'staged', 'submitted_by' => $actor->id,
@@ -267,6 +272,7 @@ final class InstitutionalEclService
                 'source_evidence' => $data['source_evidence'],
                 'reason' => $data['reason'],
             ];
+
             return DB::table('institution_ecl_source_corrections')->insertGetId($change + [
                 'correction_hash' => hash('sha256', json_encode($change, JSON_THROW_ON_ERROR)),
                 'status' => 'draft', 'created_by' => $maker->id,
@@ -422,6 +428,7 @@ final class InstitutionalEclService
         $revision = ((int) DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
             ->where('as_of_date', $asOf)->max('revision')) + 1;
         $hash = hash('sha256', json_encode([$institutionId, $asOf, $policy->id, $rows, $previous?->id, $restatesRunId], JSON_THROW_ON_ERROR));
+
         return DB::transaction(function () use ($institutionId, $asOf, $policy, $actor, $rows, $totalExposure, $totalEcl, $platformEcl, $previousTotal, $hash, $revision, $expectedExternalCount, $expectedExternalPrincipal, $coverageReference, $restatesRunId, $restatementReason, $restatedRun) {
             if (! $restatedRun && DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
                 ->where('as_of_date', $asOf)->whereIn('status', ['approved', 'posted', 'finalised'])->exists()) {
@@ -447,6 +454,7 @@ final class InstitutionalEclService
                     'run_id' => $runId, 'created_at' => now(), 'updated_at' => now(),
                 ]);
             }
+
             return $runId;
         });
     }
@@ -533,6 +541,7 @@ final class InstitutionalEclService
         if (! $run) {
             throw new InvalidArgumentException('ECL run not found.');
         }
+
         return ['run' => $run, 'items' => DB::table('institution_ecl_run_items')
             ->where('run_id', $runId)->orderBy('loan_reference')->get()];
     }
@@ -544,6 +553,7 @@ final class InstitutionalEclService
     ): array {
         $result = $this->calculator->calculate($gross, $dpd, $sicr, $impaired, $months,
             (int) $policy->stage2_dpd, (int) $policy->stage3_dpd, (int) $policy->discount_bps, $scenarios);
+
         return [
             'loan_id' => $loanId, 'external_snapshot_id' => $snapshotId,
             'loan_reference' => $reference, 'owner_type' => $owner,
@@ -562,6 +572,7 @@ final class InstitutionalEclService
             : DB::table('loan_schedules')->where('total_outstanding', '>', 0);
         $due = $query->where('loan_id', $loan->id)->where('due_date', '<', $asOf->toDateString())
             ->orderBy('due_date')->value('due_date');
+
         return $due ? min(65535, (int) Carbon::parse($due)->diffInDays($asOf)) : 0;
     }
 }

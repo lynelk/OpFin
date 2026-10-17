@@ -58,6 +58,7 @@ final class InstitutionalFinanceAssuranceController extends Controller
             'opfin_share_bps' => 'required|integer|min:1|max:9999',
         ]);
         $result = $this->invoke(fn () => $simulator->preview($values));
+
         return ApiResponse::success('Synthetic journal illustration only; no cash, approvals or credit entries posted.', $result);
     }
 
@@ -68,6 +69,7 @@ final class InstitutionalFinanceAssuranceController extends Controller
         $cuts = DB::table('institution_finance_reconciliations')
             ->where('institution_id', $v['institution_id'])->orderByDesc('as_of_date')->limit(60)->get();
         $ids = $cuts->pluck('id')->all();
+
         return ApiResponse::success('Evidence-based assurance register; recorded reviews are not external audit approval.', [
             'reconciliations' => $cuts,
             'reviews' => DB::table('institution_finance_reviews')
@@ -107,6 +109,7 @@ final class InstitutionalFinanceAssuranceController extends Controller
         ]);
         $this->maker($request, (int) $v['institution_id']);
         $id = $this->invoke(fn () => $this->service->stage($v, $request->user()));
+
         return ApiResponse::success('Original bank and lender controls staged; a reviewer must resolve all variances.', ['id' => $id], 201);
     }
 
@@ -114,6 +117,7 @@ final class InstitutionalFinanceAssuranceController extends Controller
     {
         $this->checker($request);
         $this->invoke(fn () => $this->service->approve($id, $request->user()));
+
         return ApiResponse::success('Arithmetic matched and independently checked, subject to authentic-source and professional approval.', ['id' => $id]);
     }
 
@@ -128,6 +132,7 @@ final class InstitutionalFinanceAssuranceController extends Controller
         ]);
         $this->invoke(fn () => $this->service->sign($id, $v['capacity'], $v['report_reference'],
             $v['report_sha256'], $v['signed_statement'], $request->user()));
+
         return ApiResponse::success('Reviewer attestation recorded with immutable source references; no automatic release.', ['id' => $id]);
     }
 
@@ -143,6 +148,7 @@ final class InstitutionalFinanceAssuranceController extends Controller
         $this->invoke(fn () => $this->service->reviewSharedClassification($id,
             $v['capacity'], $v['review_reference'], $v['review_document_sha256'],
             $v['technical_conclusion'], $request->user()));
+
         return ApiResponse::success('A distinct reviewer attested this contractual classification; shared GL activation remains blocked.', ['id' => $id]);
     }
 
@@ -164,6 +170,7 @@ final class InstitutionalFinanceAssuranceController extends Controller
             $v['reconciliation_id'], $v['contract_form'], $v['opfin_share_bps'],
             $v['contract_reference'], $v['signed_contract_sha256'],
             $v['accounting_policy_reference'], $v['technical_memo_sha256'], $request->user()));
+
         return ApiResponse::success('Contractual form classified pending real legal/accounting acceptance. Shared origination remains blocked.', ['id' => $id], 201);
     }
 }

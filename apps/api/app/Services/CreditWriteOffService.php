@@ -10,6 +10,7 @@ use App\Models\Loan;
 use App\Models\LoanImpairmentAssessment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 class CreditWriteOffService
@@ -33,9 +34,9 @@ class CreditWriteOffService
 
         return DB::transaction(function () use ($loan, $policyVersion, $evidence, $actor) {
             $lockedLoan = Loan::withoutGlobalScopes()->whereKey($loan->id)->lockForUpdate()->firstOrFail();
-            if (\Illuminate\Support\Facades\Schema::hasTable('loan_ecl_ownerships')) {
+            if (Schema::hasTable('loan_ecl_ownerships')) {
                 $ownership = DB::table('loan_ecl_ownerships')->where('loan_id', $lockedLoan->id)->first();
-                if (! $ownership && \Illuminate\Support\Facades\Schema::hasTable('institution_ecl_policies')
+                if (! $ownership && Schema::hasTable('institution_ecl_policies')
                     && DB::table('institution_ecl_policies')->where('institution_id', $lockedLoan->institution_id)
                         ->where('status', 'approved')->exists()) {
                     throw new InvalidArgumentException('Write-off requires explicit credit-risk ownership under an approved institutional ECL policy.');

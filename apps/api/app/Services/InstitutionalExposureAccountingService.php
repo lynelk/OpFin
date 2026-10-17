@@ -34,6 +34,7 @@ final class InstitutionalExposureAccountingService
         if (DB::table('credit_offer_ecl_ownerships')->where('credit_offer_id', $fresh->id)->exists()) {
             throw new InvalidArgumentException('Offer ownership evidence already exists; changes require controlled cancellation and re-offer.');
         }
+
         return DB::table('credit_offer_ecl_ownerships')->insertGetId([
             'credit_offer_id' => $fresh->id, 'institution_id' => $fresh->institution_id,
             'owner_type' => $owner, 'opfin_share_bps' => $shareBps,
@@ -68,8 +69,10 @@ final class InstitutionalExposureAccountingService
                     'The verified legal-credit-owner migration is missing; production credit issuance is blocked.'
                 );
             }
+
             return false;
         }
+
         // Legacy fixtures remain runnable under testing. Real environments fail closed.
         return ! app()->environment('testing')
             || (bool) config('opfin.accounting.enforce_credit_owner_at_origination', false)
@@ -92,6 +95,7 @@ final class InstitutionalExposureAccountingService
         if ($row->owner_type === 'shared') {
             throw new InvalidArgumentException('Shared exposure origination is blocked until asset, guarantee and funder-claim accounting is certified.');
         }
+
         return $row;
     }
 
@@ -119,6 +123,7 @@ final class InstitutionalExposureAccountingService
                     || (int) $reservation->cash_minor !== (int) $offer->net_disbursement_minor) {
                     throw new InvalidArgumentException('This offer has an incompatible or completed partner cash reservation.');
                 }
+
                 return;
             }
             $entries = DB::table('ledger_entries')->where('ledger_account_id', $account->id)
@@ -187,6 +192,7 @@ final class InstitutionalExposureAccountingService
                 || (int) $existing->institution_id !== (int) $row->institution_id) {
                 throw new InvalidArgumentException('Loan ownership conflicts with the immutable accepted offer.');
             }
+
             return;
         }
         DB::table('loan_ecl_ownerships')->insert([
@@ -203,6 +209,7 @@ final class InstitutionalExposureAccountingService
         if (! Schema::hasTable('loan_ecl_ownerships')) {
             return null;
         }
+
         return DB::table('loan_ecl_ownerships')->where('loan_id', $loan->id)->first();
     }
 
@@ -244,6 +251,7 @@ final class InstitutionalExposureAccountingService
             'provider_reference' => (string) $money->provider_reference,
             'evidence_reference' => trim($evidenceReference),
         ];
+
         return DB::table('institution_ecl_funding_receipts')->insertGetId($source + [
             'evidence_hash' => hash('sha256', json_encode($source, JSON_THROW_ON_ERROR)),
             'status' => 'draft', 'created_by' => $maker->id,
@@ -295,6 +303,7 @@ final class InstitutionalExposureAccountingService
                 'status' => 'posted', 'approved_by' => $checker->id, 'approved_at' => now(),
                 'ledger_transaction_id' => $journal->id, 'updated_at' => now(),
             ]);
+
             return (int) $journal->id;
         });
     }
@@ -307,6 +316,7 @@ final class InstitutionalExposureAccountingService
             || ! preg_match('/^[A-Z]{3}$/D', $currency)) {
             throw new InvalidArgumentException('Institutional custody account requires an approved institution, provider and currency.');
         }
+
         return LedgerAccount::query()->firstOrCreate(
             ['code' => 'cash.partner_custody.institution_'.$institutionId.'.provider_'.$provider, 'currency' => $currency],
             ['name' => 'Ring-fenced partner provider cash '.$institutionId.' '.$provider,

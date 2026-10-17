@@ -5,7 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('institution_finance_reconciliations', function (Blueprint $t) {
@@ -62,11 +63,11 @@ return new class extends Migration {
 
         if (DB::getDriverName() === 'pgsql') {
             foreach ([
-                'institution_finance_reconciliations' => ['institution_id','ecl_run_id','as_of_date','currency','provider_statements','external_payable_minor','external_principal_minor','external_loan_count','lender_ledger_reference','lender_ledger_sha256','control_results','content_hash','created_by'],
-                'institution_finance_reviews' => ['reconciliation_id','capacity','reviewed_by','report_sha256','report_reference','signed_statement','reviewed_at'],
-                'institution_shared_classifications' => ['credit_offer_id','institution_id','reconciliation_id','contract_form','opfin_share_bps','contract_reference','signed_contract_sha256','accounting_policy_reference','technical_memo_sha256','created_by'],
+                'institution_finance_reconciliations' => ['institution_id', 'ecl_run_id', 'as_of_date', 'currency', 'provider_statements', 'external_payable_minor', 'external_principal_minor', 'external_loan_count', 'lender_ledger_reference', 'lender_ledger_sha256', 'control_results', 'content_hash', 'created_by'],
+                'institution_finance_reviews' => ['reconciliation_id', 'capacity', 'reviewed_by', 'report_sha256', 'report_reference', 'signed_statement', 'reviewed_at'],
+                'institution_shared_classifications' => ['credit_offer_id', 'institution_id', 'reconciliation_id', 'contract_form', 'opfin_share_bps', 'contract_reference', 'signed_contract_sha256', 'accounting_policy_reference', 'technical_memo_sha256', 'created_by'],
             ] as $table => $fields) {
-                $checks = implode(' OR ', array_map(fn ($field) => in_array($field, ['provider_statements','control_results'], true)
+                $checks = implode(' OR ', array_map(fn ($field) => in_array($field, ['provider_statements', 'control_results'], true)
                     ? "(OLD.{$field})::jsonb IS DISTINCT FROM (NEW.{$field})::jsonb"
                     : "OLD.{$field} IS DISTINCT FROM NEW.{$field}", $fields));
                 DB::unprepared("CREATE OR REPLACE FUNCTION {$table}_guard_original() RETURNS trigger LANGUAGE plpgsql AS \$ecl\$ BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Institutional assurance records are append-only'; END IF; IF {$checks} THEN RAISE EXCEPTION 'Institutional assurance source and approvals are immutable'; END IF; RETURN NEW; END; \$ecl\$");
@@ -74,9 +75,9 @@ return new class extends Migration {
             }
         } elseif (DB::getDriverName() === 'sqlite') {
             foreach ([
-                'institution_finance_reconciliations' => ['institution_id','ecl_run_id','as_of_date','currency','provider_statements','external_payable_minor','external_principal_minor','external_loan_count','lender_ledger_reference','lender_ledger_sha256','control_results','content_hash','created_by'],
-                'institution_finance_reviews' => ['reconciliation_id','capacity','reviewed_by','report_sha256','report_reference','signed_statement','reviewed_at'],
-                'institution_shared_classifications' => ['credit_offer_id','institution_id','reconciliation_id','contract_form','opfin_share_bps','contract_reference','signed_contract_sha256','accounting_policy_reference','technical_memo_sha256','created_by'],
+                'institution_finance_reconciliations' => ['institution_id', 'ecl_run_id', 'as_of_date', 'currency', 'provider_statements', 'external_payable_minor', 'external_principal_minor', 'external_loan_count', 'lender_ledger_reference', 'lender_ledger_sha256', 'control_results', 'content_hash', 'created_by'],
+                'institution_finance_reviews' => ['reconciliation_id', 'capacity', 'reviewed_by', 'report_sha256', 'report_reference', 'signed_statement', 'reviewed_at'],
+                'institution_shared_classifications' => ['credit_offer_id', 'institution_id', 'reconciliation_id', 'contract_form', 'opfin_share_bps', 'contract_reference', 'signed_contract_sha256', 'accounting_policy_reference', 'technical_memo_sha256', 'created_by'],
             ] as $table => $fields) {
                 $checks = implode(' OR ', array_map(fn ($field) => "OLD.{$field} IS NOT NEW.{$field}", $fields));
                 DB::unprepared("CREATE TRIGGER {$table}_guard_original BEFORE UPDATE ON {$table} WHEN {$checks} BEGIN SELECT RAISE(ABORT,'Institutional assurance records are immutable'); END");
@@ -87,12 +88,12 @@ return new class extends Migration {
 
     public function down(): void
     {
-        foreach (['institution_shared_classifications','institution_finance_reviews','institution_finance_reconciliations'] as $table) {
+        foreach (['institution_shared_classifications', 'institution_finance_reviews', 'institution_finance_reconciliations'] as $table) {
             if (! app()->environment('testing') && Schema::hasTable($table) && DB::table($table)->exists()) {
                 throw new LogicException('Signed financial assurance evidence cannot be destroyed by rollback.');
             }
         }
-        foreach (['institution_shared_classifications','institution_finance_reviews','institution_finance_reconciliations'] as $table) {
+        foreach (['institution_shared_classifications', 'institution_finance_reviews', 'institution_finance_reconciliations'] as $table) {
             Schema::dropIfExists($table);
             if (DB::getDriverName() === 'pgsql') {
                 DB::unprepared("DROP FUNCTION IF EXISTS {$table}_guard_original()");

@@ -59,6 +59,7 @@ final class InstitutionalSharedAccountingPreviewService
         if ($cash !== $principal) {
             $result['status'] = 'fee_policy_required';
             $result['reason'] = 'Principal and borrower cash differ; deferred fees and funding split cannot be guessed.';
+
             return $result;
         }
 
@@ -69,6 +70,7 @@ final class InstitutionalSharedAccountingPreviewService
                 'financial_guarantee' => 'The issuer may recognise a financial guarantee obligation, not a share of the underlying receivable.',
                 'first_loss' => 'Priority of losses, fair value and legal rights must determine liability or tranche accounting.',
             };
+
             return $result;
         }
 
@@ -80,6 +82,7 @@ final class InstitutionalSharedAccountingPreviewService
         if ($opfin <= 0 || $partner <= 0) {
             $result['status'] = 'unrepresentable_minor_unit_split';
             $result['reason'] = 'The selected share is smaller than one currency minor unit.';
+
             return $result;
         }
 
@@ -99,6 +102,7 @@ final class InstitutionalSharedAccountingPreviewService
             ],
         ];
         $result['reason'] = 'Two segregated legal funding legs, no fees. Neither leg is executable without verified provider finality, split receivable book and signed ledger acceptance.';
+
         return $result;
     }
 }

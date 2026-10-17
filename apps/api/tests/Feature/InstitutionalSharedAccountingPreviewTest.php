@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\InstitutionalSharedAccountingPreviewService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Tests\TestCase;
 
@@ -31,7 +32,7 @@ class InstitutionalSharedAccountingPreviewTest extends TestCase
     public function test_provisional_direct_joint_creditor_splits_minor_units_exactly_and_never_posts(): void
     {
         $service = app(InstitutionalSharedAccountingPreviewService::class);
-        $before = \Illuminate\Support\Facades\DB::table('ledger_transactions')->count();
+        $before = DB::table('ledger_transactions')->count();
         $result = $service->preview($this->example());
         $this->assertSame('provisional_direct_joint_creditor', $result['status']);
         $this->assertSame(40000, $result['illustrative_opfin_principal_minor']);
@@ -43,7 +44,7 @@ class InstitutionalSharedAccountingPreviewTest extends TestCase
         foreach ($result['journals'] as $journal) {
             $this->assertSame($journal['debit']['amount_minor'], $journal['credit']['amount_minor']);
         }
-        $this->assertSame($before, \Illuminate\Support\Facades\DB::table('ledger_transactions')->count());
+        $this->assertSame($before, DB::table('ledger_transactions')->count());
     }
 
     public function test_minor_unit_remainder_never_leaks_or_creates_fractional_money(): void

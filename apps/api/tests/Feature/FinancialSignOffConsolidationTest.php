@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\CreditDecision;
+use App\Models\CreditOffer;
 use App\Models\CreditScoreComponent;
 use App\Models\Institution;
 use App\Models\LedgerAccount;
+use App\Models\LedgerTransaction;
 use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
@@ -18,6 +20,7 @@ use App\Services\CreditWriteOffService;
 use App\Services\DefaultInterestService;
 use App\Services\EarlySettlementService;
 use App\Services\FinancialAccountingPeriodService;
+use App\Services\InstitutionalExposureAccountingService;
 use App\Services\LoanImpairmentService;
 use App\Services\ProductionCreditOfferService;
 use App\Services\ProductionLedgerService;
@@ -164,7 +167,7 @@ class FinancialSignOffConsolidationTest extends TestCase
             'approved_by' => $operations->id, 'approved_at' => now(),
             'created_at' => now(), 'updated_at' => now(),
         ]);
-        $cash = app(\App\Services\InstitutionalExposureAccountingService::class)
+        $cash = app(InstitutionalExposureAccountingService::class)
             ->partnerProviderCashAccount((int) $loan->institution_id, 'test', 'UGX');
         $held = LedgerAccount::create([
             'code' => 'liability.partner_funds_held.institution_'.$loan->institution_id,
@@ -199,7 +202,7 @@ class FinancialSignOffConsolidationTest extends TestCase
     public function test_partner_credit_offer_reservation_checks_selected_provider_liquidity_before_payout(): void
     {
         [, $operations, $loan] = $this->productionLoan();
-        $offer = \App\Models\CreditOffer::query()->findOrFail($loan->credit_offer_id);
+        $offer = CreditOffer::query()->findOrFail($loan->credit_offer_id);
         $checker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
         DB::table('credit_offer_ecl_ownerships')->insert([
             'credit_offer_id' => $offer->id, 'institution_id' => $offer->institution_id,
@@ -208,7 +211,7 @@ class FinancialSignOffConsolidationTest extends TestCase
             'created_by' => $operations->id, 'approved_by' => $checker->id,
             'approved_at' => now(), 'created_at' => now(), 'updated_at' => now(),
         ]);
-        $treasury = app(\App\Services\InstitutionalExposureAccountingService::class);
+        $treasury = app(InstitutionalExposureAccountingService::class);
         $held = $treasury->partnerFundsAccount((int) $loan->institution_id, 'UGX');
         $cashOnOtherProvider = $treasury->partnerProviderCashAccount((int) $loan->institution_id, 'provider_a', 'UGX');
         $funds = 200000;
@@ -247,7 +250,7 @@ class FinancialSignOffConsolidationTest extends TestCase
     public function test_partner_cannot_spend_custodial_cash_from_another_provider(): void
     {
         [, $operations, $loan] = $this->productionLoan();
-        $accounts = app(\App\Services\InstitutionalExposureAccountingService::class);
+        $accounts = app(InstitutionalExposureAccountingService::class);
         $otherProvider = $accounts->partnerProviderCashAccount((int) $loan->institution_id, 'provider_a', 'UGX');
         $payoutProvider = $accounts->partnerProviderCashAccount((int) $loan->institution_id, 'provider_b', 'UGX');
         $held = $accounts->partnerFundsAccount((int) $loan->institution_id, 'UGX');
@@ -291,7 +294,7 @@ class FinancialSignOffConsolidationTest extends TestCase
             'accounting_status' => MobileMoneyTransaction::ACCOUNTING_UNPOSTED,
             'metadata' => ['purpose' => 'institutional_prefunding'],
         ]);
-        $treasury = app(\App\Services\InstitutionalExposureAccountingService::class);
+        $treasury = app(InstitutionalExposureAccountingService::class);
         $draft = $treasury->stageFundingReceipt($money->id, 'RECONCILED-PROVIDER-STATEMENT-TEST', $operations);
         try {
             $treasury->approveAndPostFundingReceipt($draft, $operations);
@@ -300,7 +303,7 @@ class FinancialSignOffConsolidationTest extends TestCase
             $this->assertStringContainsString('separate treasury checker', $e->getMessage());
         }
         $journalId = $treasury->approveAndPostFundingReceipt($draft, $checker);
-        $journal = \App\Models\LedgerTransaction::query()->with('entries')->findOrFail($journalId);
+        $journal = LedgerTransaction::query()->with('entries')->findOrFail($journalId);
         $this->assertSame('partner.funds.received', $journal->event_type);
         $this->assertCount(2, $journal->entries);
         $this->assertSame('posted', DB::table('institution_ecl_funding_receipts')->find($draft)->status);
@@ -336,7 +339,7 @@ class FinancialSignOffConsolidationTest extends TestCase
     public function test_shared_risk_contract_attestation_cannot_automatically_unblock_untested_origination(): void
     {
         [, $operations, $loan] = $this->productionLoan();
-        $offer = \App\Models\CreditOffer::query()->findOrFail($loan->credit_offer_id);
+        $offer = CreditOffer::query()->findOrFail($loan->credit_offer_id);
         $second = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
         DB::table('credit_offer_ecl_ownerships')->insert([
             'credit_offer_id' => $offer->id, 'institution_id' => $offer->institution_id,
@@ -348,7 +351,7 @@ class FinancialSignOffConsolidationTest extends TestCase
         ]);
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Shared exposure origination is blocked');
-        app(\App\Services\InstitutionalExposureAccountingService::class)->approved($offer);
+        app(InstitutionalExposureAccountingService::class)->approved($offer);
     }
 
     public function test_partner_fiduciary_liability_cannot_be_spent_without_prior_verified_cash(): void
