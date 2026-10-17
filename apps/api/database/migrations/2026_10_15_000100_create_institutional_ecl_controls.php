@@ -54,6 +54,24 @@ return new class extends Migration
             $t->timestamp('approved_at')->nullable();
             $t->timestamps();
         });
+        // Funding exists only when a real provider collection is independently matched.
+        Schema::create('institution_ecl_funding_receipts', function (Blueprint $t) {
+            $t->id();
+            $t->foreignId('mobile_money_transaction_id')->unique()->constrained('mobile_money_transactions')->restrictOnDelete();
+            $t->foreignId('institution_id')->constrained('institutions')->restrictOnDelete();
+            $t->string('provider', 60);
+            $t->string('currency', 3);
+            $t->unsignedBigInteger('amount_minor');
+            $t->string('provider_reference', 255);
+            $t->string('evidence_reference', 255);
+            $t->char('evidence_hash', 64);
+            $t->string('status', 20)->default('draft');
+            $t->foreignId('created_by')->constrained('users')->restrictOnDelete();
+            $t->foreignId('approved_by')->nullable()->constrained('users')->restrictOnDelete();
+            $t->timestamp('approved_at')->nullable();
+            $t->foreignId('ledger_transaction_id')->nullable()->constrained('ledger_transactions')->restrictOnDelete();
+            $t->timestamps();
+        });
         // Reservations stop two pending payouts consuming the same verified partner-held cash.
         Schema::create('partner_ecl_cash_reservations', function (Blueprint $t) {
             $t->id();
@@ -180,6 +198,11 @@ return new class extends Migration
                 'institution_id', 'version', 'effective_from', 'currency', 'stage2_dpd',
                 'stage3_dpd', 'scenarios', 'discount_bps', 'methodology_reference', 'created_by',
             ],
+            'institution_ecl_funding_receipts' => [
+                'mobile_money_transaction_id', 'institution_id', 'provider',
+                'currency', 'amount_minor', 'provider_reference',
+                'evidence_reference', 'evidence_hash', 'created_by',
+            ],
             'credit_offer_ecl_ownerships' => [
                 'credit_offer_id', 'institution_id', 'owner_type', 'opfin_share_bps',
                 'agreement_reference', 'created_by',
@@ -241,17 +264,17 @@ return new class extends Migration
     public function down(): void
     {
         if (! app()->environment('testing')) {
-            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_source_corrections', 'institution_ecl_import_batches', 'partner_ecl_cash_reservations', 'loan_ecl_ownerships', 'credit_offer_ecl_ownerships', 'institution_ecl_policies'] as $table) {
+            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_source_corrections', 'institution_ecl_import_batches', 'partner_ecl_cash_reservations', 'institution_ecl_funding_receipts', 'loan_ecl_ownerships', 'credit_offer_ecl_ownerships', 'institution_ecl_policies'] as $table) {
                 if (DB::table($table)->exists()) {
                     throw new LogicException('Institutional ECL evidence exists; rollback requires a reviewed forward migration.');
                 }
             }
         }
-        foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_source_corrections', 'institution_ecl_import_batches', 'partner_ecl_cash_reservations', 'loan_ecl_ownerships', 'credit_offer_ecl_ownerships', 'institution_ecl_policies'] as $table) {
+        foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_source_corrections', 'institution_ecl_import_batches', 'partner_ecl_cash_reservations', 'institution_ecl_funding_receipts', 'loan_ecl_ownerships', 'credit_offer_ecl_ownerships', 'institution_ecl_policies'] as $table) {
             Schema::dropIfExists($table);
         }
         if (DB::getDriverName() === 'pgsql') {
-            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_source_corrections', 'institution_ecl_import_batches', 'partner_ecl_cash_reservations', 'loan_ecl_ownerships', 'credit_offer_ecl_ownerships', 'institution_ecl_policies'] as $table) {
+            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_source_corrections', 'institution_ecl_import_batches', 'partner_ecl_cash_reservations', 'institution_ecl_funding_receipts', 'loan_ecl_ownerships', 'credit_offer_ecl_ownerships', 'institution_ecl_policies'] as $table) {
                 DB::unprepared("DROP FUNCTION IF EXISTS {$table}_lock_ecl_source()");
             }
         }
