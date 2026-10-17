@@ -518,7 +518,7 @@ class ProductionLoanLedgerService
                 'direction' => LedgerEntry::DIRECTION_DEBIT, 'amount_minor' => $cash,
                 'memo' => 'Ring-fenced provider cash collected for institutional lender'],
             ['account_id' => $held->id, 'direction' => LedgerEntry::DIRECTION_CREDIT,
-            'amount_minor' => $cash, 'memo' => 'Lender funds held; not OpFin principal, fee or interest income'],
+                'amount_minor' => $cash, 'memo' => 'Lender funds held; not OpFin principal, fee or interest income'],
         ], null, $currency, [
             'loan_id' => $loan->id, 'ownership_type' => 'partner',
             'institution_id' => $owner->institution_id,
