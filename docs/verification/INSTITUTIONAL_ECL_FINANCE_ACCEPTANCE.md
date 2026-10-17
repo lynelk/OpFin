@@ -83,6 +83,22 @@ The PostgreSQL extension caught and corrected two additional SQLite-masked defec
 
 **This is not an independent IFRS 9 certification, audited source reconciliation or signed reviewer approval.** No actual bank/provider and lender GL originals or executed risk-sharing agreements were available. Shared origination remains blocked pending contract-specific receivable, income, ECL, guarantee and repayment journal implementation, and signed legal/accounting review.
 
+### Temporary evidence deferral and read-only finance simulation (17 October 2026)
+
+**Business decision:** external institution-specific bank/provider statements, signed lender general ledgers and loan registers, executed risk-sharing agreements, independently validated IFRS 9 methodology and genuine Finance/Risk/Treasury/Legal/model reviewer decisions are **DEFERRED_NOT_APPROVED** for isolated software development, pending reinstatement. The detailed written decision is in `docs/finance/INSTITUTIONAL_RECONCILIATION_AND_SHARED_EXPOSURE_DECISION.md`.
+
+**Reversible toggle:** `config('opfin.accounting.defer_institutional_evidence_for_nonproduction')`, sourced from `OPFIN_DEFER_INSTITUTIONAL_ASSURANCE_EVIDENCE` and defaulting to true only outside production. The service and API each require an actual `local`, `testing`, or `staging` Laravel environment. Explicitly setting the variable true in production **does not** activate synthetic accounting previews.
+
+**Implementation:** a read-only `InstitutionalSharedAccountingPreviewService` and `POST /api/admin/institutional-assurance/shared-accounting-preview` return a clearly provisional two-party loan accounting illustration. Direct joint-creditor case splits principal at integer minor-unit precision and constructs balanced **illustrative** separated-funder legs with no actual ledger account IDs. Funded participation, first-loss and guarantees instead remain contract-specific classification cases, with **no executable journal suggestions**. Nonzero fee differences explicitly block a fabricated “balanced” ledger. No external documents or sign-off are required to exercise synthetic preview. No production ledger, bank API, payout, risk-owner approval, loan or reviewer records are touched. The admin UI at `/admin/institutional-assurance/preview` exposes the QA modelling form.
+
+**Final executed regression results (after this change):**
+- Isolated Laravel full suite: **634 passed / 23,315 assertions / zero failures**.
+- Isolated PostgreSQL 16 finance, ECL, assurance and synthetic preview test suites: **31 passed / 143 assertions / zero failures**.
+- Node 22 web checks: **typecheck PASS, ESLint PASS, 72 web tests PASS, production build PASS**.
+- Previous PostgreSQL competing-process treasury custody test: **20 of 20 rounds**, 40 competing withdrawal attempts, no overdrafts. It was **not rerun** for this read-only change.
+
+**Production status remains unchanged:** actual documentary reconciliation not completed, IFRS 9 externally unvalidated, professional reviewers not signed, shared real-money origination blocked. PR stays draft, unmerged and undeployed.
+
 ## Required execution evidence
 
 ### 1. API and database
