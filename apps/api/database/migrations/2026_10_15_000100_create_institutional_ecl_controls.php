@@ -79,6 +79,7 @@ return new class extends Migration
             $t->foreignId('credit_offer_id')->unique()->constrained('credit_offers')->restrictOnDelete();
             $t->foreignId('institution_id')->constrained('institutions')->restrictOnDelete();
             $t->string('currency', 3);
+            $t->string('provider', 60);
             $t->unsignedBigInteger('cash_minor');
             $t->string('status', 20)->default('reserved');
             $t->timestamps();
