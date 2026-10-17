@@ -13,6 +13,7 @@ export type AssuranceRegister = {
   reconciliations: AssuranceReconciliation[]; reviews: AssuranceReview[];
   classifications: SharedClassification[]; classification_reviews: AssuranceReview[];
   required_review_capacities: string[]; shared_origination_enabled: false;
+  external_evidence_requirement: "deferred_for_nonproduction_modelling" | "required_for_live_release";
 };
 
 export async function assuranceRequest<T>(
