@@ -32,6 +32,10 @@ P0 identifies blockers and foundations. P1 delivers the value that depends on th
 | FL-07 | **Passport and consent** | Purpose/recipient/freshness scoped exports, lawful consents, retained audit and revocation boundaries | Permissioned use of eligible histories for genuinely useful experiences, with user visibility and control | Consumer consent tests; disallow hidden underwriting inputs, child learning data and Space leakage |
 | FL-08 | **Inclusive operations** | Low-data budgets, accessible mobile, security, safeguarding and exact deployed-provider truth | Fluent Flutter/Web/authorised assisted journeys, local-language pilots after review, resilience under low connectivity | Supported real-device tests, privacy/security review, measured cost/traffic and customer comprehension |
 
+## Parallel high-priority Finance workstream
+
+OpFin Finance prioritises evidence-led, permissioned Stolets merchant finance and durable portfolio controls **in parallel with** the universal financial-life foundation. The [Finance Evidence-Led Credit Programme](OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md) preserves fourteen required technical/risk measures and the 0–3, 3–6, 6–12 month validation and activation horizons. It is not permission to launch or a decision to steer every customer into borrowing. The strongest dependencies are FL-02 (independent eligibility), FL-03 (attributed business/Personal Space ownership), FL-05 (explainability and hardship), FL-06 (affordability and financial truth), FL-07 (consented provenance) and FL-08 (channel parity and evidence).
+
 ## Implementation order (release slices, not separate initiatives)
 
 ### Slice A: Trustworthy foundation and compact clarity
