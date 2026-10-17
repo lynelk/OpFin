@@ -115,8 +115,9 @@ final class MerchantStockFinanceHandoff
         return $value;
     }
 
-    /** @param array<string, mixed> $payload
-     *  @param list<string> $allowed
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  list<string>  $allowed
      */
     private static function keys(array $payload, array $allowed, string $name): void
     {
