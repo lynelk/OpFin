@@ -96,6 +96,8 @@ final class AssetFinanceLifecycleService
             'Customer contribution must be non-negative and lower than the asset price.');
         $finance = $price - $contribution;
 
+        $evidenceProfile = AssetFinanceEvidencePolicy::for($vertical, (string) $asset->asset_class);
+
         $attributes = [
             'user_id' => $actor->id,
             'financial_space_id' => $space->id,
@@ -112,7 +114,7 @@ final class AssetFinanceLifecycleService
         ];
         $instruction = hash('sha256', json_encode($attributes, JSON_THROW_ON_ERROR));
 
-        return DB::transaction(function () use ($space, $actor, $attributes, $key, $instruction, $asset, $product): array {
+        return DB::transaction(function () use ($space, $actor, $attributes, $key, $instruction, $asset, $product, $evidenceProfile): array {
             $existing = DB::table('asset_finance_cases')
                 ->where('financial_space_id', $space->id)->where('idempotency_key', $key)->first();
             if ($existing !== null) {
@@ -132,6 +134,7 @@ final class AssetFinanceLifecycleService
                     'product_code' => $product->code,
                     'product_version' => $product->version,
                     'remote_device_controls' => false,
+                    'evidence_profile' => $evidenceProfile,
                     'money_movement' => 'separate_governed_provider_and_reconciliation_rail',
                 ], JSON_THROW_ON_ERROR),
                 'idempotency_key' => $key,
@@ -357,7 +360,7 @@ final class AssetFinanceLifecycleService
                 return $this->view($case, true);
             }
             abort_unless($case->status === 'settlement_reconciled', 409, 'Supplier settlement must be reconciled before activation.');
-            $this->assertVerifiedEvidence($case, config("asset_finance.verticals.{$case->vertical}.activation_evidence", []));
+            $this->assertVerifiedEvidence($case, $this->evidenceFor($case, 'activation'));
 
             if ((int) $case->customer_contribution_minor > 0) {
                 abort_unless(DB::table('asset_finance_settlements')->where('asset_finance_case_id', $case->id)
@@ -446,7 +449,7 @@ final class AssetFinanceLifecycleService
 
         $rules = config("asset_finance.verticals.{$case->vertical}");
         abort_unless(is_array($rules), 422, 'Unknown vertical policy.');
-        $this->assertVerifiedEvidence($case, $rules['pre_approval_evidence'] ?? []);
+        $this->assertVerifiedEvidence($case, $this->evidenceFor($case, 'pre_approval'));
 
         try {
             $this->funding->validateSelection((int) $case->capital_mandate_id, (int) $case->requested_finance_minor);
@@ -490,6 +493,20 @@ final class AssetFinanceLifecycleService
         abort_if($passport->effective_from !== null && now()->lt($passport->effective_from), 422, 'Legal Product Passport is not yet effective.');
         abort_if($passport->effective_to !== null && now()->gt($passport->effective_to), 422, 'Legal Product Passport has expired.');
         abort_if($passport->revoked_at !== null, 422, 'Legal Product Passport has been revoked.');
+    }
+
+    /** Use the immutable policy snapshot for each existing case, not newly changed defaults. */
+    private function evidenceFor(object $case, string $stage): array
+    {
+        $snapshot = json_decode((string) $case->policy_snapshot, true);
+        if (is_array($snapshot) && isset($snapshot['evidence_profile'][$stage]) &&
+            is_array($snapshot['evidence_profile'][$stage])) {
+            return $snapshot['evidence_profile'][$stage];
+        }
+
+        $assetClass = (string) DB::table('asset_passports')->where('id', $case->asset_passport_id)->value('asset_class');
+
+        return AssetFinanceEvidencePolicy::for((string) $case->vertical, $assetClass)[$stage];
     }
 
     private function assertVerifiedEvidence(object $case, array $required): void
@@ -551,8 +568,8 @@ final class AssetFinanceLifecycleService
             'remote_device_controls' => 'not_available',
         ];
         if ($detail) {
-            $view['required_pre_approval_evidence'] = config("asset_finance.verticals.{$case->vertical}.pre_approval_evidence", []);
-            $view['required_activation_evidence'] = config("asset_finance.verticals.{$case->vertical}.activation_evidence", []);
+            $view['required_pre_approval_evidence'] = $this->evidenceFor($case, 'pre_approval');
+            $view['required_activation_evidence'] = $this->evidenceFor($case, 'activation');
             $view['evidence'] = DB::table('asset_finance_case_evidence')->where('asset_finance_case_id', $case->id)
                 ->orderBy('id')->get(['id', 'evidence_type', 'evidence_reference', 'status', 'verified_at']);
             $view['settlements'] = DB::table('asset_finance_settlements')->where('asset_finance_case_id', $case->id)
