@@ -16,6 +16,7 @@ use Illuminate\Validation\Rule;
 class FinancialAspirationController extends Controller
 {
     private const CATEGORIES = ['stability', 'education', 'family', 'enterprise', 'protection', 'growth', 'other'];
+
     private const STATUSES = ['active', 'paused', 'completed', 'archived'];
 
     public function __construct(
