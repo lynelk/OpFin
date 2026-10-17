@@ -61,6 +61,12 @@ Protection products distinguish `personal`, `group` or `both` audiences. Persona
 
 Catalogue visibility is not financial activation.
 
+## Financial life continuity and customer-owned aspiration
+
+Financial Space membership is not the full financial relationship. The person keeps a Personal Space and an appropriately retained history across authorised life stages and channels; guardian, group and organisation permissions remain separately governed and never imply access to private Personal Space information. User-chosen aspirations and progress evidence have their own attribution and privacy context; they cannot be silently repurposed into underwriting. A restricted regulated product still permits lawful learning or planning where available.
+
+See [Financial Life Architecture](FINANCIAL_LIFE_CONTINUITY_AND_DIGNITY.md) for the proposed domain ownership, guardian transition controls, source-evidence model and acceptance tests. This extension does not authorise new child accounts, account migrations or provider products.
+
 ## Three independent gates
 
 An action is available only when all applicable gates pass:

@@ -13,6 +13,16 @@ Language: English (United Kingdom)
 - Secrets remain service-scoped and are never exposed to web or client builds.
 - External KYC, CRB, MNO and third-party scoring results must be attributable to their source. Missing provider data must never be replaced with invented scores.
 
+## Financial-life constitutional rules (P0–P1)
+
+The adopted OpFin North Star is **Every financial life deserves a future worth looking forward to.** The customer must define their own ambitions and be able to find an appropriate next step, regardless of whether any given regulated product is permitted. Build to [Financial Life Architecture](docs/architecture/FINANCIAL_LIFE_CONTINUITY_AND_DIGNITY.md) and [consolidated P0–P1 delivery](docs/product/OPFIN_P0_P1_UNIVERSAL_FINANCIAL_LIFE.md).
+
+- **Continuity invariant:** preserve stable person identity, explicit personal/group ownership, attributable source states and lawful consent through channel, membership and life-stage transitions. Never infer Space data authority, guardian rights or financial eligibility from a role label, age declaration or front-end preference.
+- **Dignity invariant:** keep an appropriate educational/support path available wherever safe and lawful, including when credit or other service access is restricted. Denials and shortfalls need truthful facts, accessible reasons and a permitted next step. Financial distress does not default to another loan.
+- **Aspiration invariant:** financial intentions are voluntary and user-owned. Plans, verified outcomes, estimates and provider balances are distinct. Do not infer the person's ambitions from wealth, location, gender or age; aspirations do not silently influence underwriting or marketing.
+- **Independent gates:** permission to a specific Financial Space, plan entitlement, regulated product eligibility, guardian authority and data-processing consent remain distinct, API-authoritative checks. Guidance is not permission to transact.
+- **Release evidence:** sign off the cross-channel, age/guardian, consent, exact-Space, low-data, accessibility, recovery and financial provenance tests before claiming any new life-stage feature delivered. The source-backed UX/proposal work is not a deployed regulated product.
+
 ## Required verification
 
 - GitHub Actions is the normal repository verification gate. Keep the configured workflows enabled; do not use `[skip ci]`, `[ci skip]` or equivalent bypasses unless the workspace owner explicitly suspends Actions again for a defined reason and period.
