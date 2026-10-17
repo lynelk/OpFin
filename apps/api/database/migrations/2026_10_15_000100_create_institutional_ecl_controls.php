@@ -27,6 +27,20 @@ return new class extends Migration
             $t->timestamps();
             $t->unique(['institution_id', 'version']);
         });
+        // Credit-risk ownership must be independently signed BEFORE provider disbursement.
+        Schema::create('credit_offer_ecl_ownerships', function (Blueprint $t) {
+            $t->id();
+            $t->foreignId('credit_offer_id')->unique()->constrained('credit_offers')->restrictOnDelete();
+            $t->foreignId('institution_id')->constrained('institutions')->restrictOnDelete();
+            $t->string('owner_type', 20);
+            $t->unsignedSmallInteger('opfin_share_bps');
+            $t->string('agreement_reference', 255);
+            $t->string('status', 20)->default('draft');
+            $t->foreignId('created_by')->constrained('users')->restrictOnDelete();
+            $t->foreignId('approved_by')->nullable()->constrained('users')->restrictOnDelete();
+            $t->timestamp('approved_at')->nullable();
+            $t->timestamps();
+        });
         Schema::create('loan_ecl_ownerships', function (Blueprint $t) {
             $t->id();
             $t->foreignId('loan_id')->unique()->constrained('loans')->restrictOnDelete();
@@ -133,6 +147,10 @@ return new class extends Migration
                 'institution_id', 'version', 'effective_from', 'currency', 'stage2_dpd',
                 'stage3_dpd', 'scenarios', 'discount_bps', 'methodology_reference', 'created_by',
             ],
+            'credit_offer_ecl_ownerships' => [
+                'credit_offer_id', 'institution_id', 'owner_type', 'opfin_share_bps',
+                'agreement_reference', 'created_by',
+            ],
             'loan_ecl_ownerships' => [
                 'loan_id', 'institution_id', 'owner_type', 'opfin_share_bps',
                 'agreement_reference', 'created_by',
@@ -184,17 +202,17 @@ return new class extends Migration
     public function down(): void
     {
         if (! app()->environment('testing')) {
-            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_import_batches', 'loan_ecl_ownerships', 'institution_ecl_policies'] as $table) {
+            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_import_batches', 'loan_ecl_ownerships', 'credit_offer_ecl_ownerships', 'institution_ecl_policies'] as $table) {
                 if (DB::table($table)->exists()) {
                     throw new LogicException('Institutional ECL evidence exists; rollback requires a reviewed forward migration.');
                 }
             }
         }
-        foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_import_batches', 'loan_ecl_ownerships', 'institution_ecl_policies'] as $table) {
+        foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_import_batches', 'loan_ecl_ownerships', 'credit_offer_ecl_ownerships', 'institution_ecl_policies'] as $table) {
             Schema::dropIfExists($table);
         }
         if (DB::getDriverName() === 'pgsql') {
-            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_import_batches', 'loan_ecl_ownerships', 'institution_ecl_policies'] as $table) {
+            foreach (['institution_ecl_run_items', 'institution_ecl_runs', 'institution_ecl_external_snapshots', 'institution_ecl_import_batches', 'loan_ecl_ownerships', 'credit_offer_ecl_ownerships', 'institution_ecl_policies'] as $table) {
                 DB::unprepared("DROP FUNCTION IF EXISTS {$table}_lock_ecl_source()");
             }
         }
