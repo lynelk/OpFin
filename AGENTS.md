@@ -29,6 +29,12 @@ The adopted OpFin North Star is **Every financial life deserves a future worth l
 - **Independent gates:** permission to a specific Financial Space, plan entitlement, regulated product eligibility, guardian authority and data-processing consent remain distinct, API-authoritative checks. Guidance is not permission to transact.
 - **Release evidence:** sign off the cross-channel, age/guardian, consent, exact-Space, low-data, accessibility, recovery and financial provenance tests before claiming any new life-stage feature delivered. The source-backed UX/proposal work is not a deployed regulated product.
 
+## Owner-directed test deployments (17 October 2026)
+
+**The product owner controls when code is merged and deployed for testing, including to the existing Railway production environment.** See [Owner-Directed Test Deployments](docs/operations/OWNER_DIRECTED_TEST_DEPLOYMENTS.md). When explicitly told "merge and deploy now", execute against the specified PR/commit, existing main and existing production infrastructure. Do **not** invent discretionary preconditions: no compulsory new restore drill, pre-migration manual backup, pilot vintage count, screenshots or new acceptance ceremony before an owner-directed non-destructive test deploy. Keep CI running and report its results; functional build or migration failures still need resolving. Do not auto-merge unrelated draft PRs.
+
+This removes **assistant-imposed deployment holds**, not money-movement authorisation, authentication, data ownership, service eligibility, underlying regulatory obligations, or permission for destructive backup restores. Do not describe a test deployment as an independently certified financial release merely because Railway is healthy.
+
 ## Required verification
 
 - GitHub Actions is the normal repository verification gate. Keep the configured workflows enabled; do not use `[skip ci]`, `[ci skip]` or equivalent bypasses unless the workspace owner explicitly suspends Actions again for a defined reason and period.
