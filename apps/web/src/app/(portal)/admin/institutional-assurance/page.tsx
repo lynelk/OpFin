@@ -56,6 +56,11 @@ export default async function InstitutionalAssurancePage({ searchParams }: { sea
     {error ? <StateNotice state="validation" message={error} /> : null}
     {params?.saved ? <StateNotice state="success" message="Evidence operation recorded. Recheck independent source and reviewer state." /> : null}
     {register && <>
+      {register.external_evidence_requirement === "deferred_for_nonproduction_modelling" && <section className="panel">
+        <h2>Development exception: documentary evidence deferred</h2>
+        <p>External institution/provider and lender statements, executed risk-sharing agreements, independently validated IFRS 9 methodology, and actual professional sign-offs have been deferred for synthetic engineering work. They are neither certified nor waived for live lending.</p>
+        <p><Link href="/admin/institutional-assurance/preview">Test provisional shared-credit accounting (no live entries)</Link>. The preview never posts cash, loans or journal entries, and the production API refuses it.</p>
+      </section>}
       <section className="panel"><h2>External bank, provider and lender-ledger comparison</h2>
         <p>A declared hash is not proof of authenticity. Enter amounts only from actual independent bank/provider and lender records. Variances, omitted providers, stale signed ECL cuts and unmatched balances block approval.</p>
         <table className="table"><thead><tr><th>Cut-off</th><th>Currency</th><th>Control status</th><th>Review</th></tr></thead><tbody>
