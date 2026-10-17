@@ -451,25 +451,38 @@ class ProductionLoanLedgerService
         $held = app(InstitutionalExposureAccountingService::class)->partnerFundsAccount((int) $owner->institution_id, $offer->currency);
         // The approved hold is established before provider payout and consumed in the
         // same DB transaction as this journal. Never turn a lender's loan into our asset.
-        if (! DB::table('partner_ecl_cash_reservations')->where('credit_offer_id', $offer->id)
+        if (DB::table('partner_ecl_cash_reservations')->where('credit_offer_id', $offer->id)
             ->where('status', 'reserved')->where('cash_minor', $cashMinor)
-            ->where('provider', strtolower((string) $mobileMoney->provider))->exists()) {
+            ->where('provider', strtolower((string) $mobileMoney->provider))->doesntExist()) {
             throw new \InvalidArgumentException('No verified partner-funded cash reserve backs the completed payout.');
         }
 
+        $providerCashAccount = app(InstitutionalExposureAccountingService::class)->partnerProviderCashAccount(
+            (int) $owner->institution_id, $mobileMoney->provider, $offer->currency
+        );
+
         return $this->ledgerService->post($reference, 'loan.disbursement', $mobileMoney, [
-            ['account_id' => $held->id, 'direction' => LedgerEntry::DIRECTION_DEBIT,
-                'amount_minor' => $cashMinor, 'memo' => 'Deploy lender funds held as agent; not an OpFin loan receivable'],
-            ['account_id' => app(InstitutionalExposureAccountingService::class)->partnerProviderCashAccount(
-                (int) $owner->institution_id, $mobileMoney->provider, $offer->currency
-            )->id,
+            [
+                'account_id' => $held->id,
+                'direction' => LedgerEntry::DIRECTION_DEBIT,
+                'amount_minor' => $cashMinor,
+                'memo' => 'Deploy lender funds held as agent; not an OpFin loan receivable',
+            ],
+            [
+                'account_id' => $providerCashAccount->id,
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
-                'amount_minor' => $cashMinor, 'memo' => 'Provider-confirmed agency payout from ring-fenced institutional funds'],
+                'amount_minor' => $cashMinor,
+                'memo' => 'Provider-confirmed agency payout from ring-fenced institutional funds',
+            ],
         ], null, $offer->currency, [
-            'loan_id' => $loan->id, 'credit_offer_id' => $offer->id,
-            'institution_id' => $owner->institution_id, 'ownership_type' => 'partner',
-            'partner_funds_account_id' => $held->id, 'principal_minor' => $offer->principal_amount_minor,
-            'agency_cash_minor' => $cashMinor, 'provider_reference' => $mobileMoney->provider_reference,
+            'loan_id' => $loan->id,
+            'credit_offer_id' => $offer->id,
+            'institution_id' => $owner->institution_id,
+            'ownership_type' => 'partner',
+            'partner_funds_account_id' => $held->id,
+            'principal_minor' => $offer->principal_amount_minor,
+            'agency_cash_minor' => $cashMinor,
+            'provider_reference' => $mobileMoney->provider_reference,
         ]);
     }
 
@@ -511,21 +524,34 @@ class ProductionLoanLedgerService
         }
         $held = app(InstitutionalExposureAccountingService::class)->partnerFundsAccount((int) $owner->institution_id, $currency);
 
+        $providerCashAccount = app(InstitutionalExposureAccountingService::class)->partnerProviderCashAccount(
+            (int) $owner->institution_id, $provider, $currency
+        );
+
         return $this->ledgerService->post($reference, 'loan.repayment', $transaction, [
-            ['account_id' => app(InstitutionalExposureAccountingService::class)->partnerProviderCashAccount(
-                (int) $owner->institution_id, $provider, $currency
-            )->id,
-                'direction' => LedgerEntry::DIRECTION_DEBIT, 'amount_minor' => $cash,
-                'memo' => 'Ring-fenced provider cash collected for institutional lender'],
-            ['account_id' => $held->id, 'direction' => LedgerEntry::DIRECTION_CREDIT,
-                'amount_minor' => $cash, 'memo' => 'Lender funds held; not OpFin principal, fee or interest income'],
+            [
+                'account_id' => $providerCashAccount->id,
+                'direction' => LedgerEntry::DIRECTION_DEBIT,
+                'amount_minor' => $cash,
+                'memo' => 'Ring-fenced provider cash collected for institutional lender',
+            ],
+            [
+                'account_id' => $held->id,
+                'direction' => LedgerEntry::DIRECTION_CREDIT,
+                'amount_minor' => $cash,
+                'memo' => 'Lender funds held; not OpFin principal, fee or interest income',
+            ],
         ], null, $currency, [
-            'loan_id' => $loan->id, 'ownership_type' => 'partner',
+            'loan_id' => $loan->id,
+            'ownership_type' => 'partner',
             'institution_id' => $owner->institution_id,
             'legacy_transaction_id' => $transaction->id,
-            'principal_minor' => $principal, 'interest_minor' => $interest,
-            'fees_minor' => $fees, 'default_interest_minor' => $defaultInterest,
-            'suspense_minor' => $suspense, 'partner_cash_held_minor' => $cash,
+            'principal_minor' => $principal,
+            'interest_minor' => $interest,
+            'fees_minor' => $fees,
+            'default_interest_minor' => $defaultInterest,
+            'suspense_minor' => $suspense,
+            'partner_cash_held_minor' => $cash,
         ]);
     }
 
