@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\CreditOffer;
+use App\Services\InstitutionalExposureAccountingService;
 use App\Services\InstitutionalEclService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -44,6 +46,7 @@ final class InstitutionalEclController extends Controller
         $institution = $request->validate(['institution_id' => 'required|integer|exists:institutions,id'])['institution_id'];
         return ApiResponse::success('Institutional ECL register.', [
             'policies' => DB::table('institution_ecl_policies')->where('institution_id', $institution)->orderByDesc('id')->get(),
+            'offer_ownerships' => DB::table('credit_offer_ecl_ownerships')->where('institution_id', $institution)->orderByDesc('id')->get(),
             'ownerships' => DB::table('loan_ecl_ownerships')->where('institution_id', $institution)->orderByDesc('id')->get(),
             'import_batches' => DB::table('institution_ecl_import_batches')->where('institution_id', $institution)
                 ->orderByDesc('as_of_date')->orderByDesc('id')->limit(300)->get(),
@@ -82,6 +85,30 @@ final class InstitutionalEclController extends Controller
         $this->requireChecker($request);
         $this->handled(fn () => $this->service->approvePolicy($id, $request->user()));
         return ApiResponse::success('ECL policy approved.', ['id' => $id]);
+    }
+
+    public function offerOwnership(Request $request, InstitutionalExposureAccountingService $accounting): JsonResponse
+    {
+        $this->requireRead($request);
+        $v = $request->validate([
+            'institution_id' => 'required|integer|exists:institutions,id',
+            'credit_offer_id' => 'required|integer|exists:credit_offers,id',
+            'owner_type' => 'required|in:opfin,partner,shared',
+            'opfin_share_bps' => 'required|integer|min:0|max:10000',
+            'agreement_reference' => 'required|string|max:255',
+        ]);
+        $offer = CreditOffer::query()->findOrFail($v['credit_offer_id']);
+        abort_unless((int) $offer->institution_id === (int) $v['institution_id'], 422);
+        $id = $this->handled(fn () => $accounting->stage($offer, $v['owner_type'],
+            $v['opfin_share_bps'], $v['agreement_reference'], $request->user()));
+        return ApiResponse::success('Pre-origination credit owner awaiting independent approval.', ['id' => $id], 201);
+    }
+
+    public function approveOfferOwnership(Request $request, int $id, InstitutionalExposureAccountingService $accounting): JsonResponse
+    {
+        $this->requireChecker($request);
+        $this->handled(fn () => $accounting->approve($id, $request->user()));
+        return ApiResponse::success('Pre-origination credit ownership independently approved.', ['id' => $id]);
     }
 
     public function ownership(Request $request): JsonResponse
