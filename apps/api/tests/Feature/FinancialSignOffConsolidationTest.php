@@ -36,6 +36,8 @@ class FinancialSignOffConsolidationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Finance fixtures must never submit real payment-provider instructions.
+        config()->set('services.mobile_money.default_provider', 'mock');
         $this->installPricingPolicy();
     }
 
