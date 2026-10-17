@@ -251,7 +251,7 @@ return new class extends Migration
                         : "OLD.{$column} IS DISTINCT FROM NEW.{$column}", $columns
                 ));
                 $tag = chr(36).chr(36);
-                DB::unprepared("CREATE FUNCTION {$table}_lock_ecl_source() RETURNS trigger LANGUAGE plpgsql AS {$tag} BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Institutional ECL evidence cannot be deleted'; END IF; IF {$changed} THEN RAISE EXCEPTION 'Institutional ECL source fields are immutable'; END IF; RETURN NEW; END; {$tag}");
+                DB::unprepared("CREATE OR REPLACE FUNCTION {$table}_lock_ecl_source() RETURNS trigger LANGUAGE plpgsql AS {$tag} BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Institutional ECL evidence cannot be deleted'; END IF; IF {$changed} THEN RAISE EXCEPTION 'Institutional ECL source fields are immutable'; END IF; RETURN NEW; END; {$tag}");
                 DB::unprepared("CREATE TRIGGER {$table}_lock_ecl_source BEFORE UPDATE OR DELETE ON {$table} FOR EACH ROW EXECUTE FUNCTION {$table}_lock_ecl_source()");
             } elseif ($driver === 'sqlite') {
                 $changed = implode(' OR ', array_map(
