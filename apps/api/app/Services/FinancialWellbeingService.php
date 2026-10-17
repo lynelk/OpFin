@@ -341,7 +341,7 @@ class FinancialWellbeingService
             ];
         }
         if ($goals !== []) {
-            return ['code' => 'build_goal', 'title' => 'Keep moving towards '.$goals[0]['name'], 'text' => 'Review this goal and choose a manageable next step alongside your upcoming commitments.', 'href' => '/save', 'action' => 'View goal'];
+            return ['code' => 'build_goal', 'title' => 'Choose a goal to build towards', 'text' => 'You have recorded goals. Pick the one that matters most to you now, then choose a manageable next step alongside your upcoming commitments.', 'href' => '/save', 'action' => 'Review my goals'];
         }
 
         return ['code' => 'review_position', 'title' => 'Keep your money plan moving', 'text' => 'Your recorded position does not show a shortfall for the next 30 days. Check that your balances and commitments are up to date before making another decision.', 'href' => '/money', 'action' => 'Review money plan'];
