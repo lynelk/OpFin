@@ -244,7 +244,54 @@ final class InstitutionalEclService
         });
     }
 
-    public function build(int $institutionId, string $asOf, int $expectedExternalCount, int $expectedExternalPrincipal, string $coverageReference, User $actor): int
+    public function stageSourceCorrection(int $snapshotId, array $data, User $maker): int
+    {
+        return DB::transaction(function () use ($snapshotId, $data, $maker) {
+            $source = DB::table('institution_ecl_external_snapshots')->where('id', $snapshotId)->lockForUpdate()->first();
+            if (! $source || $source->status !== 'approved') {
+                throw new InvalidArgumentException('Corrections require a previously approved immutable source observation.');
+            }
+            if (DB::table('institution_ecl_source_corrections')->where('external_snapshot_id', $snapshotId)
+                ->where('status', 'draft')->exists()) {
+                throw new InvalidArgumentException('Review the existing pending source correction first.');
+            }
+            $revision = 1 + (int) DB::table('institution_ecl_source_corrections')
+                ->where('external_snapshot_id', $snapshotId)->max('revision');
+            $change = [
+                'external_snapshot_id' => $snapshotId, 'revision' => $revision,
+                'principal_outstanding_minor' => (int) $data['principal_outstanding_minor'],
+                'days_past_due' => (int) $data['days_past_due'],
+                'sicr' => (bool) $data['sicr'],
+                'credit_impaired' => (bool) $data['credit_impaired'],
+                'contractual_maturity_date' => $data['contractual_maturity_date'],
+                'source_evidence' => $data['source_evidence'],
+                'reason' => $data['reason'],
+            ];
+            return DB::table('institution_ecl_source_corrections')->insertGetId($change + [
+                'correction_hash' => hash('sha256', json_encode($change, JSON_THROW_ON_ERROR)),
+                'status' => 'draft', 'created_by' => $maker->id,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+        });
+    }
+
+    public function approveSourceCorrection(int $correctionId, User $checker): void
+    {
+        DB::transaction(function () use ($correctionId, $checker) {
+            $correction = DB::table('institution_ecl_source_corrections')
+                ->where('id', $correctionId)->lockForUpdate()->first();
+            if (! $correction || $correction->status !== 'draft'
+                || (int) $correction->created_by === (int) $checker->id) {
+                throw new InvalidArgumentException('A different independent checker must approve the source correction.');
+            }
+            DB::table('institution_ecl_source_corrections')->where('id', $correctionId)->update([
+                'status' => 'approved', 'approved_by' => $checker->id,
+                'approved_at' => now(), 'updated_at' => now(),
+            ]);
+        });
+    }
+
+    public function build(int $institutionId, string $asOf, int $expectedExternalCount, int $expectedExternalPrincipal, string $coverageReference, User $actor, ?int $restatesRunId = null, ?string $restatementReason = null): int
     {
         $date = Carbon::parse($asOf);
         if ($expectedExternalCount < 0 || $expectedExternalPrincipal < 0 || trim($coverageReference) === '') {
@@ -259,6 +306,17 @@ final class InstitutionalEclService
         if (! $policy) {
             throw new InvalidArgumentException('No independently approved effective ECL policy.');
         }
+        $restatedRun = null;
+        if ($restatesRunId !== null) {
+            $restatedRun = DB::table('institution_ecl_runs')->find($restatesRunId);
+            if (! $restatedRun || $restatedRun->status !== 'finalised'
+                || (int) $restatedRun->institution_id !== $institutionId
+                || $restatedRun->as_of_date !== $asOf
+                || (int) $restatedRun->platform_ecl_minor !== 0
+                || trim((string) $restatementReason) === '') {
+                throw new InvalidArgumentException('Historical restatement is allowed only for a signed advisory-only run with a documented correction.');
+            }
+        }
         $scenarios = json_decode($policy->scenarios, true, 512, JSON_THROW_ON_ERROR);
         $this->calculator->validateScenarios($scenarios);
         $approvedOwnerships = DB::table('loan_ecl_ownerships')
@@ -272,6 +330,23 @@ final class InstitutionalEclService
         $external = DB::table('institution_ecl_external_snapshots')
             ->where('institution_id', $institutionId)->where('as_of_date', $asOf)
             ->where('status', 'approved')->orderBy('id')->get();
+        $snapshotIds = $external->pluck('id')->all();
+        $stagedCorrections = DB::table('institution_ecl_source_corrections')
+            ->whereIn('external_snapshot_id', $snapshotIds)->where('status', 'draft')->exists();
+        if ($stagedCorrections) {
+            throw new InvalidArgumentException('An independent review of a pending source correction is required before calculation.');
+        }
+        $corrections = DB::table('institution_ecl_source_corrections')
+            ->whereIn('external_snapshot_id', $snapshotIds)->where('status', 'approved')
+            ->orderByDesc('revision')->get()->unique('external_snapshot_id')->keyBy('external_snapshot_id');
+        foreach ($external as $record) {
+            $correction = $corrections->get($record->id);
+            if ($correction) {
+                foreach (['principal_outstanding_minor', 'days_past_due', 'sicr', 'credit_impaired', 'contractual_maturity_date'] as $field) {
+                    $record->{$field} = $correction->{$field};
+                }
+            }
+        }
         if ($approvedOwnerships->isEmpty() && $external->isEmpty()) {
             throw new InvalidArgumentException('No reviewed exposures to provision.');
         }
@@ -346,15 +421,19 @@ final class InstitutionalEclService
         $previousTotal = (int) ($previous?->total_ecl_minor ?? 0);
         $revision = ((int) DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
             ->where('as_of_date', $asOf)->max('revision')) + 1;
-        $hash = hash('sha256', json_encode([$institutionId, $asOf, $policy->id, $rows, $previous?->id], JSON_THROW_ON_ERROR));
-        return DB::transaction(function () use ($institutionId, $asOf, $policy, $actor, $rows, $totalExposure, $totalEcl, $platformEcl, $previousTotal, $hash, $revision, $expectedExternalCount, $expectedExternalPrincipal, $coverageReference) {
-            if (DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
-                ->where('as_of_date', $asOf)->whereIn('status', ['approved', 'posted'])->exists()) {
+        $hash = hash('sha256', json_encode([$institutionId, $asOf, $policy->id, $rows, $previous?->id, $restatesRunId], JSON_THROW_ON_ERROR));
+        return DB::transaction(function () use ($institutionId, $asOf, $policy, $actor, $rows, $totalExposure, $totalEcl, $platformEcl, $previousTotal, $hash, $revision, $expectedExternalCount, $expectedExternalPrincipal, $coverageReference, $restatesRunId, $restatementReason, $restatedRun) {
+            if (! $restatedRun && DB::table('institution_ecl_runs')->where('institution_id', $institutionId)
+                ->where('as_of_date', $asOf)->whereIn('status', ['approved', 'posted', 'finalised'])->exists()) {
                 throw new InvalidArgumentException('A signed-off cut-off already exists. Use a controlled restatement process.');
             }
             $runId = DB::table('institution_ecl_runs')->insertGetId([
                 'institution_id' => $institutionId, 'policy_id' => $policy->id,
-                'as_of_date' => $asOf, 'revision' => $revision, 'currency' => $policy->currency,
+                'as_of_date' => $asOf, 'revision' => $revision,
+                'restates_run_id' => $restatesRunId,
+                'restatement_reason' => $restatedRun ? $restatementReason : null,
+                'restatement_delta_minor' => $restatedRun ? $totalEcl - (int) $restatedRun->total_ecl_minor : 0,
+                'currency' => $policy->currency,
                 'status' => 'draft', 'total_exposure_minor' => $totalExposure,
                 'total_ecl_minor' => $totalEcl, 'platform_ecl_minor' => $platformEcl,
                 'ecl_movement_minor' => $totalEcl - $previousTotal, 'content_hash' => $hash,
@@ -383,8 +462,16 @@ final class InstitutionalEclService
             $alreadySigned = DB::table('institution_ecl_runs')
                 ->where('institution_id', $run->institution_id)->where('as_of_date', $run->as_of_date)
                 ->where('id', '!=', $runId)->whereIn('status', ['approved', 'posted', 'finalised'])->exists();
-            if ($alreadySigned) {
-                throw new InvalidArgumentException('Another revision for this institution and cut-off has already been signed off.');
+            if ($alreadySigned && (! $run->restates_run_id
+                || DB::table('institution_ecl_runs')->where('id', $run->restates_run_id)
+                    ->where('institution_id', $run->institution_id)->where('as_of_date', $run->as_of_date)
+                    ->where('status', 'finalised')->where('platform_ecl_minor', 0)->doesntExist())) {
+                throw new InvalidArgumentException('Another signed cut-off exists without an eligible advisory-only restatement.');
+            }
+            if ($run->restates_run_id) {
+                DB::table('institution_ecl_runs')->where('id', $run->restates_run_id)
+                    ->where('status', 'finalised')
+                    ->update(['status' => 'superseded', 'updated_at' => now()]);
             }
             DB::table('institution_ecl_runs')->where('id', $runId)->update([
                 'status' => 'approved', 'approved_by' => $actor->id,
