@@ -96,7 +96,7 @@ export default async function DashboardPage() {
           </section>
           <div className="opfin-today-focus">
             <section className="panel opfin-next-step">
-              <p className="eyebrow">One useful next step</p>
+              <p className="eyebrow">Your Next Step</p>
               <h2>{nextAction.title}</h2>
               <p className="muted">{nextAction.text}</p>
               <Link className="button compass-action" href={nextAction.href}>{nextAction.action}</Link>
@@ -219,6 +219,8 @@ export default async function DashboardPage() {
             <div><strong>Credit data permission</strong><p className="muted">{activeCreditConsent ? "Active" : "Review needed"}</p></div>
           </div>
         </section>
+        </details>
+        </div>
       </Screen>
     );
   } catch (error) {
@@ -227,8 +229,6 @@ export default async function DashboardPage() {
     return (
       <Screen title="Home" description="Your Financial Compass will appear here when your account data is available.">
         <StateNotice state={state} message={message} />
-        </details>
-        </div>
       </Screen>
     );
   }
