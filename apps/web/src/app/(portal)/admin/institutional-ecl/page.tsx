@@ -67,6 +67,26 @@ export default async function InstitutionalEclPage({ searchParams }: { searchPar
           <button className="button">Create pending policy</button>
         </form></details>
       </section>
+      <section className="panel"><h2>Pre-disbursement legal credit ownership</h2>
+        <p>Each governed credit offer must have a signed risk-owner attestation and independent approval before any payment instruction. A partner-funded payout also requires ledger-verified held funds; an investment mandate alone is not cleared money. Shared participations remain blocked until their principal and guarantee accounts pass financial sign-off.</p>
+        <table className="table"><thead><tr><th>Offer</th><th>Legal risk owner</th><th>Platform share</th><th>Status</th><th>Review</th></tr></thead><tbody>
+          {register.offer_ownerships.map(item => <tr key={item.id}><td>{item.credit_offer_id}</td><td>{item.owner_type}</td>
+            <td>{item.opfin_share_bps} bps</td><td>{item.status}</td><td>
+              {item.status === "draft" ? <Action kind="offer-ownership-approve" id={item.id} institution={institutionId} label="Approve pre-disbursement owner" /> : "Approved"}
+            </td></tr>)}
+        </tbody></table>
+        <details><summary>Stage credit-offer legal risk owner</summary><form action={institutionalEclAction} className="form-grid">
+          {hidden}<input type="hidden" name="kind" value="offer-ownership" />
+          <Field label="Existing offered credit offer ID" name="credit_offer_id" type="number" />
+          <label className="field">Legally responsible credit-risk owner<select name="owner_type">
+            <option value="partner">Institutional lender</option><option value="opfin">OpFin reporting entity</option>
+            <option value="shared">Joint contract (origination held for review)</option>
+          </select></label>
+          <Field label="OpFin risk share basis points" name="opfin_share_bps" type="number" value="0" />
+          <Field label="Executed loan risk agreement reference" name="agreement_reference" />
+          <button className="button">Stage owner attestation</button>
+        </form></details>
+      </section>
       <section className="panel"><h2>Contractual loan risk ownership</h2>
         <table className="table"><thead><tr><th>Loan</th><th>Owner</th><th>OpFin risk share</th><th>Status</th><th>Review</th></tr></thead>
           <tbody>{register.ownerships.map(item => <tr key={item.id}><td>{item.loan_id}</td><td>{item.owner_type}</td><td>{item.opfin_share_bps} bps</td><td>{item.status}</td>
