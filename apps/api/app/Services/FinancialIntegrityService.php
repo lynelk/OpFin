@@ -671,7 +671,8 @@ class FinancialIntegrityService
                 if (! empty($meta['reverses_reference'])) {
                     $reversedDisbursementReferences[(string) $meta['reverses_reference']] = true;
                 }
-            } elseif (! empty($meta['loan_id'])) {
+            } elseif (! empty($meta['loan_id']) && ($meta['ownership_type'] ?? null) !== 'partner') {
+                // Agency-funds liability movements are not platform principal assets.
                 $originalDisbursementReferences[(int) $meta['loan_id']][] = (string) $entry->reference;
             }
         }
