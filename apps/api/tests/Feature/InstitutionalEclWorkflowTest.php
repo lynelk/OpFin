@@ -155,6 +155,68 @@ class InstitutionalEclWorkflowTest extends TestCase
             ->where('id', $snapshotId)->update(['principal_outstanding_minor' => 9999]);
     }
 
+    public function test_correction_and_restatement_preserve_first_signed_partner_portfolio_and_post_no_platform_journals(): void
+    {
+        $institution = Institution::create([
+            'name' => 'Restatement Partner', 'address' => 'Kampala',
+            'phone' => '256700009994', 'email' => 'restatement-ecl-test@example.com',
+            'authority_basis' => 'licensed', 'authority_reference' => 'TEST-NOT-LIVE',
+            'regulator_code' => 'TEST',
+        ]);
+        $maker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $checker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $service = app(InstitutionalEclService::class);
+        $date = now()->toDateString();
+        $policy = $service->stagePolicy($institution->id, [
+            'version' => 'restatement-test-v1', 'effective_from' => $date,
+            'currency' => 'UGX', 'stage2_dpd' => 30, 'stage3_dpd' => 90,
+            'discount_bps' => 0, 'methodology_reference' => 'REVIEWED-TEST-RISK',
+            'scenarios' => $this->scenarios(),
+        ], $maker);
+        $service->approvePolicy($policy, $checker);
+        $source = $service->stageExternal($institution->id, [
+            'external_loan_reference' => 'EXT-CORR-1', 'as_of_date' => $date,
+            'currency' => 'UGX', 'principal_outstanding_minor' => 100000,
+            'days_past_due' => 35, 'sicr' => true, 'credit_impaired' => false,
+            'contractual_maturity_date' => now()->addYear()->toDateString(),
+            'source_evidence' => 'INITIAL-SOURCE-1',
+        ], $maker);
+        $service->approveExternal($source, $checker);
+        $originalRun = $service->build($institution->id, $date, 1, 100000, 'FIRST-SIGNED-MIS', $maker);
+        $service->approveRun($originalRun, $checker);
+        $service->postRun($originalRun, $checker);
+        $originalHash = $service->details($originalRun)['run']->content_hash;
+        $ledgerCount = DB::table('ledger_transactions')->count();
+
+        $correction = $service->stageSourceCorrection($source, [
+            'principal_outstanding_minor' => 80000, 'days_past_due' => 100,
+            'sicr' => true, 'credit_impaired' => true,
+            'contractual_maturity_date' => now()->addYear()->toDateString(),
+            'source_evidence' => 'CORRECTED-MIS-1',
+            'reason' => 'Independent source investigation confirmed revised loan balance.',
+        ], $maker);
+        $this->assertSame(100000, (int) DB::table('institution_ecl_external_snapshots')->find($source)->principal_outstanding_minor);
+        try {
+            $service->build($institution->id, $date, 1, 80000, 'SECOND-SIGNED-MIS', $maker, $originalRun, 'Revised MIS control');
+            $this->fail('A pending correction must block restatement.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('pending source correction', $e->getMessage());
+        }
+        $service->approveSourceCorrection($correction, $checker);
+        $revisedRun = $service->build(
+            $institution->id, $date, 1, 80000, 'REVISED-MIS-SIGNED',
+            $maker, $originalRun, 'Corrected original MIS source balance after independent review.'
+        );
+        $this->assertNotEquals($originalHash, $service->details($revisedRun)['run']->content_hash);
+        $service->approveRun($revisedRun, $checker);
+        $service->postRun($revisedRun, $checker);
+        $this->assertSame('superseded', $service->details($originalRun)['run']->status);
+        $this->assertSame('finalised', $service->details($revisedRun)['run']->status);
+        $this->assertSame($ledgerCount, DB::table('ledger_transactions')->count());
+        $this->assertSame(100000, (int) DB::table('institution_ecl_external_snapshots')->find($source)->principal_outstanding_minor);
+        $this->assertSame(80000, (int) $service->details($revisedRun)['items'][0]->gross_exposure_minor);
+    }
+
     public function test_policy_approval_cannot_be_replayed(): void
     {
         $institution = Institution::create([
