@@ -33,6 +33,13 @@ export async function institutionalEclAction(form: FormData) {
           owner_type: str(form, "owner_type"), opfin_share_bps: n(form, "opfin_share_bps"),
           agreement_reference: str(form, "agreement_reference") };
         break;
+      case "funding-receipt":
+        path = "/funding-receipts";
+        body = { institution_id: institutionId,
+          mobile_money_transaction_id: n(form, "mobile_money_transaction_id"),
+          evidence_reference: str(form, "evidence_reference") };
+        break;
+      case "funding-receipt-approve": path = `/funding-receipts/${n(form, "record_id")}/approve`; break;
       case "offer-ownership":
         path = "/offer-ownerships";
         body = { institution_id: institutionId, credit_offer_id: n(form, "credit_offer_id"),
