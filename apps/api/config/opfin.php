@@ -70,6 +70,13 @@ return [
     ],
 
     'accounting' => [
+        // Business instruction (17 Oct 2026): external evidence is DEFERRED for
+        // non-production modelling only. Production may never bypass real source
+        // ledgers, applicable accounting review or live customer protections.
+        'defer_institutional_evidence_for_nonproduction' => filter_var(
+            env('OPFIN_DEFER_INSTITUTIONAL_ASSURANCE_EVIDENCE', env('APP_ENV', 'production') !== 'production'),
+            FILTER_VALIDATE_BOOL
+        ),
         'fee_recognition_policy_type' => env('OPFIN_FEE_RECOGNITION_POLICY_TYPE', 'credit_fee_recognition'),
         'tax_policy_type' => env('OPFIN_TAX_POLICY_TYPE', 'tax'),
         'efris_enabled' => (bool) env('OPFIN_EFRIS_ENABLED', false),
