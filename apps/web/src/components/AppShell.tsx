@@ -1,4 +1,6 @@
 import { OpFinSymbol } from "./OpFinSymbol";
+import { ActiveNavLink } from "./ActiveNavLink";
+import { MobileSidebar } from "./MobileSidebar";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { logoutAction } from "@/app/actions";
@@ -28,7 +30,8 @@ export async function AppShell({ children }: Readonly<{ children: ReactNode }>) 
           <span className="brand-mark"><OpFinSymbol reverse /></span>
           <span>OpFin</span>
         </Link>
-        {groups.map(([group, title]) => {
+        <MobileSidebar>
+          {groups.map(([group, title]) => {
           const groupItems = visibleItems.filter((item) => item.group === group);
           if (groupItems.length === 0) return null;
 
@@ -44,15 +47,16 @@ export async function AppShell({ children }: Readonly<{ children: ReactNode }>) 
                   {groupItems
                     .filter((item) => (item.section ?? "") === section)
                     .map((item) => (
-                      <Link className="nav-link" href={item.href} key={item.href}>
+                      <ActiveNavLink href={item.href} key={item.href}>
                         {item.label}
-                      </Link>
+                      </ActiveNavLink>
                     ))}
                 </div>
               ))}
             </nav>
           );
-        })}
+          })}
+        </MobileSidebar>
       </aside>
       <main className="main">
         <header className="topbar">
