@@ -13,6 +13,10 @@ Language: English (United Kingdom)
 - Secrets remain service-scoped and are never exposed to web or client builds.
 - External KYC, CRB, MNO and third-party scoring results must be attributable to their source. Missing provider data must never be replaced with invented scores.
 
+## Governed merchant-credit workstream
+
+Preserve the complete [Finance Evidence-Led Credit Programme](docs/product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md): fourteen required areas include purpose-bound Stolets merchant finance, consented versioned evidence, independently evaluated PD and affordability, transparent UGX total-cost pricing, explainable manual-review decisions, portfolio exposure/stop-loss/vintage tracking, Cito orchestration and calibrated investor capital. **Do not make raw transaction volume stand in for income**, turn personal aspirations or protected inclusion fields into silent credit features, create direct Stolets database access or activate new products without reviewed lender, regulation, consumer and settlement controls.
+
 ## Financial-life constitutional rules (P0–P1)
 
 The adopted OpFin North Star is **Every financial life deserves a future worth looking forward to.** The customer must define their own ambitions and be able to find an appropriate next step, regardless of whether any given regulated product is permitted. Build to [Financial Life Architecture](docs/architecture/FINANCIAL_LIFE_CONTINUITY_AND_DIGNITY.md) and [consolidated P0–P1 delivery](docs/product/OPFIN_P0_P1_UNIVERSAL_FINANCIAL_LIFE.md).
