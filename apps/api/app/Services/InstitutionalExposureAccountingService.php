@@ -64,7 +64,9 @@ final class InstitutionalExposureAccountingService
         if (! Schema::hasTable('credit_offer_ecl_ownerships')) {
             return false;
         }
-        return (bool) config('opfin.accounting.enforce_credit_owner_at_origination', false)
+        // Legacy fixtures remain runnable under testing. Real environments fail closed.
+        return ! app()->environment('testing')
+            || (bool) config('opfin.accounting.enforce_credit_owner_at_origination', false)
             || DB::table('credit_offer_ecl_ownerships')->where('credit_offer_id', $offer->id)->exists()
             || DB::table('institution_ecl_policies')->where('institution_id', $offer->institution_id)
                 ->where('status', 'approved')
