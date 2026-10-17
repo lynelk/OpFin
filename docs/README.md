@@ -23,6 +23,10 @@ Start with the [updated concept note](product/OPFIN_CONCEPT_NOTE.md), [product e
 | Brand and publication owners | [Brand System v3 release candidate](../brand/v3/OPFIN_BRAND_SYSTEM_V3.md), [publication standard](PUBLICATION_STANDARD.md) | [Register](PUBLICATION_REGISTER.md), [deployment guidance](../infrastructure/railway/README.md), [UMRA controls](UMRA_DIGITAL_LENDING_CONTROLS.md) |
 | Quality, security and governance | [Integrated management-system policy proposal](governance/INTEGRATED_MANAGEMENT_SYSTEM.md) | [ISO readiness register](governance/ISO_READINESS_ACTION_REGISTER.md); adoption/effectiveness are not yet evidenced |
 
+## Stolets merchant-commerce integration
+
+The [Stolets–OpFin unified finance programme](integrations/STOLETS_OPFIN_UNIFIED_FINANCE.md) defines OpFin's financial ownership, an initial **untrusted preflight-only** stock-finance evidence contract, authorisation and provider gates, and all planned cross-platform implementation workstreams. The historical `OpFin-BE` and `OpFin-FE` repositories are archived; all new implementation is in this canonical monorepo and in the independent Stolets repo. No lender, payment or customer finance surface is activated by documentation or validation-only code.
+
 ## What this concept review changes
 
 The concept's original 32 subject areas, vision, mission, four delivery phases and financial-progression philosophy are retained. The narrative incorporates Financial Spaces, richer everyday-money records, programme delivery, club treasury, Essentials, explicit lender participation, NIN evidence reuse and developer discovery as enhancements to the existing relationship.
