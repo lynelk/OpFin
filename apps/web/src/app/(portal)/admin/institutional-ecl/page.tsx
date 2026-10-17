@@ -41,7 +41,8 @@ export default async function InstitutionalEclPage({ searchParams }: { searchPar
         <option value="">Select lender</option>{lenders.institutions.map(lender =>
           <option value={lender.id} key={lender.id}>{lender.id} · {lender.name}</option>)}
       </select></label><button className="button">Load portfolio</button></form>
-      <p><Link href="/admin/lending-platform">Manage lender legal identity and capital mandates</Link></p></section>
+      <p><Link href="/admin/lending-platform">Manage lender legal identity and capital mandates</Link></p>
+      <p><Link href={`/admin/institutional-assurance?institution_id=${institutionId || ""}`}>Review actual bank and lender reconciliation, independent IFRS 9 validation and shared contract classification</Link></p></section>
     {error ? <StateNotice state="validation" message={error} /> : null}
     {params?.saved ? <StateNotice state="success" message="Action recorded. Refresh the relevant evidence and verify its state." /> : null}
     {register ? <>
