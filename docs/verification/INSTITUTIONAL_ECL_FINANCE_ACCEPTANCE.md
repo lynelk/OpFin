@@ -51,6 +51,20 @@ All activity below was conducted against **a temporary, isolated checkout of PR 
 
 **Safety of the QA environment:** The checkout was under `/tmp`; test payment providers were mock-only; PostgreSQL ran on an internal Docker network with no published host ports and tmpfs storage, with automatic cleanup. GitHub Actions was not enabled and nothing was merged or deployed.
 
+## Extended institutional financial-assurance engineering (17 October 2026)
+
+The follow-on draft PR implementation now includes `InstitutionalFinanceAssuranceService`, the `/admin/institutional-assurance` restricted API and a finance evidence dashboard.
+
+**Actual source records:** Google Drive access did not return usable institution-specific current bank, loan or contract files. Historic general-ledger correspondence for a different reporting period cannot substitute for current institution-specific source statements. **No real bank-to-lender reconciliation, independent model approval or human Finance/Risk/Treasury sign-off has been completed.** The interface records source declarations and human attestations when authenticated originals become available. A user-typed reference or file digest is not a bank-verified statement.
+
+**Accounting treatment:** A documented legal form and proposed IFRS 9 treatment can be independently reviewed as direct joint-creditor lending, funded participation, financial guarantee or first-loss exposure. The application still refuses all live shared-risk originations. Contract review cannot authorise the full share of receivables, interest, funding, fees, ECL or write-offs without separate executable finance journals and signed testing.
+
+**Concurrency evidence:** A purpose-built PostgreSQL 16 harness executed 20 distinct institution funding rounds with two independent, overlapping withdrawal processes per round (40 simultaneous competing withdrawal attempts overall). Exactly one 80,000-minor-unit debit posted against each original 100,000-minor-unit fiduciary balance; the other was rejected. **20 of 20 rounds passed with no negative liquidity or funds-held liability.** The harness is guarded to fail outside a database explicitly named `opfin_qa`, testing environment and `OPFIN_QA_ALLOW_CONCURRENCY=1`. It does not claim multi-provider callback or customer offer reservation concurrency equivalence. No production provider was used.
+
+**Source validation controls added:** comparison of each provider's bank balance to the matching institution/provider ring-fenced cash asset as-of the specified cut-off, comparison of external lender payable to partner liability, and comparison of lender loan count/principal to a finalised external ECL source population. Every mismatch is retained and independently reviewed; a checker cannot approve mismatched source. Reviews require distinct human IDs, per-capacity evidence references and signed statements; source facts are append-only in SQLite and PostgreSQL.
+
+See the accounting classification and acceptance matrix: `docs/finance/INSTITUTIONAL_RECONCILIATION_AND_SHARED_EXPOSURE_DECISION.md`.
+
 ## Required execution evidence
 
 ### 1. API and database
