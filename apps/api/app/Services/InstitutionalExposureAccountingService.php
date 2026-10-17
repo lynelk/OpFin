@@ -63,6 +63,11 @@ final class InstitutionalExposureAccountingService
     public function governed(CreditOffer $offer): bool
     {
         if (! Schema::hasTable('credit_offer_ecl_ownerships')) {
+            if (! app()->environment('testing')) {
+                throw new InvalidArgumentException(
+                    'The verified legal-credit-owner migration is missing; production credit issuance is blocked.'
+                );
+            }
             return false;
         }
         // Legacy fixtures remain runnable under testing. Real environments fail closed.
