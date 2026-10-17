@@ -153,6 +153,18 @@ final class InstitutionalFinanceAssuranceService
         ]);
     }
 
+    private function assertCutStillMatched(object $row): void
+    {
+        $prior = json_decode($row->control_results, true, 512, JSON_THROW_ON_ERROR);
+        $now = $this->calculate((int) $row->institution_id, $row->as_of_date, $row->currency,
+            json_decode($row->provider_statements, true, 512, JSON_THROW_ON_ERROR), (int) $row->ecl_run_id);
+        if (! $prior['balanced'] || $now['run_hash'] !== $prior['run_hash']
+            || $now['provider_control'] !== $prior['provider_control']
+            || $now['ledger_liability_minor'] !== $prior['ledger_liability_minor']) {
+            throw new InvalidArgumentException('Bank, lender and GL variances or cut-off changes prevent independent assurance.');
+        }
+    }
+
     public function approve(int $id, User $checker): void
     {
         DB::transaction(function () use ($id, $checker) {
@@ -160,14 +172,7 @@ final class InstitutionalFinanceAssuranceService
             if (! $row || $row->status !== 'draft' || (int) $row->created_by === (int) $checker->id) {
                 throw new InvalidArgumentException('An independent checker must review the original external source reconciliation.');
             }
-            $prior = json_decode($row->control_results, true, 512, JSON_THROW_ON_ERROR);
-            $now = $this->calculate((int) $row->institution_id, $row->as_of_date, $row->currency,
-                json_decode($row->provider_statements, true, 512, JSON_THROW_ON_ERROR), (int) $row->ecl_run_id);
-            if (! $prior['balanced'] || $now['run_hash'] !== $prior['run_hash']
-                || $now['provider_control'] !== $prior['provider_control']
-                || $now['ledger_liability_minor'] !== $prior['ledger_liability_minor']) {
-                throw new InvalidArgumentException('Bank, lender and GL variances or cut-off changes prevent reconciliation approval.');
-            }
+            $this->assertCutStillMatched($row);
             DB::table('institution_finance_reconciliations')->where('id', $id)->update([
                 'status' => 'reconciled_pending_signoff',
                 'approved_by' => $checker->id, 'approved_at' => now(), 'updated_at' => now(),
@@ -190,6 +195,7 @@ final class InstitutionalFinanceAssuranceService
                     ->where('reviewed_by', $signer->id)->exists()) {
                 throw new InvalidArgumentException('A distinct qualified person must individually review the source dossier and sign their own evidence statement.');
             }
+            $this->assertCutStillMatched($row);
             DB::table('institution_finance_reviews')->insert([
                 'reconciliation_id' => $reconciliationId, 'capacity' => $capacity,
                 'reviewed_by' => $signer->id, 'report_sha256' => strtolower($reportSha256),
@@ -217,6 +223,7 @@ final class InstitutionalFinanceAssuranceService
             if (! $cut || $cut->status !== 'reconciled_pending_signoff') {
                 throw new InvalidArgumentException('Contract classification cannot outlive a rejected lender reconciliation.');
             }
+            $this->assertCutStillMatched($cut);
             $cutReviews = DB::table('institution_finance_reviews')
                 ->where('reconciliation_id', $cut->id)->pluck('capacity')->all();
             if (count(array_intersect(self::CAPACITIES, $cutReviews)) !== count(self::CAPACITIES)) {
@@ -258,6 +265,9 @@ final class InstitutionalFinanceAssuranceService
             || ! $ownership || $ownership->status !== 'approved'
             || $ownership->owner_type !== 'shared' || (int) $ownership->opfin_share_bps !== $share) {
             throw new InvalidArgumentException('The offered risk share and signed lender reconciliation must match.');
+        }
+        if ($offer->status !== CreditOffer::STATUS_OFFERED) {
+            throw new InvalidArgumentException('Shared-contract classification must precede customer acceptance, not reclassify a live loan.');
         }
         // A financial guarantee or first-loss contract is NOT a percentage-owned
         // loan receivable. No variant automatically activates shared origination.
