@@ -52,6 +52,10 @@ final class InstitutionalEclController extends Controller
                 ->orderByDesc('as_of_date')->orderByDesc('id')->limit(300)->get(),
             'external_snapshots' => DB::table('institution_ecl_external_snapshots')
                 ->where('institution_id', $institution)->orderByDesc('as_of_date')->limit(500)->get(),
+            'source_corrections' => DB::table('institution_ecl_source_corrections as correction')
+                ->join('institution_ecl_external_snapshots as source', 'source.id', '=', 'correction.external_snapshot_id')
+                ->where('source.institution_id', $institution)->orderByDesc('correction.id')
+                ->limit(500)->select('correction.*', 'source.external_loan_reference')->get(),
             'runs' => DB::table('institution_ecl_runs')->where('institution_id', $institution)
                 ->orderByDesc('as_of_date')->orderByDesc('revision')->get(),
         ]);
@@ -189,6 +193,29 @@ final class InstitutionalEclController extends Controller
         return ApiResponse::success('External observation independently reviewed.', ['id' => $id]);
     }
 
+    public function correctExternal(Request $request, int $id): JsonResponse
+    {
+        $this->requireRead($request);
+        $v = $request->validate([
+            'principal_outstanding_minor' => 'required|integer|min:0|max:1000000000000',
+            'days_past_due' => 'required|integer|min:0|max:65535',
+            'sicr' => 'required|boolean',
+            'credit_impaired' => 'required|boolean',
+            'contractual_maturity_date' => 'required|date_format:Y-m-d',
+            'source_evidence' => 'required|string|max:255',
+            'reason' => 'required|string|min:12|max:2000',
+        ]);
+        $newId = $this->handled(fn () => $this->service->stageSourceCorrection($id, $v, $request->user()));
+        return ApiResponse::success('Immutable source correction awaiting independent review.', ['id' => $newId], 201);
+    }
+
+    public function approveCorrection(Request $request, int $id): JsonResponse
+    {
+        $this->requireChecker($request);
+        $this->handled(fn () => $this->service->approveSourceCorrection($id, $request->user()));
+        return ApiResponse::success('Source correction independently approved; original evidence retained.', ['id' => $id]);
+    }
+
     public function build(Request $request): JsonResponse
     {
         $this->requireRead($request);
@@ -198,9 +225,12 @@ final class InstitutionalEclController extends Controller
             'expected_external_count' => 'required|integer|min:0|max:1000000',
             'expected_external_principal_minor' => 'required|integer|min:0',
             'coverage_reference' => 'required|string|max:255',
+            'restates_run_id' => 'nullable|integer|exists:institution_ecl_runs,id',
+            'restatement_reason' => 'required_with:restates_run_id|nullable|string|min:12|max:2000',
         ]);
         $id = $this->handled(fn () => $this->service->build($v['institution_id'], $v['as_of_date'],
-            $v['expected_external_count'], $v['expected_external_principal_minor'], $v['coverage_reference'], $request->user()));
+            $v['expected_external_count'], $v['expected_external_principal_minor'], $v['coverage_reference'], $request->user(),
+            $v['restates_run_id'] ?? null, $v['restatement_reason'] ?? null));
         return ApiResponse::success('Draft monthly ECL snapshot created; no journals posted.', ['id' => $id], 201);
     }
 
