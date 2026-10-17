@@ -128,3 +128,59 @@ Until the above are signed off, keep this as a non-activated development candida
 - `apps/api/database/migrations/2026_10_15_000100_create_institutional_ecl_controls.php`
 - `apps/api/tests/Feature/InstitutionalEclWorkflowTest.php`
 - `apps/web/src/app/(portal)/admin/institutional-ecl/page.tsx`
+
+
+## October 2026 accounting-completion candidate
+
+The current PR additionally includes:
+
+1. **Pre-acceptance attestation** in `credit_offer_ecl_ownerships`. Credit-risk ownership is contractually designated on the offered credit facility, reviewed by an independent checker, and copied to the immutable loan-level ownership once the provider confirms finality. All non-testing environments enforce this gate. A partner funding-pool mandate by itself never proves OpFin owns the credit risk.
+2. **Verified cash reservation** in `partner_ecl_cash_reservations`. Partner-funded disbursements cannot proceed merely because a partner has committed capital. There must be a **pre-existing positive, reconciled fiduciary liability** in `liability.partner_funds_held.institution_{institution_id}`, in the offer currency. Concurrent pending payouts reserve that balance before payment instructions are submitted.
+3. **Non-owned agency ledger**: a partner-owned successful payout *debits* funds held and *credits* provider cash, with no OpFin loan receivable, interest or customer-fee asset. Partner collections *debit* provider cash and *credit* funds held, with no OpFin interest/fee revenue. Reversals invert the original immutable custody entries.
+4. **Ledger invariant**: `ProductionLedgerService` blocks any partner loan entry outside the balanced, two-line cash/provider and partner-funds-held structure. Account locking blocks any negative custody-funds liability. Ineligible shared-risk postings are rejected.
+5. **Income/impairment guards**: partner loan fee-recognition accounting is suppressed; contractual late-interest exposure may be calculated for borrower servicing but is not posted as OpFin income. Platform impairment and write-offs are limited to valid platform-owned loans.
+6. **Source corrections without erasure**: approved lender observations remain immutable. A maker proposes a correction, a different checker approves it, and a new advisory portfolio revision may replace the previous signed-off version. The old report is marked `superseded` but retained. The new report discloses its prior-run ID, reason and total ECL revision amount. Partner advisory corrections do not create or backdate platform GL entries.
+7. **Access restrictions**: delegated operations staff may access only their own institution's calculations and source records. Independent finance approval remains platform-administrator only.
+8. **Added test code**: accounting custody flows, reversal direction, negative fiduciary balance prevention, external source corrections/restatement, maker-checker and cross-institution access.
+
+### Worked accounting illustrations
+
+For an independent lender with **UGX 100,000 confirmed funds already held by OpFin** and an authorised, fully partner-owned UGX 60,000 cash disbursement:
+
+| Event | Debit (UGX) | Credit (UGX) |
+| --- | ---: | ---: |
+| Authorised payout (after cash reservation) | Partner funds held liability 60,000 | Provider cash 60,000 |
+| Borrower repayment of principal and interest, total 20,000 | Provider cash 20,000 | Partner funds held liability 20,000 |
+| Provider-confirmed payout reversal, if applicable | Provider cash 60,000 | Partner funds held liability 60,000 |
+
+The lender's loan principal, contractual interest and credit-loss allowance remain on the lender's own accounting records. Collection service fee income for OpFin, if contractually earned, requires a separately approved service invoice/recognition event and must not be inferred from borrower repayments.
+
+For an OpFin-owned loan, the canonical loan-principal asset, expected loss allowance and stage-3 write-off accounting continue to use existing `ProductionLoanLedgerService`, `LoanImpairmentService` and `CreditWriteOffService`; they are not duplicated in this extension.
+
+### Actual deployment and acceptance constraints
+
+**These are release blockers, not things confirmed as finished by the existence of code:**
+
+- **Independent custody funding evidence:** No end-to-end connector transaction that proves a legal lender's prefunding from a matched bank/provider source, authorises wallet movements and posts the opening funds-held liability has been accepted. Until Finance verifies and books the real balance, partner disbursement fails closed. Capital-mandate fields, test journals and a manually written reference are not proof of available money.
+- **Legacy exposure remediation:** Any old partner-owned facility posted as an OpFin asset needs loan-by-loan contractual identification, dated GL/subledger reconciliation and auditor-reviewed immutable reclassification or reversal. The integrity monitor flags contamination but cannot invent or approve these journal corrections.
+- **Shared participation/guarantee:** This must be separately classified as a loan asset participation, guarantee or other commitment under the executed agreement. Its booked amount, funding source, EAD, allowance, revenue allocations and capital treatment must be approved. It remains blocked for live origination; an advisory economic-loss share is not an on-balance-sheet journal.
+- **IFRS 9 and prudential compliance:** Scenario-weighted PD × LGD × principal is an analytical estimate. Institution-specific historic default calibration, EAD (including accrued interest/commitments), discounted contractual cash shortfalls, recoveries, EIR, quantitative/qualitative SICR, stage-3 interest and policy backtesting have **not** been demonstrated. Do not represent the current calculator as audited IFRS 9-compliant.
+- **Month-end and corrective journals:** Signed institutional advisory reports can be restated with append-only evidence. Posted OpFin-owned ECL is not retroactively overwritten. Any approved true-up must be booked in a *currently open period* and must explicitly identify the superseded period and the accounting authority.
+- **Runtime evidence:** The conversation environment does not provide a runnable checkout, a PostgreSQL server or permitted GitHub Actions. Tests were committed as source but **have not been executed here**. Staging migration, complete feature/regression suites, Web build, provider cash reconciliation, concurrency/authorisation penetration checks and Finance/Risk sign-off remain required.
+
+### Verification commands (to run against the actual checked-out branch)
+
+```bash
+cd apps/api
+php artisan migrate --env=testing
+php artisan test --filter=InstitutionalEclWorkflowTest
+php artisan test --filter=FinancialSignOffConsolidationTest
+php artisan test
+cd ../web
+npm ci
+npm run lint
+npm run build
+```
+
+Use the repository's own test environment and package manager/lockfiles where different. Run PostgreSQL migrations and transactional concurrency tests against a *separate, isolated* validation database. Do not enable scheduled GitHub Actions, create new infrastructure or merge to production without explicit repository-owner and finance release authorisation.
+
