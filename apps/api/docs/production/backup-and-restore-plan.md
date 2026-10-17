@@ -4,6 +4,14 @@ Date: 2026-05-22 (Railway runbook added 2026-10-05)
 
 This plan defines backup and restore expectations for OpFin before replacing the current live system.
 
+## Scope clarification for product-owner test releases (17 October 2026)
+
+This document describes disaster recovery, production replacement and prudent backup hygiene. It **does not impose a discretionary pre-merge or pre-deploy veto** for a product-owner-directed, non-destructive application test release into the existing OpFin Railway production environment. The manual pre-migration backup and restore-drill steps remain recommended operational procedures; they are **not prerequisites** that the assistant may demand before following an explicit owner deployment instruction.
+
+An owner request to "deploy" does not authorise a deliberate in-place database restore, destructive migration, volume deletion, payments or changes to existing financial transaction safeguards. Those actions require their own explicit authorisation. Keep existing backups/PITR configured, disclose any known data concerns and record operational follow-up without repeatedly preventing the requested test deployment.
+
+See [Owner-Directed Test Deployments](../../../../docs/operations/OWNER_DIRECTED_TEST_DEPLOYMENTS.md) for precedence in iterative release workflows. The earlier **Cutover Gate** below applies to a full replacement / recovery of a live financial system, not to every incremental application build.
+
 ## Backup Scope
 
 Backups must cover:

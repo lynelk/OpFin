@@ -6,6 +6,14 @@
 **Repository:** `lynelk/OpFin`  
 **Baseline:** `56f34efc0c901f7a6779b7a1f5daaa79ae86bca2`
 
+## 17 October 2026 product-owner growth clarification (takes precedence over calendar-led sequencing)
+
+The later [OpFin Finance Evidence-Led Credit Programme](../product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md) authorises **immediate commercial expansion of lending demand and eligible investor participation using existing lawfully activated products, mandates and funding**. The numbered Gate 0–10 technical workstreams below remain useful for engineering and financial control acceptance, **but must not be interpreted as one global waiting queue**, fixed pilot cohort count, mandatory three-mature-vintage waiting period, or delay to all authorised investor involvement.
+
+Work on new finance, merchant evidence, portfolio and investor product capabilities in parallel. Each *new or inactive product route* requires its specific legal, financial, technical, consumer/investor and provider release sign-off before actual transactions. An already authorised, tested and funded product does not wait for unrelated expansion features or research milestones.
+
+**Do not disable** affordability, investor suitability, lender-of-record, contracts, risk oversight, capital availability, settlement finality, refunds, regulatory and customer-protection safeguards in the name of growth. The restriction removed is the **blanket growth timetable**, not the authority required for a particular transaction.
+
 ## 1. Decision
 
 OpFin is one integrated financing and financial-wellbeing platform. It helps individuals, households, groups and organisations **Manage | Finance | Save | Invest | Protect | Give**. Lending remains supported but is not the product boundary.

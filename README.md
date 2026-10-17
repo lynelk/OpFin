@@ -2,6 +2,12 @@
 
 **Your next step, clearer.**
 
+**North Star: Every financial life deserves a future worth looking forward to.**
+
+OpFin exists to help everyone understand their finances, make confident decisions and pursue what matters to them, at every age, every stage and every financial scale. **We don't define success for people. We help them make progress towards their own.**
+
+Financial continuity, dignity and personal aspiration are architectural obligations: retain people and attributable financial records across lawful life-stage transitions; preserve customer dignity when a specific service is restricted; and keep customer-owned goals separate from provider/product eligibility and underwriting. See [Financial Life Architecture](docs/architecture/FINANCIAL_LIFE_CONTINUITY_AND_DIGNITY.md) and [consolidated P0–P1 delivery](docs/product/OPFIN_P0_P1_UNIVERSAL_FINANCIAL_LIFE.md). These documents describe the target direction, not a completed youth-account or advanced-guidance release.
+
 Status: Public repository and product reference  
 Updated: 26 September 2026  
 Language: English (United Kingdom)

@@ -125,3 +125,17 @@ export type FinancialCalendarPayload = {
 export type FinancialCategoriesPayload = {
   categories: string[];
 };
+
+/** An aspiration is a personal plan, never a held financial product or verified balance. */
+export type FinancialAspiration = {
+  reference: string;
+  title: string;
+  category: "stability" | "education" | "family" | "enterprise" | "protection" | "growth" | "other";
+  target_amount_minor: number | null;
+  currency: string;
+  target_date: string | null;
+  status: "active" | "paused" | "completed" | "archived";
+  is_priority: boolean;
+  financial_state: "plan_only";
+  updated_at: string;
+};
