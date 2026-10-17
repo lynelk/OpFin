@@ -93,10 +93,10 @@ class FinancialAspirationController extends Controller
             $status = $data['status'] ?? $record->status;
             $priority = $data['is_priority'] ?? (bool) $record->is_priority;
 
-            if ($priority && $status !== 'active') {
+            if (($data['is_priority'] ?? false) && $status !== 'active') {
                 abort(422, 'Only an active goal can be your current priority.');
             }
-            if ($priority) {
+            if ($priority && $status === 'active') {
                 $this->owned($user)->where('is_priority', true)->update(['is_priority' => false, 'updated_at' => now()]);
             }
             $changes = array_intersect_key($data, array_flip(['title', 'category', 'target_amount_minor', 'target_date', 'status', 'is_priority']));
