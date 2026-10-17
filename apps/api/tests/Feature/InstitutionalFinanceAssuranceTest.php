@@ -144,7 +144,7 @@ class InstitutionalFinanceAssuranceTest extends TestCase
         [$institution, $maker, $checker, $run, $date] = $this->evidence();
         $service = app(InstitutionalFinanceAssuranceService::class);
         $id = $service->stage($this->input($institution->id, $run, $date), $maker);
-        $custody = app(\\App\\Services\\InstitutionalExposureAccountingService::class);
+        $custody = app(\App\Services\InstitutionalExposureAccountingService::class);
         $cash = $custody->partnerProviderCashAccount($institution->id, 'providerqa', 'UGX');
         $held = $custody->partnerFundsAccount($institution->id, 'UGX');
         app(ProductionLedgerService::class)->post('qa:cash-posting-after-source', 'partner.funds.received', $maker, [
