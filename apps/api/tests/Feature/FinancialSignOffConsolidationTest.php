@@ -162,10 +162,8 @@ class FinancialSignOffConsolidationTest extends TestCase
             'approved_by' => $operations->id, 'approved_at' => now(),
             'created_at' => now(), 'updated_at' => now(),
         ]);
-        $cash = LedgerAccount::create([
-            'code' => 'cash.test.collection', 'name' => 'Custodial collection',
-            'type' => 'asset', 'currency' => 'UGX', 'is_active' => true,
-        ]);
+        $cash = app(\App\Services\InstitutionalExposureAccountingService::class)
+            ->partnerProviderCashAccount((int) $loan->institution_id, 'test', 'UGX');
         $held = LedgerAccount::create([
             'code' => 'liability.partner_funds_held.institution_'.$loan->institution_id,
             'name' => 'Lender funds held', 'type' => 'liability', 'currency' => 'UGX',
@@ -194,6 +192,36 @@ class FinancialSignOffConsolidationTest extends TestCase
         $this->assertSame(0, (int) DB::table('ledger_entries')->where('ledger_account_id', $held->id)
             ->selectRaw("SUM(CASE WHEN direction = 'credit' THEN amount_minor ELSE -amount_minor END) AS balance")
             ->value('balance'));
+    }
+
+    public function test_partner_cannot_spend_custodial_cash_from_another_provider(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        $accounts = app(\App\Services\InstitutionalExposureAccountingService::class);
+        $otherProvider = $accounts->partnerProviderCashAccount((int) $loan->institution_id, 'provider_a', 'UGX');
+        $payoutProvider = $accounts->partnerProviderCashAccount((int) $loan->institution_id, 'provider_b', 'UGX');
+        $held = $accounts->partnerFundsAccount((int) $loan->institution_id, 'UGX');
+        app(ProductionLedgerService::class)->post(
+            'test:partner-prefunded-in-provider-a', 'partner.funds.received', $operations,
+            [
+                ['account_id' => $otherProvider->id, 'direction' => 'debit', 'amount_minor' => 5000],
+                ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => 5000],
+            ], $operations, 'UGX'
+        );
+        $before = DB::table('ledger_transactions')->count();
+        try {
+            app(ProductionLedgerService::class)->post(
+                'test:wrong-provider-payout', 'partner.funds.disbursement', $operations,
+                [
+                    ['account_id' => $held->id, 'direction' => 'debit', 'amount_minor' => 2500],
+                    ['account_id' => $payoutProvider->id, 'direction' => 'credit', 'amount_minor' => 2500],
+                ], $operations, 'UGX'
+            );
+            $this->fail('Funds on Provider A must not be spent via Provider B without a reconciled treasury transfer.');
+        } catch (InvalidArgumentException $error) {
+            $this->assertStringContainsString('custody cash cannot be spent', $error->getMessage());
+        }
+        $this->assertSame($before, DB::table('ledger_transactions')->count());
     }
 
     public function test_independently_matched_partner_prefunding_posts_cash_and_liability_exactly_once(): void
