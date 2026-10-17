@@ -1,10 +1,12 @@
 import { randomUUID } from "crypto";
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { Screen, StateNotice } from "@/components/Screen";
 import { experienceApi } from "@/lib/api/experience";
 import { OpfinApiError } from "@/lib/api/errors";
 import { getAccessToken } from "@/lib/auth/session";
 import { formatUgx } from "@/lib/format";
+import { investmentOrderFields } from "@/lib/investment-order-fields";
 
 async function saveSuitability(formData: FormData) {
   "use server";
@@ -23,9 +25,9 @@ async function saveSuitability(formData: FormData) {
 async function createOrder(formData: FormData) {
   "use server";
   const token = await getAccessToken();
-  const productId = Number(formData.get("product_id"));
+  const { productId, amountMinor } = investmentOrderFields(formData);
   await experienceApi.createInvestmentOrder(productId, {
-    amount_minor: Number(formData.get("amount_minor")),
+    amount_minor: amountMinor,
     idempotency_key: randomUUID(),
     disclosure_acknowledged: true
   }, token);
@@ -58,7 +60,7 @@ export default async function InvestmentsPage() {
 
         <section className="panel">
           <div className="case-card-head"><div><h2>Available products</h2><p className="muted">Only products explicitly activated by independent product approval appear here.</p></div><span className="badge">{workspace.products.length}</span></div>
-          {workspace.products.length === 0 ? <StateNotice state="empty" message="No approved investment products are currently available." /> : (
+          {workspace.products.length === 0 ? <div><StateNotice state="empty" message="No approved investment products are currently available. Your financial plans and learning still belong here." /><p className="muted">Explore <Link href="/learn">financial learning</Link> or return to <Link href="/ahead">your aspirations</Link> while we verify suitable offerings.</p></div> : (
             <div className="experience-card-grid">
               {workspace.products.map((product) => (
                 <article className="experience-card" key={product.id}>
@@ -70,7 +72,7 @@ export default async function InvestmentsPage() {
                     <form action={createOrder} className="form-grid">
                       <input type="hidden" name="product_id" value={product.id} />
                       <div className="field"><label htmlFor={`amount-${product.id}`}>Amount, UGX</label><input id={`amount-${product.id}`} name="amount_minor" type="number" min={product.minimum_investment_minor} step="1000" required /></div>
-                      <label><input type="checkbox" required /> I reviewed and acknowledge the product disclosures.</label>
+                      <label><input type="checkbox" name="disclosure_acknowledged" value="yes" required /> I reviewed and acknowledge the product disclosures.</label>
                       <button className="button" type="submit">Create investment order</button>
                     </form>
                   ) : <p className="muted">Complete suitability before placing an order.</p>}
