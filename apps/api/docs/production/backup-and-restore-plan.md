@@ -10,7 +10,7 @@ This document describes disaster recovery, production replacement and prudent ba
 
 An owner request to "deploy" does not authorise a deliberate in-place database restore, destructive migration, volume deletion, payments or changes to existing financial transaction safeguards. Those actions require their own explicit authorisation. Keep existing backups/PITR configured, disclose any known data concerns and record operational follow-up without repeatedly preventing the requested test deployment.
 
-See [Owner-Directed Test Deployments](../../../docs/operations/OWNER_DIRECTED_TEST_DEPLOYMENTS.md) for precedence in iterative release workflows. The earlier **Cutover Gate** below applies to a full replacement / recovery of a live financial system, not to every incremental application build.
+See [Owner-Directed Test Deployments](../../../../docs/operations/OWNER_DIRECTED_TEST_DEPLOYMENTS.md) for precedence in iterative release workflows. The earlier **Cutover Gate** below applies to a full replacement / recovery of a live financial system, not to every incremental application build.
 
 ## Backup Scope
 
