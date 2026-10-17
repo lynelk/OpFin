@@ -168,7 +168,7 @@ return new class extends Migration
         $driver = DB::getDriverName();
         foreach (['fi_publications', 'fi_case_events', 'fi_reports'] as $table) {
             if ($driver === 'pgsql') {
-                DB::unprepared("CREATE FUNCTION {$table}_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Financial intelligence evidence is append-only'; END; $$");
+                DB::unprepared("CREATE OR REPLACE FUNCTION {$table}_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Financial intelligence evidence is append-only'; END; $$");
                 DB::unprepared("CREATE TRIGGER {$table}_immutable BEFORE UPDATE OR DELETE ON {$table} FOR EACH ROW EXECUTE FUNCTION {$table}_immutable()");
             } elseif ($driver === 'sqlite') {
                 foreach (['UPDATE', 'DELETE'] as $verb) {
@@ -185,7 +185,7 @@ return new class extends Migration
         foreach ($protected as $table => $fields) {
             if ($driver === 'pgsql') {
                 $changed = implode(' OR ', array_map(fn ($field) => "OLD.{$field} IS DISTINCT FROM NEW.{$field}", $fields));
-                DB::unprepared("CREATE FUNCTION {$table}_protect_source() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Source evidence cannot be deleted'; END IF; IF {$changed} THEN RAISE EXCEPTION 'Source evidence fields are immutable'; END IF; RETURN NEW; END; $$");
+                DB::unprepared("CREATE OR REPLACE FUNCTION {$table}_protect_source() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Source evidence cannot be deleted'; END IF; IF {$changed} THEN RAISE EXCEPTION 'Source evidence fields are immutable'; END IF; RETURN NEW; END; $$");
                 DB::unprepared("CREATE TRIGGER {$table}_protect_source BEFORE UPDATE OR DELETE ON {$table} FOR EACH ROW EXECUTE FUNCTION {$table}_protect_source()");
             } elseif ($driver === 'sqlite') {
                 $changed = implode(' OR ', array_map(fn ($field) => "OLD.{$field} IS NOT NEW.{$field}", $fields));

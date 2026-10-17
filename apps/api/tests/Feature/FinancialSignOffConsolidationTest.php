@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\CreditDecision;
+use App\Models\CreditOffer;
 use App\Models\CreditScoreComponent;
 use App\Models\Institution;
 use App\Models\LedgerAccount;
+use App\Models\LedgerTransaction;
 use App\Models\Loan;
 use App\Models\LoanApplication;
 use App\Models\LoanProduct;
@@ -18,6 +20,7 @@ use App\Services\CreditWriteOffService;
 use App\Services\DefaultInterestService;
 use App\Services\EarlySettlementService;
 use App\Services\FinancialAccountingPeriodService;
+use App\Services\InstitutionalExposureAccountingService;
 use App\Services\LoanImpairmentService;
 use App\Services\ProductionCreditOfferService;
 use App\Services\ProductionLedgerService;
@@ -36,6 +39,8 @@ class FinancialSignOffConsolidationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Finance fixtures must never submit real payment-provider instructions.
+        config()->set('services.mobile_money.default_provider', 'mock');
         $this->installPricingPolicy();
     }
 
@@ -149,6 +154,269 @@ class FinancialSignOffConsolidationTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('recovery path');
         app(EarlySettlementService::class)->quote($loan->fresh(), $customer);
+    }
+
+    public function test_partner_owned_exposure_posts_only_custodial_cash_and_partner_liability(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        DB::table('loan_ecl_ownerships')->insert([
+            'loan_id' => $loan->id, 'institution_id' => $loan->institution_id,
+            'owner_type' => 'partner', 'opfin_share_bps' => 0,
+            'agreement_reference' => 'TEST-AGENCY-AGREEMENT',
+            'status' => 'approved', 'created_by' => $operations->id,
+            'approved_by' => $operations->id, 'approved_at' => now(),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $cash = app(InstitutionalExposureAccountingService::class)
+            ->partnerProviderCashAccount((int) $loan->institution_id, 'test', 'UGX');
+        $held = LedgerAccount::create([
+            'code' => 'liability.partner_funds_held.institution_'.$loan->institution_id,
+            'name' => 'Lender funds held', 'type' => 'liability', 'currency' => 'UGX',
+            'is_active' => true,
+        ]);
+        $journal = app(ProductionLedgerService::class)->post(
+            'test:partner-only-custody', 'loan.repayment', $loan,
+            [
+                ['account_id' => $cash->id, 'direction' => 'debit', 'amount_minor' => 1500],
+                ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => 1500],
+            ],
+            $operations, 'UGX', ['loan_id' => $loan->id, 'ownership_type' => 'partner'],
+        );
+        $this->assertCount(2, $journal->entries);
+        $this->assertEqualsCanonicalizing([$cash->id, $held->id],
+            $journal->entries->pluck('ledger_account_id')->all());
+
+        app(ProductionLedgerService::class)->post(
+            'test:partner-custody-reversal', 'loan.repayment.reversal', $loan,
+            [
+                ['account_id' => $cash->id, 'direction' => 'credit', 'amount_minor' => 1500],
+                ['account_id' => $held->id, 'direction' => 'debit', 'amount_minor' => 1500],
+            ],
+            $operations, 'UGX', ['loan_id' => $loan->id, 'ownership_type' => 'partner'],
+        );
+        $this->assertSame(0, (int) DB::table('ledger_entries')->where('ledger_account_id', $held->id)
+            ->selectRaw("SUM(CASE WHEN direction = 'credit' THEN amount_minor ELSE -amount_minor END) AS balance")
+            ->value('balance'));
+    }
+
+    public function test_partner_credit_offer_reservation_checks_selected_provider_liquidity_before_payout(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        $offer = CreditOffer::query()->findOrFail($loan->credit_offer_id);
+        $checker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        DB::table('credit_offer_ecl_ownerships')->insert([
+            'credit_offer_id' => $offer->id, 'institution_id' => $offer->institution_id,
+            'owner_type' => 'partner', 'opfin_share_bps' => 0, 'status' => 'approved',
+            'agreement_reference' => 'TEST-VERIFIED-AGENCY-OWNERSHIP',
+            'created_by' => $operations->id, 'approved_by' => $checker->id,
+            'approved_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $treasury = app(InstitutionalExposureAccountingService::class);
+        $held = $treasury->partnerFundsAccount((int) $loan->institution_id, 'UGX');
+        $cashOnOtherProvider = $treasury->partnerProviderCashAccount((int) $loan->institution_id, 'provider_a', 'UGX');
+        $funds = 200000;
+        app(ProductionLedgerService::class)->post(
+            'test:prefund-provider-a-before-payout', 'partner.funds.received', $operations,
+            [
+                ['account_id' => $cashOnOtherProvider->id, 'direction' => 'debit', 'amount_minor' => $funds],
+                ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => $funds],
+            ], $operations, 'UGX'
+        );
+        config()->set('services.mobile_money.default_provider', 'provider_b');
+        try {
+            $treasury->reserveBeforePayout($offer);
+            $this->fail('Availability at Provider A cannot authorise a disbursement through Provider B.');
+        } catch (InvalidArgumentException $exception) {
+            $this->assertStringContainsString('actual payout provider lacks sufficient', $exception->getMessage());
+        }
+        $this->assertSame(0, DB::table('partner_ecl_cash_reservations')->count());
+
+        $payoutCash = $treasury->partnerProviderCashAccount((int) $loan->institution_id, 'provider_b', 'UGX');
+        app(ProductionLedgerService::class)->post(
+            'test:provider-b-prefund-for-payout', 'partner.funds.received', $operations,
+            [
+                ['account_id' => $payoutCash->id, 'direction' => 'debit', 'amount_minor' => $funds],
+                ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => $funds],
+            ], $operations, 'UGX'
+        );
+        $treasury->reserveBeforePayout($offer);
+        $reservation = DB::table('partner_ecl_cash_reservations')->where('credit_offer_id', $offer->id)->first();
+        $this->assertSame('provider_b', $reservation->provider);
+        $this->assertSame((int) $offer->net_disbursement_minor, (int) $reservation->cash_minor);
+        $treasury->reserveBeforePayout($offer);
+        $this->assertSame(1, DB::table('partner_ecl_cash_reservations')->count());
+    }
+
+    public function test_partner_cannot_spend_custodial_cash_from_another_provider(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        $accounts = app(InstitutionalExposureAccountingService::class);
+        $otherProvider = $accounts->partnerProviderCashAccount((int) $loan->institution_id, 'provider_a', 'UGX');
+        $payoutProvider = $accounts->partnerProviderCashAccount((int) $loan->institution_id, 'provider_b', 'UGX');
+        $held = $accounts->partnerFundsAccount((int) $loan->institution_id, 'UGX');
+        app(ProductionLedgerService::class)->post(
+            'test:partner-prefunded-in-provider-a', 'partner.funds.received', $operations,
+            [
+                ['account_id' => $otherProvider->id, 'direction' => 'debit', 'amount_minor' => 5000],
+                ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => 5000],
+            ], $operations, 'UGX'
+        );
+        $before = DB::table('ledger_transactions')->count();
+        try {
+            app(ProductionLedgerService::class)->post(
+                'test:wrong-provider-payout', 'partner.funds.disbursement', $operations,
+                [
+                    ['account_id' => $held->id, 'direction' => 'debit', 'amount_minor' => 2500],
+                    ['account_id' => $payoutProvider->id, 'direction' => 'credit', 'amount_minor' => 2500],
+                ], $operations, 'UGX'
+            );
+            $this->fail('Funds on Provider A must not be spent via Provider B without a reconciled treasury transfer.');
+        } catch (InvalidArgumentException $error) {
+            $this->assertStringContainsString('custody cash cannot be spent', $error->getMessage());
+        }
+        $this->assertSame($before, DB::table('ledger_transactions')->count());
+    }
+
+    public function test_independently_matched_partner_prefunding_posts_cash_and_liability_exactly_once(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        $checker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $money = MobileMoneyTransaction::create([
+            'user_id' => $operations->id, 'institution_id' => $loan->institution_id,
+            'provider' => 'mock', 'direction' => MobileMoneyTransaction::DIRECTION_COLLECTION,
+            'amount_minor' => 90000, 'currency' => 'UGX', 'phone' => '256700000112',
+            'idempotency_key' => 'institution-funds-test-'.$loan->id,
+            'internal_reference' => 'institution-funds-test-'.$loan->id,
+            'provider_reference' => 'BANK-PREFUND-TEST-'.$loan->id,
+            'status' => MobileMoneyTransaction::STATUS_SUCCESSFUL,
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+            'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_MATCHED,
+            'accounting_status' => MobileMoneyTransaction::ACCOUNTING_UNPOSTED,
+            'metadata' => ['purpose' => 'institutional_prefunding'],
+        ]);
+        $treasury = app(InstitutionalExposureAccountingService::class);
+        $draft = $treasury->stageFundingReceipt($money->id, 'RECONCILED-PROVIDER-STATEMENT-TEST', $operations);
+        try {
+            $treasury->approveAndPostFundingReceipt($draft, $operations);
+            $this->fail('Funding maker must not approve their own bank receipt.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('separate treasury checker', $e->getMessage());
+        }
+        $journalId = $treasury->approveAndPostFundingReceipt($draft, $checker);
+        $journal = LedgerTransaction::query()->with('entries')->findOrFail($journalId);
+        $this->assertSame('partner.funds.received', $journal->event_type);
+        $this->assertCount(2, $journal->entries);
+        $this->assertSame('posted', DB::table('institution_ecl_funding_receipts')->find($draft)->status);
+        $this->assertSame(MobileMoneyTransaction::ACCOUNTING_POSTED, $money->fresh()->accounting_status);
+        $account = $treasury->partnerFundsAccount((int) $loan->institution_id, 'UGX');
+        $this->assertSame(90000, (int) DB::table('ledger_entries')->where('ledger_account_id', $account->id)
+            ->selectRaw("SUM(CASE WHEN direction = 'credit' THEN amount_minor ELSE -amount_minor END) AS balance")
+            ->value('balance'));
+        $duplicateProviderMovement = MobileMoneyTransaction::create([
+            'user_id' => $operations->id, 'institution_id' => $loan->institution_id,
+            'provider' => 'mock', 'direction' => MobileMoneyTransaction::DIRECTION_COLLECTION,
+            'amount_minor' => 90000, 'currency' => 'UGX', 'phone' => '256700000113',
+            'idempotency_key' => 'institution-funds-other-event-'.$loan->id,
+            'internal_reference' => 'institution-funds-other-event-'.$loan->id,
+            'provider_reference' => 'BANK-PREFUND-TEST-'.$loan->id,
+            'status' => MobileMoneyTransaction::STATUS_SUCCESSFUL,
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+            'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_MATCHED,
+            'accounting_status' => MobileMoneyTransaction::ACCOUNTING_UNPOSTED,
+            'metadata' => ['purpose' => 'institutional_prefunding'],
+        ]);
+        try {
+            $treasury->stageFundingReceipt($duplicateProviderMovement->id, 'REPLAYED-SOURCE', $operations);
+            $this->fail('A second provider message cannot double-credit the same underlying bank transfer.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('already been allocated', $e->getMessage());
+        }
+        $this->assertSame(1, DB::table('institution_ecl_funding_receipts')->count());
+        $this->expectException(InvalidArgumentException::class);
+        $treasury->approveAndPostFundingReceipt($draft, $checker);
+    }
+
+    public function test_shared_risk_contract_attestation_cannot_automatically_unblock_untested_origination(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        $offer = CreditOffer::query()->findOrFail($loan->credit_offer_id);
+        $second = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        DB::table('credit_offer_ecl_ownerships')->insert([
+            'credit_offer_id' => $offer->id, 'institution_id' => $offer->institution_id,
+            'owner_type' => 'shared', 'opfin_share_bps' => 4000,
+            'agreement_reference' => 'SYNTHETIC-UNVERIFIED-JOINT-CREDIT',
+            'status' => 'approved', 'created_by' => $operations->id,
+            'approved_by' => $second->id, 'approved_at' => now(),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Shared exposure origination is blocked');
+        app(InstitutionalExposureAccountingService::class)->approved($offer);
+    }
+
+    public function test_partner_fiduciary_liability_cannot_be_spent_without_prior_verified_cash(): void
+    {
+        $actor = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
+        $held = LedgerAccount::create([
+            'code' => 'liability.partner_funds_held.institution_9998',
+            'name' => 'Test lender funds awaiting receipt',
+            'type' => 'liability', 'currency' => 'UGX', 'is_active' => true,
+        ]);
+        $cash = LedgerAccount::create([
+            'code' => 'cash.test.prefunding', 'name' => 'Test payment cash',
+            'type' => 'asset', 'currency' => 'UGX', 'is_active' => true,
+        ]);
+        $prior = DB::table('ledger_transactions')->count();
+        try {
+            app(ProductionLedgerService::class)->post(
+                'test:partner-unfunded-payout', 'partner.funds.disbursement', $actor,
+                [
+                    ['account_id' => $held->id, 'direction' => 'debit', 'amount_minor' => 10000],
+                    ['account_id' => $cash->id, 'direction' => 'credit', 'amount_minor' => 10000],
+                ], $actor, 'UGX',
+            );
+            $this->fail('A partner funds payable cannot be spent before cash receipt is evidenced.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('cannot be overdrawn', $e->getMessage());
+        }
+        $this->assertSame($prior, DB::table('ledger_transactions')->count());
+    }
+
+    public function test_partner_risk_owner_blocks_platform_impairment_income_and_asset_entries(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        DB::table('loan_ecl_ownerships')->insert([
+            'loan_id' => $loan->id, 'institution_id' => $loan->institution_id,
+            'owner_type' => 'partner', 'opfin_share_bps' => 0,
+            'agreement_reference' => 'TEST-AGENCY-ACCOUNTING',
+            'status' => 'approved', 'created_by' => $operations->id,
+            'approved_by' => $operations->id, 'approved_at' => now(),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $cash = LedgerAccount::create([
+            'code' => 'cash.test.forbidden', 'name' => 'Test cash',
+            'type' => 'asset', 'currency' => 'UGX', 'is_active' => true,
+        ]);
+        $income = LedgerAccount::create([
+            'code' => 'income.test.partner', 'name' => 'Forbidden lender income',
+            'type' => 'income', 'currency' => 'UGX', 'is_active' => true,
+        ]);
+        try {
+            app(ProductionLedgerService::class)->post(
+                'test:partner-income-forbidden', 'loan.repayment', $loan,
+                [
+                    ['account_id' => $cash->id, 'direction' => 'debit', 'amount_minor' => 500],
+                    ['account_id' => $income->id, 'direction' => 'credit', 'amount_minor' => 500],
+                ],
+                $operations, 'UGX', ['loan_id' => $loan->id, 'ownership_type' => 'partner'],
+            );
+            $this->fail('Partner financial income must never be recognised as OpFin revenue.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('platform receivable, income', $e->getMessage());
+        }
+        $this->expectException(InvalidArgumentException::class);
+        app(LoanImpairmentService::class)->assess($loan, now(), 500,
+            'stage_1', 'test-partner-ineligible', ['risk_owner' => 'partner'], $operations);
     }
 
     public function test_closed_accounting_period_rejects_a_posting_inside_that_period(): void

@@ -23,6 +23,11 @@ class CreditFeeRecognitionService
         bool $settlement = false,
         int $rebatedFeeMinor = 0,
     ): int {
+        $owner = app(InstitutionalExposureAccountingService::class)->ownerForLoan($loan);
+        // Servicer fees belong to the contractual lender; never release them as OpFin income.
+        if ($owner && $owner->owner_type !== 'opfin') {
+            return 0;
+        }
         if (! $loan->credit_offer_id || strcasecmp((string) $loan->status, 'Written Off') === 0) {
             return 0;
         }

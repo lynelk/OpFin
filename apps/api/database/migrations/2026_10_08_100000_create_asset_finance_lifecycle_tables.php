@@ -113,7 +113,7 @@ return new class extends Migration
     {
         $driver = DB::getDriverName();
         if ($driver === 'pgsql') {
-            DB::unprepared("CREATE FUNCTION {$table}_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Asset finance history is append-only'; END; $$");
+            DB::unprepared("CREATE OR REPLACE FUNCTION {$table}_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Asset finance history is append-only'; END; $$");
             DB::unprepared("CREATE TRIGGER {$table}_immutable BEFORE UPDATE OR DELETE ON {$table} FOR EACH ROW EXECUTE FUNCTION {$table}_immutable()");
         } elseif ($driver === 'sqlite') {
             foreach (['UPDATE', 'DELETE'] as $verb) {
