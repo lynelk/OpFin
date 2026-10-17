@@ -247,10 +247,7 @@ final class InstitutionalExposureAccountingService
             }
             $currency = $row->currency;
             $provider = strtolower($row->provider);
-            $cash = LedgerAccount::query()->firstOrCreate(
-                ['code' => 'cash.'.$provider.'.disbursement', 'currency' => $currency],
-                ['name' => ucfirst($provider).' disbursement cash', 'type' => 'asset', 'is_active' => true],
-            );
+            $cash = $this->partnerProviderCashAccount((int) $row->institution_id, $provider, $currency);
             $held = $this->partnerFundsAccount((int) $row->institution_id, $currency);
             $journal = app(ProductionLedgerService::class)->post(
                 'partner.funds.received:'.$money->id, 'partner.funds.received', $money,
@@ -276,6 +273,21 @@ final class InstitutionalExposureAccountingService
             ]);
             return (int) $journal->id;
         });
+    }
+
+    public function partnerProviderCashAccount(int $institutionId, string $provider, string $currency): LedgerAccount
+    {
+        $provider = strtolower(trim($provider));
+        $currency = strtoupper(trim($currency));
+        if ($institutionId <= 0 || ! preg_match('/^[a-z0-9_-]{2,50}$/D', $provider)
+            || ! preg_match('/^[A-Z]{3}$/D', $currency)) {
+            throw new InvalidArgumentException('Institutional custody account requires an approved institution, provider and currency.');
+        }
+        return LedgerAccount::query()->firstOrCreate(
+            ['code' => 'cash.partner_custody.institution_'.$institutionId.'.provider_'.$provider, 'currency' => $currency],
+            ['name' => 'Ring-fenced partner provider cash '.$institutionId.' '.$provider,
+                'type' => 'asset', 'is_active' => true],
+        );
     }
 
     public function partnerFundsAccount(int $institutionId, string $currency): LedgerAccount
