@@ -21,16 +21,35 @@ Prepared: 17 October 2026.
 | Cross-institution finance-record access | `InstitutionalEclController::requireInstitution` | Committed, security regression test pending |
 | Loan/portfolio CSV reporting | controller and authenticated Web export | Committed, end-to-end export test pending |
 
-## Actual results available now
+## Executed test and source-verification evidence (17 October 2026)
 
-- **Static repository review:** 14 PHP files were fetched from the PR branch; the source brackets and PHP opening delimiters were structurally balanced.
-- **Route wiring:** all 18 institutional ECL controller routes had a matching controller method in the branch.
-- **PHP interpreter / Laravel tests:** **not run**. Source-only reviews are not PHP lint, PHPUnit or transaction acceptance.
-- **PostgreSQL and SQLite migrations:** **not run**.
-- **Web scripts:** package declares `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`; **not run**.
-- **GitHub Actions / CI:** deferred under the repository owner's existing instruction; **not activated**.
-- **Real financing partners, matched institutional receipts, custodian bank funds, tax, fee-sharing agreements and institution auditor sign-off:** **not available for validation**.
-- **Deployments:** no staging/production deployment performed, no new Railway resources provisioned.
+All activity below was conducted against **a temporary, isolated checkout of PR #182**, never against production records or infrastructure.
+
+| Check | Executed evidence | Outcome |
+| --- | --- | --- |
+| PHP syntax | Native PHP 8.4 `php -l` on 16 originally modified PHP files, plus source parse on core revised files | **16 passed, 0 errors** in initial run; later PostgreSQL migration edits separately reviewed |
+| Laravel institutional ECL (SQLite) | `php artisan test --filter=InstitutionalEclWorkflowTest` | **7 passed, 41 assertions** |
+| Laravel finance sign-off (SQLite) | `php artisan test --filter=FinancialSignOffConsolidationTest` | **10 passed, 51 assertions** |
+| Entire Laravel API suite (SQLite) | `php artisan test` on PHP 8.5 + GD isolated QA runtime | **620 passed, 23,264 assertions, 0 failures** |
+| Web typecheck | `npm run typecheck`, Node **22.23.3** | **Passed** |
+| Web lint | `npm run lint`, Node **22.23.3** | **Passed** |
+| Web unit suite | `npm run test`, Node **22.23.3** | **68 passed across 11 suites** |
+| Web build | `npm run build`, Node **22.23.3** | **Passed** |
+| PostgreSQL 16 governance | Both institutional ECL and financial sign-off suites in one ephemeral, non-exposed PostgreSQL 16 database | **17 passed, 92 assertions**, confirmed |
+| Repeat PostgreSQL schema rebuild | Two separate suite invocations against the same isolated database | See final repeated-run evidence below; do not presume success before completion |
+
+**Found and repaired during actual testing:**
+- An invalid PHP namespace in an ECL test, corrected and native-linted.
+- An invalid TypeScript helper call in the provisioning form, corrected.
+- An incompatible frontend tooling combination (TypeScript 7 versus supported eslint parser), pinned to TypeScript 6.0.2 and regenerated the npm lockfile.
+- Financial test fixtures incorrectly required a live external payment provider. They now explicitly use the test-only mock adapter.
+- The portable PHP QA image lacked GD (used by a pre-existing image upload test). An isolated container was built with GD; the full application suite passed without modifying the test.
+- The PostgreSQL test reset uncovered reusable PL/pgSQL audit functions created with `CREATE FUNCTION`. Five migrations now use `CREATE OR REPLACE FUNCTION` to preserve the protections while allowing schema reconstruction. The combined PostgreSQL suite passes after this correction.
+- Treasury review found an opportunity to double-allocate a single provider receipt and to reserve lender funds despite insufficient cash on the *selected* payout provider. Fixed with unique provider references, provider-specific ring-fenced accounts and reservations, and dedicated regression tests.
+
+**Scope and evidential limitations:** SQLite tests and serial PostgreSQL tests do **not** establish simultaneous-transaction concurrency, source-to-bank reconciliation or external entity financial statement correctness. Tests use synthetic accounts and money movements. No real institutional source statement, verified external provider prefunding, customer consent dossier or executed risk-participation contract was supplied. This is engineering regression evidence, not independent audit or IFRS 9 financial sign-off.
+
+**Safety of the QA environment:** The checkout was under `/tmp`; test payment providers were mock-only; PostgreSQL ran on an internal Docker network with no published host ports and tmpfs storage, with automatic cleanup. GitHub Actions was not enabled and nothing was merged or deployed.
 
 ## Required execution evidence
 
@@ -83,7 +102,7 @@ For each legal reporting entity, evidence:
 
 1. Institutional prefunding ingestion now has code that accepts only successful, reconciled, statement-matched and not-yet-posted provider transactions specifically designated for institutional funding. Its actual Cito/provider feed, independently verified legal sender/source, test posting, funding reconciliation and live acceptance are **not yet proven**. Unverified money remains blocked.
 2. Shared participations and financial guarantee recognition must be implemented after signed legal and Finance classification. They currently remain advisory/blocked.
-3. An actual PostgreSQL and application test run, independent test results, finance model calibration, lender-ledger reconciliation and approval are indispensable.
+3. SQLite, isolated PostgreSQL and Web application test runs have been performed and passed as above. **Still outstanding** are independently executed PostgreSQL concurrency stress checks, finance model calibration, lender-ledger reconciliation, provider evidence acceptance and the authorising sign-offs.
 4. Corrective journalling for earlier misclassified partner-funded principal remains specific to executed agreements and confirmed historical GL. Automatic guessing is prohibited.
 
 **Sign-off record (not yet completed):** Engineering QA — pending. Security — pending. Treasury — pending. Credit Risk — pending. Finance/IFRS — pending. Compliance — pending. Production release — pending.
