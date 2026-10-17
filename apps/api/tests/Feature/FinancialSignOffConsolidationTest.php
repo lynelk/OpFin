@@ -196,6 +196,45 @@ class FinancialSignOffConsolidationTest extends TestCase
             ->value('balance'));
     }
 
+    public function test_independently_matched_partner_prefunding_posts_cash_and_liability_exactly_once(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        $checker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        $money = MobileMoneyTransaction::create([
+            'user_id' => $operations->id, 'institution_id' => $loan->institution_id,
+            'provider' => 'mock', 'direction' => MobileMoneyTransaction::DIRECTION_COLLECTION,
+            'amount_minor' => 90000, 'currency' => 'UGX', 'phone' => '256700000112',
+            'idempotency_key' => 'institution-funds-test-'.$loan->id,
+            'internal_reference' => 'institution-funds-test-'.$loan->id,
+            'provider_reference' => 'BANK-PREFUND-TEST-'.$loan->id,
+            'status' => MobileMoneyTransaction::STATUS_SUCCESSFUL,
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+            'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_MATCHED,
+            'accounting_status' => MobileMoneyTransaction::ACCOUNTING_UNPOSTED,
+            'metadata' => ['purpose' => 'institutional_prefunding'],
+        ]);
+        $treasury = app(\App\Services\InstitutionalExposureAccountingService::class);
+        $draft = $treasury->stageFundingReceipt($money->id, 'RECONCILED-PROVIDER-STATEMENT-TEST', $operations);
+        try {
+            $treasury->approveAndPostFundingReceipt($draft, $operations);
+            $this->fail('Funding maker must not approve their own bank receipt.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('separate treasury checker', $e->getMessage());
+        }
+        $journalId = $treasury->approveAndPostFundingReceipt($draft, $checker);
+        $journal = \App\Models\LedgerTransaction::query()->with('entries')->findOrFail($journalId);
+        $this->assertSame('partner.funds.received', $journal->event_type);
+        $this->assertCount(2, $journal->entries);
+        $this->assertSame('posted', DB::table('institution_ecl_funding_receipts')->find($draft)->status);
+        $this->assertSame(MobileMoneyTransaction::ACCOUNTING_POSTED, $money->fresh()->accounting_status);
+        $account = $treasury->partnerFundsAccount((int) $loan->institution_id, 'UGX');
+        $this->assertSame(90000, (int) DB::table('ledger_entries')->where('ledger_account_id', $account->id)
+            ->selectRaw("SUM(CASE WHEN direction = 'credit' THEN amount_minor ELSE -amount_minor END) AS balance")
+            ->value('balance'));
+        $this->expectException(InvalidArgumentException::class);
+        $treasury->approveAndPostFundingReceipt($draft, $checker);
+    }
+
     public function test_partner_fiduciary_liability_cannot_be_spent_without_prior_verified_cash(): void
     {
         $actor = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
