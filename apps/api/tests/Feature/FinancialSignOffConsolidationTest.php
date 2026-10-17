@@ -261,6 +261,26 @@ class FinancialSignOffConsolidationTest extends TestCase
         $this->assertSame(90000, (int) DB::table('ledger_entries')->where('ledger_account_id', $account->id)
             ->selectRaw("SUM(CASE WHEN direction = 'credit' THEN amount_minor ELSE -amount_minor END) AS balance")
             ->value('balance'));
+        $duplicateProviderMovement = MobileMoneyTransaction::create([
+            'user_id' => $operations->id, 'institution_id' => $loan->institution_id,
+            'provider' => 'mock', 'direction' => MobileMoneyTransaction::DIRECTION_COLLECTION,
+            'amount_minor' => 90000, 'currency' => 'UGX', 'phone' => '256700000113',
+            'idempotency_key' => 'institution-funds-other-event-'.$loan->id,
+            'internal_reference' => 'institution-funds-other-event-'.$loan->id,
+            'provider_reference' => 'BANK-PREFUND-TEST-'.$loan->id,
+            'status' => MobileMoneyTransaction::STATUS_SUCCESSFUL,
+            'reconciliation_status' => MobileMoneyTransaction::RECONCILIATION_MATCHED,
+            'statement_reconciliation_status' => MobileMoneyTransaction::STATEMENT_MATCHED,
+            'accounting_status' => MobileMoneyTransaction::ACCOUNTING_UNPOSTED,
+            'metadata' => ['purpose' => 'institutional_prefunding'],
+        ]);
+        try {
+            $treasury->stageFundingReceipt($duplicateProviderMovement->id, 'REPLAYED-SOURCE', $operations);
+            $this->fail('A second provider message cannot double-credit the same underlying bank transfer.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('already been allocated', $e->getMessage());
+        }
+        $this->assertSame(1, DB::table('institution_ecl_funding_receipts')->count());
         $this->expectException(InvalidArgumentException::class);
         $treasury->approveAndPostFundingReceipt($draft, $checker);
     }
