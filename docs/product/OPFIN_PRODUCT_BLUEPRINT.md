@@ -8,6 +8,24 @@ Language: English (United Kingdom)
 
 OpFin is a personal financial operating platform with embedded financial services. It starts with the individual, particularly people who are underserved by conventional financial systems, and helps that person understand, manage, plan, protect and improve their financial life. Groups and organisations extend that personal financial life through governed Financial Spaces; they do not replace the individual as OpFin's centre of gravity. Lending is one capability, not the product boundary.
 
+## North Star: Every financial life deserves a future worth looking forward to
+
+> **Every financial life deserves a future worth looking forward to.**
+>
+> OpFin exists to help everyone understand their finances, make confident decisions and pursue what matters to them, at every age, every stage and every financial scale.
+>
+> **We don't define success for people. We help them make progress towards their own.**
+
+This is a **constitutional product and engineering requirement**, not a campaign-only message. The customer-facing brand promise remains **Your next step, clearer.**
+
+### Three standing financial-life invariants
+
+- **Continuity:** one durable person and their separately owned records, consented financial evidence and life-stage transitions must persist across Web, App, authorised Financial Spaces and channels without uncontrolled transfer of private data.
+- **Dignity:** a person who cannot access a specific financial service must still be offered any safe, lawful and available learning, planning or support option; restrictions, fees, risks and remedies remain truthful and visible. Product eligibility does not define the value of a person.
+- **Aspiration:** the person defines their own goals and success; OpFin keeps plans separate from confirmed financial outcomes and does not infer goals from age, gender, rural location, income or wealth class.
+
+Delivery of these invariants is governed by [the Financial Life architecture](../architecture/FINANCIAL_LIFE_CONTINUITY_AND_DIGNITY.md) and [the consolidated P0–P1 programme](OPFIN_P0_P1_UNIVERSAL_FINANCIAL_LIFE.md). These target requirements are **not** claims that all related features are currently implemented or regulatory-approved.
+
 ## Constitutional product principles
 
 1. **One person, one identity.** A human registers once and may participate in many Financial Spaces.
