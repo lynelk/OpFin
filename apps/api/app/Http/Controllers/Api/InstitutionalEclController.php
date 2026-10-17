@@ -26,6 +26,15 @@ final class InstitutionalEclController extends Controller
                 && (bool) $request->user()->can_manage_platform_credit), 403);
     }
 
+    private function requireInstitution(Request $request, int $institutionId): void
+    {
+        $this->requireRead($request);
+        if ($request->user()->hasRole(User::ROLE_OPERATIONS)
+            && (int) $request->user()->institution_id !== $institutionId) {
+            abort(403, 'Institution financial records are not available to this user.');
+        }
+    }
+
     private function requireChecker(Request $request): void
     {
         abort_unless($request->user()?->hasRole(User::ROLE_PLATFORM_ADMIN), 403);
@@ -44,6 +53,7 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireRead($request);
         $institution = $request->validate(['institution_id' => 'required|integer|exists:institutions,id'])['institution_id'];
+        $this->requireInstitution($request, (int) $institution);
         return ApiResponse::success('Institutional ECL register.', [
             'policies' => DB::table('institution_ecl_policies')->where('institution_id', $institution)->orderByDesc('id')->get(),
             'offer_ownerships' => DB::table('credit_offer_ecl_ownerships')->where('institution_id', $institution)->orderByDesc('id')->get(),
@@ -80,6 +90,7 @@ final class InstitutionalEclController extends Controller
             'scenarios.*.pd_impaired_bps' => 'required|integer|min:0|max:10000',
             'scenarios.*.lgd_bps' => 'required|integer|min:0|max:10000',
         ]);
+        $this->requireInstitution($request, (int) $v['institution_id']);
         $id = $this->handled(fn () => $this->service->stagePolicy($v['institution_id'], $v, $request->user()));
         return ApiResponse::success('Draft ECL policy created; independent review required.', ['id' => $id], 201);
     }
@@ -103,6 +114,7 @@ final class InstitutionalEclController extends Controller
         ]);
         $offer = CreditOffer::query()->findOrFail($v['credit_offer_id']);
         abort_unless((int) $offer->institution_id === (int) $v['institution_id'], 422);
+        $this->requireInstitution($request, (int) $v['institution_id']);
         $id = $this->handled(fn () => $accounting->stage($offer, $v['owner_type'],
             $v['opfin_share_bps'], $v['agreement_reference'], $request->user()));
         return ApiResponse::success('Pre-origination credit owner awaiting independent approval.', ['id' => $id], 201);
@@ -125,6 +137,7 @@ final class InstitutionalEclController extends Controller
             'opfin_share_bps' => 'required|integer|min:0|max:10000',
             'agreement_reference' => 'required|string|max:255',
         ]);
+        $this->requireInstitution($request, (int) $v['institution_id']);
         $id = $this->handled(fn () => $this->service->registerOwnership($v['institution_id'], $v['loan_id'], $v, $request->user()));
         return ApiResponse::success('Loan credit-risk ownership awaiting independent review.', ['id' => $id], 201);
     }
@@ -151,6 +164,7 @@ final class InstitutionalEclController extends Controller
             'contractual_maturity_date' => 'required|date_format:Y-m-d',
             'source_evidence' => 'required|string|max:255',
         ]);
+        $this->requireInstitution($request, (int) $v['institution_id']);
         $id = $this->handled(fn () => $this->service->stageExternal($v['institution_id'], $v, $request->user()));
         return ApiResponse::success('External loan evidence staged, not an OpFin accounting asset.', ['id' => $id], 201);
     }
@@ -168,6 +182,7 @@ final class InstitutionalEclController extends Controller
             'expected_principal_minor' => 'required|integer|min:0',
             'file' => 'required|file|max:2048',
         ]);
+        $this->requireInstitution($request, (int) $v['institution_id']);
         $content = file_get_contents($request->file('file')->getRealPath());
         if ($content === false) {
             throw ValidationException::withMessages(['file' => 'Unable to load CSV content.']);
@@ -205,6 +220,9 @@ final class InstitutionalEclController extends Controller
             'source_evidence' => 'required|string|max:255',
             'reason' => 'required|string|min:12|max:2000',
         ]);
+        $institution = DB::table('institution_ecl_external_snapshots')->where('id', $id)->value('institution_id');
+        abort_unless($institution, 404);
+        $this->requireInstitution($request, (int) $institution);
         $newId = $this->handled(fn () => $this->service->stageSourceCorrection($id, $v, $request->user()));
         return ApiResponse::success('Immutable source correction awaiting independent review.', ['id' => $newId], 201);
     }
@@ -228,6 +246,7 @@ final class InstitutionalEclController extends Controller
             'restates_run_id' => 'nullable|integer|exists:institution_ecl_runs,id',
             'restatement_reason' => 'required_with:restates_run_id|nullable|string|min:12|max:2000',
         ]);
+        $this->requireInstitution($request, (int) $v['institution_id']);
         $id = $this->handled(fn () => $this->service->build($v['institution_id'], $v['as_of_date'],
             $v['expected_external_count'], $v['expected_external_principal_minor'], $v['coverage_reference'], $request->user(),
             $v['restates_run_id'] ?? null, $v['restatement_reason'] ?? null));
@@ -251,6 +270,9 @@ final class InstitutionalEclController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         $this->requireRead($request);
+        $institution = DB::table('institution_ecl_runs')->where('id', $id)->value('institution_id');
+        abort_unless($institution, 404);
+        $this->requireInstitution($request, (int) $institution);
         return ApiResponse::success('Loan and portfolio-level impairment statement.', $this->handled(fn () => $this->service->details($id)));
     }
 
@@ -258,6 +280,9 @@ final class InstitutionalEclController extends Controller
     {
         $this->requireRead($request);
         abort_unless(in_array($view, ['loans', 'portfolio'], true), 404);
+        $institution = DB::table('institution_ecl_runs')->where('id', $id)->value('institution_id');
+        abort_unless($institution, 404);
+        $this->requireInstitution($request, (int) $institution);
         $details = $this->handled(fn () => $this->service->details($id));
         $run = $details['run'];
         $file = 'ecl-'.$run->institution_id.'-'.$run->as_of_date.'-'.$run->revision.'-'.$view.'.csv';
