@@ -151,6 +151,88 @@ class FinancialSignOffConsolidationTest extends TestCase
         app(EarlySettlementService::class)->quote($loan->fresh(), $customer);
     }
 
+    public function test_partner_owned_exposure_posts_only_custodial_cash_and_partner_liability(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        DB::table('loan_ecl_ownerships')->insert([
+            'loan_id' => $loan->id, 'institution_id' => $loan->institution_id,
+            'owner_type' => 'partner', 'opfin_share_bps' => 0,
+            'agreement_reference' => 'TEST-AGENCY-AGREEMENT',
+            'status' => 'approved', 'created_by' => $operations->id,
+            'approved_by' => $operations->id, 'approved_at' => now(),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $cash = LedgerAccount::create([
+            'code' => 'cash.test.collection', 'name' => 'Custodial collection',
+            'type' => 'asset', 'currency' => 'UGX', 'is_active' => true,
+        ]);
+        $held = LedgerAccount::create([
+            'code' => 'liability.partner_funds_held.institution_'.$loan->institution_id,
+            'name' => 'Lender funds held', 'type' => 'liability', 'currency' => 'UGX',
+            'is_active' => true,
+        ]);
+        $journal = app(ProductionLedgerService::class)->post(
+            'test:partner-only-custody', 'loan.repayment', $loan,
+            [
+                ['account_id' => $cash->id, 'direction' => 'debit', 'amount_minor' => 1500],
+                ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => 1500],
+            ],
+            $operations, 'UGX', ['loan_id' => $loan->id, 'ownership_type' => 'partner'],
+        );
+        $this->assertCount(2, $journal->entries);
+        $this->assertEqualsCanonicalizing([$cash->id, $held->id],
+            $journal->entries->pluck('ledger_account_id')->all());
+
+        app(ProductionLedgerService::class)->post(
+            'test:partner-custody-reversal', 'loan.repayment.reversal', $loan,
+            [
+                ['account_id' => $cash->id, 'direction' => 'credit', 'amount_minor' => 1500],
+                ['account_id' => $held->id, 'direction' => 'debit', 'amount_minor' => 1500],
+            ],
+            $operations, 'UGX', ['loan_id' => $loan->id, 'ownership_type' => 'partner'],
+        );
+        $this->assertSame(0, (int) DB::table('ledger_entries')->where('ledger_account_id', $held->id)
+            ->selectRaw("SUM(CASE WHEN direction = 'credit' THEN amount_minor ELSE -amount_minor END) AS balance")
+            ->value('balance'));
+    }
+
+    public function test_partner_risk_owner_blocks_platform_impairment_income_and_asset_entries(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        DB::table('loan_ecl_ownerships')->insert([
+            'loan_id' => $loan->id, 'institution_id' => $loan->institution_id,
+            'owner_type' => 'partner', 'opfin_share_bps' => 0,
+            'agreement_reference' => 'TEST-AGENCY-ACCOUNTING',
+            'status' => 'approved', 'created_by' => $operations->id,
+            'approved_by' => $operations->id, 'approved_at' => now(),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $cash = LedgerAccount::create([
+            'code' => 'cash.test.forbidden', 'name' => 'Test cash',
+            'type' => 'asset', 'currency' => 'UGX', 'is_active' => true,
+        ]);
+        $income = LedgerAccount::create([
+            'code' => 'income.test.partner', 'name' => 'Forbidden lender income',
+            'type' => 'income', 'currency' => 'UGX', 'is_active' => true,
+        ]);
+        try {
+            app(ProductionLedgerService::class)->post(
+                'test:partner-income-forbidden', 'loan.repayment', $loan,
+                [
+                    ['account_id' => $cash->id, 'direction' => 'debit', 'amount_minor' => 500],
+                    ['account_id' => $income->id, 'direction' => 'credit', 'amount_minor' => 500],
+                ],
+                $operations, 'UGX', ['loan_id' => $loan->id, 'ownership_type' => 'partner'],
+            );
+            $this->fail('Partner financial income must never be recognised as OpFin revenue.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('platform receivable, income', $e->getMessage());
+        }
+        $this->expectException(InvalidArgumentException::class);
+        app(LoanImpairmentService::class)->assess($loan, now(), 500,
+            'stage_1', 'test-partner-ineligible', ['risk_owner' => 'partner'], $operations);
+    }
+
     public function test_closed_accounting_period_rejects_a_posting_inside_that_period(): void
     {
         $actor = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
