@@ -213,6 +213,11 @@ final class InstitutionalExposureAccountingService
     {
         $money = MobileMoneyTransaction::query()->findOrFail($moneyId);
         $this->validatedFundingSource($money);
+        if (DB::table('institution_ecl_funding_receipts')
+            ->where('provider', $money->provider)
+            ->where('provider_reference', $money->provider_reference)->exists()) {
+            throw new InvalidArgumentException('The provider statement reference has already been allocated to institutional funding.');
+        }
         if (! $money->institution_id || trim($evidenceReference) === '') {
             throw new InvalidArgumentException('The partner institution and bank/provider reconciliation evidence are required.');
         }
