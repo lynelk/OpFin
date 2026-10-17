@@ -12,6 +12,7 @@ Prepared: 17 October 2026.
 | Platform/partner/shared ownership classification and loan attestation | `InstitutionalExposureAccountingService::attachLoan`, immutable loan ownership | Committed, runtime test pending |
 | No partner receivable or income in canonical platform GL | `ProductionLoanLedgerService`, `ProductionLedgerService`, fee/interest guards | Committed, end-to-end reconciliation pending |
 | Agency-cash reservation and held-funds liability protection | `partner_ecl_cash_reservations`, row-locked partner balance check | Committed, PostgreSQL concurrency acceptance pending |
+| Provider-matched funding receipts and independently approved opening partner cash | `institution_ecl_funding_receipts`, matched money-movement checks, approval/posting service | Committed, actual provider statement and financial UAT pending |
 | Partner receipts, collections and provider-confirmed reversals | `ProductionLoanLedgerService` | Committed, provider/bank proof pending |
 | Shared/guarantee postings blocked until contract-specific book is approved | `InstitutionalExposureAccountingService`, `ProductionLedgerService` | Fail-closed candidate; shared production functionality not ready |
 | Institution-specific scenario policy, external MIS source and monthly ECL snapshot | `InstitutionalEclCalculator`, `InstitutionalEclService`, API | Committed, model validation pending |
@@ -28,7 +29,7 @@ Prepared: 17 October 2026.
 - **PostgreSQL and SQLite migrations:** **not run**.
 - **Web scripts:** package declares `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`; **not run**.
 - **GitHub Actions / CI:** deferred under the repository owner's existing instruction; **not activated**.
-- **Real financing partners, custodian bank funds, tax, fee-sharing agreements and institution auditor sign-off:** **not available for validation**.
+- **Real financing partners, matched institutional receipts, custodian bank funds, tax, fee-sharing agreements and institution auditor sign-off:** **not available for validation**.
 - **Deployments:** no staging/production deployment performed, no new Railway resources provisioned.
 
 ## Required execution evidence
@@ -80,7 +81,7 @@ For each legal reporting entity, evidence:
 
 ### 4. Explicit release blockers
 
-1. Independent custodian/provider **actual cash receipt posting** for partner prefunds must be integrated and evidenced. The code intentionally blocks partner payouts without a credit balance; it cannot create money from a mandate.
+1. Institutional prefunding ingestion now has code that accepts only successful, reconciled, statement-matched and not-yet-posted provider transactions specifically designated for institutional funding. Its actual Cito/provider feed, independently verified legal sender/source, test posting, funding reconciliation and live acceptance are **not yet proven**. Unverified money remains blocked.
 2. Shared participations and financial guarantee recognition must be implemented after signed legal and Finance classification. They currently remain advisory/blocked.
 3. An actual PostgreSQL and application test run, independent test results, finance model calibration, lender-ledger reconciliation and approval are indispensable.
 4. Corrective journalling for earlier misclassified partner-funded principal remains specific to executed agreements and confirmed historical GL. Automatic guessing is prohibited.
