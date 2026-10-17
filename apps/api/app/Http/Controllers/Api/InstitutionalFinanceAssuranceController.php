@@ -52,6 +52,10 @@ final class InstitutionalFinanceAssuranceController extends Controller
                 ->whereIn('reconciliation_id', $ids)->orderByDesc('id')->get(),
             'classifications' => DB::table('institution_shared_classifications')
                 ->where('institution_id', $v['institution_id'])->orderByDesc('id')->get(),
+            'classification_reviews' => DB::table('institution_shared_classification_reviews')
+                ->whereIn('classification_id', DB::table('institution_shared_classifications')
+                    ->where('institution_id', $v['institution_id'])->select('id'))
+                ->orderByDesc('id')->get(),
             'required_review_capacities' => InstitutionalFinanceAssuranceService::CAPACITIES,
             'shared_origination_enabled' => false,
         ]);
@@ -99,6 +103,21 @@ final class InstitutionalFinanceAssuranceController extends Controller
         $this->invoke(fn () => $this->service->sign($id, $v['capacity'], $v['report_reference'],
             $v['report_sha256'], $v['signed_statement'], $request->user()));
         return ApiResponse::success('Reviewer attestation recorded with immutable source references; no automatic release.', ['id' => $id]);
+    }
+
+    public function reviewShared(Request $request, int $id): JsonResponse
+    {
+        $this->checker($request);
+        $v = $request->validate([
+            'capacity' => 'required|in:treasury,finance,risk,independent_model,legal',
+            'review_reference' => 'required|string|min:12|max:255',
+            'review_document_sha256' => 'required|regex:/^[a-fA-F0-9]{64}$/',
+            'technical_conclusion' => 'required|string|min:50|max:5000',
+        ]);
+        $this->invoke(fn () => $this->service->reviewSharedClassification($id,
+            $v['capacity'], $v['review_reference'], $v['review_document_sha256'],
+            $v['technical_conclusion'], $request->user()));
+        return ApiResponse::success('A distinct reviewer attested this contractual classification; shared GL activation remains blocked.', ['id' => $id]);
     }
 
     public function classifyShared(Request $request): JsonResponse
