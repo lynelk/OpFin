@@ -65,6 +65,7 @@ return new class extends Migration
             $t->string('provider_reference', 255);
             $t->string('evidence_reference', 255);
             $t->char('evidence_hash', 64);
+            $t->unique(['provider', 'provider_reference'], 'ecl_funding_provider_reference_unique');
             $t->string('status', 20)->default('draft');
             $t->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $t->foreignId('approved_by')->nullable()->constrained('users')->restrictOnDelete();
