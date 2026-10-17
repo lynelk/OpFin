@@ -9,7 +9,7 @@ import { capabilityLabel } from "@/lib/capabilities";
 import { formatUgx } from "@/lib/format";
 
 function money(value: number | null): string {
-  return value === null ? "Add balance" : formatUgx(value);
+  return value === null ? "Unavailable" : formatUgx(value);
 }
 
 export default async function DashboardPage() {
@@ -35,18 +35,30 @@ export default async function DashboardPage() {
     const activeCreditConsent = consents.find((consent) => consent.purpose === "credit_processing" && consent.status === "granted");
     const capabilities = capabilityResult.status === "fulfilled" ? capabilityResult.value.data.capabilities : {};
     const paymentCapability = capabilities.payments;
+    const aspirationResult = await Promise.allSettled([financialWellbeingApi.aspirations(token)]);
+    const aspirations = aspirationResult[0].status === "fulfilled" ? aspirationResult[0].value.data.aspirations : [];
+    const preferredAspiration = aspirations.find((goal) => goal.status === "active" && goal.is_priority);
+    const requiresAttention = ["cashflow_shortfall", "budget_overrun", "loan_due", "debt_due"].includes(compass.next_best_action.code);
 
-    const nextAction = !activation.activation_complete
-      ? {
-          title: "Finish your OpFin setup",
-          text: `${activation.essential_complete} of ${activation.essential_total} essential setup steps are complete. Finish the essentials once, then OpFin will ask for additional information only when a journey needs it.`,
-          href: "/setup",
-          action: "Continue setup"
-        }
-      : !kyc || kyc.status !== "verified"
-        ? { title: "Complete verification", text: "Verify your identity so OpFin can safely unlock regulated financial products.", href: "/kyc", action: "Continue verification" }
-        : !activeCreditConsent
-          ? { title: "Review your permissions", text: "Grant only the permissions needed before OpFin uses your information for credit assessment.", href: "/consent", action: "Review permissions" }
+
+    // Immediate obligations outrank optional aspirations. KYC/credit permission
+    // remains mandatory at the actual product gate, not for personal planning.
+    const nextAction = requiresAttention
+      ? compass.next_best_action
+      : !activation.activation_complete
+        ? {
+            title: "Keep building your OpFin account",
+            text: `${activation.essential_complete} of ${activation.essential_total} setup steps complete. You can continue exploring your money and goals while finishing the steps relevant to your next financial service.`,
+            href: "/setup",
+            action: "Continue my setup"
+          }
+        : preferredAspiration
+          ? {
+              title: `Move towards ${preferredAspiration.title}`,
+              text: "Your goal is yours to shape. Review it and choose one manageable next step. A plan is not a savings deposit or a product offer.",
+              href: "/ahead",
+              action: "Review my goal"
+            }
           : compass.next_best_action;
 
     return (
@@ -54,21 +66,56 @@ export default async function DashboardPage() {
         title={`Welcome, ${user.name}`}
         description="Understand, manage, plan and improve your money. Your Financial Compass separates recorded facts from estimates and keeps each Financial Space private."
       >
-        <section className="panel">
-          <div className="case-card-head"><div><h2>Your financial spaces</h2><p className="muted">Personal money, households, savings groups and organisations under one identity.</p></div><Link href="/spaces">Open spaces</Link></div>
-        </section>
-        <section className="financial-compass" aria-labelledby="financial-compass-title">
-          <p className="eyebrow">Financial Compass</p>
-          <h2 className="financial-compass-title" id="financial-compass-title">See the position. Understand the next move.</h2>
-          <p className="muted">Recorded facts, estimates and unavailable information stay distinct so guidance never looks more certain than the underlying evidence.</p>
-        </section>
-        <section className="panel compass-next-action opfin-next-step">
-          <p className="eyebrow">Recommended next step</p>
-          <h2>{nextAction.title}</h2>
-          <p className="muted">{nextAction.text}</p>
-          <Link className="button compass-action" href={nextAction.href}>{nextAction.action}</Link>
-        </section>
-
+        <div className="opfin-today">
+          <section className="financial-compass" aria-labelledby="financial-compass-title">
+            <div className="case-card-head">
+              <div>
+                <p className="eyebrow">OpFin Today · Financial Compass</p>
+                <h2 className="financial-compass-title" id="financial-compass-title">Your money, clearly in view.</h2>
+                <p className="muted">Your recorded position. Estimates and missing information remain clearly labelled.</p>
+              </div>
+              <Link href="/money">My money plan</Link>
+            </div>
+            <div className="opfin-today-position" aria-label="Financial position">
+              <div>
+                <h3>Available money</h3>
+                <strong className="stat">{money(position.available_money_minor)}</strong>
+                <p className="muted">{position.available_money_confidence ? `Source: ${position.available_money_confidence.replaceAll("_", " ")}` : "No current balance source"}</p>
+              </div>
+              <div>
+                <h3>Coming up · 30 days</h3>
+                <strong className="stat">{formatUgx(position.committed_money_minor)}</strong>
+                <p className="muted">Confirmed and scheduled commitments</p>
+              </div>
+              <div>
+                <h3>Safe-to-spend estimate</h3>
+                <strong className="stat">{money(position.safe_to_spend_minor)}</strong>
+                <p className="muted"><Link href="/money">How this is calculated</Link></p>
+              </div>
+            </div>
+          </section>
+          <div className="opfin-today-focus">
+            <section className="panel opfin-next-step">
+              <p className="eyebrow">One useful next step</p>
+              <h2>{nextAction.title}</h2>
+              <p className="muted">{nextAction.text}</p>
+              <Link className="button compass-action" href={nextAction.href}>{nextAction.action}</Link>
+            </section>
+            <section className="panel opfin-today-aspiration">
+              <p className="eyebrow">OpFin Ahead</p>
+              <h2>{preferredAspiration ? preferredAspiration.title : "What matters to you?"}</h2>
+              <p className="muted">{preferredAspiration ? "Your chosen priority. Your plans can change whenever life changes." : "Start a personal goal. You do not need a loan, investment or savings product to make a plan."}</p>
+              <Link href="/ahead">{preferredAspiration ? "See my goals" : "Choose my goal"} →</Link>
+            </section>
+          </div>
+          <section className="opfin-today-shortcuts" aria-label="Your financial journeys">
+            <Link href="/money">My money</Link>
+            <Link href="/ahead">My goals</Link>
+            <Link href="/save">Save</Link>
+            <Link href="/borrow">Borrow</Link>
+            <Link href="/grow">Grow</Link>
+            <Link href="/more">More</Link>
+          </section>
         {!activation.activation_complete ? (
           <section className="panel" style={{ marginBottom: 16 }}>
             <div className="case-card-head">
@@ -82,24 +129,8 @@ export default async function DashboardPage() {
           </section>
         ) : null}
 
-        <div className="grid grid-3 compass-grid">
-          <section className="panel">
-            <h2>Available money</h2>
-            <div className="stat">{money(position.available_money_minor)}</div>
-            <p className="muted">{position.available_money_confidence ? `Source confidence: ${position.available_money_confidence.replaceAll("_", " ")}.` : "No current balance source is recorded."}</p>
-          </section>
-          <section className="panel">
-            <h2>Committed money</h2>
-            <div className="stat">{formatUgx(position.committed_money_minor)}</div>
-            <p className="muted">Confirmed and scheduled obligations in the next 30 days.</p>
-          </section>
-          <section className="panel">
-            <h2>Safe to spend</h2>
-            <div className="stat">{money(position.safe_to_spend_minor)}</div>
-            <p className="muted">{position.safe_to_spend_explanation}</p>
-          </section>
-        </div>
-
+        <details className="opfin-today-details">
+          <summary>Explore more of your finances and services</summary>
         <div className="grid grid-3 compass-grid">
           <section className="panel">
             <h2>Debt obligations</h2>
@@ -114,24 +145,9 @@ export default async function DashboardPage() {
           <section className="panel">
             <h2>Payments</h2>
             <div className="stat stat-text">{capabilityLabel(paymentCapability)}</div>
-            <p className="muted">Money movement is executed through CPay when enabled.</p>
+            <p className="muted">Payment services depend on actual provider activation and confirmation.</p>
           </section>
         </div>
-
-        <section className="panel">
-          <div className="case-card-head">
-            <div>
-              <h2>What would you like to do?</h2>
-              <p className="muted">Four clear financial journeys. Setup, security, automation and support stay in More so Home remains focused.</p>
-            </div>
-          </div>
-          <div className="quick-actions" aria-label="Primary financial journeys">
-            <Link className="button" href="/borrow">Borrow</Link>
-            <Link className="button secondary" href="/save">Save</Link>
-            <Link className="button secondary" href="/grow">Grow</Link>
-            <Link className="button secondary" href="/insurance">Protect</Link>
-          </div>
-        </section>
 
         <section className="panel">
           <div className="case-card-head">
@@ -211,6 +227,8 @@ export default async function DashboardPage() {
     return (
       <Screen title="Home" description="Your Financial Compass will appear here when your account data is available.">
         <StateNotice state={state} message={message} />
+        </details>
+        </div>
       </Screen>
     );
   }
