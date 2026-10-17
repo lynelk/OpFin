@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\EarlySettlementController;
 use App\Http\Controllers\Api\EssentialsBillPlanningController;
 use App\Http\Controllers\Api\EssentialsController;
 use App\Http\Controllers\Api\FinancialControlController;
+use App\Http\Controllers\Api\FinancialAspirationController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\FinancialSpaceController;
 use App\Http\Controllers\Api\FinancialSpaceCredentialController;
@@ -230,6 +231,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/reconciliation/summary', [V5P0PlatformController::class, 'reconciliation']);
 
     Route::get('/financial-compass', [FinancialWellbeingController::class, 'compass']);
+    Route::get('/financial-aspirations', [FinancialAspirationController::class, 'index']);
+    Route::post('/financial-aspirations', [FinancialAspirationController::class, 'store']);
+    Route::patch('/financial-aspirations/{reference}', [FinancialAspirationController::class, 'update'])->whereUuid('reference');
     Route::get('/financial-categories', [FinancialWellbeingController::class, 'categories']);
     Route::get('/financial-accounts', [FinancialWellbeingController::class, 'accounts']);
     Route::post('/financial-accounts', [FinancialWellbeingController::class, 'storeAccount']);
