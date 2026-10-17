@@ -459,9 +459,11 @@ class ProductionLoanLedgerService
         return $this->ledgerService->post($reference, 'loan.disbursement', $mobileMoney, [
             ['account_id' => $held->id, 'direction' => LedgerEntry::DIRECTION_DEBIT,
                 'amount_minor' => $cashMinor, 'memo' => 'Deploy lender funds held as agent; not an OpFin loan receivable'],
-            ['account_id' => $this->providerCashAccount($mobileMoney->provider, 'disbursement', $offer->currency)->id,
+            ['account_id' => app(InstitutionalExposureAccountingService::class)->partnerProviderCashAccount(
+                    (int) $owner->institution_id, $mobileMoney->provider, $offer->currency
+                )->id,
                 'direction' => LedgerEntry::DIRECTION_CREDIT,
-                'amount_minor' => $cashMinor, 'memo' => 'Provider-confirmed agency disbursement'],
+                'amount_minor' => $cashMinor, 'memo' => 'Provider-confirmed agency payout from ring-fenced institutional funds'],
         ], null, $offer->currency, [
             'loan_id' => $loan->id, 'credit_offer_id' => $offer->id,
             'institution_id' => $owner->institution_id, 'ownership_type' => 'partner',
@@ -507,9 +509,11 @@ class ProductionLoanLedgerService
         }
         $held = app(InstitutionalExposureAccountingService::class)->partnerFundsAccount((int) $owner->institution_id, $currency);
         return $this->ledgerService->post($reference, 'loan.repayment', $transaction, [
-            ['account_id' => $this->providerCashAccount($provider, 'collection', $currency)->id,
+            ['account_id' => app(InstitutionalExposureAccountingService::class)->partnerProviderCashAccount(
+                    (int) $owner->institution_id, $provider, $currency
+                )->id,
                 'direction' => LedgerEntry::DIRECTION_DEBIT, 'amount_minor' => $cash,
-                'memo' => 'Agency cash collected for institutional lender'],
+                'memo' => 'Ring-fenced provider cash collected for institutional lender'],
             ['account_id' => $held->id, 'direction' => LedgerEntry::DIRECTION_CREDIT,
                 'amount_minor' => $cash, 'memo' => 'Lender funds held; not OpFin principal, fee or interest income'],
         ], null, $currency, [
