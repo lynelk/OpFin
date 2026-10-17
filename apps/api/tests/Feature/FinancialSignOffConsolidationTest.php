@@ -196,6 +196,54 @@ class FinancialSignOffConsolidationTest extends TestCase
             ->value('balance'));
     }
 
+    public function test_partner_credit_offer_reservation_checks_selected_provider_liquidity_before_payout(): void
+    {
+        [, $operations, $loan] = $this->productionLoan();
+        $offer = \App\Models\CreditOffer::query()->findOrFail($loan->credit_offer_id);
+        $checker = User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]);
+        DB::table('credit_offer_ecl_ownerships')->insert([
+            'credit_offer_id' => $offer->id, 'institution_id' => $offer->institution_id,
+            'owner_type' => 'partner', 'opfin_share_bps' => 0, 'status' => 'approved',
+            'agreement_reference' => 'TEST-VERIFIED-AGENCY-OWNERSHIP',
+            'created_by' => $operations->id, 'approved_by' => $checker->id,
+            'approved_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $treasury = app(\App\Services\InstitutionalExposureAccountingService::class);
+        $held = $treasury->partnerFundsAccount((int) $loan->institution_id, 'UGX');
+        $cashOnOtherProvider = $treasury->partnerProviderCashAccount((int) $loan->institution_id, 'provider_a', 'UGX');
+        $funds = 200000;
+        app(ProductionLedgerService::class)->post(
+            'test:prefund-provider-a-before-payout', 'partner.funds.received', $operations,
+            [
+                ['account_id' => $cashOnOtherProvider->id, 'direction' => 'debit', 'amount_minor' => $funds],
+                ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => $funds],
+            ], $operations, 'UGX'
+        );
+        config()->set('services.mobile_money.default_provider', 'provider_b');
+        try {
+            $treasury->reserveBeforePayout($offer);
+            $this->fail('Availability at Provider A cannot authorise a disbursement through Provider B.');
+        } catch (InvalidArgumentException $exception) {
+            $this->assertStringContainsString('actual payout provider lacks sufficient', $exception->getMessage());
+        }
+        $this->assertSame(0, DB::table('partner_ecl_cash_reservations')->count());
+
+        $payoutCash = $treasury->partnerProviderCashAccount((int) $loan->institution_id, 'provider_b', 'UGX');
+        app(ProductionLedgerService::class)->post(
+            'test:provider-b-prefund-for-payout', 'partner.funds.received', $operations,
+            [
+                ['account_id' => $payoutCash->id, 'direction' => 'debit', 'amount_minor' => $funds],
+                ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => $funds],
+            ], $operations, 'UGX'
+        );
+        $treasury->reserveBeforePayout($offer);
+        $reservation = DB::table('partner_ecl_cash_reservations')->where('credit_offer_id', $offer->id)->first();
+        $this->assertSame('provider_b', $reservation->provider);
+        $this->assertSame((int) $offer->net_disbursement_minor, (int) $reservation->cash_minor);
+        $treasury->reserveBeforePayout($offer);
+        $this->assertSame(1, DB::table('partner_ecl_cash_reservations')->count());
+    }
+
     public function test_partner_cannot_spend_custodial_cash_from_another_provider(): void
     {
         [, $operations, $loan] = $this->productionLoan();
