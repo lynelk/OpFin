@@ -56,7 +56,8 @@ final class InstitutionalFinanceAssuranceService
         ksort($input);
         $prefix = 'cash.partner_custody.institution_'.$institutionId.'.provider_';
         $accounts = DB::table('ledger_accounts')->where('currency', $currency)
-            ->where('code', 'like', $prefix.'%')->get();
+            ->where('type', 'asset')->get()
+            ->filter(fn ($account) => str_starts_with((string) $account->code, $prefix));
         $providerBalances = [];
         foreach ($accounts as $account) {
             $provider = substr($account->code, strlen($prefix));
