@@ -7,7 +7,8 @@ import type {
   FinancialCalendarEvent,
   FinancialCalendarPayload,
   FinancialCategoriesPayload,
-  FinancialCompass
+  FinancialCompass,
+  FinancialAspiration
 } from "../financial-wellbeing/types";
 import { classifyStatus, OpfinApiError } from "./errors";
 
@@ -143,6 +144,17 @@ const mockCompass: FinancialCompass = {
 
 function mockRequest<T>(path: string, init: RequestOptions): Promise<ApiEnvelope<T>> {
   if (path === "/financial-compass") return Promise.resolve(envelope(mockCompass as T));
+  if (path === "/financial-aspirations" && init.method === "POST") return Promise.resolve(envelope({
+    ...(init.bodyJson as object), reference: "sandbox-goal", category: "other", currency: "UGX",
+    target_amount_minor: null, target_date: null, status: "active", is_priority: false, financial_state: "plan_only",
+    updated_at: now.toISOString()
+  } as T));
+  if (path.startsWith("/financial-aspirations/") && init.method === "PATCH") return Promise.resolve(envelope({
+    reference: path.split("/").pop(), ...(init.bodyJson as object), title: "Sandbox goal",
+    category: "other", currency: "UGX", status: "active", financial_state: "plan_only",
+    updated_at: now.toISOString()
+  } as T));
+  if (path === "/financial-aspirations") return Promise.resolve(envelope({ aspirations: [], financial_state: "plan_only" } as T));
   if (path === "/financial-categories") return Promise.resolve(envelope({ categories: ["Food", "Transport", "Rent", "Utilities", "School Fees", "Health", "Airtime/Data", "Business Stock", "Family Support", "Loan Repayment", "Savings", "Insurance", "Entertainment", "Transfers", "Other"] } as T));
   if (path === "/financial-accounts" && init.method === "POST") return Promise.resolve(envelope({ ...mockAccount, ...(init.bodyJson as object), id: Date.now() } as T));
   if (path === "/financial-accounts") return Promise.resolve(envelope({ accounts: [mockAccount] } as T));
@@ -180,5 +192,11 @@ export const financialWellbeingApi = {
     request<CashFlowEntry>(`/cash-flow/entries/${entryId}`, { method: "PATCH", bodyJson: { category }, token }),
   calendar: (token?: string) => request<FinancialCalendarPayload>("/financial-calendar", { token }),
   createCalendarEvent: (payload: { title: string; event_type: string; direction: "income" | "expense"; amount_minor: number; scheduled_for: string; certainty?: "scheduled" | "estimated"; recurrence?: "weekly" | "monthly"; category?: string; notes?: string; currency?: string }, token?: string) =>
-    request<FinancialCalendarEvent>("/financial-calendar/events", { method: "POST", bodyJson: payload, token })
+    request<FinancialCalendarEvent>("/financial-calendar/events", { method: "POST", bodyJson: payload, token }),
+  aspirations: (token?: string) =>
+    request<{ aspirations: FinancialAspiration[]; financial_state: "plan_only" }>("/financial-aspirations", { token }),
+  createAspiration: (payload: { title: string; category?: FinancialAspiration["category"]; target_amount_minor?: number | null; target_date?: string | null }, token?: string) =>
+    request<FinancialAspiration>("/financial-aspirations", { method: "POST", bodyJson: payload, token }),
+  updateAspiration: (reference: string, payload: { title?: string; status?: FinancialAspiration["status"]; is_priority?: boolean }, token?: string) =>
+    request<FinancialAspiration>(`/financial-aspirations/${encodeURIComponent(reference)}`, { method: "PATCH", bodyJson: payload, token })
 };

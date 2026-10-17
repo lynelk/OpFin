@@ -22,6 +22,7 @@ const roleHomes: Record<UserRole, string> = {
 
 export const protectedPortalPrefixes = [
   "/admin",
+  "/ahead",
   "/asset-finance",
   "/borrow",
   "/calendar",

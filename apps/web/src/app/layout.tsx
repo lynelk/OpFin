@@ -6,6 +6,7 @@ import "./globals.css";
 import "./marketing.css";
 import "./experience.css";
 import "./opfin-brand.css";
+import "./opfin-today.css";
 
 export const metadata: Metadata = {
   title: "OpFin | Understand, manage, plan and improve your money",

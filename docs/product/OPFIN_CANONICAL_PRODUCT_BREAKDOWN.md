@@ -101,6 +101,12 @@ OPFIN
 
 These are **experience patterns**, not necessarily new product tabs, API endpoints or shipped modules. Build within existing Home, Compass and goal routes first. Simple, Detailed and Advanced are optional information-depth preferences, never financial class labels.
 
+## Dedicated credit priority and merchant-finance programme
+
+**The universal financial life platform stays universal.** Inside OpFin, Finance is the near-term controlled, evidence-led commercial vertical, prioritising permissioned Stolets merchant finance, four independent underwriting outputs, affordability, transparent pricing, PAR/roll-rate/vintage dashboards, governed lender exposure, reconciliation, Cito orchestration and ultimately permissioned portfolio capital. These workstreams now run alongside active customer and investor growth; they are not a reason to delay authorised services or redefine the customer experience as compulsory credit solicitation.
+
+Preserved in full: [OpFin Finance Evidence-Led Credit Programme](OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md). The credit programme calls for immediate growth of lending volume and eligible investor participation across currently authorised products and funding routes. Later months organise optimisation and evidence gathering, not blanket participation delays. The eight Universal Financial Life workstreams and age-appropriate service rules remain intact.
+
 ## 4. Financial services: distinct regulated product domains
 
 | ID | Product family | Scope and example journeys | Provider/governance rule | Source/launch interpretation |

@@ -311,3 +311,19 @@ The asset-finance routes are a reviewed candidate implementation, **not** an ass
 | POST | `/api/admin/asset-finance-cases/{case}/transition` | Advance asset finance lifecycle according to allowed transitions |
 
 Do not infer custody, provider success or loan disbursement from application approval alone. The Finance Product Factory, independent settlement controls, safeguarding rules and all applicable lender mandates remain authoritative. For request field validation and error handling, see `AssetFinanceLifecycleController` and the corresponding feature tests.
+
+## Personal aspirations contract (17 October 2026 review candidate)
+
+**Authenticated and Personal-Space-scoped; planning only, not regulated savings or lending.** Implemented as a draft vertical slice, not a deployed or launch-approved financial product.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| GET | `/api/financial-aspirations` | List caller-owned aspirations, ordered by selected priority then recent creation |
+| POST | `/api/financial-aspirations` | Create private planning aspiration; only title, category, optional target amount/date accepted |
+| PATCH | `/api/financial-aspirations/{reference}` | Revise title/category/target/date, pause/resume/archive, or select a current active priority |
+
+The API resolves the person's canonical Personal Financial Space **server-side**. A client cannot assign a different person or Financial Space by submitting IDs. The response includes `financial_state=plan_only`; `target_amount_minor` is **not a held balance or deposit**. A person can choose at most one current active priority. Records and mutations remain owner/Space/institution scoped; updates use a row lock on the person for priority changes. Scope is initial Uganda/UGX planning only. No investment, lending, savings custody, financial score or provider-money action is created. Protected-youth account access requires independent safeguarding/guardian and lawful-processing authorisation.
+
+The public Next.js `/learn` page is static financial education that does not require an OpFin account or credit eligibility; it collects no lesson answers or child profile in this initial iteration. The customer `/ahead` page is protected by the existing portal authentication and Laravel account authority.
+
+The broader target evidence-led financing contract is documented in `docs/product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md`, **not yet represented by new underwriting execution endpoints**.

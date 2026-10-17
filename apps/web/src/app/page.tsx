@@ -68,7 +68,7 @@ export default function HomePage() {
           <a href="#employers">Businesses</a>
           <a href="#partners">Partners</a>
           <a href="#access">Access</a>
-          <a href="#learn">Learn</a>
+          <Link href="/learn">Free learning</Link>
         </nav>
         <div className="marketing-nav-actions">
           <Link className="button marketing-primary" href="/login">Sign in to Web</Link>
@@ -84,7 +84,7 @@ export default function HomePage() {
           </p>
           <div className="marketing-hero-actions">
             <Link className="button marketing-primary marketing-large" href="/login">Sign in to Web</Link>
-            <a className="button secondary marketing-large" href="#how-it-works">Explore OpFin</a>
+            <Link className="button secondary marketing-large" href="/learn">Learn about money, freely</Link>
           </div>
           <p className="marketing-preview-disclosure">
             New-customer registration is phone-first in the OpFin App. Web sign-in is for existing or authorised Workspace access.

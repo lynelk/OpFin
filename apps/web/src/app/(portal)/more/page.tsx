@@ -28,6 +28,7 @@ export default function MorePage() {
       <section className="panel">
         <h2>Plan & automate</h2>
         <div className="grid grid-3">
+          <JourneyCard title="My aspirations" description="Set your own financial goals without opening a regulated financial product." href="/ahead" action="Review my goals" status="available" />
           <JourneyCard title="Money plan" description="Review cash flow, budgets and safe-to-spend from one place." href="/money" action="Open money plan" status="available" />
           <JourneyCard title="Financial calendar" description="See confirmed, scheduled and estimated future cash events." href="/calendar" action="Open calendar" status="available" />
           <JourneyCard title="Money Autopilot" description="Manage capped, user-authorised routines without bypassing provider settlement controls." href="/money-autopilot" action="Manage automation" status="available" />

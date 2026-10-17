@@ -280,6 +280,12 @@ Every slice is done only when implementation, permissions, failure states, tests
 
 Every slice must also satisfy the **Complexity Behind Simplicity** release gate above. A technically correct feature is not production-ready if it transfers avoidable platform, regulatory or operational complexity to the customer.
 
+## Evidence-led credit and merchant finance delivery priority
+
+Within the universal financial-life platform, OpFin Finance pursues **immediate growth in eligible lending and investor participation through lawfully activated products**, alongside stronger evidence-led underwriting and portfolio management. No compulsory loan-vintage count, pilot cohort number or elapsed-month milestone is a universal condition for growth. The full [Finance Evidence-Led Credit Programme](OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md) preserves purpose-bound Stolets-merchant products, independently measured PD/affordability/structure/confidence, a permissioned business evidence interface, cash-flow affordability, all-in UGX pricing, measured limit progression, PAR/vintage economics, stop-loss, customer explanations, fairness, Cito orchestration, model governance, separate mobile borrower/investor workspaces and gated UGX portfolio capital.
+
+This credit workstream does not displace universal learning, planning, personal aspirations, privacy or age-appropriate guidance. It does not activate new lender products or authorise direct access to Stolets systems.
+
 ## OpFin Essentials
 
 Essentials is an embedded financial-service capability inside the wider OpFin financial operating platform. It provides purpose-bound financing for verified electricity, water, connectivity, household energy and rent while preserving the existing Financial Spaces, Financial Compass, savings, investment, insurance, employer and ordinary responsible-credit journeys.

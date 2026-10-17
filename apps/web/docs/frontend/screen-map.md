@@ -63,3 +63,11 @@ When a workflow changes materially, update this map or the corresponding current
 The current Web experience includes a Financial Spaces index and Space detail/workspace context. The product proposition is **understand, manage, plan and improve your money** across Personal, Household, Savings Group and authorised organisation contexts. Web is an enhancement for Individuals/Savings Groups and the deeper operating surface for Business/Employer, SACCO and regulated-partner administration.
 
 Do not restore lending as the sole organising principle for Home/navigation. Borrowing remains one financial capability alongside everyday money, budgeting/goals, debt/receivables, assets/net position, saving, investment and protection.
+
+## OpFin Today, Ahead and universal guest learning (draft)
+
+- Customer `/dashboard` introduces compact evidence-labelled OpFin Today, one useful Next Step, a chosen private aspiration and collapsible details.
+- Customer `/ahead` supports voluntary financial plans: create, select current priority, pause/resume, archive. The ASPIRATION financial state is `plan_only`, not a regulated savings account, payment, investment or credit decision.
+- Public `/learn` provides basic age-appropriate lessons without login or financial eligibility. It stores no lesson-completion or personally identifying child profile.
+- The existing Borrow, Save, Grow, Money, Space, Consent and Support routes retain their own API-authoritative permission, eligibility, evidence and financial-control rules.
+- The parallel Finance evidence-led merchant-credit product roadmap is documented in `docs/product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md` and does not replace the universal Home.

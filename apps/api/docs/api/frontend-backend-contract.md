@@ -421,3 +421,7 @@ Partner source attribution is the separately reviewed `financial_intent_source_p
 ### Final review corrections
 
 Payroll currency is copied from the authoritative financing product; client-supplied mismatches are rejected. Positive reservation confirmation requires the operations caller to supply the agreement reference independently, not inherit a customer-declared reference. Nonterminal premium processing and reversal exceptions block account deletion, including when the policy itself is cancelled. Fully reversed legacy loans and declined claims are terminal for deletion checks, without deleting their required history. The forward payroll migration installs immutable-event protection on databases that ran an earlier schema.
+
+## Personal financial aspirations (new draft contract)
+
+`GET /api/financial-aspirations`, `POST /api/financial-aspirations`, `PATCH /api/financial-aspirations/{reference}` are authenticated, person/Personal-Space-scoped **planning** routes. A created aspiration is labelled `plan_only`; it cannot be represented as confirmed saving, a credit input or a movement of funds. A user can select one active priority, pause, resume and archive plans; owners cannot amend another person's record. `/learn` is public static education and `/ahead` is authenticated customer Web. The proposed merchant-credit evidence-led risk/affordability contract is documented in the Finance programme but is not activated by these API routes.
