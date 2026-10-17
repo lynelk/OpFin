@@ -67,6 +67,22 @@ export default async function InstitutionalEclPage({ searchParams }: { searchPar
           <button className="button">Create pending policy</button>
         </form></details>
       </section>
+      <section className="panel"><h2>Bank/provider-matched institutional funding</h2>
+        <p>Partner lending requires cash, not merely a funding promise. Stage a successful institutional-prefunding collection only after provider and statement reconciliation both say matched. The source must have no customer loan or offer and must still be unposted. A different platform administrator must approve the posting to the custodial provider wallet and funds-held liability.</p>
+        <table className="table"><thead><tr><th>Source provider movement</th><th>Amount</th><th>Evidence</th><th>Status</th><th>Accounting approval</th></tr></thead><tbody>
+          {register.funding_receipts.map(receipt => <tr key={receipt.id}><td>{receipt.provider} · {receipt.mobile_money_transaction_id}</td>
+            <td>{receipt.currency} {receipt.amount_minor.toLocaleString("en-GB")}</td>
+            <td>{receipt.evidence_reference}</td><td>{receipt.status}</td>
+            <td>{receipt.status === "draft" ? <Action kind="funding-receipt-approve" id={receipt.id} institution={institutionId} label="Verify and book funds received" /> :
+              `Ledger ${receipt.ledger_transaction_id ?? "pending"}`}</td></tr>)}
+        </tbody></table>
+        <details><summary>Stage reconciled partner capital receipt</summary><form action={institutionalEclAction} className="form-grid">
+          {hidden}<input type="hidden" name="kind" value="funding-receipt" />
+          <Field label="Matched institutional-prefunding provider transaction ID" name="mobile_money_transaction_id" type="number" />
+          <Field label="Independent bank/provider reconciliation evidence" name="evidence_reference" />
+          <button className="button">Submit matched funding for independent review</button>
+        </form></details>
+      </section>
       <section className="panel"><h2>Pre-disbursement legal credit ownership</h2>
         <p>Each governed credit offer must have a signed risk-owner attestation and independent approval before any payment instruction. A partner-funded payout also requires ledger-verified held funds; an investment mandate alone is not cleared money. Shared participations remain blocked until their principal and guarantee accounts pass financial sign-off.</p>
         <table className="table"><thead><tr><th>Offer</th><th>Legal risk owner</th><th>Platform share</th><th>Status</th><th>Review</th></tr></thead><tbody>
