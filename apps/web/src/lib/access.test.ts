@@ -42,6 +42,10 @@ describe("role-aware workspace access", () => {
 
   it("recognises portal routes that require a session", () => {
     expect(isProtectedPortalPath("/financial-passport")).toBe(true);
+    expect(isProtectedPortalPath("/ahead")).toBe(true);
+    expect(canRoleOpenPath("customer", "/ahead")).toBe(true);
+    expect(canRoleOpenPath("programme_partner", "/ahead")).toBe(false);
+    expect(isProtectedPortalPath("/learn")).toBe(false);
     expect(isProtectedPortalPath("/spaces/42")).toBe(true);
     expect(isProtectedPortalPath("/")).toBe(false);
     expect(isProtectedPortalPath("/account/delete")).toBe(false);
