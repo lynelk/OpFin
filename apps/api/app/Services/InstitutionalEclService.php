@@ -500,12 +500,12 @@ final class InstitutionalEclService
                     || $ownership->owner_type !== 'opfin' || (int) $ownership->opfin_share_bps !== 10000) {
                     throw new InvalidArgumentException('Credit ownership changed since the ECL snapshot.');
                 }
-                $platformJournalCount++;
                 $liveLoan = Loan::withoutGlobalScopes()->findOrFail($item->loan_id);
                 $writtenOff = DB::table('credit_write_offs')->where('loan_id', $liveLoan->id)->exists();
                 if ($writtenOff && (int) $item->gross_exposure_minor === 0) {
                     continue; // Its approved allowance was already consumed by the original write-off.
                 }
+                $platformJournalCount++;
                 if ($this->impairment->grossRecordedExposureMinor($liveLoan) !== (int) $item->gross_exposure_minor) {
                     throw new InvalidArgumentException('Loan balance changed after ECL cut-off; rebuild from verified accounting evidence.');
                 }
