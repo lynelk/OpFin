@@ -196,6 +196,34 @@ class FinancialSignOffConsolidationTest extends TestCase
             ->value('balance'));
     }
 
+    public function test_partner_fiduciary_liability_cannot_be_spent_without_prior_verified_cash(): void
+    {
+        $actor = User::factory()->create(['role' => User::ROLE_OPERATIONS]);
+        $held = LedgerAccount::create([
+            'code' => 'liability.partner_funds_held.institution_9998',
+            'name' => 'Test lender funds awaiting receipt',
+            'type' => 'liability', 'currency' => 'UGX', 'is_active' => true,
+        ]);
+        $cash = LedgerAccount::create([
+            'code' => 'cash.test.prefunding', 'name' => 'Test payment cash',
+            'type' => 'asset', 'currency' => 'UGX', 'is_active' => true,
+        ]);
+        $prior = DB::table('ledger_transactions')->count();
+        try {
+            app(ProductionLedgerService::class)->post(
+                'test:partner-unfunded-payout', 'partner.funds.disbursement', $actor,
+                [
+                    ['account_id' => $held->id, 'direction' => 'debit', 'amount_minor' => 10000],
+                    ['account_id' => $cash->id, 'direction' => 'credit', 'amount_minor' => 10000],
+                ], $actor, 'UGX',
+            );
+            $this->fail('A partner funds payable cannot be spent before cash receipt is evidenced.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('cannot be overdrawn', $e->getMessage());
+        }
+        $this->assertSame($prior, DB::table('ledger_transactions')->count());
+    }
+
     public function test_partner_risk_owner_blocks_platform_impairment_income_and_asset_entries(): void
     {
         [, $operations, $loan] = $this->productionLoan();
