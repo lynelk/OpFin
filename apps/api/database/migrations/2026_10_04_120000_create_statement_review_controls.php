@@ -33,7 +33,7 @@ return new class extends Migration
 
         $driver = DB::getDriverName();
         if ($driver === 'pgsql') {
-            DB::unprepared("CREATE FUNCTION fi_statement_reviews_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Statement review decisions are append-only'; END; $$");
+            DB::unprepared("CREATE OR REPLACE FUNCTION fi_statement_reviews_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Statement review decisions are append-only'; END; $$");
             DB::unprepared('CREATE TRIGGER fi_statement_reviews_immutable BEFORE UPDATE OR DELETE ON fi_statement_reviews FOR EACH ROW EXECUTE FUNCTION fi_statement_reviews_immutable()');
         } elseif ($driver === 'sqlite') {
             foreach (['UPDATE', 'DELETE'] as $verb) {
