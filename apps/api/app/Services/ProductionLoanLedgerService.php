@@ -10,6 +10,7 @@ use App\Models\LedgerTransaction;
 use App\Models\Loan;
 use App\Models\MobileMoneyTransaction;
 use App\Models\Transaction;
+use Illuminate\Support\Facades\DB;
 
 class ProductionLoanLedgerService
 {
@@ -33,6 +34,10 @@ class ProductionLoanLedgerService
 
         [$principalMinor, $cashMinor, $deductedFeesMinor, $financedFeesMinor] = $this->creditDisbursementComponents($offer);
         $this->assertCreditPaymentMatchesOffer($mobileMoney, $offer, $cashMinor);
+        $owner = app(InstitutionalExposureAccountingService::class);
+        if ($owner->governed($offer) && $owner->approved($offer)->owner_type === 'partner') {
+            return $this->postAgencyDisbursement($mobileMoney, $loan, $offer, $cashMinor, $reference);
+        }
 
         $entries = [
             [
@@ -126,6 +131,10 @@ class ProductionLoanLedgerService
 
         [$principalMinor, $cashMinor, $deductedFeesMinor, $financedFeesMinor] = $this->creditDisbursementComponents($offer);
         $this->assertCreditPaymentMatchesOffer($mobileMoney, $offer, $cashMinor);
+        if (app(InstitutionalExposureAccountingService::class)->governed($offer)
+            && app(InstitutionalExposureAccountingService::class)->approved($offer)->owner_type === 'partner') {
+            return $this->reverseAgencyDisbursement($mobileMoney, $loan, $offer, $reference, $originalReference);
+        }
 
         $entries = [
             [
@@ -204,6 +213,10 @@ class ProductionLoanLedgerService
             return null;
         }
 
+        $owner = app(InstitutionalExposureAccountingService::class)->ownerForLoan($loan);
+        if ($owner && $owner->owner_type !== 'opfin') {
+            throw new \InvalidArgumentException('Legacy disbursement may not recognise partner or shared loan assets.');
+        }
         $amountMinor = $this->toMinorUnits($transaction->amount);
         $provider = $this->paymentProvider($transaction);
         $currency = $this->transactionCurrency($transaction);
@@ -274,6 +287,14 @@ class ProductionLoanLedgerService
         $loan = $transaction->loan;
         if (! $loan) {
             throw new \InvalidArgumentException('Repayment ledger posting requires a loan.');
+        }
+        $owner = app(InstitutionalExposureAccountingService::class)->ownerForLoan($loan);
+        if ($owner && $owner->status === 'approved' && $owner->owner_type === 'partner') {
+            return $this->postAgencyRepayment($transaction, $loan, $amountMinor, $principalMinor, $interestMinor,
+                $feesMinor, $defaultInterestMinor, $suspenseMinor, $provider, $currency, $reference);
+        }
+        if ($owner && $owner->owner_type === 'shared') {
+            throw new \InvalidArgumentException('Shared-risk loan repayment accounting needs an approved participation subledger.');
         }
         $writtenOff = CreditWriteOff::query()->where('loan_id', $loan->id)->exists();
 
@@ -420,6 +441,84 @@ class ProductionLoanLedgerService
         ]);
 
         return $posted;
+    }
+
+
+    private function postAgencyDisbursement(
+        MobileMoneyTransaction $mobileMoney, Loan $loan, CreditOffer $offer, int $cashMinor, string $reference
+    ): LedgerTransaction {
+        $owner = app(InstitutionalExposureAccountingService::class)->approved($offer);
+        $held = app(InstitutionalExposureAccountingService::class)->partnerFundsAccount((int) $owner->institution_id, $offer->currency);
+        // The approved hold is established before provider payout and consumed in the
+        // same DB transaction as this journal. Never turn a lender's loan into our asset.
+        if (! DB::table('partner_ecl_cash_reservations')->where('credit_offer_id', $offer->id)
+            ->where('status', 'reserved')->where('cash_minor', $cashMinor)->exists()) {
+            throw new \InvalidArgumentException('No verified partner-funded cash reserve backs the completed payout.');
+        }
+        return $this->ledgerService->post($reference, 'loan.disbursement', $mobileMoney, [
+            ['account_id' => $held->id, 'direction' => LedgerEntry::DIRECTION_DEBIT,
+                'amount_minor' => $cashMinor, 'memo' => 'Deploy lender funds held as agent; not an OpFin loan receivable'],
+            ['account_id' => $this->providerCashAccount($mobileMoney->provider, 'disbursement', $offer->currency)->id,
+                'direction' => LedgerEntry::DIRECTION_CREDIT,
+                'amount_minor' => $cashMinor, 'memo' => 'Provider-confirmed agency disbursement'],
+        ], null, $offer->currency, [
+            'loan_id' => $loan->id, 'credit_offer_id' => $offer->id,
+            'institution_id' => $owner->institution_id, 'ownership_type' => 'partner',
+            'partner_funds_account_id' => $held->id, 'principal_minor' => $offer->principal_amount_minor,
+            'agency_cash_minor' => $cashMinor, 'provider_reference' => $mobileMoney->provider_reference,
+        ]);
+    }
+
+    private function reverseAgencyDisbursement(
+        MobileMoneyTransaction $money, Loan $loan, CreditOffer $offer, string $reference, string $originalReference
+    ): LedgerTransaction {
+        $original = LedgerTransaction::query()->with('entries')->where('reference', $originalReference)->firstOrFail();
+        if (($original->metadata['ownership_type'] ?? null) !== 'partner') {
+            throw new \InvalidArgumentException('An agency reversal cannot rewrite an original platform loan asset. Reconcile historic entries.');
+        }
+        return $this->ledgerService->post(
+            $reference, 'loan.disbursement.reversal', $money,
+            $original->entries->map(fn (LedgerEntry $entry) => [
+                'account_id' => (int) $entry->ledger_account_id,
+                'direction' => $entry->direction === LedgerEntry::DIRECTION_CREDIT
+                    ? LedgerEntry::DIRECTION_DEBIT : LedgerEntry::DIRECTION_CREDIT,
+                'amount_minor' => (int) $entry->amount_minor,
+                'memo' => 'Append-only provider-confirmed agency payout reversal',
+            ])->all(), null, $offer->currency, [
+                'loan_id' => $loan->id, 'credit_offer_id' => $offer->id,
+                'ownership_type' => 'partner', 'institution_id' => $offer->institution_id,
+                'reverses_reference' => $originalReference,
+            ]
+        );
+    }
+
+    private function postAgencyRepayment(
+        Transaction $transaction, Loan $loan, int $cash, int $principal, int $interest,
+        int $fees, int $defaultInterest, int $suspense, string $provider,
+        string $currency, string $reference
+    ): LedgerTransaction {
+        if ($cash <= 0) {
+            throw new \InvalidArgumentException('Agent collections must have positive verified cash.');
+        }
+        $owner = app(InstitutionalExposureAccountingService::class)->ownerForLoan($loan);
+        if (! $owner || $owner->status !== 'approved') {
+            throw new \InvalidArgumentException('Agency collections need a verified partner mandate.');
+        }
+        $held = app(InstitutionalExposureAccountingService::class)->partnerFundsAccount((int) $owner->institution_id, $currency);
+        return $this->ledgerService->post($reference, 'loan.repayment', $transaction, [
+            ['account_id' => $this->providerCashAccount($provider, 'collection', $currency)->id,
+                'direction' => LedgerEntry::DIRECTION_DEBIT, 'amount_minor' => $cash,
+                'memo' => 'Agency cash collected for institutional lender'],
+            ['account_id' => $held->id, 'direction' => LedgerEntry::DIRECTION_CREDIT,
+                'amount_minor' => $cash, 'memo' => 'Lender funds held; not OpFin principal, fee or interest income'],
+        ], null, $currency, [
+            'loan_id' => $loan->id, 'ownership_type' => 'partner',
+            'institution_id' => $owner->institution_id,
+            'legacy_transaction_id' => $transaction->id,
+            'principal_minor' => $principal, 'interest_minor' => $interest,
+            'fees_minor' => $fees, 'default_interest_minor' => $defaultInterest,
+            'suspense_minor' => $suspense, 'partner_cash_held_minor' => $cash,
+        ]);
     }
 
     private function creditDisbursementComponents(CreditOffer $offer): array
