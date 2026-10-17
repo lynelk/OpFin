@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CreditOffer;
 use App\Models\LedgerAccount;
 use App\Models\Loan;
+use App\Models\MobileMoneyTransaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -184,6 +185,97 @@ final class InstitutionalExposureAccountingService
             return null;
         }
         return DB::table('loan_ecl_ownerships')->where('loan_id', $loan->id)->first();
+    }
+
+    private function validatedFundingSource(MobileMoneyTransaction $money): void
+    {
+        $meta = (array) ($money->metadata ?? []);
+        if ($money->direction !== MobileMoneyTransaction::DIRECTION_COLLECTION
+            || $money->status !== MobileMoneyTransaction::STATUS_SUCCESSFUL
+            || $money->reconciliation_status !== MobileMoneyTransaction::RECONCILIATION_MATCHED
+            || $money->statement_reconciliation_status !== MobileMoneyTransaction::STATEMENT_MATCHED
+            || $money->accounting_status !== MobileMoneyTransaction::ACCOUNTING_UNPOSTED
+            || $money->credit_offer_id || $money->loan_id
+            || ($meta['purpose'] ?? null) !== 'institutional_prefunding'
+            || (int) $money->amount_minor <= 0
+            || empty($money->provider_reference)
+            || ! preg_match('/^[a-zA-Z0-9_]{2,32}$/', (string) $money->provider)) {
+            throw new InvalidArgumentException('Partner funding requires a distinct, reconciled, statement-matched, unposted provider receipt expressly designated as institutional prefunding.');
+        }
+    }
+
+    public function stageFundingReceipt(int $moneyId, string $evidenceReference, User $maker): int
+    {
+        $money = MobileMoneyTransaction::query()->findOrFail($moneyId);
+        $this->validatedFundingSource($money);
+        if (! $money->institution_id || trim($evidenceReference) === '') {
+            throw new InvalidArgumentException('The partner institution and bank/provider reconciliation evidence are required.');
+        }
+        $source = [
+            'mobile_money_transaction_id' => $money->id,
+            'institution_id' => $money->institution_id,
+            'provider' => $money->provider,
+            'currency' => strtoupper((string) $money->currency),
+            'amount_minor' => (int) $money->amount_minor,
+            'provider_reference' => (string) $money->provider_reference,
+            'evidence_reference' => trim($evidenceReference),
+        ];
+        return DB::table('institution_ecl_funding_receipts')->insertGetId($source + [
+            'evidence_hash' => hash('sha256', json_encode($source, JSON_THROW_ON_ERROR)),
+            'status' => 'draft', 'created_by' => $maker->id,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
+    public function approveAndPostFundingReceipt(int $id, User $checker): int
+    {
+        return DB::transaction(function () use ($id, $checker) {
+            $row = DB::table('institution_ecl_funding_receipts')->where('id', $id)
+                ->lockForUpdate()->first();
+            if (! $row || $row->status !== 'draft' || (int) $row->created_by === (int) $checker->id) {
+                throw new InvalidArgumentException('A separate treasury checker must approve a pending matched receipt.');
+            }
+            $money = MobileMoneyTransaction::query()->whereKey($row->mobile_money_transaction_id)
+                ->lockForUpdate()->firstOrFail();
+            $this->validatedFundingSource($money);
+            if ((int) $money->institution_id !== (int) $row->institution_id
+                || $money->currency !== $row->currency
+                || (int) $money->amount_minor !== (int) $row->amount_minor
+                || (string) $money->provider_reference !== $row->provider_reference
+                || $money->provider !== $row->provider) {
+                throw new InvalidArgumentException('Provider source differs from immutable treasury attestation.');
+            }
+            $currency = $row->currency;
+            $provider = strtolower($row->provider);
+            $cash = LedgerAccount::query()->firstOrCreate(
+                ['code' => 'cash.'.$provider.'.disbursement', 'currency' => $currency],
+                ['name' => ucfirst($provider).' disbursement cash', 'type' => 'asset', 'is_active' => true],
+            );
+            $held = $this->partnerFundsAccount((int) $row->institution_id, $currency);
+            $journal = app(ProductionLedgerService::class)->post(
+                'partner.funds.received:'.$money->id, 'partner.funds.received', $money,
+                [
+                    ['account_id' => $cash->id, 'direction' => 'debit', 'amount_minor' => (int) $row->amount_minor,
+                        'memo' => 'Statement-matched institutional funding received in custodial wallet'],
+                    ['account_id' => $held->id, 'direction' => 'credit', 'amount_minor' => (int) $row->amount_minor,
+                        'memo' => 'Institutional funds held in trust; not OpFin funding revenue'],
+                ], $checker, $currency, [
+                    'institution_id' => $row->institution_id, 'funding_receipt_id' => $row->id,
+                    'provider_reference' => $money->provider_reference,
+                    'reconciliation_evidence' => $row->evidence_reference,
+                    'source_hash' => $row->evidence_hash,
+                ],
+            );
+            $money->update([
+                'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
+                'accounting_posted_at' => now(),
+            ]);
+            DB::table('institution_ecl_funding_receipts')->where('id', $row->id)->update([
+                'status' => 'posted', 'approved_by' => $checker->id, 'approved_at' => now(),
+                'ledger_transaction_id' => $journal->id, 'updated_at' => now(),
+            ]);
+            return (int) $journal->id;
+        });
     }
 
     public function partnerFundsAccount(int $institutionId, string $currency): LedgerAccount
