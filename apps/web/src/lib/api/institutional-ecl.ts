@@ -6,7 +6,8 @@ export type EclSnapshot = { id: number; external_loan_reference: string; as_of_d
 export type EclRun = { id: number; institution_id: number; as_of_date: string; revision: number; status: string; currency: string; total_exposure_minor: number; total_ecl_minor: number; platform_ecl_minor: number; ecl_movement_minor: number; coverage_reference: string };
 export type EclBatch = { id: number; institution_id: number; as_of_date: string; currency: string; source_evidence: string; loan_count: number; principal_total_minor: number; status: string };
 export type EclOfferOwner = { id: number; credit_offer_id: number; institution_id: number; owner_type: string; opfin_share_bps: number; status: string };
-export type EclRegister = { offer_ownerships: EclOfferOwner[]; policies: EclPolicy[]; ownerships: EclOwnership[]; import_batches: EclBatch[]; external_snapshots: EclSnapshot[]; runs: EclRun[] };
+export type EclCorrection = { id: number; external_snapshot_id: number; external_loan_reference: string; revision: number; status: string; principal_outstanding_minor: number; reason: string };
+export type EclRegister = { source_corrections: EclCorrection[]; offer_ownerships: EclOfferOwner[]; policies: EclPolicy[]; ownerships: EclOwnership[]; import_batches: EclBatch[]; external_snapshots: EclSnapshot[]; runs: EclRun[] };
 
 export async function eclRequest<T>(path: string, token?: string, body?: Record<string, unknown>): Promise<T> {
   if (!token) throw new OpfinApiError("unauthorized", "Sign in to use institutional provisioning.");
