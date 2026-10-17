@@ -217,6 +217,35 @@ class InstitutionalEclWorkflowTest extends TestCase
         $this->assertSame(80000, (int) $service->details($revisedRun)['items'][0]->gross_exposure_minor);
     }
 
+    public function test_delegated_operations_cannot_list_another_institutions_financial_provisions(): void
+    {
+        $own = Institution::create([
+            'name' => 'Authorised Loan Partner', 'address' => 'Kampala',
+            'phone' => '256700009995', 'email' => 'owned-ledger-ecl@example.com',
+            'authority_basis' => 'licensed', 'authority_reference' => 'TEST-NOT-LIVE',
+            'regulator_code' => 'TEST',
+        ]);
+        $other = Institution::create([
+            'name' => 'Independent External Partner', 'address' => 'Jinja',
+            'phone' => '256700009996', 'email' => 'other-ledger-ecl@example.com',
+            'authority_basis' => 'licensed', 'authority_reference' => 'TEST-NOT-LIVE',
+            'regulator_code' => 'TEST',
+        ]);
+        $user = User::factory()->create([
+            'role' => User::ROLE_OPERATIONS, 'institution_id' => $own->id,
+        ]);
+        $user->forceFill(['can_manage_platform_credit' => true])->save();
+        $this->actingAs($user)->getJson('/api/admin/institutional-ecl?institution_id='.$own->id)->assertOk();
+        $this->actingAs($user)->getJson('/api/admin/institutional-ecl?institution_id='.$other->id)->assertForbidden();
+        $this->actingAs($user)->postJson('/api/admin/institutional-ecl/policies', [
+            'institution_id' => $other->id, 'version' => 'unauthorised-test',
+            'effective_from' => now()->toDateString(), 'currency' => 'UGX',
+            'stage2_dpd' => 30, 'stage3_dpd' => 90, 'discount_bps' => 0,
+            'methodology_reference' => 'SCOPE-TEST', 'scenarios' => $this->scenarios(),
+        ])->assertForbidden();
+        $this->assertSame(0, DB::table('institution_ecl_policies')->where('institution_id', $other->id)->count());
+    }
+
     public function test_policy_approval_cannot_be_replayed(): void
     {
         $institution = Institution::create([
