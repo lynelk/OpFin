@@ -421,6 +421,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/institutional-assurance/reconciliations/{id}/approve', [InstitutionalFinanceAssuranceController::class, 'approve']);
     Route::post('/admin/institutional-assurance/reconciliations/{id}/sign', [InstitutionalFinanceAssuranceController::class, 'sign']);
     Route::post('/admin/institutional-assurance/shared-classifications', [InstitutionalFinanceAssuranceController::class, 'classifyShared']);
+    Route::post('/admin/institutional-assurance/shared-classifications/{id}/review', [InstitutionalFinanceAssuranceController::class, 'reviewShared']);
     Route::post('/admin/institutional-ecl/policies', [InstitutionalEclController::class, 'policy']);
     Route::post('/admin/institutional-ecl/policies/{id}/approve', [InstitutionalEclController::class, 'approvePolicy']);
     Route::post('/admin/institutional-ecl/funding-receipts', [InstitutionalEclController::class, 'stageFunding']);
