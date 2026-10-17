@@ -148,7 +148,7 @@ class InstitutionalEclWorkflowTest extends TestCase
         $this->assertSame(2, $service->approveExternalBatch($batch, $checker));
         $this->assertSame('approved', DB::table('institution_ecl_import_batches')->find($batch)->status);
 
-        $this->expectException(\\Illuminate\\Database\\QueryException::class);
+        $this->expectException(\Illuminate\Database\QueryException::class);
         $snapshotId = DB::table('institution_ecl_external_snapshots')
             ->where('import_batch_id', $batch)->value('id');
         DB::table('institution_ecl_external_snapshots')
