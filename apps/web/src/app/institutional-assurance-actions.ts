@@ -14,7 +14,7 @@ const n = (form: FormData, name: string) => {
 export async function institutionalAssuranceAction(form: FormData) {
   const institution = n(form, "institution_id");
   const kind = str(form, "kind");
-  let route = "";
+  let route: string;
   let payload: Record<string, unknown> = {};
   try {
     if (institution < 1) throw new Error("Select a lending institution.");
