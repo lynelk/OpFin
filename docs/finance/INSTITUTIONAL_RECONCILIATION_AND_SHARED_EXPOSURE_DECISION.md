@@ -4,6 +4,37 @@
 **Accounting status:** **PROPOSED, NOT SIGNED, NOT CERTIFIED, NOT LIVE**  
 **Source basis:** existing OpFin canonical general ledger and lender-ECL code on draft PR #182. No authenticated external institutional bank statements, third-party GL extracts, executed co-lending documents or independent model validation report were accessible for this review. Do not treat synthetic test evidence as a real bank or regulator approval.
 
+## Temporary documentary-evidence deferral (decision recorded 17 October 2026)
+
+**Instruction:** Defer the following five external inputs *for development, isolated testing and illustrative accounting only*, until their requirements are reinstated by an authorised business decision:
+
+1. Actual institution-specific bank and payment-provider statements and external source verification.
+2. Signed institutional lender general ledgers, trial balances and complete loan registers.
+3. Executed direct co-lending, risk-sharing, participation, first-loss and guarantee agreements.
+4. Independently validated IFRS 9 impairment methodology and qualified model opinion.
+5. Genuine named Finance, Credit Risk, Treasury, Legal and independent-model-review decisions.
+
+**Status of each: `DEFERRED_NOT_APPROVED`.** No fake supporting documents, dummy legal signatures or source approval records may be presented as genuine. Deferred is not waived, reconciled, verified, accepted, or complete.
+
+### Work allowed during the deferral
+
+- Implement, validate and refactor separate OpFin and external lender receivables, participant funding, provider custody, collections, fee allocations, ECL, recovery, write-off and reversal accounting.
+- Test with explicitly synthetic user/loan/lender/provider records, seeded QA balances and fixture contracts.
+- Preview accounting classifications without external evidence via `POST /api/admin/institutional-assurance/shared-accounting-preview` or the administrative preview page, only in `local`, `testing` or `staging` when `opfin.accounting.defer_institutional_evidence_for_nonproduction=true`.
+- Continue independent automated QA and reconciliation arithmetic using synthetic matched or deliberately mismatched accounts.
+- Mark unfinished validations as **provisional engineering assumptions**, and retain exception records for later assessment.
+
+### What is not authorised
+
+- Do **not** post synthetic journal illustrations to a real or production GL or send provider disbursement instructions.
+- Do **not** approve a credit-risk owner or lender contract merely because a test script or dummy document reference exists.
+- Do **not** recognise one lender's loan balance as OpFin's asset or income on the basis of a percentage unless actual legal rights and the selected recognition model are established.
+- Do **not** enable real-money shared-loan origination or bypass the production `InstitutionalExposureAccountingService::approved()` fail-closed shared-loan gate.
+- Do **not** imply professional IFRS 9 certification, audited bank reconciliation, or qualified Finance/Risk/Treasury approval.
+- Do **not** confuse this temporary development deferral with a regulator's ability to waive statutory or prudential obligations.
+
+**Reinstatement procedure:** set `OPFIN_DEFER_INSTITUTIONAL_ASSURANCE_EVIDENCE=false` in non-production environments, disable the preview, and resume the five-category evidence collection and independent acceptance schedule. Production is *always* excluded from the preview independently of this setting. Actual execution of shared-loan ledger treatment will require a separate code and financial acceptance gate.
+
 ## 1. Four-ledger reconciliation required, institution by institution
 
 | Source ledger | Source proof | Exactly what must reconcile |
