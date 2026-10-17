@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CreditOffer;
 use App\Models\User;
 use App\Services\InstitutionalFinanceAssuranceService;
+use App\Services\InstitutionalSharedAccountingPreviewService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,27 @@ final class InstitutionalFinanceAssuranceController extends Controller
         }
     }
 
+    /**
+     * Non-production, synthetic scenario only. Never touches any real ledger,
+     * borrower, payment provider, legal attestation or signed source record.
+     */
+    public function previewShared(Request $request, InstitutionalSharedAccountingPreviewService $simulator): JsonResponse
+    {
+        $this->checker($request);
+        abort_unless(app()->environment('local', 'testing', 'staging')
+            && config('opfin.accounting.defer_institutional_evidence_for_nonproduction', false) === true, 403,
+            'Provisional documentary deferral cannot be used in production.');
+        $values = $request->validate([
+            'contract_form' => 'required|in:direct_joint_creditor,funded_participation,financial_guarantee,first_loss',
+            'currency' => 'required|regex:/^[A-Z]{3}$/D',
+            'principal_amount_minor' => 'required|integer|min:1|max:1000000000000',
+            'cash_disbursement_minor' => 'required|integer|min:1|max:1000000000000',
+            'opfin_share_bps' => 'required|integer|min:1|max:9999',
+        ]);
+        $result = $this->invoke(fn () => $simulator->preview($values));
+        return ApiResponse::success('Synthetic journal illustration only; no cash, approvals or credit entries posted.', $result);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $v = $request->validate(['institution_id' => 'required|integer|exists:institutions,id']);
@@ -58,6 +80,10 @@ final class InstitutionalFinanceAssuranceController extends Controller
                 ->orderByDesc('id')->get(),
             'required_review_capacities' => InstitutionalFinanceAssuranceService::CAPACITIES,
             'shared_origination_enabled' => false,
+            'external_evidence_requirement' => app()->environment('local', 'testing', 'staging')
+                && config('opfin.accounting.defer_institutional_evidence_for_nonproduction', false) === true
+                ? 'deferred_for_nonproduction_modelling'
+                : 'required_for_live_release',
         ]);
     }
 
