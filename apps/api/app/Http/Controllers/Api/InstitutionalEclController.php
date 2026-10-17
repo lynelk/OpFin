@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\CreditOffer;
+use App\Models\MobileMoneyTransaction;
 use App\Services\InstitutionalExposureAccountingService;
 use App\Services\InstitutionalEclService;
 use App\Support\ApiResponse;
@@ -56,6 +57,7 @@ final class InstitutionalEclController extends Controller
         $this->requireInstitution($request, (int) $institution);
         return ApiResponse::success('Institutional ECL register.', [
             'policies' => DB::table('institution_ecl_policies')->where('institution_id', $institution)->orderByDesc('id')->get(),
+            'funding_receipts' => DB::table('institution_ecl_funding_receipts')->where('institution_id', $institution)->orderByDesc('id')->get(),
             'offer_ownerships' => DB::table('credit_offer_ecl_ownerships')->where('institution_id', $institution)->orderByDesc('id')->get(),
             'ownerships' => DB::table('loan_ecl_ownerships')->where('institution_id', $institution)->orderByDesc('id')->get(),
             'import_batches' => DB::table('institution_ecl_import_batches')->where('institution_id', $institution)
@@ -100,6 +102,28 @@ final class InstitutionalEclController extends Controller
         $this->requireChecker($request);
         $this->handled(fn () => $this->service->approvePolicy($id, $request->user()));
         return ApiResponse::success('ECL policy approved.', ['id' => $id]);
+    }
+
+    public function stageFunding(Request $request, InstitutionalExposureAccountingService $accounting): JsonResponse
+    {
+        $this->requireRead($request);
+        $v = $request->validate([
+            'institution_id' => 'required|integer|exists:institutions,id',
+            'mobile_money_transaction_id' => 'required|integer|exists:mobile_money_transactions,id',
+            'evidence_reference' => 'required|string|max:255',
+        ]);
+        $this->requireInstitution($request, (int) $v['institution_id']);
+        $money = MobileMoneyTransaction::query()->findOrFail($v['mobile_money_transaction_id']);
+        abort_unless((int) $money->institution_id === (int) $v['institution_id'], 422);
+        $id = $this->handled(fn () => $accounting->stageFundingReceipt($money->id, $v['evidence_reference'], $request->user()));
+        return ApiResponse::success('Statement-matched partner prefunding evidence staged for separate treasury review.', ['id' => $id], 201);
+    }
+
+    public function approveFunding(Request $request, int $id, InstitutionalExposureAccountingService $accounting): JsonResponse
+    {
+        $this->requireChecker($request);
+        $journal = $this->handled(fn () => $accounting->approveAndPostFundingReceipt($id, $request->user()));
+        return ApiResponse::success('Reconciled partner prefunding journal posted.', ['id' => $id, 'ledger_transaction_id' => $journal]);
     }
 
     public function offerOwnership(Request $request, InstitutionalExposureAccountingService $accounting): JsonResponse
