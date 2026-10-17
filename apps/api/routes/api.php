@@ -417,6 +417,8 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::get('/admin/institutional-ecl', [InstitutionalEclController::class, 'index']);
     Route::post('/admin/institutional-ecl/policies', [InstitutionalEclController::class, 'policy']);
     Route::post('/admin/institutional-ecl/policies/{id}/approve', [InstitutionalEclController::class, 'approvePolicy']);
+    Route::post('/admin/institutional-ecl/funding-receipts', [InstitutionalEclController::class, 'stageFunding']);
+    Route::post('/admin/institutional-ecl/funding-receipts/{id}/approve', [InstitutionalEclController::class, 'approveFunding']);
     Route::post('/admin/institutional-ecl/offer-ownerships', [InstitutionalEclController::class, 'offerOwnership']);
     Route::post('/admin/institutional-ecl/offer-ownerships/{id}/approve', [InstitutionalEclController::class, 'approveOfferOwnership']);
     Route::post('/admin/institutional-ecl/ownerships', [InstitutionalEclController::class, 'ownership']);
