@@ -22,7 +22,7 @@ return new class extends Migration {
             $t->char('lender_ledger_sha256', 64);
             $t->json('control_results');
             $t->char('content_hash', 64);
-            $t->string('status', 20)->default('draft');
+            $t->string('status', 48)->default('draft');
             $t->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $t->foreignId('approved_by')->nullable()->constrained('users')->restrictOnDelete();
             $t->timestamp('approved_at')->nullable();
@@ -55,7 +55,7 @@ return new class extends Migration {
             $t->char('signed_contract_sha256', 64);
             $t->string('accounting_policy_reference', 255);
             $t->char('technical_memo_sha256', 64);
-            $t->string('status', 35)->default('proposed_pending_legal_review');
+            $t->string('status', 64)->default('proposed_pending_legal_review');
             $t->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $t->timestamps();
         });
