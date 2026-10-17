@@ -47,6 +47,7 @@ export default async function LendingPlatformPage({ searchParams }: { searchPara
         <label className="field">Interest cycle<select name="interest_cycle">{["daily", "weekly", "monthly", "annual"].map((cycle) => <option key={cycle}>{cycle}</option>)}</select></label>
         <label className="field">Repayment frequency<select name="repayment_frequency">{["daily", "weekly", "fortnightly", "monthly"].map((cycle) => <option key={cycle}>{cycle}</option>)}</select></label><Status /><button className="button">Create term</button></form></details>
       <p><Link href="/admin/essentials">Manage Essentials products and funding mandates</Link></p>
+      <p><Link href="/admin/institutional-ecl">Institutional credit-loss provisioning, independent approval and financial statements</Link></p>
     </section>
     <section className="panel"><h2>Channel availability</h2><p>Keep a product configured even where publication requires review. Record the applicable store decision or policy evidence; lender authority alone does not establish store acceptance.</p>
       <table className="table"><thead><tr><th>Channel / scope</th><th>Revision</th><th>Availability</th><th>Reason / evidence</th></tr></thead><tbody>{data.distribution_rules.map((rule) => <tr key={rule.id}><td>{rule.channel} / {rule.country} / {rule.product_category}</td><td>{rule.version}</td><td>{rule.availability}</td><td>{rule.reason} · {rule.source_reference}</td></tr>)}</tbody></table>

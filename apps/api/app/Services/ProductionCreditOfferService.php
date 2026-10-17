@@ -247,6 +247,8 @@ class ProductionCreditOfferService
             // Re-evaluate publication and deployment before a new commitment. Existing
             // pending/disbursed acceptance replays above keep their original semantics.
             app(PlatformCreditRoutingService::class)->assertOrigination($locked->application);
+            // Approved legal-risk owner and verified partner cash must be evidenced before external payout.
+            app(InstitutionalExposureAccountingService::class)->reserveBeforePayout($locked);
             $acceptedTerm = clone $locked->application->loanProductTerm;
             $acceptedTerm->duration = $locked->duration_days;
             if (! isset($locked->disclosure_snapshot['equivalent_apr_percent'])) {
@@ -302,6 +304,7 @@ class ProductionCreditOfferService
                 'purpose' => 'credit_offer_disbursement',
             ]);
         } catch (\Throwable $exception) {
+            app(InstitutionalExposureAccountingService::class)->releaseReservation($offer);
             $this->fundingPools->release($offer);
             CreditOffer::query()->whereKey($offer->id)->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
             throw $exception;
@@ -324,6 +327,7 @@ class ProductionCreditOfferService
 
         if ($transaction->status === MobileMoneyTransaction::STATUS_FAILED) {
             $failedOffer = CreditOffer::query()->findOrFail($transaction->credit_offer_id);
+            app(InstitutionalExposureAccountingService::class)->releaseReservation($failedOffer);
             $this->fundingPools->release($failedOffer);
             $failedOffer->update(['status' => CreditOffer::STATUS_DISBURSEMENT_FAILED]);
             $transaction->update([
@@ -345,8 +349,12 @@ class ProductionCreditOfferService
                 if ((int) $lockedTransaction->loan_id !== (int) $existing->id) {
                     $lockedTransaction->update(['loan_id' => $existing->id]);
                 }
+                app(InstitutionalExposureAccountingService::class)->attachLoan($offer, $existing);
                 $this->fundingPools->commit($offer);
                 $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $existing, $offer);
+                if (DB::table('partner_ecl_cash_reservations')->where('credit_offer_id', $offer->id)->where('status', 'reserved')->exists()) {
+                    app(InstitutionalExposureAccountingService::class)->settleReservation($offer);
+                }
                 $lockedTransaction->update([
                     'accounting_status' => MobileMoneyTransaction::ACCOUNTING_POSTED,
                     'accounting_posted_at' => now(),
@@ -396,8 +404,10 @@ class ProductionCreditOfferService
 
             $this->fundingPools->commit($offer);
             $this->createExactSchedule($loan, $offer, $disbursedAt);
+            app(InstitutionalExposureAccountingService::class)->attachLoan($offer, $loan);
             $lockedTransaction->update(['loan_id' => $loan->id]);
             $this->loanLedger->postCreditOfferDisbursement($lockedTransaction->fresh(), $loan, $offer);
+            app(InstitutionalExposureAccountingService::class)->settleReservation($offer);
             $offer->update(['status' => CreditOffer::STATUS_DISBURSED]);
             $application->update(['status' => 'Disbursed', 'disbursed_at' => $disbursedAt]);
             $lockedTransaction->update([

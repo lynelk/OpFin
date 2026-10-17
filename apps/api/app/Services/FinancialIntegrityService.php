@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CreditOffer;
 use App\Models\LedgerTransaction;
 use App\Models\MobileMoneyTransaction;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -655,13 +656,93 @@ class FinancialIntegrityService
         $maxAgeDays = max(1, (int) config('opfin.accounting.impairment_max_age_days', 31));
         $allowanceExpected = [];
 
-        $loans = DB::table('loans')->whereNull('deleted_at')->get(['id', 'loan_product_id', 'credit_offer_id', 'status']);
+        // Disbursement events are platform GL facts, even when OpFin is only the servicer.
+        // Track unreversed original postings so partner-owned principal is not silently
+        // treated as an OpFin recognised receivable.
+        $originalDisbursementReferences = [];
+        $reversedDisbursementReferences = [];
+        foreach (DB::table('ledger_transactions')
+            ->whereIn('event_type', ['loan.disbursement', 'loan.disbursement.reversal'])
+            ->get(['reference', 'event_type', 'metadata']) as $entry) {
+            $meta = is_array($entry->metadata) ? $entry->metadata : json_decode((string) $entry->metadata, true);
+            if (! is_array($meta)) {
+                continue;
+            }
+            if ($entry->event_type === 'loan.disbursement.reversal') {
+                if (! empty($meta['reverses_reference'])) {
+                    $reversedDisbursementReferences[(string) $meta['reverses_reference']] = true;
+                }
+            } elseif (! empty($meta['loan_id']) && ($meta['ownership_type'] ?? null) !== 'partner') {
+                // Agency-funds liability movements are not platform principal assets.
+                $originalDisbursementReferences[(int) $meta['loan_id']][] = (string) $entry->reference;
+            }
+        }
+        $ownerships = Schema::hasTable('loan_ecl_ownerships')
+            ? DB::table('loan_ecl_ownerships')->get()->keyBy('loan_id') : collect();
+        $institutionsWithPolicies = Schema::hasTable('institution_ecl_policies')
+            ? DB::table('institution_ecl_policies')->where('status', 'approved')
+                ->pluck('institution_id')->map(fn ($id) => (int) $id)->all()
+            : [];
+        $loans = DB::table('loans')->whereNull('deleted_at')->get(['id', 'institution_id', 'loan_product_id', 'credit_offer_id', 'status']);
         foreach ($loans as $loan) {
             $legalExposure = $loan->credit_offer_id
                 ? (int) ($productionExposure[$loan->id] ?? 0)
                 : (int) ($legacyExposure[$loan->id] ?? 0);
             $writeOff = $writeOffs->get($loan->id);
             $assessment = $latestByLoan[$loan->id] ?? null;
+            $ownership = $ownerships->get($loan->id);
+            if ($ownership && $ownership->status === 'approved'
+                && in_array($ownership->owner_type, ['partner', 'shared'], true)) {
+                // A servicer's loan is not the platform's recognised credit-risk asset.
+                // It needs a current advisory provision report, not a fabricated GL allowance.
+                $advisory = Schema::hasTable('institution_ecl_runs')
+                    ? DB::table('institution_ecl_run_items as item')
+                        ->join('institution_ecl_runs as run', 'run.id', '=', 'item.run_id')
+                        ->where('item.loan_id', $loan->id)
+                        ->whereIn('run.status', ['approved', 'posted', 'finalised'])
+                        ->orderByDesc('run.as_of_date')->orderByDesc('run.id')
+                        ->select('run.as_of_date', 'item.expected_credit_loss_minor', 'item.platform_ecl_minor')
+                        ->first()
+                    : null;
+                if ($legalExposure > 0 && (! $advisory
+                    || Carbon::parse($advisory->as_of_date)->diffInDays(now()) > $maxAgeDays)) {
+                    $findings[] = $this->alert($runId, 'high', 'partner_impairment_report_missing', (string) $loan->id,
+                        'Partner-owned or shared serviced credit lacks a current approved advisory ECL statement.', [
+                            'loan_id' => $loan->id, 'risk_owner' => $ownership->owner_type,
+                        ]);
+                }
+                $unreversedPrincipalPostings = array_values(array_filter(
+                    $originalDisbursementReferences[(int) $loan->id] ?? [],
+                    fn (string $reference) => ! isset($reversedDisbursementReferences[$reference])
+                ));
+                if ($unreversedPrincipalPostings !== []) {
+                    $findings[] = $this->alert($runId, 'critical', 'partner_principal_recognised_by_platform', (string) $loan->id,
+                        'An unreversed disbursement journal may recognise a partner-owned facility as an OpFin loan receivable; reconcile and reclassify with signed accounting evidence.', [
+                            'loan_id' => $loan->id,
+                            'disbursement_references' => $unreversedPrincipalPostings,
+                        ]);
+                }
+                if ($assessment && $assessment->ledger_transaction_id) {
+                    $findings[] = $this->alert($runId, 'critical', 'partner_impairment_platform_ledger_contamination', (string) $loan->id,
+                        'A partner/shared exposure has historic impairment postings in the platform ledger; a controlled accounting remediation is required.', [
+                            'loan_id' => $loan->id, 'assessment_id' => $assessment->id,
+                        ]);
+                }
+                if ($ownership->owner_type === 'shared' && (int) $ownership->opfin_share_bps > 0) {
+                    $findings[] = $this->alert($runId, 'high', 'shared_risk_platform_accounting_not_certified', (string) $loan->id,
+                        'Shared contractual risk has an advisory allocation but no certified platform-owned receivable/guarantee posting model.', [
+                            'loan_id' => $loan->id, 'opfin_share_bps' => $ownership->opfin_share_bps,
+                        ]);
+                }
+
+                continue;
+            }
+            if (! $ownership && in_array((int) $loan->institution_id, $institutionsWithPolicies, true)) {
+                $findings[] = $this->alert($runId, 'critical', 'institutional_credit_risk_owner_missing', (string) $loan->id,
+                    'Credit facility subject to an approved institutional ECL policy has no independently attested legal risk owner.', [
+                        'loan_id' => $loan->id, 'institution_id' => $loan->institution_id,
+                    ]);
+            }
 
             if ($writeOff) {
                 if (! $assessment
@@ -676,6 +757,7 @@ class FinancialIntegrityService
                             'impairment_assessment_id' => $assessment?->id,
                         ]);
                 }
+
                 continue;
             }
 
@@ -685,6 +767,7 @@ class FinancialIntegrityService
                         'loan_id' => $loan->id,
                         'current_principal_exposure_minor' => $legalExposure,
                     ]);
+
                 continue;
             }
 
@@ -692,7 +775,7 @@ class FinancialIntegrityService
                 continue;
             }
 
-            $ageDays = \Carbon\Carbon::parse($assessment->as_of_date)->startOfDay()->diffInDays(now()->startOfDay());
+            $ageDays = Carbon::parse($assessment->as_of_date)->startOfDay()->diffInDays(now()->startOfDay());
             if ($legalExposure > 0 && $ageDays > $maxAgeDays) {
                 $findings[] = $this->alert($runId, 'high', 'credit_impairment_assessment_stale', (string) $loan->id,
                     'Outstanding credit exposure has a stale impairment assessment.', [
@@ -802,6 +885,7 @@ class FinancialIntegrityService
                             'collections_minor' => $collections,
                             'disbursements_minor' => $disbursements,
                         ]);
+
                     continue;
                 }
 

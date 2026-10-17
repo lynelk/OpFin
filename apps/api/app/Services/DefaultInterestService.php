@@ -128,7 +128,14 @@ class DefaultInterestService
         $delta = max(0, $permittedTotal - $current);
         if ($delta > 0) {
             $reference = 'loan.default_interest_accrual:'.$loan->id.':'.$asOf->toDateString();
-            if (! LedgerTransaction::where('reference', $reference)->exists()) {
+            $riskOwner = app(InstitutionalExposureAccountingService::class)->ownerForLoan($loan);
+            // Record customer obligations for servicing, not platform interest income,
+            // when the lender retains the contractual asset.
+            if ($riskOwner && $riskOwner->owner_type === 'shared') {
+                throw new InvalidArgumentException('Shared-risk default interest requires certified contractual accounting.');
+            }
+            if ((! $riskOwner || $riskOwner->owner_type === 'opfin')
+                && ! LedgerTransaction::where('reference', $reference)->exists()) {
                 $this->ledger->post(
                     $reference,
                     'loan.default_interest_accrual',
