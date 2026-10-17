@@ -425,6 +425,8 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     Route::post('/admin/institutional-ecl/external-csv', [InstitutionalEclController::class, 'uploadExternalCsv']);
     Route::post('/admin/institutional-ecl/import-batches/{id}/approve', [InstitutionalEclController::class, 'approveExternalBatch']);
     Route::post('/admin/institutional-ecl/external-snapshots/{id}/approve', [InstitutionalEclController::class, 'approveExternal']);
+    Route::post('/admin/institutional-ecl/external-snapshots/{id}/corrections', [InstitutionalEclController::class, 'correctExternal']);
+    Route::post('/admin/institutional-ecl/corrections/{id}/approve', [InstitutionalEclController::class, 'approveCorrection']);
     Route::post('/admin/institutional-ecl/runs', [InstitutionalEclController::class, 'build']);
     Route::post('/admin/institutional-ecl/runs/{id}/approve', [InstitutionalEclController::class, 'approveRun']);
     Route::post('/admin/institutional-ecl/runs/{id}/post', [InstitutionalEclController::class, 'postRun']);
