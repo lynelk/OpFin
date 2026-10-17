@@ -50,22 +50,28 @@ class ProductionLedgerService
             $affectedAccounts = LedgerAccount::query()->whereIn('id', array_column($entries, 'account_id'))
                 ->orderBy('id')->lockForUpdate()->get();
             foreach ($affectedAccounts as $account) {
-                if (! str_starts_with((string) $account->code, 'liability.partner_funds_held.institution_')) {
+                $partnerLiability = str_starts_with((string) $account->code, 'liability.partner_funds_held.institution_');
+                $partnerCustodyCash = str_starts_with((string) $account->code, 'cash.partner_custody.institution_');
+                if (! $partnerLiability && ! $partnerCustodyCash) {
                     continue;
                 }
                 $balance = (int) DB::table('ledger_entries')
                     ->where('ledger_account_id', $account->id)
-                    ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_minor ELSE -amount_minor END), 0) AS amount")
+                    ->selectRaw($partnerLiability
+                        ? "COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_minor ELSE -amount_minor END), 0) AS amount"
+                        : "COALESCE(SUM(CASE WHEN direction = 'debit' THEN amount_minor ELSE -amount_minor END), 0) AS amount")
                     ->value('amount');
                 $movement = 0;
                 foreach ($entries as $entry) {
                     if ((int) $entry['account_id'] === (int) $account->id) {
-                        $movement += $entry['direction'] === 'credit'
+                        $movement += $entry['direction'] === ($partnerLiability ? 'credit' : 'debit')
                             ? (int) $entry['amount_minor'] : - (int) $entry['amount_minor'];
                     }
                 }
                 if ($balance + $movement < 0) {
-                    throw new InvalidArgumentException('Partner fiduciary funds cannot be overdrawn.');
+                    throw new InvalidArgumentException($partnerLiability
+                        ? 'Partner fiduciary funds cannot be overdrawn.'
+                        : 'Ring-fenced partner custody cash cannot be spent before provider prefunding.');
                 }
             }
             $transaction = LedgerTransaction::create([
@@ -138,8 +144,9 @@ class ProductionLedgerService
             $account = $accounts->get($entry['account_id']);
             if ($account && $account->code === $heldCode && $account->currency === $currency) {
                 $heldEntry = $entry;
-            } elseif ($account && str_starts_with((string) $account->code, 'cash.')
-                && $account->currency === $currency && $account->type === 'asset') {
+            } elseif ($account && str_starts_with(
+                (string) $account->code, 'cash.partner_custody.institution_'.$ownership->institution_id.'.provider_'
+            ) && $account->currency === $currency && $account->type === 'asset') {
                 $cashEntry = $entry;
             } else {
                 throw new InvalidArgumentException('Agency journal contains a platform receivable, income or unauthorised account.');
