@@ -97,3 +97,10 @@ Open financial obligations must be handled through governed closure. The reviewe
 ## Availability
 
 Internal software defects, missing acceptance evidence and external provider/legal activation are different limitations. None should be represented as completed without evidence. A published manual, source merge or successful deployment of one component does not establish that every service is live.
+
+
+## Essentials repayments: pending and uncertain results
+
+A repayment request may remain pending while the payment provider confirms the result. A submitted or acknowledged request is not proof that funds settled or the obligation was reduced. If a request times out or shows an uncertain state, use the original request/reference and follow the in-app status or support recovery route; do not create a second payment to compensate for uncertainty. Reserved financing is not the same as an amount currently due.
+
+Essentials availability and provider-backed execution depend on the relevant lender authority, product configuration and provider capability being verified. These instructions describe the candidate control design and must not be read as a statement that every lender, biller, repayment route or refund path is live.
