@@ -68,3 +68,10 @@ Every material system/API change must update the affected current contracts, man
 GitHub Actions remains deferred by owner instruction. Retain equivalent candidate-specific verification without enabling Actions, weakening tests or provisioning additional infrastructure. Earlier successful runs or deployments do not certify a new candidate.
 
 The [lender implementation contract](architecture/LENDER_ORCHESTRATION.md), [executed roadmap](development/2026-09-25-lending-platform-roadmap.md), [cross-border backlog](development/CROSS_BORDER_ROADMAP.md) and [lending evidence](operations/LENDING_DELIVERY_2026-09-25.md) preserve the 25 September lending work. This concept update does not expand weekly management-review scope or cadence.
+
+
+## Documentation alignment review (18 October 2026)
+
+The current club-client candidate now includes server-persisted encrypted saved requests, resume of the original request after reload/device change, explicit acknowledgement or cancellation before another request of the same purpose, former-member access limited to their own retained capital history, and mobile statement save/share/print. Read the [club recovery/export evidence](operations/CLUB_RECOVERY_EXPORT_IMPLEMENTATION_2026-09-26.md), [recovery API contract](../apps/api/docs/api/CLUB_CLIENT_RECOVERY.md), [current capability supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md), [user manual](manuals/OPFIN_USER_MANUAL.md), [training manual](manuals/OPFIN_TRAINING_MANUAL.md), [operational manual](manuals/OPFIN_OPERATIONAL_MANUAL.md) and [UAT manual](manuals/OPFIN_UAT_MANUAL.md) together.
+
+These features remain a **code candidate**. Targeted transport/policy/syntax checks have passed, but the new Laravel recovery tests and complete dependency-aware API/Web/App builds, populated migration tests, real-device/accessibility checks and independent financial review are not evidenced as passed. No merge, deployment, provider activation or financial-launch acceptance is asserted. Historical test totals apply only to their recorded commits.
