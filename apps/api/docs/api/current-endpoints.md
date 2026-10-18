@@ -351,3 +351,10 @@ Production requires real documentary evidence and specific certified accounting 
 | GET | `/api/admin/growth-readiness` | Authenticated platform administrator only | Read-only country/product/mandate configuration; remaining committed nominal capital; explicit unknown verification fields; Uganda statement-provider readiness. No investor personally identifiable information or financial transaction. |
 
 A configured product or capital mandate is **not** asserted to have certified payment custody, actual settlement, current lender authority or investor rights. The new signed Stolets merchant evidence preflight is **internal only**: it requires exact raw HMAC signature, freshness and replay rejection. It is not a public API route, credit decision, verified consent or payment instruction.
+
+
+## Club client recovery and Essentials repayment controls (18 October 2026)
+
+For club recovery, use [Club Client Recovery API contract](CLUB_CLIENT_RECOVERY.md). Saved requests are encrypted, user/book/purpose-scoped, hash-bound and re-authorised on recovery. Resume returns the original domain result; acknowledgement releases the recovery slot and is not accounting approval or payment execution. Cancellation applies only before domain submission.
+
+For Essentials, collection identity is persisted before provider submission and uncertain outcomes are reconciled against the original request. Capacity reservation is separate from due debt; provider acknowledgement is not settlement finality. Do not infer a universal idempotency-key location or response status from route registration; consult the operation-specific contract. The current candidate does not establish complete lender funding/drawdown, biller settlement, lender release, activation/opening accounting, mandate compatibility, older-record adoption or post-service-reversal refunds. Full API/database/client acceptance remains outstanding.
