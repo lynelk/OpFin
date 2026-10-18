@@ -72,3 +72,13 @@ Every material system/API change must update the affected current contracts, man
 GitHub Actions remains deferred by owner instruction. Retain equivalent candidate-specific verification without enabling Actions, weakening tests or provisioning additional infrastructure. Earlier successful runs or deployments do not certify a new candidate.
 
 The [lender implementation contract](architecture/LENDER_ORCHESTRATION.md), [executed roadmap](development/2026-09-25-lending-platform-roadmap.md), [cross-border backlog](development/CROSS_BORDER_ROADMAP.md) and [lending evidence](operations/LENDING_DELIVERY_2026-09-25.md) preserve the 25 September lending work. This concept update does not expand weekly management-review scope or cadence.
+
+
+## Application alignment review (18 October 2026)
+
+The current implementation documentation distinguishes two code candidates and their release boundaries:
+
+- **Club accounting:** encrypted server-persisted instruction/statement requests; exact identity/hash resume after reload/device change; explicit acknowledgement or cancellation only before domain submission; former-member access restricted to their own retained history; and authenticated Web/native mobile statement export. See the [recovery API contract](../apps/api/docs/api/CLUB_CLIENT_RECOVERY.md) and [club implementation evidence](operations/CLUB_RECOVERY_EXPORT_IMPLEMENTATION_2026-09-26.md).
+- **Essentials:** durable payload-bound collection identity; original-request reconciliation for uncertain outcomes; one-in-flight capacity controls; reservation separated from due debt; append-only balanced servicing/reversal evidence. See [current API endpoint index](../apps/api/docs/api/current-endpoints.md) and [PR #134](https://github.com/lynelk/OpFin/pull/134).
+
+Neither candidate is a blanket production release. Full database/migration/concurrency suites, complete Web/App builds, device/accessibility checks and independent financial review remain outstanding. The new Laravel integration tests have not run in the complete application environment. Essentials funding/drawdown, biller settlement, lender release, activation/opening accounting, mandate compatibility, older-record adoption and refunds after service reversal remain incomplete; the separate credential-log incident is unresolved. Do not infer provider activation, live payment, deployment or launch acceptance.
