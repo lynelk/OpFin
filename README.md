@@ -94,3 +94,10 @@ The existing Web/API setup addresses are `https://opfin-web-production.up.railwa
 The separately recorded credential-log incident requires controlled remediation and verified credential handling. It is not closed by a documentation or API-discovery feature.
 
 Read [security](SECURITY.md), [engineering rules](AGENTS.md), [deployment guidance](infrastructure/railway/README.md) and the relevant current contracts before changing authentication, providers, credit, money movement or customer financial state. Historical records retain their original dates; approved requirements are not silently rewritten to match defects.
+
+
+## Essentials execution and release status (18 October 2026)
+
+The current Essentials candidate adds durable repayment collection requests, reserved-capacity handling, reconciliation, immutable servicing movements and safer interruption/reversal recovery. Reserved financing is distinct from due debt. These controls are not a substitute for completed lender funding, biller settlement, lender release or refund lifecycles.
+
+**Not release-ready:** full Laravel/PostgreSQL and migration/concurrency checks, complete Web/App builds, API compatibility review, evidence of older-record adoption, independent financial review and resolution of the credential-log incident remain outstanding. No production deployment, provider activation or live payment is asserted. See the [Essentials PR #134](https://github.com/lynelk/OpFin/pull/134) and [current capability supplement](docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md).
