@@ -71,3 +71,15 @@ GitHub Actions remains deferred by owner instruction. Retain equivalent candidat
 Use the [documentation hub](README.md), [concept](product/OPFIN_CONCEPT_NOTE.md), [evolution review](product/PRODUCT_EVOLUTION_2026-09-26.md), [lender contract](architecture/LENDER_ORCHESTRATION.md), [manuals](manuals/OPFIN_USER_MANUAL.md) and [capability supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md). The dated [concept comparison](product/CONCEPT_AND_PLAN_COMPARISON.md) and [implementation index](product/CANONICAL_IMPLEMENTATION_STATUS.md) retain their own assessment dates.
 
 Original requirements, later decisions, source observations and acceptance evidence are separate authorities. Update this index from new evidence rather than simply a new merge date.
+
+
+## Current application delta (18 October 2026)
+
+### Club accounting
+The current candidate persists encrypted request envelopes for accounting instructions and statement issuance. Recovery verifies the original reference and content hash, scopes requests to user/book/purpose, rechecks current authorisation and allows resume/read after reload or device change. Acknowledgement releases the recovery slot; cancellation is only for a genuinely unsubmitted request. Former-member navigation exposes that member's own retained capital history only. Mobile statement save/share/print is read-only; opening a system dialogue does not prove delivery or printing.
+
+### Essentials collection and servicing
+The current candidate persists collection identity before provider submission and retains provider observations before applying accounting. Uncertain outcomes are reconciled using the original request. A durable one-in-flight constraint reserves capacity, while reserved financing is kept distinct from due debt and production/legacy copies are not double-counted. Repayment allocation/reversal preserves the original policy and append-only balanced servicing evidence.
+
+### Acceptance boundary
+These are code candidates, not blanket release acceptance. Targeted transport/policy/arithmetic/syntax checks do not replace complete Laravel/database/migration/concurrency suites, Next.js build, Flutter analysis/tests, Android/iOS release builds, real browser/device/accessibility checks and independent financial review. Essentials lender funding/drawdown, biller settlement, lender release, activation/opening accounting, full mandate compatibility, older-record adoption and post-service-reversal customer refunds remain incomplete. The separate credential-log incident is unresolved. No provider activation, live payment, deployment or financial launch is asserted.
