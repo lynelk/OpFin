@@ -131,3 +131,16 @@ Automated regression results and remaining mobile/PostgreSQL/reviewer gates are 
 - With affiliated credit withheld, or independent-first with an eligible independent lender, verify no eligibility request or new credit line is created for the affiliate. Then request a genuinely underserved amount/category and verify permitted fallback.
 - Suspend an Essentials product for one channel and verify eligibility, displayed limit, quote and acceptance agree while another authorised channel remains available.
 - Verify legacy loan default-interest caps continue under the configured/snapshotted licence class and each new offer uses one distribution revision in pricing and disclosures.
+
+
+## Club recovery, retained history and export acceptance
+
+- Prepare an instruction and statement request; interrupt before submission, after server preparation and after domain submission.
+- Reload Web, restart App and use a second device/session. Resume the same reference and content hash; confirm no duplicate domain record is created.
+- Confirm an unresolved request blocks another request of the same purpose until acknowledged or safely cancelled while unsubmitted.
+- Attempt cancellation after domain submission and confirm the system refuses to treat a recorded result as unsent.
+- Revoke the maker's role and confirm recovery does not expose the saved whole-club payload.
+- Leave a club and confirm retained history is limited to the former member's own records.
+- Test authenticated CSV/HTML and mobile CSV save/share/statement print, including cancellation, invalid destinations, large text, screen readers, narrow layouts and keyboard/focus behaviour.
+
+Record the exact candidate, database/migration state, device/OS, result and evidence for each test. Targeted source assertions and parsing are not substitutes for the full Laravel/database, Next.js, Flutter, Android/iOS and device acceptance gates.
