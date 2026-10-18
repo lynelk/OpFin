@@ -94,3 +94,10 @@ The [concept comparison](../product/CONCEPT_AND_PLAN_COMPARISON.md) separates or
 Use **Admin → Lenders & credit deployment** to configure Core Synergies as an affiliated institution and record its actual authority. Link its internal funding partner to a maker-checker-approved capital mandate. Choose withhold, external-first fallback or explicit affiliated priority; record the reason, per-loan cap and expiry. Only platform admin can set strategy or delegate credit management. Existing repayments continue while origination is withheld.
 
 Record product-specific store restrictions as distribution revisions with source evidence and a partner-facing reason. Keep the product definition intact. A lender's licence does not by itself establish store approval. Follow the [full operating contract](../architecture/LENDER_ORCHESTRATION.md); foreign-country metadata does not activate local rails.
+
+
+## Essentials collection exceptions and servicing controls
+
+For a pending or uncertain repayment, retain the original collection identity and reconcile the provider result. Do not submit a new collection to resolve a timeout. Check source wallet ownership/verification, payer and beneficiary, amount, currency, route and environment against the persisted instruction. Contradictory provider finality, duplicate references and uncertain reversals must remain exceptions for investigation; do not manually mark the obligation paid or delete original servicing movements.
+
+Capacity reporting separates reserved financing from due debt. Exposure synchronisation must not double-count one obligation represented in both production and legacy records. Retained servicing is limited to authorised reconciliation and does not reopen customer access. Lender funding, biller settlement, lender release, activation/opening accounting and post-reversal customer refunds remain unfinished in this candidate; do not represent them as operationally available. Resolve the older-record adoption and credential-log incident before release approval.
