@@ -131,3 +131,16 @@ Automated regression results and remaining mobile/PostgreSQL/reviewer gates are 
 - With affiliated credit withheld, or independent-first with an eligible independent lender, verify no eligibility request or new credit line is created for the affiliate. Then request a genuinely underserved amount/category and verify permitted fallback.
 - Suspend an Essentials product for one channel and verify eligibility, displayed limit, quote and acceptance agree while another authorised channel remains available.
 - Verify legacy loan default-interest caps continue under the configured/snapshotted licence class and each new offer uses one distribution revision in pricing and disclosures.
+
+
+## Essentials durable collection, capacity and reversal acceptance
+
+- Confirm collection identity binds user, advance, verified source wallet, payer, beneficiary, amount, currency, route, merchant/environment and allocation version.
+- Interrupt after request preparation, provider submission and provider response; resume/reconcile the original request without issuing a second collection.
+- Submit concurrent repayment attempts and verify the durable one-in-flight constraint and reserved-capacity accounting.
+- Verify reserved financing is not classified as due debt and duplicated legacy/production representations are not counted twice.
+- Test full and partial repayment allocation against the original policy, duplicate provider references, contradictory finality, and reversal append-only balanced servicing entries.
+- Verify closure does not destroy unresolved collection/reversal evidence and retained servicing requires current authorisation.
+- Run clean and populated schema migrations, repeated upgrades, SQLite and PostgreSQL suites, concurrent writers, API compatibility, Web production build, Flutter analysis/tests, Android/iOS release builds and independent financial review on the exact candidate.
+
+The current PR has 13 authored Laravel integration scenarios that have not run in the full environment. Do not mark this acceptance complete based on the pure arithmetic harness, PHP syntax checks or documentation alone. Lender drawdown, settlement, release, activation/opening accounting, mandate compatibility and refunds after service reversal require separate acceptance criteria.
