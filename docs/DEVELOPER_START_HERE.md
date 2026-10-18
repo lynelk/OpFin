@@ -118,3 +118,8 @@ Run affected implementation checks and `make docs-check`/`make publication-check
 GitHub Actions remains disabled by owner instruction. Do not re-enable it, remove existing build tests/audits or use Railway Agent. Use only approved existing infrastructure; a build/deployment request is not consent for a new service, database, volume or replica.
 
 After a permitted release, verify actual running source, forward migrations, API/Web health, worker/scheduler freshness and applicable reconciliation. Preserve original concept requirements and historical evidence; do not rewrite requirements to legitimise a defect.
+
+
+## Current club recovery/export implementation note (18 October 2026)
+
+When changing club accounting Web/App workflows, preserve the server-persisted encrypted saved-request lifecycle: prepare, inspect/resume the same reference and content hash, then acknowledge a read result or cancel only a genuinely unsubmitted request. Keep current authorisation checks and the existing accounting API as the sole financial authority. Former-member history is member-specific; native export must not receive bearer credentials. Update the [recovery contract](../apps/api/docs/api/CLUB_CLIENT_RECOVERY.md), [current endpoint index](../apps/api/docs/api/current-endpoints.md), [user/training/operations/UAT manuals](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) and dated [implementation evidence](operations/CLUB_RECOVERY_EXPORT_IMPLEMENTATION_2026-09-26.md) in the same change. These features remain unaccepted until full candidate builds, database/migration tests, device/accessibility checks and independent financial review pass.
