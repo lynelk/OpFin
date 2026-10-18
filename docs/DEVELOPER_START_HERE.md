@@ -118,3 +118,8 @@ Run affected implementation checks and `make docs-check`/`make publication-check
 GitHub Actions remains disabled by owner instruction. Do not re-enable it, remove existing build tests/audits or use Railway Agent. Use only approved existing infrastructure; a build/deployment request is not consent for a new service, database, volume or replica.
 
 After a permitted release, verify actual running source, forward migrations, API/Web health, worker/scheduler freshness and applicable reconciliation. Preserve original concept requirements and historical evidence; do not rewrite requirements to legitimise a defect.
+
+
+## Essentials durable collection implementation note (18 October 2026)
+
+When changing Essentials collection, preserve durable request identity, original-request reconciliation, provider-observation retention before accounting, one-in-flight capacity control, reserved-financing versus due-debt separation and immutable servicing/reversal evidence. Never create a second collection to resolve an uncertain response. Update the [current API endpoint index](../apps/api/docs/api/current-endpoints.md), [current capability supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md), [operational/UAT manuals](manuals/OPFIN_OPERATIONAL_MANUAL.md) and dated PR evidence in the same change. Lender funding, biller settlement, lender release, activation/opening accounting, mandate compatibility, older-record adoption and customer refunds after service reversal are not complete in this candidate. Full database/client acceptance and independent financial review are release prerequisites.
