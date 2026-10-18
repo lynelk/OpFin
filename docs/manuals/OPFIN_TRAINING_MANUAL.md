@@ -88,3 +88,10 @@ In an approved non-money-moving fixture, practise account capture, verification 
 Use plain language, demonstrations and synthetic records. Never collect PINs/OTPs or publish identity evidence. Distinguish implementation, deployment, financial activation, device acceptance and publication status. Keep current screen labels and source references with each lesson.
 
 A learner passes a task only when they complete it unaided, explain confirmed versus pending state, recognise unavailable services and identify safe support/recovery. Record actual results, build/environment/device, tester and defects. No lesson or added test case is automatically marked passed.
+
+
+## Essentials repayment interruption and reconciliation exercise
+
+Using synthetic accounts only, submit a repayment request and interrupt the response after preparation, provider submission and provider acknowledgement. Confirm the same request identity is reconciled and never replaced with a fresh collection merely because the client timed out. Verify that contradictory finality and duplicate provider references are raised for review; reserved financing is displayed separately from due debt; partial payments follow the recorded original allocation policy; and a reversal appends balanced servicing evidence instead of deleting the original movement.
+
+Record that the complete Laravel integration suite, PostgreSQL/SQLite migration and concurrency tests, and full Web/App release checks remain outstanding for the current candidate. Do not train staff to treat the isolated arithmetic harness as proof of production readiness.
