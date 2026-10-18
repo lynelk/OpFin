@@ -97,3 +97,12 @@ Open financial obligations must be handled through governed closure. The reviewe
 ## Availability
 
 Internal software defects, missing acceptance evidence and external provider/legal activation are different limitations. None should be represented as completed without evidence. A published manual, source merge or successful deployment of one component does not establish that every service is live.
+
+
+## Saved club requests and interrupted work
+
+If an accounting instruction or statement request is interrupted, open **Saved requests** and resume or read the original result. The server stores an encrypted request identity scoped to your user, club book and request purpose. Do not create a replacement request merely because a screen timed out. Read the recorded result and acknowledge it before starting another request of the same purpose. An unsubmitted request may be cancelled; a request already recorded in the accounting domain must be handled through the normal accounting workflow.
+
+**My club capital history** may remain available after leaving a club and shows only your own retained history, not other members' records or the full club accounts. For mobile statement exports, use the system save/share/print dialogue and verify the destination yourself. Opening a dialogue is not proof that a file was delivered or printed.
+
+These workflows are documented in the current code candidate. Availability in a production build depends on release and acceptance checks; consult the current capability supplement for the verified release boundary.
