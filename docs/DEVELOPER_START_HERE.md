@@ -118,3 +118,12 @@ Run affected implementation checks and `make docs-check`/`make publication-check
 GitHub Actions remains disabled by owner instruction. Do not re-enable it, remove existing build tests/audits or use Railway Agent. Use only approved existing infrastructure; a build/deployment request is not consent for a new service, database, volume or replica.
 
 After a permitted release, verify actual running source, forward migrations, API/Web health, worker/scheduler freshness and applicable reconciliation. Preserve original concept requirements and historical evidence; do not rewrite requirements to legitimise a defect.
+
+
+## Current financial-workflow engineering notes (18 October 2026)
+
+**Club accounting:** preserve the encrypted saved-request lifecycle: prepare, inspect/resume the same reference and content hash, then acknowledge a read result or cancel only a genuinely unsubmitted request. Keep current authorisation checks and the accounting API as sole financial authority. Former-member history is own-member only; native export must not receive bearer credentials.
+
+**Essentials:** preserve durable collection identity, original-request reconciliation, provider-observation retention before accounting, one-in-flight capacity, reserved-financing versus due-debt separation and append-only balanced servicing/reversal evidence. Never create a second collection to resolve an uncertain response.
+
+Update the API contract, capability supplement, user/training/operations/UAT guides and dated implementation evidence in the same change. Full API/database/migration/concurrency suites, Web/App builds, real-device/accessibility checks and independent financial review remain release prerequisites. Do not document unfinished funding, settlement, lender release, activation/opening accounting, mandate compatibility, older-record adoption or post-reversal refunds as live.
