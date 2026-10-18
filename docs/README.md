@@ -65,3 +65,10 @@ GitHub Actions remains disabled by the owner's instruction. Retain equivalent ca
 ## Lending platform implementation: 25 September 2026
 
 Current implementation: [lender orchestration contract](architecture/LENDER_ORCHESTRATION.md), [executed development roadmap](development/2026-09-25-lending-platform-roadmap.md), [cross-border backlog](development/CROSS_BORDER_ROADMAP.md), and [validation/release evidence](operations/LENDING_DELIVERY_2026-09-25.md). These record platform-admin affiliated lending and configurable distribution; they do not amend the weekly management-review schedule.
+
+
+## Essentials financial-control candidate review (18 October 2026)
+
+The current Essentials change adds durable collection identity and replay, one-in-flight capacity control, reservation-versus-debt separation, original-policy repayment allocation, immutable balanced servicing movements, reversal evidence and retained servicing reconciliation. It does **not** complete lender drawdown/funding, biller settlement, lender release, activation/opening accounting, full mandate-origination compatibility or customer refunds after service reversal. Older repayment-record adoption, full database/concurrency/migration suites, client builds, independent financial review and the separate credential-log incident remain release blockers. See the [Essentials capability supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md), [current API endpoint index](../apps/api/docs/api/current-endpoints.md), and [PR #134](https://github.com/lynelk/OpFin/pull/134).
+
+Do not infer launch readiness from the isolated arithmetic harness or syntax checks. The 13 new Laravel integration scenarios have not been executed on the complete application/database candidate. Provider activation, live payment, merge and deployment are not claimed.
