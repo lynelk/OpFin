@@ -109,3 +109,10 @@ Use the existing approved services first. Run build, browser, migration, compati
 - Remote device controls, public tokenisation, secondary transfer, stablecoin/virtual-asset settlement and crypto-backed finance remain disabled until their specific legal, security, finance and operational gates are approved.
 - The public marketing site has one canonical source under `sites/opfin-public/` once host/source compatibility is proven. Do not create or maintain a second independently authored marketing website.
 - A source merge, deployment, configured provider, saved Site version or successful HTTP response is never by itself production acceptance.
+
+
+## Current integration and financial-control documentation rules (18 October 2026)
+
+External identity, credit-information, communications and payment-provider orchestration must be mediated through Cito where the relevant capability and country permissions are verified. Keep each application independently deployable with explicit contracts, scoped credentials, data ownership and reconciliation boundaries. Provider involvement is not proof of regulatory coverage, provider activation or settlement finality.
+
+For club accounting, preserve encrypted request recovery, exact identity/hash replay, current authorisation and the distinction between acknowledgement, accounting approval and payment execution. For Essentials, preserve original-request reconciliation, reserved-capacity accounting, due-debt separation and append-only servicing evidence. Documentation must distinguish implemented code, executed checks, unresolved tests, deployment and external activation. Do not report incomplete Essentials funding, settlement, lender release, activation/opening accounting, mandate compatibility, older-record adoption or post-reversal refunds as complete.
