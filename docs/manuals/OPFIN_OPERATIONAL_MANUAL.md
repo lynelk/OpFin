@@ -137,3 +137,14 @@ Record product-specific store restrictions as distribution revisions with source
 ## PR 142 candidate acceptance update (2 October 2026)
 
 Account deletion rejects unresolved obligations immediately and preserves servicing; optional-data deletion retains the account and regulated evidence. Payroll undertaking is case-bound and atomic with reservation request; cancellation/expiry awaits evidenced provider release. Apply `docs/releases/2026-10-02-pr142-release-acceptance.md` to OPF-FEAT-0022, FIN-FOUNDATION, DOC-CONTINUITY and OPF-REL-0001. This entry is implementation/validation work, not production or store acceptance.
+
+
+## Club recovery exceptions
+
+For an uncertain club request, preserve the saved reference and content hash; guide the user to inspect/resume the original request. Do not advise creating a replacement. Only an unsubmitted request may be cancelled through recovery. Once recorded in the accounting domain, use the normal decision workflow. Recovery rechecks current permissions. Statement export is read-only; a system share/print dialogue does not prove delivery.
+
+## Essentials collection exceptions
+
+Reconcile uncertain repayment outcomes against the persisted original collection identity. Do not submit a new collection after a timeout. Check customer, advance, verified source wallet, payer/beneficiary, amount, currency, merchant/environment, route and allocation version. Keep contradictory provider finality, duplicate references and uncertain reversals as exceptions. Do not manually mark obligations paid or delete original servicing movements. Reserved financing is separate from due debt.
+
+Essentials lender funding/drawdown, biller settlement, lender release, activation/opening accounting, complete mandate compatibility, older-record adoption and customer refunds after service reversal remain unfinished. The separate credential-log incident must be resolved before release approval. No provider activation or production acceptance is implied.
