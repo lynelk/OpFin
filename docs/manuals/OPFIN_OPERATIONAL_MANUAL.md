@@ -94,3 +94,10 @@ The [concept comparison](../product/CONCEPT_AND_PLAN_COMPARISON.md) separates or
 Use **Admin → Lenders & credit deployment** to configure Core Synergies as an affiliated institution and record its actual authority. Link its internal funding partner to a maker-checker-approved capital mandate. Choose withhold, external-first fallback or explicit affiliated priority; record the reason, per-loan cap and expiry. Only platform admin can set strategy or delegate credit management. Existing repayments continue while origination is withheld.
 
 Record product-specific store restrictions as distribution revisions with source evidence and a partner-facing reason. Keep the product definition intact. A lender's licence does not by itself establish store approval. Follow the [full operating contract](../architecture/LENDER_ORCHESTRATION.md); foreign-country metadata does not activate local rails.
+
+
+## Operations: unresolved club-client requests
+
+When a user reports an uncertain club-accounting result, direct them to **Saved requests** and have them inspect/resume the same saved request. Do not advise creating a fresh instruction or statement request until the original result is understood and the recovery slot is released. Cancellation is valid only for a genuinely unsubmitted request; once a domain record exists, use the normal instruction decision/cancellation controls. Current permissions are rechecked during recovery, so a revoked role must not be bypassed to retrieve a prior whole-club payload.
+
+Statement export is read-only. Native save/share/print must not be reported as successful delivery based only on opening the system dialogue. Preserve evidence and escalate integrity mismatches or contradictory results; do not manually alter ledger records to resolve a client timeout. Full production acceptance remains subject to the current release evidence and independent financial review.
