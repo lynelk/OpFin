@@ -90,3 +90,12 @@ These identifiers extend, rather than renumber, existing UAT cases. Expected res
 Record task ID, tester/role, source commit, build/environment/channel, synthetic fixture, actual steps/results, non-sensitive request/statement/provider references, defect/review reference and accountable approver. Never include real PINs, OTPs, tokens, raw identity evidence or full bank details in a publication pack.
 
 A passing lesson does not certify the whole product. A passing build does not certify provider activation. A published manual does not certify an untested or still-failing workflow.
+
+
+## Essentials current candidate boundary (18 October 2026)
+
+**Implemented in the candidate:** encrypted/payload-bound durable collection identity; persisted preparation before provider submission; provider observation retention before accounting application; original-request reconciliation; one-in-flight repayment control; reserved-capital capacity; exposure synchronisation that distinguishes reservation from due debt and avoids production/legacy double-counting; exact original-policy repayment allocation and reversal; immutable balanced lender-servicing movements; duplicate-reference and contradictory-finality checks; and retained servicing for unresolved outcomes.
+
+**Not complete or not accepted:** lender funding/drawdown, biller settlement, lender release, activation/opening servicing accounting, full mandate-origination compatibility, customer refunds after service reversal, evidenced adoption of older repayment records, and the separate credential-log incident. The 13 new Laravel integration tests have not run in the full application environment. Complete database/migration/concurrency tests, Web/App release builds, API compatibility review and independent financial acceptance remain outstanding. No provider activation, live payment, merge or deployment is asserted.
+
+Use [PR #134](https://github.com/lynelk/OpFin/pull/134) as the implementation change record, not as a production release certificate.
