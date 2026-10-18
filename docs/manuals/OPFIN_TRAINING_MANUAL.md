@@ -88,3 +88,10 @@ In an approved non-money-moving fixture, practise account capture, verification 
 Use plain language, demonstrations and synthetic records. Never collect PINs/OTPs or publish identity evidence. Distinguish implementation, deployment, financial activation, device acceptance and publication status. Keep current screen labels and source references with each lesson.
 
 A learner passes a task only when they complete it unaided, explain confirmed versus pending state, recognise unavailable services and identify safe support/recovery. Record actual results, build/environment/device, tester and defects. No lesson or added test case is automatically marked passed.
+
+
+## Club accounting: recovery and statement export
+
+Train with synthetic data and two authorised officers. Prepare an instruction, interrupt the request, reload Web or restart the App, and resume the same saved request. Confirm that the original instruction is returned once, the maker cannot approve it, and a new request remains blocked until the previous request is acknowledged or an eligible unsubmitted request is cancelled. Repeat for statement issuance and a second signed-in user.
+
+Test former-member navigation and confirm that the former member can see only their own retained capital history. On supported mobile devices, exercise CSV save/share and statement print/save, including cancellation and unavailable destinations. Explain that acknowledgement is not approval or payment execution, and that opening a system share/print dialogue does not prove delivery. These are required training/UAT scenarios, not evidence that full device acceptance has already passed.
