@@ -51,3 +51,10 @@ The [user](manuals/OPFIN_USER_MANUAL.md), [training](manuals/OPFIN_TRAINING_MANU
 Original concept requirements, later approved decisions, observed implementation and acceptance evidence are different authorities. A code defect does not authorise silently rewriting the original requirement. Historical audit, migration and release records retain their original dates; this review does not retrospectively certify them.
 
 Remaining work includes internal defects, missing acceptance evidence and external activation. Provider credentials, legal approvals, programmes, translations, app-store publication and device certification are external gates only where the underlying implementation already satisfies its own controls.
+
+
+## 18 October 2026: Essentials collection and servicing controls
+
+The current Essentials candidate persists collection instructions before provider submission and records provider observations before applying accounting. Requests bind the customer, advance, verified source wallet, payer/beneficiary, amount, currency, merchant/environment, route and allocation version. An uncertain result must be reconciled against the original request, not resubmitted as a new collection. Exposure synchronisation distinguishes reserved financing from due debt and avoids counting a production loan and its legacy copy twice.
+
+Repayment allocation/reversal and immutable balanced servicing movements are implemented in the candidate, with reconciliation and retained servicing controls. The candidate does not yet implement the full lender funding/drawdown, biller settlement, lender release, activation/opening servicing accounting, complete mandate-origination compatibility or customer refund lifecycle after service reversal. Older-record adoption remains a release requirement. The 13 new Laravel tests are authored but not run in the full application environment; full PostgreSQL/SQLite, populated migration, concurrency, dependency audit, client build and independent financial acceptance remain outstanding. The credential-log incident is separate and unresolved. See [PR #134](https://github.com/lynelk/OpFin/pull/134).
