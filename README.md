@@ -127,3 +127,12 @@ GitHub Actions remains deferred under the owner's instruction. Retain equivalent
 Existing Web/API setup references are `https://opfin-web-production.up.railway.app` and `https://opfin-production.up.railway.app`. They are not proof of current live health or custom-domain cutover. Read [security](SECURITY.md), [engineering](AGENTS.md), [deployment guidance](infrastructure/railway/README.md) and current contracts before changing authentication, providers, credit or money movement.
 
 Enhance working capabilities, preserve customer and financial history, and describe only what the evidence supports.
+
+
+## Current implementation and release status (18 October 2026)
+
+Two current financial-control candidates have documentation updates underway: (1) club accounting request recovery, retained former-member own-history and native statement exports; and (2) Essentials durable repayment collection, capacity reservation, reconciliation and servicing controls. These are not blanket production-readiness claims.
+
+For club workflows, encrypted server-persisted request recovery supports resuming the original instruction/statement request after reload or device change; acknowledgement is not accounting approval or payment execution. Former members can access only their own retained capital history. For Essentials, uncertain collections must be reconciled against the original request; reserved financing is distinct from due debt.
+
+**Release boundary:** complete API/database/migration/concurrency tests, Web/App builds, real-device/accessibility acceptance and independent financial review remain outstanding. Essentials lender drawdown/funding, biller settlement, lender release, activation/opening accounting, full mandate compatibility, older-record adoption and refunds after service reversal remain incomplete. Do not infer provider activation, live payment, deployment or financial launch readiness from isolated checks. See [documentation hub](docs/README.md) and [current capability supplement](docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md).
