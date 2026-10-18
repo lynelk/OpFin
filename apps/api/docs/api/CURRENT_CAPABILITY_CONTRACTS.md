@@ -135,3 +135,10 @@ Acceptance requires optional purpose-specific location, manual fallback, no back
 ## 5. Maintenance
 
 Update changed routes, validation, fields, roles, states, errors and retries with the endpoint index and relevant task/UAT case. Original requirements remain separate from defects. This guide is not a complete OpenAPI specification, generated SDK or financial-release certificate.
+
+
+## Essentials durable repayment candidate status (18 October 2026)
+
+The current candidate persists collection identity before provider submission and reconciles uncertain outcomes against that original identity. The identity is bound to the customer, advance, verified source wallet, payer/beneficiary, amount, currency, merchant/environment, provider route and accepted allocation version. Provider acknowledgement is not settlement finality; reserved financing is not due debt. The API keeps original servicing evidence and uses append-only balanced movements for reversal.
+
+This candidate does not establish completed lender drawdown/funding, biller settlement, lender release, activation/opening accounting, full mandate-origination compatibility, older-record adoption or customer refunds after service reversal. New integration tests remain unexecuted in the complete application environment; do not represent this status section as API acceptance or production availability. See [current endpoint index](current-endpoints.md) and [capability supplement](../../../docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md).
