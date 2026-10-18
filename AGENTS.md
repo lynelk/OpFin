@@ -8,7 +8,7 @@ Language: English (United Kingdom)
 
 - `apps/api` owns identity, consent, eligibility, credit profiles, financial decisions, obligations, ledger postings, provider finality and reconciliation.
 - `apps/web` and `apps/client` consume authenticated API contracts and never connect directly to PostgreSQL.
-- CPay is the preferred production money-movement adapter. OpFin must remain independently operable and may use an explicitly configured, production-certified direct provider adapter as a controlled fallback. Never enable a direct provider without a real contract, credentials, certification and reconciliation path.\n- All OpFin access to gnuGrid services must route through Cito. A generic direct-provider fallback rule does not authorise direct gnuGrid access.
+- Cito is the integration and orchestration boundary for external identity, credit-information, communications and payment capabilities where each capability and country permission is verified. OpFin must remain independently operable, with scoped provider credentials, explicit contracts and its own reconciliation controls. Do not treat an intermediary or provider acknowledgement as regulatory coverage or accounting finality.\n- All OpFin access to gnuGrid services must route through Cito. A generic direct-provider fallback rule does not authorise direct gnuGrid access.
 - A provider acknowledgement is not accounting finality.
 - Secrets remain service-scoped and are never exposed to web or client builds.
 - External KYC, CRB, MNO and third-party scoring results must be attributable to their source. Missing provider data must never be replaced with invented scores.
@@ -87,3 +87,8 @@ Use the existing approved services first. Run build, browser, migration, compati
 - Remote device controls, public tokenisation, secondary transfer, stablecoin/virtual-asset settlement and crypto-backed finance remain disabled until their specific legal, security, finance and operational gates are approved.
 - The public marketing site has one canonical source under `sites/opfin-public/` once host/source compatibility is proven. Do not create or maintain a second independently authored marketing website.
 - A source merge, deployment, configured provider, saved Site version or successful HTTP response is never by itself production acceptance.
+
+
+## Current integration boundary clarification (18 October 2026)
+
+External identity, credit-information, communications and payment-provider orchestration must be mediated through Cito where the relevant capability and country permissions have been verified. Do not introduce new direct dependencies on legacy standalone components. Provider involvement is not evidence of regulatory authority, provider activation, settlement finality or production acceptance. Keep each application independently deployable with explicit contracts, scoped credentials, data ownership and reconciliation boundaries.
