@@ -121,3 +121,10 @@ GitHub Actions remains deferred under the owner's instruction. Retain equivalent
 Existing Web/API setup references are `https://opfin-web-production.up.railway.app` and `https://opfin-production.up.railway.app`. They are not proof of current live health or custom-domain cutover. Read [security](SECURITY.md), [engineering](AGENTS.md), [deployment guidance](infrastructure/railway/README.md) and current contracts before changing authentication, providers, credit or money movement.
 
 Enhance working capabilities, preserve customer and financial history, and describe only what the evidence supports.
+
+
+## Current implementation and release status (18 October 2026)
+
+The current club-accounting candidate adds encrypted, server-persisted recovery for interrupted instruction and statement requests, cross-device resume, former-member access to their own retained capital history, and native statement export/share/print on supported mobile platforms. These are code-candidate capabilities, not a claim of production availability. See [club recovery and export evidence](docs/operations/CLUB_RECOVERY_EXPORT_IMPLEMENTATION_2026-09-26.md), [the recovery API contract](apps/api/docs/api/CLUB_CLIENT_RECOVERY.md), and the [current capability supplement](docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md).
+
+**Release status:** full Laravel/database, Next.js, Flutter, Android/iOS, browser/device/accessibility and independent financial acceptance remain outstanding. Do not infer deployment, provider activation, payment execution or launch readiness from targeted local checks. Keep this repository's current state and release evidence authoritative over feature aspirations.
