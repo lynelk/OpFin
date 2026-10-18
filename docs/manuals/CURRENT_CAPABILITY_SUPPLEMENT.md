@@ -90,3 +90,10 @@ These identifiers extend, rather than renumber, existing UAT cases. Expected res
 Record task ID, tester/role, source commit, build/environment/channel, synthetic fixture, actual steps/results, non-sensitive request/statement/provider references, defect/review reference and accountable approver. Never include real PINs, OTPs, tokens, raw identity evidence or full bank details in a publication pack.
 
 A passing lesson does not certify the whole product. A passing build does not certify provider activation. A published manual does not certify an untested or still-failing workflow.
+
+
+## Club recovery/export implementation note (18 October 2026)
+
+The current candidate also supports former-member navigation restricted to the former member's own retained capital history and native mobile statement save/share/print. Web exports remain authenticated. Opening an operating-system share/print dialogue is not proof of delivery or printing.
+
+**Acceptance status:** targeted transport/policy assertions, source syntax checks, Swift parsing and XML checks are recorded. The new Laravel recovery tests, full API/database and migration checks, Next.js build, Flutter analysis/tests, Android/iOS release builds, browser/device/accessibility checks and independent financial review remain outstanding. No merge, deployment or production acceptance is asserted. See [dated recovery/export evidence](../operations/CLUB_RECOVERY_EXPORT_IMPLEMENTATION_2026-09-26.md) and [recovery API contract](../../apps/api/docs/api/CLUB_CLIENT_RECOVERY.md).
