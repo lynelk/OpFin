@@ -68,3 +68,12 @@ Documentation is part of the implementation, not a post-release chore.
 Railway infrastructure is controlled by `ops/railway/topology-policy.json`. Do **not** create a new Railway project, environment, service, database, volume, bucket, persistent validation workload, or increase replica counts unless the workspace owner has explicitly approved that specific infrastructure change. A request to build, test, validate, fix, deploy, synchronise or release software is not infrastructure-creation consent.
 
 Use the existing approved services first. Run build, browser, migration, compatibility and release validation in ephemeral CI unless the owner has explicitly authorised a persistent Railway resource. Never use Railway Agent to work around this rule. Keep the workspace Railway Agent hard limit at USD 0 and respect the current compute hard limit. If an approved topology change is required, update the allow-list, cost impact and governance documentation in the same reviewed change before provisioning it.
+
+
+## Current integration boundary clarification (18 October 2026)
+
+External identity, credit-information, communications and payment-provider orchestration must be mediated through **Cito** where the relevant capability and country permissions have been verified. Do not introduce new direct references to legacy standalone components as integration dependencies. Provider involvement is not evidence of regulatory authority, provider activation, settlement finality or production acceptance. Keep each application independently deployable with explicit contracts, scoped credentials, data ownership and reconciliation boundaries.
+
+## Current Essentials release boundary
+
+The durable collection/servicing candidate is not a complete financial lifecycle. Before release, resolve legacy-record adoption and compatibility, execute the full API/database/migration/concurrency suites and Web/App builds, complete independent financial review, and close the credential-log incident. Do not report lender funding, biller settlement, lender release, activation/opening accounting or post-reversal refunds as complete without implementation and candidate-specific evidence.
