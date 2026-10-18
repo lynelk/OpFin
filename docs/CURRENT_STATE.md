@@ -71,3 +71,12 @@ GitHub Actions remains deferred by owner instruction. Retain equivalent candidat
 Use the [documentation hub](README.md), [concept](product/OPFIN_CONCEPT_NOTE.md), [evolution review](product/PRODUCT_EVOLUTION_2026-09-26.md), [lender contract](architecture/LENDER_ORCHESTRATION.md), [manuals](manuals/OPFIN_USER_MANUAL.md) and [capability supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md). The dated [concept comparison](product/CONCEPT_AND_PLAN_COMPARISON.md) and [implementation index](product/CANONICAL_IMPLEMENTATION_STATUS.md) retain their own assessment dates.
 
 Original requirements, later decisions, source observations and acceptance evidence are separate authorities. Update this index from new evidence rather than simply a new merge date.
+
+
+## 18 October 2026: club recovery and export delta
+
+The current candidate adds encrypted server-side saved requests for accounting instructions and statement issuance; exact identity/hash replay; a single unresolved request slot per user, book and purpose; explicit resume/read, acknowledgement and cancellation of requests that were never submitted; and current-authorisation checks during recovery. Web recovery is no longer limited to the open page. The App also supports former members' own retained capital history and authenticated statement save/share/print flows.
+
+These additions do not change the accounting authority boundary: the API remains authoritative for validation, approval, ledger postings, statements and access. A saved-request acknowledgement is not an accounting approval or payment. Native export opens a system destination/dialogue and does not prove delivery or printing.
+
+**Evidence boundary:** targeted transport assertions, Kotlin export-policy assertions, PHP syntax checks, Swift parsing and XML checks are recorded. The twelve new Laravel recovery tests and full API/database/Web/Flutter/mobile/device/accessibility gates remain outstanding. Treat the branch as a code candidate, not deployed or accepted production capability. See [dated recovery/export evidence](operations/CLUB_RECOVERY_EXPORT_IMPLEMENTATION_2026-09-26.md).
