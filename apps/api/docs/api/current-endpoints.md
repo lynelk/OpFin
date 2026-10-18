@@ -118,3 +118,10 @@ The accepted `/api/admin/lending-platform` routes and scope are retained in [Dom
 The running catalogue reads registered routes and checked-in guides. `api:catalogue --check` checks definition consistency; `--require-complete` fails for missing reviewed schemas. `--baseline` also detects operation-ID changes and contract-status regressions. The offline export includes all reviewed role-specific contracts; the authenticated HTTP export remains role-filtered.
 
 Source discovery is not automatic semantic completion or proof that production equals remote main. Update fields, examples, permissions, errors, financial recovery and training tasks with the implementation. Historical evidence keeps its original date; unresolved financial and security requirements remain separate.
+
+
+## Essentials repayment collection and reconciliation (18 October 2026)
+
+The Essentials candidate uses a persisted, payload-bound collection request and original-request reconciliation for uncertain provider outcomes. A request acknowledgement is not settlement finality. Exposure synchronisation separates reserved financing from due debt and protects against duplicate production/legacy exposure. The repayment contract's idempotency-key location and response semantics must be checked in the specific operation contract; do not infer a universal request envelope from route registration.
+
+The current candidate does not establish complete lender drawdown, biller settlement, lender release, activation/opening accounting, full mandate compatibility or refund-after-reversal support. Review [the current capability supplement](../../../docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) and [PR #134](https://github.com/lynelk/OpFin/pull/134). Full API/database and client acceptance remain outstanding.
