@@ -97,3 +97,12 @@ Open financial obligations must be handled through governed closure. The reviewe
 ## Availability
 
 Internal software defects, missing acceptance evidence and external provider/legal activation are different limitations. None should be represented as completed without evidence. A published manual, source merge or successful deployment of one component does not establish that every service is live.
+
+
+## Club requests and interrupted work
+
+If a club instruction or statement request times out, open **Saved requests** and inspect/resume the original request. Do not create a replacement just because the result is uncertain. Read the recorded result and acknowledge it before starting another request of the same purpose. Cancellation is available only if the request was not submitted to the accounting domain. Acknowledgement is not accounting approval or payment execution. Former-member capital history is limited to the former member's own retained records. Opening a mobile save/share/print dialogue is not proof that a file was delivered or printed.
+
+## Essentials repayment status
+
+A repayment can remain pending while the provider confirms the outcome. An uncertain result must be reconciled against the original request, not resolved by submitting a second payment. Reserved financing is not an amount currently due. Availability of any Essentials product depends on verified lender authority, product configuration and provider capability; this guide does not claim that every lender, biller, repayment route or refund path is live.
