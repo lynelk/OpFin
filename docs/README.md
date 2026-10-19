@@ -69,7 +69,7 @@ Dated audit, demo, migration and release files remain historical. Specialist len
 
 Every material system/API change must update the affected current contracts, manual tasks and UAT evidence in the same change. The concept records stable purpose; the current-state index records current evidence; the evolution record records a dated review.
 
-GitHub Actions remains deferred by owner instruction. Retain equivalent candidate-specific verification without enabling Actions, weakening tests or provisioning additional infrastructure. Earlier successful runs or deployments do not certify a new candidate.
+GitHub Actions workflows are currently active. Retain candidate-specific verification without weakening tests or provisioning unapproved infrastructure. Earlier successful runs or deployments do not certify a new candidate.
 
 The [lender implementation contract](architecture/LENDER_ORCHESTRATION.md), [executed roadmap](development/2026-09-25-lending-platform-roadmap.md), [cross-border backlog](development/CROSS_BORDER_ROADMAP.md) and [lending evidence](operations/LENDING_DELIVERY_2026-09-25.md) preserve the 25 September lending work. This concept update does not expand weekly management-review scope or cadence.
 
