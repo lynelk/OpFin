@@ -7,6 +7,7 @@ use App\Models\Otp;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -116,6 +117,51 @@ class StaffCredentialRecoveryTest extends TestCase
         $this->assertTrue(Hash::check(self::STRONG, $admin->password));
         $this->postJson('/api/reset-password', ['email' => 'owner@example.test', 'otp' => $code, 'password' => 'Another-Pass-77!', 'password_confirmation' => 'Another-Pass-77!'])
             ->assertStatus(400);
+    }
+
+    public function test_production_reset_does_not_queue_a_code_without_real_delivery_configuration(): void
+    {
+        Mail::fake();
+        $this->bootstrap();
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $this->app->detectEnvironment(fn () => 'production');
+
+        // Even for an existing staff identity, no code is stored or queued when
+        // the mailer would log the secret or when the Resend token is missing.
+        foreach (['log', 'array', 'resend'] as $mailer) {
+            config()->set('mail.default', $mailer);
+            config()->set('mail.from.address', 'security@verified-opfin.example.net');
+            config()->set('services.resend.key', null);
+
+            $this->postJson('/api/generate-otp', ['channel' => 'email', 'email' => 'owner@example.test'])
+                ->assertStatus(503);
+            $this->postJson('/api/generate-otp', ['channel' => 'email', 'email' => 'nobody@example.test'])
+                ->assertStatus(503);
+        }
+
+        $this->assertDatabaseMissing('otps', ['phone' => '256700000123']);
+        Mail::assertNothingQueued();
+    }
+
+    public function test_production_reset_queues_only_with_a_configured_https_mail_transport(): void
+    {
+        Mail::fake();
+        $this->bootstrap();
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $this->app->detectEnvironment(fn () => 'production');
+        config()->set('mail.default', 'resend');
+        config()->set('mail.from.address', 'security@validated-opfin.example.net');
+        config()->set('services.resend.key', 'fake-test-key');
+
+        $this->postJson('/api/generate-otp', ['channel' => 'email', 'email' => 'owner@example.test'])
+            ->assertOk();
+        Mail::assertQueued(PasswordResetCode::class, 1);
+
+        // A placeholder sender domain must fail closed even with a provider key.
+        config()->set('mail.from.address', 'hello@example.com');
+        $this->postJson('/api/generate-otp', ['channel' => 'email', 'email' => 'owner@example.test'])
+            ->assertStatus(503);
+        Mail::assertQueued(PasswordResetCode::class, 1);
     }
 
     public function test_customers_cannot_use_the_email_channel_or_the_staff_password_change(): void

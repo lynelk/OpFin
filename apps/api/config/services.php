@@ -12,7 +12,8 @@ return [
     ],
 
     'resend' => [
-        'key' => env('RESEND_KEY'),
+        // Resend uses its HTTPS API; do not supply SMTP credentials on Railway Hobby.
+        'key' => env('RESEND_API_KEY', env('RESEND_KEY')),
     ],
 
     'slack' => [
