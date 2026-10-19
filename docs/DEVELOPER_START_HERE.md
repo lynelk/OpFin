@@ -115,7 +115,7 @@ The six current API failures and Essentials review findings are not solved by th
 
 Run affected implementation checks and `make docs-check`/`make publication-check` for their stated scope. Retain the exact candidate, command, environment and actual result. Failed or absent checks are not a pass.
 
-GitHub Actions remains disabled by owner instruction. Do not re-enable it, remove existing build tests/audits or use Railway Agent. Use only approved existing infrastructure; a build/deployment request is not consent for a new service, database, volume or replica.
+GitHub Actions workflows are currently active. Preserve build, security and financial-control checks; do not disable tests/audits or use Railway Agent. Use only approved existing infrastructure; a build/deployment request is not consent for a new service, database, volume or replica.
 
 After a permitted release, verify actual running source, forward migrations, API/Web health, worker/scheduler freshness and applicable reconciliation. Preserve original concept requirements and historical evidence; do not rewrite requirements to legitimise a defect.
 
