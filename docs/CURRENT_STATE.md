@@ -64,7 +64,7 @@ Cito/CPay remain preferred integration/payment routes. Explicitly certified dire
 
 Complete outstanding control integration, current-release mobile/database/recovery evidence and normal personal/group acceptance; validate treasury history; activate contracted services; then complete the retained wellbeing, club-accounting, automation and longer-range scope. Keep the essential App-only Individual/Savings Group requirement in force.
 
-GitHub Actions remains deferred by owner instruction. Retain equivalent candidate-specific evidence without enabling Actions, weakening checks or creating unapproved infrastructure. This is a documentation change, not a deployment or financial activation.
+GitHub Actions workflows are currently active. Retain candidate-specific release-gate evidence and independent runtime/financial acceptance; do not weaken checks or create unapproved infrastructure. This is a documentation change, not a deployment or financial activation.
 
 ## Maintenance
 
