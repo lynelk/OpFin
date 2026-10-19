@@ -90,3 +90,15 @@ These identifiers extend, rather than renumber, existing UAT cases. Expected res
 Record task ID, tester/role, source commit, build/environment/channel, synthetic fixture, actual steps/results, non-sensitive request/statement/provider references, defect/review reference and accountable approver. Never include real PINs, OTPs, tokens, raw identity evidence or full bank details in a publication pack.
 
 A passing lesson does not certify the whole product. A passing build does not certify provider activation. A published manual does not certify an untested or still-failing workflow.
+
+
+## Current application alignment and acceptance boundary (18 October 2026)
+
+### Club accounting recovery/export
+The candidate includes encrypted server-persisted request envelopes for instructions and statement issuance; original reference/content-hash resume after reload/device change; explicit acknowledgement or cancellation only before domain submission; current-authorisation checks; former-member access restricted to own retained capital history; and authenticated Web/native mobile statement export. Acknowledgement is not accounting approval or payment execution. A system share/print dialogue does not prove delivery.
+
+### Essentials collection/servicing
+The candidate includes payload-bound durable collection identity; persistence before provider submission; provider-observation retention before accounting application; original-request reconciliation for uncertain outcomes; one-in-flight capacity control; reservation-versus-due-debt separation; exposure deduplication across production/legacy copies; original-policy repayment allocation/reversal; and append-only balanced servicing evidence.
+
+### Not accepted / incomplete
+The complete Laravel recovery/Essentials integration tests have not run in the full application environment. Full database/migration/concurrency suites, Next.js production build, Flutter analysis/tests, Android/iOS release builds, browser/device/accessibility checks and independent financial review remain outstanding. Essentials lender funding/drawdown, biller settlement, lender release, activation/opening accounting, full mandate-origination compatibility, older-record adoption and customer refunds after service reversal remain incomplete. The separate credential-log incident is unresolved. No merge/deployment/provider activation/live payment/financial-launch acceptance is implied by targeted local checks.

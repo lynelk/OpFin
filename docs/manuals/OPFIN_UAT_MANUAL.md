@@ -190,3 +190,21 @@ Use synthetic partners, licence references and wording only.
 | UAT-100 | Email sign-in scope | Try to sign in with a customer's email, and with an unknown email | Both get "Email or password is incorrect." Five failures lock the email for 10 minutes. |
 | UAT-101 | Email recovery | Use **Forgot password?** with the staff email, enter the emailed code and a new password; reuse the code | The password changes once. The reused code is refused. An unknown email shows the same confirmation and sends nothing. |
 | UAT-102 | Owner recovery | Run `opfin:admin:reset-password` for the administrator | Existing sessions end and the next sign-in requires a new password. The audit trail shows the reset. |
+
+
+## Club recovery, former-member history and export
+
+- Interrupt before submission and after server/domain submission; reload Web/restart App and resume the same reference/hash.
+- Verify one domain record only, current-authorisation checks, maker/checker separation, acknowledgement before another request, and cancellation only while genuinely unsubmitted.
+- Verify former-member navigation exposes only that member's retained history.
+- Test authenticated CSV/HTML and mobile save/share/print, cancellation, unavailable destinations, large text, screen readers, narrow layouts and keyboard/focus behaviour.
+
+## Essentials durable collection and servicing
+
+- Verify payload-bound collection identity and one-in-flight capacity under concurrent attempts.
+- Interrupt at preparation/provider submission/provider response and reconcile the original request without a second collection.
+- Confirm reserved financing is not due debt and production/legacy representations are not double-counted.
+- Test original-policy partial/full allocation, duplicate references, contradictory finality, append-only balanced reversal movements and safe retained servicing/closure.
+- Run clean and populated migrations, repeat upgrades, SQLite/PostgreSQL suites, concurrent writers, API compatibility, Web production build, Flutter analysis/tests, Android/iOS release builds and independent financial review on the exact candidate.
+
+Record candidate commit, database state, device/OS and evidence. Targeted harnesses and syntax checks are not full acceptance. Essentials funding, settlement, release, activation/opening accounting, mandate compatibility, older-record adoption and post-reversal refunds require separate completed tests.

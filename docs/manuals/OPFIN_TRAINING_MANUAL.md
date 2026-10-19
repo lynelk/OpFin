@@ -88,3 +88,12 @@ In an approved non-money-moving fixture, practise account capture, verification 
 Use plain language, demonstrations and synthetic records. Never collect PINs/OTPs or publish identity evidence. Distinguish implementation, deployment, financial activation, device acceptance and publication status. Keep current screen labels and source references with each lesson.
 
 A learner passes a task only when they complete it unaided, explain confirmed versus pending state, recognise unavailable services and identify safe support/recovery. Record actual results, build/environment/device, tester and defects. No lesson or added test case is automatically marked passed.
+
+
+## Club recovery and export exercise
+
+Using synthetic data and two authorised officers, prepare an instruction, interrupt submission, reload Web/restart App and resume the same reference/hash. Confirm no duplicate accounting record, no maker self-approval and no new request until the prior request is acknowledged or safely cancelled while unsubmitted. Repeat for statement issuance and a second user. Verify a former member sees only their own retained history. Test mobile CSV save/share/print, cancellation and unavailable destinations; teach that a system dialogue is not proof of delivery.
+
+## Essentials interruption and reversal exercise
+
+Using synthetic accounts, interrupt repayment after preparation, provider submission and provider response. Reconcile the original request without creating a second collection. Check one-in-flight capacity, reservation-versus-due-debt display, legacy/production exposure deduplication, partial allocation against the original policy, duplicate provider references, contradictory finality and append-only balanced reversal movements. These are training/UAT scenarios, not proof that full release acceptance has passed.
