@@ -122,7 +122,7 @@ python3 scripts/search-api.py "essentials"
 python3 scripts/search-api.py "statement"
 ```
 
-GitHub Actions remains deferred under the owner's instruction. Retain equivalent candidate-specific validation. Do not re-enable Actions, disable tests/audits or provision new infrastructure to manufacture release evidence.
+GitHub Actions workflows are currently active, including OpFin Monorepo CI, security monitoring and deployment-contract checks. Retain candidate-specific build, test and audit evidence; successful CI does not establish live production acceptance. Do not weaken release checks or provision unapproved infrastructure.
 
 Existing Web/API setup references are `https://opfin-web-production.up.railway.app` and `https://opfin-production.up.railway.app`. They are not proof of current live health or custom-domain cutover. Read [security](SECURITY.md), [engineering](AGENTS.md), [deployment guidance](infrastructure/railway/README.md) and current contracts before changing authentication, providers, credit or money movement.
 
