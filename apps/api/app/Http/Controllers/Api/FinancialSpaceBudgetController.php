@@ -14,7 +14,10 @@ class FinancialSpaceBudgetController extends Controller
 {
     public function index(Request $request, FinancialSpace $space): JsonResponse
     {
-        $this->role($request, $space);
+        abort_unless(
+            FinancialSpaceRolePolicy::canViewFinancialRecords($space->type, $this->role($request, $space)),
+            403
+        );
         $validated = $request->validate([
             'month' => ['sometimes', 'date_format:Y-m'],
         ]);
