@@ -2,7 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\ConsentRecord;
+use App\Models\FinancialSpace;
+use App\Models\FinancialSpaceMembership;
+use App\Models\Institution;
+use App\Models\LoanProduct;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
@@ -12,9 +18,50 @@ class BusinessPassportShadowReviewTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function references(): array
+    private function references(bool $consented = true, bool $validLender = true): array
     {
+        $borrower = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $institution = Institution::create([
+            'name' => 'Test merchant lender', 'address' => 'Test road',
+            'phone' => '000000000', 'email' => (string) Str::uuid().'@example.test',
+            'country' => 'UG', 'status' => $validLender ? 'Active' : 'Suspended',
+            'lender_relationship' => 'independent', 'authority_basis' => 'licensed',
+            'authority_reference' => 'TEST-LICENCE-NOT-REAL', 'regulator_code' => 'TEST',
+        ]);
+        $product = LoanProduct::create([
+            'name' => 'Test-only merchant stock finance', 'type' => 'Cash',
+            'status' => 'Active', 'institution_id' => $institution->id,
+            'country' => 'UG', 'currency' => 'UGX',
+            'product_category' => 'merchant_stock_finance',
+        ]);
+        $space = FinancialSpace::create([
+            'public_id' => (string) Str::uuid(), 'type' => 'business',
+            'name' => 'Synthetic merchant space', 'country' => 'UG',
+            'currency' => 'UGX', 'status' => 'active',
+            'metadata' => ['stolets_tenant_id' => 'merchant-one'],
+        ]);
+        FinancialSpaceMembership::create([
+            'financial_space_id' => $space->id, 'user_id' => $borrower->id,
+            'role' => 'owner', 'status' => 'active', 'joined_at' => now(),
+            'approved_at' => now(),
+        ]);
+        ConsentRecord::create([
+            'user_id' => $borrower->id, 'purpose' => 'merchant_finance_assessment',
+            'policy_version' => 'merchant-shadow-v1',
+            'status' => $consented ? ConsentRecord::STATUS_GRANTED : ConsentRecord::STATUS_REVOKED,
+            'granted_at' => now()->subMinute(),
+            'revoked_at' => $consented ? null : now(),
+            'metadata' => [
+                'financial_space_id' => $space->id,
+                'stolets_tenant_id' => 'merchant-one',
+                'lender_recipient_id' => 'opfin-lender-'.$institution->id,
+            ],
+        ]);
+
         return [
+            'borrowerUserId' => $borrower->id,
+            'loanProductId' => $product->id,
+            'financialSpaceId' => $space->id,
             'tenantId' => 'merchant-one',
             'consentGrantId' => 'grant-one',
             'passportShareId' => 'share-one',
@@ -42,6 +89,7 @@ class BusinessPassportShadowReviewTest extends TestCase
             'consentGrantId' => 'grant-one',
             'sharePackageId' => 'share-one',
             'featureSnapshotId' => 'feature-one',
+            'providerOfRecordId' => 'opfin-lender-1',
             'sourcePeriodUntil' => now()->subDay()->toIso8601String(),
             'expiresAt' => now()->addDay()->toIso8601String(),
             'metrics' => [
@@ -60,10 +108,14 @@ class BusinessPassportShadowReviewTest extends TestCase
     public function test_shadow_passport_evidence_is_real_partner_scoped_but_never_a_credit_decision(): void
     {
         $this->enable();
-        Http::fake(['https://stolets.example.test/*' => Http::response($this->packet(), 200)]);
+        $references = $this->references();
+        $lender = 'opfin-lender-'.LoanProduct::find($references['loanProductId'])->institution_id;
+        Http::fake(['https://stolets.example.test/*' => Http::response($this->packet([
+            'providerOfRecordId' => $lender,
+        ]), 200)]);
         Sanctum::actingAs(User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]));
 
-        $this->postJson('/api/admin/business-passport/shadow-review', $this->references())
+        $this->postJson('/api/admin/business-passport/shadow-review', $references)
             ->assertOk()
             ->assertJsonPath('data.status', 'shadow_evidence_received')
             ->assertJsonPath('data.decision', 'manual_review')
@@ -78,6 +130,7 @@ class BusinessPassportShadowReviewTest extends TestCase
             $request->url() === 'https://stolets.example.test/v1/partner-evidence/opfin/credit-shadow'
             && $request->hasHeader('Authorization', 'Bearer '.str_repeat('x', 40))
             && $request['tenantId'] === 'merchant-one'
+            && $request['providerOfRecordId'] === $lender
         );
         $this->assertDatabaseCount('loans', 0);
     }
@@ -118,6 +171,20 @@ class BusinessPassportShadowReviewTest extends TestCase
         $this->postJson('/api/admin/business-passport/shadow-review', $this->references())
             ->assertStatus(503);
         $this->assertDatabaseCount('loans', 0);
+    }
+
+
+    public function test_absent_customer_consent_or_inactive_lender_denies_before_external_data_call(): void
+    {
+        $this->enable();
+        Http::fake();
+        Sanctum::actingAs(User::factory()->create(['role' => User::ROLE_PLATFORM_ADMIN]));
+
+        $this->postJson('/api/admin/business-passport/shadow-review', $this->references(false))
+            ->assertStatus(503);
+        $this->postJson('/api/admin/business-passport/shadow-review', $this->references(true, false))
+            ->assertStatus(503);
+        Http::assertNothingSent();
     }
 
     public function test_stale_and_absent_funding_data_remain_unavailable(): void
