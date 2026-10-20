@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opfin/location_context_screen.dart';
 import 'package:opfin/financial_space_statements_screen.dart';
+import 'package:opfin/financial_space_budget_screen.dart';
 import 'package:opfin/provider_statements_screen.dart';
 import 'package:opfin/services/financial_spaces_api.dart';
 import 'package:opfin/services/statement_intelligence_api.dart';
@@ -78,6 +79,7 @@ class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>
     Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Financial position'),Text(ugx(d['net_worth_minor']),style:const TextStyle(fontSize:30,fontWeight:FontWeight.w800)),const SizedBox(height:8),Text('Safe to spend ${ugx(d['safe_to_spend_minor'])}')] ))),
     Row(children:[Expanded(child:_tile('I own',ugx(d['assets_minor']),canEditFinances?()=>quick('asset'):null)),const SizedBox(width:8),Expanded(child:_tile('I owe',ugx(d['debt_minor']),canEditFinances?()=>quick('owe'):null))]),
     _tile('Owed to me',ugx(d['receivables_minor']),canEditFinances?()=>quick('receivable'):null),
+    Card(child:ListTile(leading:const Icon(Icons.pie_chart_outline),title:const Text('Budgets'),subtitle:const Text('Plan category limits in this financial space; spending actuals remain separately verified.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>FinancialSpaceBudgetScreen(space:widget.space))))),
     // Shown only when the server reports statements are switched on for this Space.
     FutureBuilder<bool>(future:_statementsAvailable,builder:(_,available)=>available.data==true?Card(child:ListTile(leading:const Icon(Icons.description_outlined),title:const Text('Provider statements'),subtitle:const Text('Upload bank or mobile money statements to see money in and out. Results are checks, not provider confirmation.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProviderStatementsScreen(space:widget.space))))):const SizedBox.shrink()),
     if(WorkspaceAccess.canOpenPeople(widget.space))Card(child:ListTile(leading:const Icon(Icons.badge_outlined),title:const Text('OpFin People'),subtitle:Text(WorkspaceAccess.canManagePeople(widget.space)?'View your authorised employer connection; workforce setup is pending.':'View your employer connection; workforce features require activation.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyEmploymentScreen())))),
