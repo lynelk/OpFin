@@ -55,3 +55,14 @@ All ten are required for Core Release acceptance; none may be replaced with a pl
 - **Production:** passing CI, migration/backups and restore rehearsal, observability, security review, rollback plan and explicit operational sign-off.
 
 **One Core Release:** no module is deferred to a later release. Staged internal delivery and feature flags are permitted only for testing and rollout safety; all ten modules must pass acceptance before the Core Release is declared complete. No deployment or release-complete claim until evidence supports it.
+
+## Mobile distribution and future app separation (approved)
+
+- **Core Release delivery:** OpFin People employee, supervisor, HR and employer experiences are embedded in the existing OpFin Flutter mobile application. Do not require a separate People mobile app for launch.
+- **Navigation:** preserve the existing OpFin Finance, Activity and More journeys; expose a role-aware People workspace through the existing navigation, with deep links for attendance, leave, payroll, assets, field accountability, KPIs, biometrics, appraisals and rewards. Avoid assuming a new permanent bottom tab.
+- **Organisation context:** support authorised switching between multiple engagements and organisations. Every API request must enforce tenant and role boundaries server-side.
+- **Backend independence:** People retains its own domain APIs, data ownership, deployment boundaries, audit and authorisation, even while embedded in the OpFin mobile shell. The standalone People backend must remain viable if the OpFin finance backend is unavailable, subject to a secure identity/session strategy.
+- **Employer web:** a responsive employer administration portal may coexist with the embedded mobile experience; it is not a prerequisite for employees to install another app.
+- **Future dedicated app:** package People Flutter routes, widgets, state and API clients into a reusable feature module with a documented interface; a later dedicated People application may consume the same feature module and backend without migrating HR data or rewriting business rules.
+- **Separation safeguards:** do not expose financial balances, loan information or financial eligibility to HR roles; avoid reusing financial permissions as HR permissions; no implicit credit-data sharing.
+- **Release acceptance:** test the full People feature set inside OpFin on Android and iOS, deep-linking, logout, session expiry, multi-organisation switching, offline reconciliation, and existing OpFin finance regression flows.
