@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\FinancialWellbeingController;
 use App\Http\Controllers\Api\FinancingController;
 use App\Http\Controllers\Api\FoundationAdminController;
 use App\Http\Controllers\Api\GrowthReadinessController;
+use App\Http\Controllers\Api\BusinessPassportShadowController;
 use App\Http\Controllers\Api\GuarantorController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\InclusiveFinanceController;
@@ -352,6 +353,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     });
     Route::get('/admin/lending-platform', [LendingPlatformController::class, 'index']);
     Route::get('/admin/growth-readiness', [GrowthReadinessController::class, 'index']);
+    Route::post('/admin/business-passport/shadow-review', BusinessPassportShadowController::class);
     Route::post('/admin/lending-platform/institutions', [LendingPlatformController::class, 'institution']);
     Route::post('/admin/lending-platform/products', [LendingPlatformController::class, 'product']);
     Route::post('/admin/lending-platform/products/{product}/terms', [LendingPlatformController::class, 'term']);
