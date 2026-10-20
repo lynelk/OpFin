@@ -17,7 +17,7 @@ const pillars = [
 ];
 
 const steps = [
-  ["01", "Join securely", "New customers start in the App with phone verification, names and a six-digit PIN."],
+  ["01", "Join securely", "New customers start on Web or in the App with phone verification, names and a six-digit PIN."],
   ["02", "Understand your position", "OpFin separates recorded facts, estimates and unavailable information."],
   ["03", "Take the next useful step", "Manage, save, borrow, protect or grow according to your goals and available services."],
   ["04", "Progress over time", "Build a stronger verified financial record without turning programme data into hidden underwriting."],
@@ -71,7 +71,7 @@ export default function HomePage() {
           <Link href="/learn">Free learning</Link>
         </nav>
         <div className="marketing-nav-actions">
-          <Link className="button marketing-primary" href="/login">Sign in to Web</Link>
+          <Link className="button marketing-primary" href="/signup">Get started</Link>
         </div>
       </header>
 
@@ -83,11 +83,11 @@ export default function HomePage() {
             One OpFin identity can connect your personal money, savings groups and authorised organisations while keeping each Financial Space appropriately separated.
           </p>
           <div className="marketing-hero-actions">
-            <Link className="button marketing-primary marketing-large" href="/login">Sign in to Web</Link>
+            <Link className="button marketing-primary marketing-large" href="/signup">Get started</Link>
             <Link className="button secondary marketing-large" href="/learn">Learn about money, freely</Link>
           </div>
           <p className="marketing-preview-disclosure">
-            New-customer registration is phone-first in the OpFin App. Web sign-in is for existing or authorised Workspace access.
+            New customers can register on Web or in the OpFin App. Existing customers sign in to their authorised Workspace.
           </p>
           <div className="marketing-trust-row" aria-label="OpFin trust commitments">
             <span>✓ Secure by design</span>
