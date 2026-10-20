@@ -14,7 +14,7 @@ The registry identifies Financial Space types, 13 customer-facing service famili
 - Financial Spaces own membership and context boundaries.
 - Financial records own shared budgets, assets, debts, cash flow and goals.
 - Accounting owns ledger semantics; governance owns approvals, tasks and documents.
-- Group finance owns VSLA and SACCO member finance; investment operations own investment club units and valuations.
+- Savings Groups and SACCO finance own member savings and cooperative records; investment operations own investment club units and valuations.
 - People owns workforce engagement, payroll, attendance, biometric event integrations, assets in custody, appraisals, rewards, KPIs and field accountability.
 - Credit and risk own regulated underwriting and lending, with financial core immutable accounting, durable money intents and reconciliation.
 - Integration adapters, including Cito, never confer regulatory authority merely by being connected.
@@ -36,3 +36,17 @@ Keep the existing OpFin mobile app shell and its financial journeys. Use authori
 7. Release only after CI, security, regulatory and operational readiness gates pass.
 
 No new persistent infrastructure or production activation is implied by the registry.
+
+## Product terminology (20 October 2026)
+
+**Savings Groups** is the canonical user-facing name for savings circles, VSLAs and informal community savings groups. The service registry key is `savings_groups`; the database Financial Space type **remains** `savings_group` to preserve existing memberships, APIs, imports and accounting history. Existing references to VSLAs may remain in educational or regulatory classifications, but are not the primary user-facing module label.
+
+## Confirmed implementation progress
+
+- Role-aware server-sourced workspace permissions attached to each active Financial Space membership.
+- Flutter workspace switcher integrated with Home and Financial Space detail routes, with restricted edit/invite UI.
+- Financial asset and debt mutations restricted to authorised financial managers at the API boundary.
+- Shared budgets use the existing `financial_budgets` table with mandatory `financial_space_id` scoping, space-based view/create/update APIs and a Flutter budget view.
+- Budget values are **planned limits only**. Expense actuals, reconciliation and overspend alerting remain separate integration work; nothing is marked complete before actual evidence.
+
+These changes are on the development branch and remain subject to full automated and end-to-end tests, review and release approval. No People payroll/biometric/HR suite or regulated institution operation is implied.
