@@ -6,6 +6,9 @@ import 'package:opfin/provider_statements_screen.dart';
 import 'package:opfin/services/financial_spaces_api.dart';
 import 'package:opfin/services/statement_intelligence_api.dart';
 import 'package:opfin/sacco_workspace_screen.dart';
+import 'package:opfin/workspace_access.dart';
+import 'package:opfin/workspace_switcher_screen.dart';
+import 'package:opfin/my_employment_screen.dart';
 import 'package:opfin/club_accounting/workspace.dart';
 
 class FinancialSpacesScreen extends StatefulWidget {
@@ -21,7 +24,7 @@ class _FinancialSpacesScreenState extends State<FinancialSpacesScreen>{
     final ok=await showDialog<bool>(context:context,builder:(c)=>StatefulBuilder(builder:(c,setLocal)=>AlertDialog(
       title:const Text('Add a financial space'),content:Column(mainAxisSize:MainAxisSize.min,children:[
         DropdownButtonFormField<String>(initialValue:type,decoration:const InputDecoration(labelText:'What are you setting up?'),items:const[
-          DropdownMenuItem(value:'household',child:Text('Household')),DropdownMenuItem(value:'savings_group',child:Text('Savings group')),
+          DropdownMenuItem(value:'household',child:Text('Household')),DropdownMenuItem(value:'savings_group',child:Text('Savings Groups')),
           DropdownMenuItem(value:'investment_club',child:Text('Investment club')),
           DropdownMenuItem(value:'business',child:Text('Business')),DropdownMenuItem(value:'sacco',child:Text('SACCO')),
           DropdownMenuItem(value:'investment_fund',child:Text('Investment / fund organisation')),DropdownMenuItem(value:'partner',child:Text('Financial partner')),
@@ -40,7 +43,7 @@ class _FinancialSpacesScreenState extends State<FinancialSpacesScreen>{
     ]));
   }));
   IconData _icon(String? t)=>t=='savings_group'?Icons.groups_outlined:t=='investment_club'?Icons.trending_up_outlined:t=='business'?Icons.storefront_outlined:t=='sacco'?Icons.account_balance_outlined:t=='household'?Icons.home_outlined:Icons.account_balance_wallet_outlined;
-  String _label(String? t)=>{'personal':'My money','savings_group':'Savings group','investment_club':'Investment club','business':'Business','sacco':'SACCO','household':'Household','investment_fund':'Investment / fund','partner':'Partner'}[t]??'Organisation';
+  String _label(String? t)=>{'personal':'My money','savings_group':'Savings Groups','investment_club':'Investment club','business':'Business','sacco':'SACCO','household':'Household','investment_fund':'Investment / fund','partner':'Partner'}[t]??'Organisation';
 }
 
 class FinancialSpaceDetailScreen extends StatefulWidget{
@@ -54,23 +57,34 @@ class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>
   Future<void> reload()async{setState(()=>_life=FinancialSpacesApi.financialLife(id));await _life;}
   String ugx(dynamic v)=>'UGX ${money.format((v as num?)?.toInt()??0)}';
   bool get groupLike=>['savings_group','investment_club','sacco'].contains(widget.space['type']?.toString());
-  bool get canManageSpace=>const {'owner','administrator','admin','chairperson','treasurer','secretary','director','manager'}.contains(widget.space['role']?.toString());
+  bool get canManageSpace => WorkspaceAccess.canManageMembers(widget.space);
+  bool get canEditFinances => WorkspaceAccess.canEditFinances(widget.space);
+
+  Future<void> switchWorkspace() async {
+    final next = await Navigator.push<Map<String, dynamic>>(
+      context, MaterialPageRoute(builder: (_) => const WorkspaceSwitcherScreen()));
+    if (!mounted || next == null || next['id'] == widget.space['id']) return;
+    Navigator.pushReplacement(context,
+      MaterialPageRoute(builder: (_) => FinancialSpaceDetailScreen(space: next)));
+  }
   Future<void> quick(String kind)async{
+    if (!canEditFinances) return;
     final name=TextEditingController(),amount=TextEditingController();
     final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:Text(kind=='asset'?'Add what you own':kind=='owe'?'Add what you owe':'Add money owed to you'),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:name,decoration:const InputDecoration(labelText:'Name or person')),TextField(controller:amount,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Amount (UGX)'))]),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Save'))]));
     final a=int.tryParse(amount.text.replaceAll(',',''))??0; if(ok==true&&a>0){ if(kind=='asset'){ await FinancialSpacesApi.addAsset(id,'other',name.text,a); } else { await FinancialSpacesApi.addObligation(id,kind=='owe'?'personal_debt':'receivable',kind=='owe'?'i_owe':'owed_to_me',name.text,a); } await reload(); }
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(widget.space['name']?.toString()??'My money')),body:FutureBuilder<Map<String,dynamic>>(future:_life,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text('${s.error}'));final d=s.data??{};return RefreshIndicator(onRefresh:reload,child:ListView(padding:const EdgeInsets.all(20),children:[
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(widget.space['name']?.toString()??'My money'), actions:[IconButton(tooltip:'Switch workspace',icon:const Icon(Icons.swap_horiz),onPressed:switchWorkspace)]),body:FutureBuilder<Map<String,dynamic>>(future:_life,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text('${s.error}'));final d=s.data??{};return RefreshIndicator(onRefresh:reload,child:ListView(padding:const EdgeInsets.all(20),children:[
     Text(_label(widget.space['type']?.toString()),style:const TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:8),
     Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Financial position'),Text(ugx(d['net_worth_minor']),style:const TextStyle(fontSize:30,fontWeight:FontWeight.w800)),const SizedBox(height:8),Text('Safe to spend ${ugx(d['safe_to_spend_minor'])}')] ))),
-    Row(children:[Expanded(child:_tile('I own',ugx(d['assets_minor']),()=>quick('asset'))),const SizedBox(width:8),Expanded(child:_tile('I owe',ugx(d['debt_minor']),()=>quick('owe')))]),
-    _tile('Owed to me',ugx(d['receivables_minor']),()=>quick('receivable')),
+    Row(children:[Expanded(child:_tile('I own',ugx(d['assets_minor']),canEditFinances?()=>quick('asset'):null)),const SizedBox(width:8),Expanded(child:_tile('I owe',ugx(d['debt_minor']),canEditFinances?()=>quick('owe'):null))]),
+    _tile('Owed to me',ugx(d['receivables_minor']),canEditFinances?()=>quick('receivable'):null),
     // Shown only when the server reports statements are switched on for this Space.
     FutureBuilder<bool>(future:_statementsAvailable,builder:(_,available)=>available.data==true?Card(child:ListTile(leading:const Icon(Icons.description_outlined),title:const Text('Provider statements'),subtitle:const Text('Upload bank or mobile money statements to see money in and out. Results are checks, not provider confirmation.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ProviderStatementsScreen(space:widget.space))))):const SizedBox.shrink()),
+    if(WorkspaceAccess.canOpenPeople(widget.space))Card(child:ListTile(leading:const Icon(Icons.badge_outlined),title:const Text('OpFin People'),subtitle:Text(WorkspaceAccess.canManagePeople(widget.space)?'View your authorised employer connection; workforce setup is pending.':'View your employer connection; workforce features require activation.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyEmploymentScreen())))),
     if(widget.space['type']=='sacco')Card(child:ListTile(leading:const Icon(Icons.account_balance_outlined),title:const Text('SACCO member workspace'),subtitle:const Text('Shares, savings, guarantees, contributions, repayments and cooperative analytics.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SaccoWorkspaceScreen(space:widget.space))))),
     if(widget.space['type']=='investment_club')Card(child:ListTile(leading:const Icon(Icons.candlestick_chart_outlined),title:const Text('Investment club portfolio'),subtitle:const Text('Capital, units, investments, NAV, returns, distributions, approvals and statements.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>ClubAccountingScreen(space:widget.space))))),
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.insights_outlined),title:const Text('Space operations & analytics'),subtitle:const Text('Collections, disbursements, obligations, fees and operating position.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>SpaceOperationsScreen(space:widget.space))))),
-    if(groupLike)Card(child:ListTile(leading:const Icon(Icons.group_add_outlined),title:const Text('Members & invitations'),subtitle:const Text('Manage membership and roles from the same OpFin identity.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupMembersScreen(spaceId:id))))),
+    if(groupLike)Card(child:ListTile(leading:const Icon(Icons.group_add_outlined),title:const Text('Members & invitations'),subtitle:const Text('Manage membership and roles from the same OpFin identity.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupMembersScreen(spaceId:id,canInvite:canManageSpace))))),
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.verified_outlined),title:const Text('Registration & verification'),subtitle:const Text('Attach government or authority identifiers without changing the OpFin group identity.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupCredentialsScreen(space:widget.space))))),
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.health_and_safety_outlined),title:const Text('Group protection'),subtitle:const Text('See approved group-capable insurance products. Enrolment remains controlled.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GroupProtectionCatalogueScreen(space:widget.space))))),
     if(groupLike)Card(child:ListTile(leading:const Icon(Icons.map_outlined),title:const Text('Operating area'),subtitle:const Text('Record the group or club operating area without exposing member home locations.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>LocationContextScreen(subjectType:'financial_space',subjectId:id,purpose:'group_operating_area',title:'Operating area',description:'Use a locality or district-level location for the group operating area.',countryCode:widget.space['country']?.toString()??'UG',readOnly:!canManageSpace))))),
@@ -79,11 +93,11 @@ class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>
       Card(child:ListTile(leading:const Icon(Icons.receipt_long_outlined),title:const Text('Treasury & statements'),subtitle:const Text('View treasury balances and issue immutable bank-style OpFin statements.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>FinancialSpaceStatementsScreen(space:widget.space))))),
     Card(child:ListTile(leading:const Icon(Icons.location_city_outlined),title:const Text('Assets & project locations'),subtitle:const Text('Attach locations to property, farm, project or other recorded assets where useful.'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>FinancialAssetLocationsScreen(space:widget.space))))),
   ]));}));
-  Widget _tile(String t,String v,VoidCallback tap)=>Card(child:ListTile(title:Text(t),subtitle:Text(v),trailing:const Icon(Icons.add_circle_outline),onTap:tap));
-  String _label(String? t)=>t=='savings_group'?'Group money':t=='investment_club'?'Investment club':t=='sacco'?'SACCO':t=='business'?'Business money':t=='personal'?'My money':'Financial space';
+  Widget _tile(String t,String v,VoidCallback? tap)=>Card(child:ListTile(title:Text(t),subtitle:Text(v),trailing:Icon(tap==null?Icons.lock_outline:Icons.add_circle_outline),onTap:tap));
+  String _label(String? t)=>t=='savings_group'?'Savings Groups':t=='investment_club'?'Investment club':t=='sacco'?'SACCO':t=='business'?'Business money':t=='personal'?'My money':'Financial space';
 }
-class GroupMembersScreen extends StatefulWidget{final int spaceId;const GroupMembersScreen({super.key,required this.spaceId});@override State<GroupMembersScreen> createState()=>_GroupMembersScreenState();}
-class _GroupMembersScreenState extends State<GroupMembersScreen>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=FinancialSpacesApi.members(widget.spaceId);}Future<void> invite()async{final p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Invite member'),content:TextField(controller:p,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Phone number')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Invite'))]));if(ok==true&&p.text.isNotEmpty){ await FinancialSpacesApi.invite(widget.spaceId,p.text,'member'); if(mounted){ ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Invitation created.'))); } }}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Group members')),floatingActionButton:FloatingActionButton.extended(onPressed:invite,icon:const Icon(Icons.person_add),label:const Text('Invite')),body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());return ListView(padding:const EdgeInsets.all(20),children:(s.data??[]).map((m)=>ListTile(leading:const Icon(Icons.person_outline),title:Text('Member ${m['user_id']}'),subtitle:Text('${m['role']} · ${m['status']}'))).toList());}));}
+class GroupMembersScreen extends StatefulWidget{final int spaceId;final bool canInvite;const GroupMembersScreen({super.key,required this.spaceId,required this.canInvite});@override State<GroupMembersScreen> createState()=>_GroupMembersScreenState();}
+class _GroupMembersScreenState extends State<GroupMembersScreen>{late Future<List<dynamic>> f;@override void initState(){super.initState();f=FinancialSpacesApi.members(widget.spaceId);}Future<void> invite()async{final p=TextEditingController();final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Invite member'),content:TextField(controller:p,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Phone number')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Invite'))]));if(ok==true&&p.text.isNotEmpty){ await FinancialSpacesApi.invite(widget.spaceId,p.text,'member'); if(mounted){ ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Invitation created.'))); } }}@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('Members')),floatingActionButton:widget.canInvite?FloatingActionButton.extended(onPressed:invite,icon:const Icon(Icons.person_add),label:const Text('Invite')):null,body:FutureBuilder<List<dynamic>>(future:f,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());return ListView(padding:const EdgeInsets.all(20),children:(s.data??[]).map((m)=>ListTile(leading:const Icon(Icons.person_outline),title:Text('Member ${m['user_id']}'),subtitle:Text('${m['role']} · ${m['status']}'))).toList());}));}
 
 
 class GroupCredentialsScreen extends StatefulWidget {
