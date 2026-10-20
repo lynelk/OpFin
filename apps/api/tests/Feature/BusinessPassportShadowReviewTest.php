@@ -109,7 +109,7 @@ class BusinessPassportShadowReviewTest extends TestCase
     {
         $this->enable();
         $references = $this->references();
-        $lender = 'opfin-lender-'.LoanProduct::find($references['loanProductId'])->institution_id;
+        $lender = 'opfin-lender-'.LoanProduct::withoutGlobalScopes()->findOrFail($references['loanProductId'])->institution_id;
         Http::fake(['https://stolets.example.test/*' => Http::response($this->packet([
             'providerOfRecordId' => $lender,
         ]), 200)]);
