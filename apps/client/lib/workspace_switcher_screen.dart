@@ -5,7 +5,10 @@ import 'package:opfin/workspace_access.dart';
 /// Returns a server-authorised Financial Space to the calling screen.
 /// Never persists selected IDs or credentials across signed-in accounts.
 class WorkspaceSwitcherScreen extends StatefulWidget {
-  const WorkspaceSwitcherScreen({super.key});
+  const WorkspaceSwitcherScreen({super.key, this.loadSpaces});
+
+  /// Optional loader injection for deterministic navigation/widget tests.
+  final Future<List<Map<String, dynamic>>> Function()? loadSpaces;
 
   @override
   State<WorkspaceSwitcherScreen> createState() => _WorkspaceSwitcherScreenState();
@@ -17,11 +20,11 @@ class _WorkspaceSwitcherScreenState extends State<WorkspaceSwitcherScreen> {
   @override
   void initState() {
     super.initState();
-    _spaces = FinancialSpacesApi.spaces();
+    _spaces = (widget.loadSpaces ?? FinancialSpacesApi.spaces)();
   }
 
   Future<void> _reload() async {
-    setState(() => _spaces = FinancialSpacesApi.spaces());
+    setState(() => _spaces = (widget.loadSpaces ?? FinancialSpacesApi.spaces)());
     await _spaces;
   }
 
