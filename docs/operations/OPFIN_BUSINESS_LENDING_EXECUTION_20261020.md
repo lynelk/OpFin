@@ -1,9 +1,33 @@
-# OpFin Business Lending: Operational Policy, Evidence and Growth Delivery
+# OpFin Embedded Merchant Finance: Optional Third-Party Capability and Credit Controls
 
 **Decision baseline:** 20 October 2026  
 **Status:** engineering and commercial execution specification; **NOT** a signed credit policy, funded product activation, regulator approval or proof of production acceptance.  
-**Scope:** OpFin Finance in Uganda, independently operated within the OpFin platform. Stolets is an optional, separately owned commerce-data provider; Cito is the intended external-service orchestration boundary.  
+**Scope:** One optional, consent-driven business lending and third-party commerce-data integration within OpFin's existing universal personal financial operating platform. Stolets is only one independently owned source of merchant evidence; Cito is the intended external-service orchestration boundary. Neither changes OpFin's brand, North Star, Financial Spaces or user relationship.  
 **Supersedes:** any interpretation of two merchant cohorts, three mature vintages or shadow scoring as a compulsory *platform-wide* bar on growth. This implementation programme complements [OpFin Finance credit strategy](../product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md), [merchant integration issue #176](https://github.com/lynelk/OpFin/issues/176) and [authorised growth issue #190](https://github.com/lynelk/OpFin/issues/190).
+
+## Governing North Star: do not reposition OpFin
+
+> **Every financial life deserves a future worth looking forward to.**
+>
+> OpFin exists to help everyone understand their finances, make confident decisions and pursue what matters to them, at every age, every stage and every financial scale.
+>
+> **We don't define success for people. We help them make progress towards their own.**
+
+**Brand promise:** *Your next step, clearer.* **Authority:** [canonical OpFin product blueprint](../product/OPFIN_PRODUCT_BLUEPRINT.md), [concept note](../product/OPFIN_CONCEPT_NOTE.md) and [financial-life continuity and dignity](../architecture/FINANCIAL_LIFE_CONTINUITY_AND_DIGNITY.md). Those core contracts take precedence if a merchant finance requirement is interpreted as conflicting with OpFin's platform identity.
+
+**This programme does not modify what OpFin is.** Merchant loans, Stolets Business Passport, shadow underwriting, financial risk controls and investor portfolio packaging are **embedded and optional** product/integration workstreams. They are not a new company-wide strategy, product rebrand, main onboarding funnel or universal dependency. Stolets has no privileged access to OpFin customer identities or Financial Spaces, and merchant data never becomes mandatory for non-merchant lending, savings, investments, insurance, protection, financial learning or general financial planning.
+
+**Experience and independence requirements:**
+
+1. Keep **OpFin Today, Progress and Ahead**, the individual's Personal Financial Space, consent-led Financial Passport, personal aspirations, financial education, planning and other existing product pillars available independently of merchant finance. Neither credit eligibility nor a Stolets account is a precondition for general OpFin access.
+2. Embed merchant finance **only when contextually relevant** to an eligible business user or authorised Financial Space. Surface an optional connected-business pathway inside existing **Borrow / Finance**, rather than creating a new OpFin identity, compulsory registration step, primary navigation structure or merchant-only home.
+3. Design the merchant data-adapter contract **provider neutral**: Stolets is one potential authorised commerce-data source. Other independent merchant/POS, accounting, banking or consented records may participate through separately verified equivalent contracts. No exclusive Stolets relationship is implied.
+4. OpFin owns the personal relationship, credit/risk decisions, product and lender governance, permissions, agreements, servicing, customer explanations and financial ledger. Stolets owns commerce records and grants. Cito provides separately verified external-service mediation. **No cross-database coupling, blended identity ownership or blanket cross-application commercial assumptions.**
+5. Preserve non-credit alternatives, simple/low-data and accessible user journeys, user-selected aspirations, age-appropriate safeguarding and the freedom to decline finance. Advice or the Next Step engine must not steer customers towards borrowing for platform revenue.
+6. Success is assessed both by **customer financial progress** and product-specific credit performance. Merchant loan volume, loan approval rates and marketplace GMV alone are not OpFin's company-wide North Star metrics. Do not sacrifice continuity, dignity, aspiration or other financial-life capabilities to meet business-lending targets.
+7. Any proposed conflict with these boundaries is a product design defect. Resolve within the embedded business-finance module; do not reinterpret the overarching OpFin blueprint.
+
+**Scope of controls:** Shadow scoring, two merchant cohorts, three mature product vintages, conservative initial exposure, portfolio stop-loss and product-specific manual review are **applicable to the new experimental merchant credit policy**, not platform-wide restrictions. They cannot silently gate already lawful unrelated products, eligible investor participation or further development of AI/marketplace capabilities. Actual provider, legal, lender, capital and customer-protection controls continue to apply to each transaction.
 
 ## 1. Decisions and non-negotiable distinction
 
@@ -27,7 +51,7 @@
 
 This is a source review, **not** verification of production provider connectivity, a complete code audit, local build, issuer certification or legal opinion. Historical config values are not evidence of commercial or regulatory approval.
 
-## 3. Proposed business-product policy matrix: sign-off required
+## 3. Optional embedded merchant-credit product matrix: sign-off required
 
 These are **candidate product definitions**, not enabled production offers. Amount bands deliberately describe an *evaluation envelope*; actual offers use the minimum of approved product/country/lender exposure, available committed funding, independently verified affordability, merchant cash conversion evidence, linked-borrower aggregate exposure and fraud/collection constraints. Any amount below the lender's economic minimum is not viable merely because this table displays it.
 
@@ -48,7 +72,7 @@ Allow **manual review** for thin files, ambiguous evidence, high-value/long-teno
 
 ## 4. Business Passport interface and consent
 
-**Stolets owns the data and remains independently deployable.** Extend its existing first-party Passport capability with an explicitly authorised, versioned **external partner** share/verification contract and build a narrow inward-facing OpFin adapter. Do not give OpFin direct access to Stolets data stores, and do not use Cito as an unapproved substitute for data-owner consent.
+**Stolets is a non-exclusive third-party provider of business evidence, remains independently deployable and must not become a compulsory source for merchant eligibility.** Extend its existing first-party Passport capability with an explicitly authorised, versioned **external partner** share/verification contract and build a narrow inward-facing OpFin adapter. Do not give OpFin direct access to Stolets data stores, and do not use Cito as an unapproved substitute for data-owner consent.
 
 **Existing Stolets source entry points (not yet an approved cross-application integration):** `apps/api/src/data-access/data-access.controller.ts` currently provides permissioned `POST /v1/data-access/consent/grants`, `POST /v1/data-access/consent/grants/:grantId/revoke`, `POST /v1/data-access/passport/snapshots`, `POST /v1/data-access/passport/shares`, `GET /v1/data-access/trusted-commerce/features/:featureSnapshotId` and grant audit export. These first-party routes require Stolets user permissions and tenant scope. **Do not pass OpFin a merchant session or pretend existing first-party access is service-to-service authentication.** Define a separately scoped partner principal, an authoritative grant/revocation verification method and an immutable signed share package mapped to OpFin's verified merchant/Space before constructing the receiver. The Stolets guide explicitly describes these as implementation candidates whose deployed acceptance must be checked.
 
