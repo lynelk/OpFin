@@ -145,34 +145,34 @@ class AuthController extends Controller
 
             $user = DB::transaction(function () use ($name, $first, $other, $last, $request, $pin, $legacyPassword, $webRegistration, $termsVersion, $privacyVersion) {
                 $user = User::create([
-                'name' => $name,
-                'first_name' => $first !== '' ? $first : null,
-                'other_name' => $other !== '' ? $other : null,
-                'last_name' => $last !== '' ? $last : null,
-                'phone' => $request->phone,
-                'phone_verified_at' => now(),
-                'role' => User::ROLE_CUSTOMER,
-                'password' => Hash::make($pin !== '' ? $pin : $legacyPassword),
-                'preferred_language' => $request->input('preferred_language', 'en'),
-                'accessibility_preferences' => $request->input('accessibility_preferences'),
-            ]);
+                    'name' => $name,
+                    'first_name' => $first !== '' ? $first : null,
+                    'other_name' => $other !== '' ? $other : null,
+                    'last_name' => $last !== '' ? $last : null,
+                    'phone' => $request->phone,
+                    'phone_verified_at' => now(),
+                    'role' => User::ROLE_CUSTOMER,
+                    'password' => Hash::make($pin !== '' ? $pin : $legacyPassword),
+                    'preferred_language' => $request->input('preferred_language', 'en'),
+                    'accessibility_preferences' => $request->input('accessibility_preferences'),
+                ]);
 
                 if ($webRegistration) {
-                DB::table('consent_records')->insert([
-                    [
-                        'user_id' => $user->id, 'purpose' => 'registration_terms_acceptance',
-                        'policy_version' => $termsVersion, 'status' => 'granted', 'channel' => 'web',
-                        'granted_at' => now(), 'metadata' => json_encode(['method' => 'explicit_checkbox']),
-                        'created_at' => now(), 'updated_at' => now(),
-                    ],
-                    [
-                        'user_id' => $user->id, 'purpose' => 'registration_privacy_acknowledgement',
-                        'policy_version' => $privacyVersion, 'status' => 'granted', 'channel' => 'web',
-                        'granted_at' => now(), 'metadata' => json_encode(['method' => 'explicit_checkbox']),
-                        'created_at' => now(), 'updated_at' => now(),
-                    ],
-                ]);
-            }
+                    DB::table('consent_records')->insert([
+                        [
+                            'user_id' => $user->id, 'purpose' => 'registration_terms_acceptance',
+                            'policy_version' => $termsVersion, 'status' => 'granted', 'channel' => 'web',
+                            'granted_at' => now(), 'metadata' => json_encode(['method' => 'explicit_checkbox']),
+                            'created_at' => now(), 'updated_at' => now(),
+                        ],
+                        [
+                            'user_id' => $user->id, 'purpose' => 'registration_privacy_acknowledgement',
+                            'policy_version' => $privacyVersion, 'status' => 'granted', 'channel' => 'web',
+                            'granted_at' => now(), 'metadata' => json_encode(['method' => 'explicit_checkbox']),
+                            'created_at' => now(), 'updated_at' => now(),
+                        ],
+                    ]);
+                }
 
                 return $user;
             });
