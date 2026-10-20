@@ -4,6 +4,7 @@ import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/credit_offers_screen.dart';
 import 'package:opfin/essentials_screen.dart';
 import 'package:opfin/financial_spaces_screen.dart';
+import 'package:opfin/workspace_switcher_screen.dart';
 import 'package:opfin/financial_hubs.dart';
 import 'package:opfin/protection_screen.dart';
 import 'package:opfin/personal_money_screen.dart';
@@ -27,16 +28,25 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _index = 0;
+
+  Future<void> _switchWorkspace() async {
+    final selected = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(builder: (_) => const WorkspaceSwitcherScreen()),
+    );
+    if (!mounted || selected == null) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => FinancialSpaceDetailScreen(space: selected)),
+    );
+  }
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('OpFin'), actions: [
           IconButton(
-              tooltip: 'My spaces',
+              tooltip: 'Switch workspace',
               icon: const Icon(Icons.swap_horiz),
-              onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const FinancialSpacesScreen())))
+              onPressed: _switchWorkspace)
         ]),
         body: IndexedStack(index: _index, children: const [
           _HomePage(),
