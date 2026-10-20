@@ -7,6 +7,9 @@ class WorkspaceAccess {
       (space['workspace'] as Map?)?.cast<String, dynamic>() ??
       const <String, dynamic>{};
 
+  static bool canViewFinances(Map<String, dynamic> space) =>
+      info(space)['can_view_finances'] == true;
+
   static bool canEditFinances(Map<String, dynamic> space) =>
       info(space)['can_edit_finances'] == true;
 
