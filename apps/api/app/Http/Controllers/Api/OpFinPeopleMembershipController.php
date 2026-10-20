@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,7 +42,7 @@ class OpFinPeopleMembershipController extends Controller
         ]])->header('Cache-Control', 'no-store');
     }
 
-    private function memberships(Request $request): \Illuminate\Database\Query\Builder
+    private function memberships(Request $request): Builder
     {
         return DB::table('financial_space_memberships as m')
             ->join('financial_spaces as s', 's.id', '=', 'm.financial_space_id')
