@@ -132,6 +132,7 @@ class BusinessPassportShadowReviewTest extends TestCase
             && $request['providerOfRecordId'] === $lender
         );
         $this->assertDatabaseCount('loans', 0);
+        $this->assertDatabaseHas('audit_logs', ['event' => 'merchant_passport.shadow_reviewed']);
     }
 
     public function test_unauthorised_user_or_disabled_shadow_feature_cannot_fetch_merchant_data(): void
@@ -183,6 +184,7 @@ class BusinessPassportShadowReviewTest extends TestCase
         $this->postJson('/api/admin/business-passport/shadow-review', $this->references(true, false))
             ->assertStatus(503);
         Http::assertNothingSent();
+        $this->assertDatabaseHas('audit_logs', ['event' => 'merchant_passport.shadow_review_blocked']);
     }
 
     public function test_stale_and_absent_funding_data_remain_unavailable(): void
