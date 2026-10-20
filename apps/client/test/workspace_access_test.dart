@@ -42,6 +42,7 @@ void main() {
         'can_edit_finances': false,
       },
     };
+    expect(WorkspaceAccess.canViewFinances(space), isTrue);
     expect(WorkspaceAccess.canEditFinances(space), isFalse);
     expect(WorkspaceAccess.accessDescription(space), 'View financial records');
   });
