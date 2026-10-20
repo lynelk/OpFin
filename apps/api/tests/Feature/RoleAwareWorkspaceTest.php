@@ -117,5 +117,8 @@ class RoleAwareWorkspaceTest extends TestCase
         $this->assertTrue($business['workspace']['can_open_people_connections']);
         $this->assertFalse($business['workspace']['can_manage_people']);
         $this->assertFalse($business['workspace']['can_edit_finances']);
+        $this->assertFalse($business['workspace']['can_view_finances']);
+        $this->getJson('/api/financial-spaces/'.$id.'/financial-life')->assertForbidden();
+        $this->getJson('/api/financial-spaces/'.$id.'/budgets')->assertForbidden();
     }
 }
