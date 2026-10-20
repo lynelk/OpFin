@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\FinancialAspirationController;
 use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\FinancialSpaceController;
+use App\Http\Controllers\Api\FinancialSpaceBudgetController;
 use App\Http\Controllers\Api\FinancialSpaceCredentialController;
 use App\Http\Controllers\Api\FinancialSpacePayoutMandateController;
 use App\Http\Controllers\Api\FinancialSpaceStatementController;
@@ -121,6 +122,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/financial-spaces', [FinancialSpaceController::class, 'index']);
     Route::post('/financial-spaces', [FinancialSpaceController::class, 'store']);
     Route::post('/financial-spaces/invitations/accept', [FinancialSpaceController::class, 'acceptInvitation']);
+    Route::get('/financial-spaces/{space}/budgets', [FinancialSpaceBudgetController::class, 'index']);
+    Route::post('/financial-spaces/{space}/budgets', [FinancialSpaceBudgetController::class, 'store']);
+    Route::patch('/financial-spaces/{space}/budgets/{budget}', [FinancialSpaceBudgetController::class, 'update'])->whereNumber('budget');
     Route::get('/financial-spaces/{space}/members', [FinancialSpaceController::class, 'members']);
     Route::post('/financial-spaces/{space}/invitations', [FinancialSpaceController::class, 'invite']);
     Route::put('/financial-spaces/{space}/capabilities', [FinancialSpaceController::class, 'enableCapability']);
