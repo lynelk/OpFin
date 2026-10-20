@@ -8,7 +8,8 @@ type Result = { ok: boolean; message: string };
 type ApiPayload = { success?: boolean; message?: string; data?: { verification_token?: string; access_token?: string; user?: { role?: string; name?: string } } };
 const API_URL = process.env.OPFIN_API_URL || process.env.NEXT_PUBLIC_OPFIN_API_URL;
 const verifiedCookie = "opfin_signup_verified";
-const SIGNUP_POLICY_VERSION = "onboarding-web-v1";
+const TERMS_VERSION = process.env.OPFIN_LEGAL_TERMS_VERSION;
+const PRIVACY_VERSION = process.env.OPFIN_LEGAL_PRIVACY_VERSION;
 
 async function post(path: string, data: object): Promise<{ ok: boolean; payload: ApiPayload }> {
   if (!API_URL || process.env.NEXT_PUBLIC_USE_MOCK_API === "true") {
@@ -70,11 +71,12 @@ export async function finishSignup(formData: FormData): Promise<Result> {
   if (!firstName || !lastName || firstName.length > 80 || lastName.length > 80) return { ok: false, message: "Enter your first and last names." };
   if (!validSignupPin(pin, confirmation)) return { ok: false, message: "Enter matching six-digit PINs." };
   if (!accepted) return { ok: false, message: "Accept the terms and privacy notice to continue." };
+  if (!TERMS_VERSION || !PRIVACY_VERSION) return { ok: false, message: "Registration policies are not ready. Please contact OpFin support." };
   const response = await post("/register", {
     phone: verified.phone, verification_token: verified.token,
     first_name: firstName, last_name: lastName,
     pin, pin_confirmation: confirmation,
-    terms_accepted: true, terms_policy_version: SIGNUP_POLICY_VERSION, acquisition_channel: "web"
+    terms_accepted: true, terms_policy_version: TERMS_VERSION, privacy_policy_version: PRIVACY_VERSION, acquisition_channel: "web"
   });
   if (!response.ok) return { ok: false, message: response.payload.message || "Registration could not be completed." };
   const data = response.payload.data;
