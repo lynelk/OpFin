@@ -48,6 +48,7 @@ export default async function LoginPage({
         <div className="auth-help-row">
           <Link href="/">Back to OpFin</Link>
           <Link href="/forgot-password">Forgot password?</Link>
+          <Link href="/signup">Create account</Link>
           {!deletingAccount ? <Link href="/programme-partner/activate">Activate programme invitation</Link> : null}
         </div>
       }
@@ -95,7 +96,7 @@ export default async function LoginPage({
       </form>
 
       <p className="auth-note">
-        New customers create their account in the OpFin App. Web access is for existing customers and authorised Workspace users.
+        New customers can create an account on Web or in the OpFin App.
       </p>
 
       {demoShortcutsEnabled ? (
