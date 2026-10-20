@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\OpFinPeopleMembershipController;
+use App\Http\Controllers\Api\OpFinPeopleServiceController;
 use App\Http\Controllers\Api\AdminEssentialsController;
 use App\Http\Controllers\Api\AssetFinanceLifecycleController;
 use App\Http\Controllers\Api\AssetRegistryController;
@@ -69,6 +70,7 @@ use App\Http\Controllers\Api\V5P0PlatformController;
 use App\Http\Controllers\Api\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
+Route::post('/people/service/verify-membership', [OpFinPeopleServiceController::class, 'verify'])->middleware('throttle:api');
 Route::get('/health', [HealthController::class, 'show']);
 Route::get('/health/live', [HealthController::class, 'live']);
 Route::get('/health/ready', [HealthController::class, 'ready']);
