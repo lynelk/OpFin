@@ -8,9 +8,9 @@ use App\Models\FinancialSpaceMembership;
 use App\Models\Institution;
 use App\Models\LoanProduct;
 use App\Models\User;
-use Illuminate\Support\Str;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -172,7 +172,6 @@ class BusinessPassportShadowReviewTest extends TestCase
             ->assertStatus(503);
         $this->assertDatabaseCount('loans', 0);
     }
-
 
     public function test_absent_customer_consent_or_inactive_lender_denies_before_external_data_call(): void
     {
