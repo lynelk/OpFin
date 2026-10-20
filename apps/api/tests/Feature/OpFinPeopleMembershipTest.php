@@ -59,12 +59,14 @@ class OpFinPeopleMembershipTest extends TestCase
             'country' => 'UG', 'currency' => 'UGX', 'status' => $status,
             'created_at' => now(), 'updated_at' => now(),
         ]);
+
         return $publicId;
     }
 
     private function membership(string $publicId, int $userId, string $status, string $role): void
     {
         $id = DB::table('financial_spaces')->where('public_id', $publicId)->value('id');
+
         DB::table('financial_space_memberships')->insert([
             'financial_space_id' => $id, 'user_id' => $userId,
             'role' => $role, 'status' => $status,
