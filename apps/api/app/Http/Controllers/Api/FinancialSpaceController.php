@@ -31,7 +31,7 @@ class FinancialSpaceController extends Controller
                 $row = (array) $space;
                 $row['workspace'] = [
                     'label' => FinancialSpaceRolePolicy::label($space->type),
-                    'can_view_finances' => true,
+                    'can_view_finances' => FinancialSpaceRolePolicy::canViewFinancialRecords($space->type, $space->role),
                     'can_edit_finances' => FinancialSpaceRolePolicy::canManageFinancialRecords($space->type, $space->role),
                     'can_manage_members' => FinancialSpaceRolePolicy::canManageMembers($space->role),
                     'can_open_people_connections' => $space->type === 'business',
