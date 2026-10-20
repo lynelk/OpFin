@@ -176,3 +176,5 @@ The budget view presents planned limits only. Recorded expense actuals and recon
 OpFin People connections appear within authorised Business Spaces and under More > My employment. This is membership discovery, **not** the completed People product; the ten-module People Core Release remains implementation pending and its full embedded experience must be tested before production.
 
 Mobile regression requirements: switch Personal → Savings Groups → SACCO → Investment Club → Business and back; ensure private financial data never carries across Spaces, inactive/suspended Spaces are absent, unauthorised actions never appear and backend writes remain forbidden; verify app logout, token expiry, offline handling and existing Borrow, Home, Activity and More journeys. Run Flutter analyse/tests for this feature before merging.
+
+Employees who have People-only business membership are routed to their authorised employer connection instead of the organisation's financial position. This prevents accidental exposure of corporate balances through general workspace switching.
