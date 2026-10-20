@@ -52,6 +52,7 @@ class OpFinPeopleServiceTest extends TestCase
         foreach ($headers as $key => $value) {
             $result[strtoupper(str_replace('-', '_', $key)) === 'CONTENT_TYPE' ? 'CONTENT_TYPE' : 'HTTP_'.strtoupper(str_replace('-', '_', $key))] = $value;
         }
+
         return $result;
     }
 }
