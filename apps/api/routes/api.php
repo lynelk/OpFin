@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\OpFinPeopleMembershipController;
 use App\Http\Controllers\Api\AdminEssentialsController;
 use App\Http\Controllers\Api\AssetFinanceLifecycleController;
 use App\Http\Controllers\Api\AssetRegistryController;
@@ -88,6 +89,8 @@ Route::post('/guarantors/confirm', [GuarantorController::class, 'confirm'])->mid
 Route::post('/programme-partner/invitations/accept', [ProgrammeCompletionController::class, 'acceptPartnerInvitation'])->middleware('throttle:auth');
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    Route::get('/people/business-spaces', [OpFinPeopleMembershipController::class, 'index']);
+    Route::get('/people/business-spaces/{publicId}', [OpFinPeopleMembershipController::class, 'show']);
     Route::post('/admin/cito-baas/intents', [CitoBaasGovernanceController::class, 'draft']);
     Route::get('/admin/cito-operations/snapshot', CitoOperationsController::class);
     Route::post('/admin/financial-spaces/{space}/payout-mandates', [FinancialSpacePayoutMandateController::class, 'store']);
