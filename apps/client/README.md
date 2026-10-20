@@ -163,3 +163,16 @@ Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/
 ## Club accounting client recovery and export
 
 Investment Club members can recover saved accounting requests and retain access to their own historical member statements after leaving a club. Native statement export supports controlled save/share and HTML print flows; exports contain document bytes rather than authentication credentials. Android combines this with the approximate-location-only Play policy, while iOS uses the native print/share bridge. Financial mutations remain server-authoritative and maker-checker controls are not bypassed by the client.
+
+
+## Financial Spaces and Savings Groups (20 October 2026)
+
+The OpFin mobile app now has a **Switch workspace** action from Home and from each Financial Space detail screen. Only currently active memberships returned by `GET /api/financial-spaces` are offered. Roles and capabilities displayed by the UI come from server-issued `workspace` metadata; absent metadata defaults to **no write or management access**. Selection is a route-local session operation, not a locally persisted tenant identifier.
+
+Workspaces include Personal, Household, Business, Savings Groups (`savings_group` persisted type), SACCOs and Investment Clubs. Selecting a Space opens its own financial position, assets, obligations and the shared monthly budget manager. A non-manager can view authorised information without edit controls. All mutations independently enforce server authorisation.
+
+The budget view presents planned limits only. Recorded expense actuals and reconciliation are **not** claimed by the budget UI. The existing personal finance navigation remains unaffected when opening an organisation context.
+
+OpFin People connections appear within authorised Business Spaces and under More > My employment. This is membership discovery, **not** the completed People product; the ten-module People Core Release remains implementation pending and its full embedded experience must be tested before production.
+
+Mobile regression requirements: switch Personal → Savings Groups → SACCO → Investment Club → Business and back; ensure private financial data never carries across Spaces, inactive/suspended Spaces are absent, unauthorised actions never appear and backend writes remain forbidden; verify app logout, token expiry, offline handling and existing Borrow, Home, Activity and More journeys. Run Flutter analyse/tests for this feature before merging.
