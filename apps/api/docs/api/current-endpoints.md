@@ -358,3 +358,25 @@ A configured product or capital mandate is **not** asserted to have certified pa
 For club recovery, use [Club Client Recovery API contract](CLUB_CLIENT_RECOVERY.md). Saved requests are encrypted, user/book/purpose-scoped, hash-bound and re-authorised on recovery. Resume returns the original domain result; acknowledgement releases the recovery slot and is not accounting approval or payment execution. Cancellation applies only before domain submission.
 
 For Essentials, collection identity is persisted before provider submission and uncertain outcomes are reconciled against the original request. Capacity reservation is separate from due debt; provider acknowledgement is not settlement finality. Do not infer a universal idempotency-key location or response status from route registration; consult the operation-specific contract. The current candidate does not establish complete lender funding/drawdown, biller settlement, lender release, activation/opening accounting, mandate compatibility, older-record adoption or post-service-reversal refunds. Full API/database/client acceptance remains outstanding.
+
+
+## Financial Space workspaces, Savings Groups and shared budgets (20 October 2026)
+
+These routes are behind `auth:sanctum` and standard API throttling. Records remain owned by the specified Financial Space. An API catalogue entry is **not** permission, entitlement, regulatory approval, or activation.
+
+| Method | Path | Access and purpose |
+| --- | --- | --- |
+| GET | `/api/service-registry` | Authenticated, non-authoritative discovery of the canonical 13 service families, 10 shared tools and People module identifiers |
+| GET | `/api/financial-spaces` | Active membership-only spaces with `workspace.label`, `can_view_finances`, `can_edit_finances`, `can_manage_members`, `can_open_people_connections` and `can_manage_people` hints |
+| GET | `/api/financial-spaces/{space}/budgets?month=YYYY-MM` | Active member may view the selected month's planned category limits; returns `actuals_status=not_included` |
+| POST | `/api/financial-spaces/{space}/budgets` | Financial manager only; `category`, `monthly_limit_minor`, `effective_from` and optional `effective_to` and `alert_threshold_percent` |
+| PATCH | `/api/financial-spaces/{space}/budgets/{budget}` | Financial manager only; update `monthly_limit_minor`, `alert_threshold_percent` or `active`; budget ownership verified within the given Space |
+| GET | `/api/financial-spaces/{space}/assets` | Active member, existing asset records; edits restricted to authorised managers |
+| POST | `/api/financial-spaces/{space}/assets` | Authorised financial manager only |
+| GET | `/api/financial-spaces/{space}/obligations` | Active member, existing liabilities and receivables |
+| POST | `/api/financial-spaces/{space}/obligations` | Authorised financial manager only |
+| POST | `/api/financial-spaces/{space}/obligations/{obligation}/settlements` | Authorised financial manager only; underlying obligation must belong to Space |
+| GET | `/api/people/business-spaces` | Authenticated first-party business membership discovery, not proof of HR service activation |
+| GET | `/api/people/business-spaces/{publicId}` | Own active business membership only, with People administrator hint |
+
+**Savings Groups** is the product-facing label; `savings_group` remains the stable persisted Financial Space type for backwards compatibility. Server-side checks govern every write even when the Flutter interface hides an action. All amounts are integer currency minor units as defined in the financial core; no automatic transfer, provider finality or accounting posting is inferred from a budget declaration.
