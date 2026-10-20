@@ -2,7 +2,7 @@
 
 Status: **Approved product scope; implementation pending**. This document does not imply features are live.
 
-## Release 1: seven mandatory capabilities
+## Core Release: ten mandatory capabilities
 
 1. **Core HR:** organisation, branch, department, cost centre, employee lifecycle, contracts, job history, reporting lines, access controls, onboarding/offboarding, document retention.
 2. **Leave:** policies, accrual, balances, calendars, requests, delegated approvals, cancellation, audit and payroll impact.
@@ -12,7 +12,7 @@ Status: **Approved product scope; implementation pending**. This document does n
 6. **Asset management:** asset register, QR/barcode tags, employee custody, issue/transfer/return, inspections, incidents, maintenance and offboarding clearance.
 7. **KPI tracking:** versioned KPI definitions, owners, periods, target/actual, evidence, weighting, review, disputes, sign-off and reporting; no automatic punitive decisions.
 
-All seven are required for initial release acceptance; none may be replaced with a placeholder dashboard.
+All ten are required for Core Release acceptance; none may be replaced with a placeholder dashboard.
 
 ## Shared architecture
 
@@ -26,13 +26,13 @@ All seven are required for initial release acceptance; none may be replaced with
 - Mobile-first employee experience, web employer portal, offline-safe field/attendance queue with conflict resolution.
 - Integration to OpFin Business Spaces is optional; no employer access to private financial information.
 
-## Release 2: built-in extension points, no premature activation
+## Additional mandatory Core Release capabilities and extension contracts
 
-**Biometric connectors:** versioned AttendanceEvent ingestion adapter; vendor-specific mapping, clock skew handling, duplicate/replay detection, device health, employee-device binding, manual fallback. Prefer matching on devices and do not store biometric templates in the HR service. Require lawful basis, DPIA as appropriate, security and employee notice before activation.
+8. **Biometric connectors:** versioned AttendanceEvent ingestion adapter; vendor-specific mapping, clock skew handling, duplicate/replay detection, device health, employee-device binding, manual fallback. Prefer matching on devices and do not store biometric templates in the HR service. Require lawful basis, DPIA as appropriate, security and employee notice before activation.
 
-**Appraisals:** consume signed-off KPI periods and authorised evidence snapshots; add goals, self-assessment, manager review, calibration, appeals and improvement plans without altering original KPI history.
+9. **Appraisals:** consume signed-off KPI periods and authorised evidence snapshots; add goals, self-assessment, manager review, calibration, appeals and improvement plans without altering original KPI history.
 
-**Rewards:** policy-based reward eligibility from approved KPI/appraisal events, nomination, budget checks, maker-checker approval, fraud safeguards, and optional payroll instruction. No automatic payroll payout on unreviewed score.
+10. **Rewards:** policy-based reward eligibility from approved KPI/appraisal events, nomination, budget checks, maker-checker approval, fraud safeguards, and optional payroll instruction. No automatic payroll payout on unreviewed score.
 
 ## Required end-to-end acceptance scenarios
 
@@ -44,14 +44,14 @@ All seven are required for initial release acceptance; none may be replaced with
 6. Configure KPI period, evidence and weighting; reject unauthorised edits; close and reopen with audit and approval.
 7. Prepare payroll, apply effective-dated statutory rules, approve with a second actor, lock, generate payslip and reconcile export.
 8. Confirm standalone HR works when OpFin is unavailable; deny cross-tenant requests and unauthorised service calls.
-9. Confirm biometric, appraisal and rewards extensions can be introduced through stable contracts without schema rewrites.
+9. Validate production-grade biometric device sync, enrolment safeguards, offline fallback, appraisal cycles and approved rewards workflows.
 10. Run PHP/Laravel tests, Next.js typecheck/lint/tests/build, Flutter analyse/tests and integration/security tests before deployment.
 
 ## Delivery gates
 
 - **Foundation:** identity federation, organisation provisioning, scoped authorisation, workflows, audit and migrations.
-- **Core implementation:** all seven modules and employee/employer interfaces, with tested cross-module contracts.
+- **Core implementation:** all ten modules and employee/employer interfaces, with tested cross-module contracts.
 - **Pilot:** attendance and field offline testing, payroll parallel runs, statutory verification and user acceptance.
 - **Production:** passing CI, migration/backups and restore rehearsal, observability, security review, rollback plan and explicit operational sign-off.
 
-No deployment or release-complete claim until evidence supports it.
+**One Core Release:** no module is deferred to a later release. Staged internal delivery and feature flags are permitted only for testing and rollout safety; all ten modules must pass acceptance before the Core Release is declared complete. No deployment or release-complete claim until evidence supports it.
