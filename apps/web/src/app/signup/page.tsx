@@ -17,7 +17,7 @@ export default function SignupPage() {
 
   function sendCode() {
     startTransition(async () => {
-      const result = await startSignup(phone);
+      const result = await startSignup(phone, accountType);
       setMessage(result.message);
       setError(!result.ok);
       if (result.ok) setStep("code");
