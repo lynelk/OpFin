@@ -23,6 +23,9 @@ final class BusinessPassportShadowController extends Controller
         abort_unless($request->user()?->hasRole(User::ROLE_PLATFORM_ADMIN), 403);
 
         $references = $request->validate([
+            'borrowerUserId' => ['required', 'integer', 'min:1'],
+            'loanProductId' => ['required', 'integer', 'min:1'],
+            'financialSpaceId' => ['required', 'integer', 'min:1'],
             'tenantId' => ['required', 'string', 'max:128', 'regex:/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/D'],
             'consentGrantId' => ['required', 'string', 'max:128', 'regex:/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/D'],
             'passportShareId' => ['required', 'string', 'max:128', 'regex:/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/D'],
