@@ -33,6 +33,17 @@ class _FinancialSpacesScreenState extends State<FinancialSpacesScreen>{
       ]),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Create'))])));
     if(ok==true&&name.text.trim().isNotEmpty){ await FinancialSpacesApi.createSpace(type,name.text.trim()); await _reload(); }
   }
+  Future<void> _openSpace(Map<String,dynamic> space) async {
+    if (!WorkspaceAccess.canViewFinances(space)) {
+      if (WorkspaceAccess.canOpenPeople(space)) {
+        await Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const MyEmploymentScreen()));
+      }
+      return;
+    }
+    await Navigator.push(context,
+      MaterialPageRoute(builder: (_) => FinancialSpaceDetailScreen(space: space)));
+  }
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('My spaces')),floatingActionButton:FloatingActionButton.extended(onPressed:_create,icon:const Icon(Icons.add),label:const Text('Add or join')),body:FutureBuilder<List<Map<String,dynamic>>>(future:_spaces,builder:(c,s){
     if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
     if(s.hasError)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Text('We could not load your spaces. ${s.error}')));
@@ -40,7 +51,7 @@ class _FinancialSpacesScreenState extends State<FinancialSpacesScreen>{
     return RefreshIndicator(onRefresh:_reload,child:ListView(padding:const EdgeInsets.all(20),children:[
       const Text('One OpFin identity, all the money you manage.',style:TextStyle(fontSize:24,fontWeight:FontWeight.w800)),
       const SizedBox(height:8),const Text('Your personal money stays private. Groups and organisations only show information you are authorised to see.'),const SizedBox(height:18),
-      ...spaces.map((x)=>Card(child:ListTile(leading:Icon(_icon(x['type']?.toString())),title:Text(x['name']?.toString()??'Financial space'),subtitle:Text('${_label(x['type']?.toString())} · ${x['role']??'member'}'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>FinancialSpaceDetailScreen(space:x)))))),
+      ...spaces.map((x)=>Card(child:ListTile(leading:Icon(_icon(x['type']?.toString())),title:Text(x['name']?.toString()??'Financial space'),subtitle:Text('${_label(x['type']?.toString())} · ${x['role']??'member'}'),trailing:const Icon(Icons.chevron_right),onTap:()=>_openSpace(x)))),
     ]));
   }));
   IconData _icon(String? t)=>t=='savings_group'?Icons.groups_outlined:t=='investment_club'?Icons.trending_up_outlined:t=='business'?Icons.storefront_outlined:t=='sacco'?Icons.account_balance_outlined:t=='household'?Icons.home_outlined:Icons.account_balance_wallet_outlined;
@@ -65,6 +76,13 @@ class _FinancialSpaceDetailScreenState extends State<FinancialSpaceDetailScreen>
     final next = await Navigator.push<Map<String, dynamic>>(
       context, MaterialPageRoute(builder: (_) => const WorkspaceSwitcherScreen()));
     if (!mounted || next == null || next['id'] == widget.space['id']) return;
+    if (!WorkspaceAccess.canViewFinances(next)) {
+      if (WorkspaceAccess.canOpenPeople(next)) {
+        Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (_) => const MyEmploymentScreen()));
+      }
+      return;
+    }
     Navigator.pushReplacement(context,
       MaterialPageRoute(builder: (_) => FinancialSpaceDetailScreen(space: next)));
   }
