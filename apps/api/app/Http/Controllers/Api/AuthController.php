@@ -143,7 +143,8 @@ class AuthController extends Controller
                 ? $legacyName
                 : trim(implode(' ', array_filter([$first, $other, $last])));
 
-            $user = User::create([
+            $user = DB::transaction(function () use ($name, $first, $other, $last, $request, $pin, $legacyPassword, $webRegistration, $termsVersion, $privacyVersion) {
+                $user = User::create([
                 'name' => $name,
                 'first_name' => $first !== '' ? $first : null,
                 'other_name' => $other !== '' ? $other : null,
@@ -156,7 +157,7 @@ class AuthController extends Controller
                 'accessibility_preferences' => $request->input('accessibility_preferences'),
             ]);
 
-            if ($webRegistration) {
+                if ($webRegistration) {
                 DB::table('consent_records')->insert([
                     [
                         'user_id' => $user->id, 'purpose' => 'registration_terms_acceptance',
@@ -172,6 +173,9 @@ class AuthController extends Controller
                     ],
                 ]);
             }
+
+                return $user;
+            });
 
             $otpRecord?->delete();
             if (app(CitoFeatureGate::class)->enabled('otp')) {
