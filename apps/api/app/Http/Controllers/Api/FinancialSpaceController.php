@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
-use App\Support\FinancialSpaceRolePolicy;
 use App\Services\PersonalFinancialSpaceService;
+use App\Support\FinancialSpaceRolePolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -89,5 +89,6 @@ class FinancialSpaceController extends Controller
     }
 
     private function assertMember(Request $r, FinancialSpace $s): void { abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$s->id)->where('user_id',$r->user()->id)->where('status','active')->whereNull('deleted_at')->exists(),403); }
+
     private function assertAdministrator(Request $r, FinancialSpace $s): void { abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$s->id)->where('user_id',$r->user()->id)->where('status','active')->whereNull('deleted_at')->whereIn('role',['owner','administrator','chairperson','treasurer','director'])->exists(),403); }
 }
