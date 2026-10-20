@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'opfin_people' => [
+        'verification_secret' => env('OPFIN_PEOPLE_VERIFICATION_SECRET'),
+    ],
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
