@@ -91,7 +91,9 @@ class FinancialSpaceBudgetController extends Controller
             ->where('currency', $space->currency);
         abort_unless($query->exists(), 404);
         abort_if($validated === [], 422, 'No budget changes supplied.');
+
         $query->update([...$validated, 'updated_at' => now()]);
+
         return response()->json(['data' => [
             'budget' => $query->first(),
         ]]);
