@@ -8,7 +8,29 @@ namespace App\Support;
  */
 final class FinancialSpaceRolePolicy
 {
+    private const FINANCIAL_VIEWERS = [
+        'owner', 'administrator', 'chairperson', 'treasurer', 'director',
+        'accountant', 'finance_manager', 'auditor', 'manager',
+    ];
+
     private const FINANCIAL_MANAGERS = ['owner', 'administrator', 'chairperson', 'treasurer', 'director'];
+
+    public static function canViewFinancialRecords(string $type, string $role): bool
+    {
+        // Corporate employment membership is NOT blanket permission to browse
+        // employer balances, payroll funding, debts, or owned assets.
+        if (in_array($type, ['business', 'institution', 'investment_fund', 'partner'], true)) {
+            return in_array($role, self::FINANCIAL_VIEWERS, true);
+        }
+
+        // A personal Space is only available to its owner. Other Space types
+        // rely on explicit, active membership and permit member visibility.
+        if ($type === 'personal') {
+            return $role === 'owner';
+        }
+
+        return $role !== '';
+    }
 
     public static function canManageFinancialRecords(string $type, string $role): bool
     {
