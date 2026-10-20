@@ -14,7 +14,7 @@ class FinancialLifeController extends Controller
 {
     public function summary(Request $request, FinancialSpace $space): JsonResponse
     {
-        $this->member($request, $space);
+        $this->viewer($request, $space);
         $assets = (int) DB::table('financial_assets')->where('financial_space_id', $space->id)->where('status', 'active')->whereNull('deleted_at')->sum('value_minor');
         $owed = (int) DB::table('financial_obligations')->where('financial_space_id', $space->id)->where('direction', 'i_owe')->where('status', 'open')->whereNull('deleted_at')->sum('outstanding_amount_minor');
         $receivable = (int) DB::table('financial_obligations')->where('financial_space_id', $space->id)->where('direction', 'owed_to_me')->where('status', 'open')->whereNull('deleted_at')->sum('outstanding_amount_minor');
@@ -26,7 +26,7 @@ class FinancialLifeController extends Controller
 
     public function obligations(Request $request, FinancialSpace $space): JsonResponse
     {
-        $this->member($request, $space);
+        $this->viewer($request, $space);
 
         return response()->json(['data' => ['obligations' => DB::table('financial_obligations')->where('financial_space_id', $space->id)->whereNull('deleted_at')->orderByRaw('due_date IS NULL, due_date')->get()]]);
     }
@@ -55,7 +55,7 @@ class FinancialLifeController extends Controller
 
     public function assets(Request $request, FinancialSpace $space): JsonResponse
     {
-        $this->member($request, $space);
+        $this->viewer($request, $space);
 
         return response()->json(['data' => ['assets' => DB::table('financial_assets')->where('financial_space_id', $space->id)->whereNull('deleted_at')->orderBy('name')->get()]]);
     }
@@ -83,6 +83,12 @@ class FinancialLifeController extends Controller
         abort_unless($role !== null, 403);
 
         return (string) $role;
+    }
+
+    private function viewer(Request $request, FinancialSpace $space): void
+    {
+        $role = $this->member($request, $space);
+        abort_unless(FinancialSpaceRolePolicy::canViewFinancialRecords($space->type, $role), 403);
     }
 
     private function manager(Request $request, FinancialSpace $space): void
