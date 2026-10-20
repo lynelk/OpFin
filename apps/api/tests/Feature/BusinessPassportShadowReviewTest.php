@@ -126,8 +126,7 @@ class BusinessPassportShadowReviewTest extends TestCase
             ->assertJsonPath('data.approved_loan_amount_minor', null)
             ->assertJsonPath('data.indicators.netSalesMinor', 850000);
 
-        Http::assertSent(fn ($request) =>
-            $request->url() === 'https://stolets.example.test/v1/partner-evidence/opfin/credit-shadow'
+        Http::assertSent(fn ($request) => $request->url() === 'https://stolets.example.test/v1/partner-evidence/opfin/credit-shadow'
             && $request->hasHeader('Authorization', 'Bearer '.str_repeat('x', 40))
             && $request['tenantId'] === 'merchant-one'
             && $request['providerOfRecordId'] === $lender
