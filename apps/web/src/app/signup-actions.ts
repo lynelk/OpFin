@@ -28,10 +28,12 @@ async function post(path: string, data: object): Promise<{ ok: boolean; payload:
   }
 }
 
-export async function startSignup(phoneInput: string): Promise<Result> {
+export async function startSignup(phoneInput: string, accountType: "individual" | "organisation" = "individual"): Promise<Result> {
   const phone = normaliseUgandanPhone(phoneInput);
   if (!phone) return { ok: false, message: "Enter a valid Ugandan mobile phone number." };
-  (await cookies()).delete(verifiedCookie);
+  const cookieStore = await cookies();
+  cookieStore.delete(verifiedCookie);
+  cookieStore.set("opfin_signup_intent", accountType, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 86400 });
   const response = await post("/generate-otp", { phone, purpose: "REGISTRATION", otp_channel: "sms" });
   return { ok: response.ok, message: response.ok ? "Verification code sent." : response.payload.message || "Could not send a code." };
 }
@@ -79,9 +81,11 @@ export async function finishSignup(formData: FormData): Promise<Result> {
   if (!data?.access_token || data?.user?.role !== "customer") return { ok: false, message: "Registration response was incomplete. Contact support." };
   const store = await cookies();
   store.delete(verifiedCookie);
+  const intendedOrganisation = store.get("opfin_signup_intent")?.value === "organisation";
+  store.delete("opfin_signup_intent");
   const sessionOptions = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", maxAge: 60 * 60 * 8 };
   store.set("opfin_access_token", data.access_token, sessionOptions);
   store.set("opfin_role", data.user.role, sessionOptions);
   store.set("opfin_name", encodeURIComponent(data.user.name || firstName), sessionOptions);
-  redirect("/dashboard");
+  redirect(intendedOrganisation ? "/setup/organisation" : "/dashboard");
 }
