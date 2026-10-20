@@ -4,9 +4,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 type Result = { ok: boolean; message: string };
+type ApiPayload = { success?: boolean; message?: string; data?: { verification_token?: string; access_token?: string; user?: { role?: string; name?: string } } };
 const API_URL = process.env.OPFIN_API_URL || process.env.NEXT_PUBLIC_OPFIN_API_URL;
 const verifiedCookie = "opfin_signup_verified";
-const SIGNUP_POLICY_VERSION = "opfin-terms-2026-10";
+const SIGNUP_POLICY_VERSION = "onboarding-web-v1";
 
 function normalisePhone(raw: string): string | null {
   const phone = raw.replace(/[\s()-]/g, "");
@@ -16,7 +17,7 @@ function normalisePhone(raw: string): string | null {
   return null;
 }
 
-async function post(path: string, data: object): Promise<{ ok: boolean; payload: any }> {
+async function post(path: string, data: object): Promise<{ ok: boolean; payload: ApiPayload }> {
   if (!API_URL || process.env.NEXT_PUBLIC_USE_MOCK_API === "true") {
     return { ok: false, payload: { message: "Registration requires a configured live OpFin API." } };
   }
@@ -28,7 +29,7 @@ async function post(path: string, data: object): Promise<{ ok: boolean; payload:
       cache: "no-store"
     });
     const payload = await response.json().catch(() => ({}));
-    return { ok: response.ok && payload.success === true, payload };
+    return { ok: response.ok && payload.success === true, payload: payload as ApiPayload };
   } catch {
     return { ok: false, payload: { message: "Unable to connect to OpFin. Try again later." } };
   }
@@ -82,7 +83,7 @@ export async function finishSignup(formData: FormData): Promise<Result> {
   });
   if (!response.ok) return { ok: false, message: response.payload.message || "Registration could not be completed." };
   const data = response.payload.data;
-  if (!data?.access_token || !data?.user?.role) return { ok: false, message: "Registration response was incomplete. Contact support." };
+  if (!data?.access_token || data?.user?.role !== "customer") return { ok: false, message: "Registration response was incomplete. Contact support." };
   const store = await cookies();
   store.delete(verifiedCookie);
   const sessionOptions = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", maxAge: 60 * 60 * 8 };
