@@ -15,11 +15,35 @@ class FinancialSpacesApi {
     late http.Response r;
     if(method=='POST') { r=await OpFinHttp.post(uri,headers:h,body:jsonEncode(body??{})); }
     else if(method=='PUT') { r=await OpFinHttp.put(uri,headers:h,body:jsonEncode(body??{})); }
+    else if(method=='PATCH') { r=await OpFinHttp.patch(uri,headers:h,body:jsonEncode(body??{})); }
     else { r=await OpFinHttp.get(uri,headers:h); }
     final decoded=jsonDecode(r.body) as Map<String,dynamic>;
     if(r.statusCode<200||r.statusCode>=300) { throw Exception(decoded['message']?.toString()??'Unable to complete request.'); }
     return decoded['data'];
   }
+  static Future<Map<String, dynamic>> budgets(int id, {String? month}) async =>
+      (await _request('/financial-spaces/$id/budgets'
+          + (month == null ? '' : '?month=$month')) as Map).cast<String, dynamic>();
+
+  static Future<void> createBudget(int id, {
+    required String category,
+    required int monthlyLimitMinor,
+    required String effectiveFrom,
+    int alertThresholdPercent = 80,
+  }) async {
+    await _request('/financial-spaces/$id/budgets', method: 'POST', body: {
+      'category': category,
+      'monthly_limit_minor': monthlyLimitMinor,
+      'effective_from': effectiveFrom,
+      'alert_threshold_percent': alertThresholdPercent,
+    });
+  }
+
+  static Future<void> setBudgetActive(int id, int budgetId, bool active) async {
+    await _request('/financial-spaces/$id/budgets/$budgetId',
+        method: 'PATCH', body: {'active': active});
+  }
+
   static Future<List<Map<String,dynamic>>> spaces() async => (((await _request('/financial-spaces'))['spaces'] as List?)??[]).map((e)=>(e as Map).cast<String,dynamic>()).toList();
   static Future<Map<String,dynamic>> createSpace(String type,String name) async => ((await _request('/financial-spaces',method:'POST',body:{'type':type,'name':name}))['space'] as Map).cast<String,dynamic>();
   static Future<Map<String,dynamic>> financialLife(int id) async => (await _request('/financial-spaces/$id/financial-life') as Map).cast<String,dynamic>();
