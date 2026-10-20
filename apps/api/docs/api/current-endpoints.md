@@ -380,3 +380,5 @@ These routes are behind `auth:sanctum` and standard API throttling. Records rema
 | GET | `/api/people/business-spaces/{publicId}` | Own active business membership only, with People administrator hint |
 
 **Savings Groups** is the product-facing label; `savings_group` remains the stable persisted Financial Space type for backwards compatibility. Server-side checks govern every write even when the Flutter interface hides an action. All amounts are integer currency minor units as defined in the financial core; no automatic transfer, provider finality or accounting posting is inferred from a budget declaration.
+
+**Business finance privacy:** ordinary employee/member Business Space roles may discover an OpFin People connection but cannot read the organisation's assets, debt positions or budgets. Role-scoped finance viewing requires an approved business finance role, and all checks are repeated server-side.
