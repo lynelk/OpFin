@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
+use App\Support\FinancialSpaceRolePolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +33,7 @@ class FinancialLifeController extends Controller
 
     public function storeObligation(Request $request, FinancialSpace $space): JsonResponse
     {
-        $this->member($request, $space);
+        $this->manager($request, $space);
         $v = $request->validate(['kind' => ['required', Rule::in(['loan', 'personal_debt', 'supplier_credit', 'receivable', 'payable', 'other'])], 'direction' => ['required', Rule::in(['i_owe', 'owed_to_me'])], 'counterparty_name' => ['nullable', 'string', 'max:160'], 'amount_minor' => ['required', 'integer', 'min:1'], 'currency' => ['sometimes', 'string', 'size:3'], 'due_date' => ['nullable', 'date']]);
         $id = DB::table('financial_obligations')->insertGetId(['financial_space_id' => $space->id, 'created_by_user_id' => $request->user()->id, 'kind' => $v['kind'], 'direction' => $v['direction'], 'counterparty_name' => $v['counterparty_name'] ?? null, 'original_amount_minor' => $v['amount_minor'], 'outstanding_amount_minor' => $v['amount_minor'], 'currency' => strtoupper($v['currency'] ?? $space->currency), 'due_date' => $v['due_date'] ?? null, 'status' => 'open', 'created_at' => now(), 'updated_at' => now()]);
 
@@ -41,7 +42,7 @@ class FinancialLifeController extends Controller
 
     public function settleObligation(Request $request, FinancialSpace $space, int $obligation): JsonResponse
     {
-        $this->member($request, $space);
+        $this->manager($request, $space);
         $v = $request->validate(['amount_minor' => ['required', 'integer', 'min:1']]);
         $o = DB::table('financial_obligations')->where('financial_space_id', $space->id)->where('id', $obligation)->whereNull('deleted_at')->first();
         abort_if(! $o, 404);
@@ -61,15 +62,32 @@ class FinancialLifeController extends Controller
 
     public function storeAsset(Request $request, FinancialSpace $space): JsonResponse
     {
-        $this->member($request, $space);
+        $this->manager($request, $space);
         $v = $request->validate(['asset_type' => ['required', 'string', 'max:80'], 'name' => ['required', 'string', 'max:160'], 'value_minor' => ['required', 'integer', 'min:0'], 'currency' => ['sometimes', 'string', 'size:3'], 'valued_at' => ['nullable', 'date']]);
         $id = DB::table('financial_assets')->insertGetId(['financial_space_id' => $space->id, 'created_by_user_id' => $request->user()->id, 'asset_type' => $v['asset_type'], 'name' => $v['name'], 'value_minor' => $v['value_minor'], 'currency' => strtoupper($v['currency'] ?? $space->currency), 'valued_at' => $v['valued_at'] ?? now()->toDateString(), 'status' => 'active', 'created_at' => now(), 'updated_at' => now()]);
 
         return response()->json(['data' => ['id' => $id]], 201);
     }
 
-    private function member(Request $request, FinancialSpace $space): void
+    private function member(Request $request, FinancialSpace $space): string
     {
-        abort_unless(DB::table('financial_space_memberships')->where('financial_space_id', $space->id)->where('user_id', $request->user()->id)->where('status', 'active')->exists(), 403);
+        abort_unless($space->status === 'active' && $space->deleted_at === null, 403);
+
+        $role = DB::table('financial_space_memberships')
+            ->where('financial_space_id', $space->id)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'active')
+            ->whereNull('deleted_at')
+            ->value('role');
+
+        abort_unless($role !== null, 403);
+
+        return (string) $role;
+    }
+
+    private function manager(Request $request, FinancialSpace $space): void
+    {
+        $role = $this->member($request, $space);
+        abort_unless(FinancialSpaceRolePolicy::canManageFinancialRecords($space->type, $role), 403);
     }
 }
