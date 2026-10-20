@@ -107,3 +107,7 @@ The supporting domain tables are:
 - `essentials_repayments`
 
 Service-account references are encrypted at rest and masked in ordinary API responses. Embedded platforms receive only customer-authorised Financial-Space scopes. See `../product/OPFIN_ESSENTIALS.md`.
+
+## Savings Groups naming
+
+The customer-facing designation is **Savings Groups**. The persistent code `savings_group` is intentionally retained for migration and API compatibility; no data model rename is permitted without a controlled migration plan. VSLA is retained only where it describes a particular savings methodology or external classification.
