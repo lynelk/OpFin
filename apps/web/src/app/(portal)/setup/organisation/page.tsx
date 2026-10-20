@@ -25,7 +25,7 @@ export default async function OrganisationSetup({ searchParams }: { searchParams
   const selected = eligible.find(s => s.id === id);
   const workspace = selected ? await authenticatedGet(`/financial-spaces/${id}/workspace`) : null;
   const onboarding = workspace?.onboarding as Case | undefined;
-  const requirements = typeof onboarding?.requirements === "string" ? (() => { try { return JSON.parse(onboarding.requirements) as Record<string,string>; } catch { return {}; } })() : (onboarding?.requirements ?? {});
+  const requirements: Record<string, string> = typeof onboarding?.requirements === "string" ? (() => { try { return JSON.parse(onboarding.requirements) as Record<string,string>; } catch { return {}; } })() : (onboarding?.requirements ?? {});
   const current = stages.includes(p.stage ?? "") ? p.stage! : stages.includes(onboarding?.stage ?? "") ? onboarding!.stage! : "profile";
   const index = stages.indexOf(current);
   const next = stages[Math.min(index + 1, stages.length - 1)];
