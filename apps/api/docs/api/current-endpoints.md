@@ -358,3 +358,12 @@ A configured product or capital mandate is **not** asserted to have certified pa
 For club recovery, use [Club Client Recovery API contract](CLUB_CLIENT_RECOVERY.md). Saved requests are encrypted, user/book/purpose-scoped, hash-bound and re-authorised on recovery. Resume returns the original domain result; acknowledgement releases the recovery slot and is not accounting approval or payment execution. Cancellation applies only before domain submission.
 
 For Essentials, collection identity is persisted before provider submission and uncertain outcomes are reconciled against the original request. Capacity reservation is separate from due debt; provider acknowledgement is not settlement finality. Do not infer a universal idempotency-key location or response status from route registration; consult the operation-specific contract. The current candidate does not establish complete lender funding/drawdown, biller settlement, lender release, activation/opening accounting, mandate compatibility, older-record adoption or post-service-reversal refunds. Full API/database/client acceptance remains outstanding.
+
+## Optional merchant Business Passport shadow verification (20 October 2026)
+
+| Method | Route | Authority | Behaviour |
+| --- | --- | --- | --- |
+| POST | `/api/admin/business-passport/shadow-review` | Authenticated platform administrator only; feature flag and independently configured HTTPS partner credentials required | Reads a consent-checked, source-quality-gated, time-bound third-party commerce-evidence snapshot. Returns quality indicators and `manual_review`; no loan eligibility, score, recognised borrower income, product quote, disbursement, investor subscription, ledger write or customer-facing decision. |
+
+Body: four strict opaque references `tenantId`, `consentGrantId`, `passportShareId`, `featureSnapshotId`. Responses use the conventional `success/message/data` envelope. Disabled, revoked, mismatched, unavailable, stale or invalid upstream evidence fails closed; public/customer accounts cannot invoke this admin endpoint. The external candidate recipient must run separately permissioned consent verification and does not delegate OpFin's lender or borrower authorisation. Default feature setting is **off**. This is not a live credit product activation, and participation remains optional within the wider OpFin Financial Spaces system.
+
