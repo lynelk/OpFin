@@ -92,8 +92,10 @@ export default function SignupPage() {
               <div className="field"><label htmlFor="last_name">Last name</label><input id="last_name" name="last_name" autoComplete="family-name" maxLength={80} required /></div>
               <div className="field"><label htmlFor="pin">Create a six-digit PIN</label><input id="pin" name="pin" type="password" autoComplete="new-password" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required /></div>
               <div className="field"><label htmlFor="pin_confirmation">Confirm PIN</label><input id="pin_confirmation" name="pin_confirmation" type="password" autoComplete="new-password" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required /></div>
-              <label><input name="terms_accepted" type="checkbox" value="yes" required /> I accept the OpFin Terms of Service and Privacy Notice. Credit-information consent is requested separately.</label>
-              <button className="button auth-primary-action" disabled={pending} type="submit">{pending ? "Creating account…" : "Create account"}</button>
+              {process.env.NEXT_PUBLIC_OPFIN_TERMS_URL && process.env.NEXT_PUBLIC_OPFIN_PRIVACY_URL ? (
+                <label><input name="terms_accepted" type="checkbox" value="yes" required /> I accept the <a href={process.env.NEXT_PUBLIC_OPFIN_TERMS_URL} target="_blank" rel="noopener noreferrer">Terms of Service</a> and acknowledge the <a href={process.env.NEXT_PUBLIC_OPFIN_PRIVACY_URL} target="_blank" rel="noopener noreferrer">Privacy Notice</a>. Credit-information consent is requested separately.</label>
+              ) : <p role="alert">Registration is temporarily unavailable until the approved Terms of Service and Privacy Notice are published.</p>}
+              <button className="button auth-primary-action" disabled={pending || !process.env.NEXT_PUBLIC_OPFIN_TERMS_URL || !process.env.NEXT_PUBLIC_OPFIN_PRIVACY_URL} type="submit">{pending ? "Creating account…" : "Create account"}</button>
             </form>
           )}
           <div className="auth-panel-footer"><Link href="/login">Already registered? Sign in</Link></div>
