@@ -22,7 +22,7 @@ return [
     'services' => [
         'personal' => ['owner' => 'financial_records', 'spaces' => ['personal']],
         'household' => ['owner' => 'financial_records', 'spaces' => ['household']],
-        'groups' => ['owner' => 'group_finance', 'spaces' => ['savings_group']],
+        'savings_groups' => ['owner' => 'group_finance', 'spaces' => ['savings_group']],
         'sacco' => ['owner' => 'group_finance', 'spaces' => ['sacco']],
         'investment_clubs' => ['owner' => 'investment_operations', 'spaces' => ['investment_club']],
         'business' => ['owner' => 'financial_records', 'spaces' => ['business']],
