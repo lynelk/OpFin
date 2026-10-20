@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
+use App\Support\FinancialSpaceRolePolicy;
 use App\Services\PersonalFinancialSpaceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,13 +21,25 @@ class FinancialSpaceController extends Controller
         $this->personalSpaces->ensure($request->user());
         $spaces = DB::table('financial_space_memberships as m')
             ->join('financial_spaces as s', 's.id', '=', 'm.financial_space_id')
-            ->where('m.user_id', $request->user()->id)->where('m.status', 'active')->whereNull('m.deleted_at')->whereNull('s.deleted_at')
+            ->where('m.user_id', $request->user()->id)->where('m.status', 'active')->where('s.status', 'active')->whereNull('m.deleted_at')->whereNull('s.deleted_at')
             ->select('s.id','s.public_id','s.type','s.name','s.country','s.currency','s.status','m.role')
             ->orderByRaw("CASE WHEN s.type = 'personal' THEN 0 ELSE 1 END")
             ->orderBy('s.name')
             ->orderBy('s.id')
-            ->get();
-        return response()->json(['data'=>['spaces'=>$spaces]]);
+            ->get()
+            ->map(function ($space) {
+                $row = (array) $space;
+                $row['workspace'] = [
+                    'label' => FinancialSpaceRolePolicy::label($space->type),
+                    'can_view_finances' => true,
+                    'can_edit_finances' => FinancialSpaceRolePolicy::canManageFinancialRecords($space->type, $space->role),
+                    'can_manage_members' => FinancialSpaceRolePolicy::canManageMembers($space->role),
+                    'can_open_people_connections' => $space->type === 'business',
+                    'can_manage_people' => FinancialSpaceRolePolicy::canManagePeople($space->type, $space->role),
+                ];
+                return $row;
+            });
+        return response()->json(['data'=>['spaces'=>$spaces]])->header('Cache-Control', 'private, no-store');
     }
 
     public function store(Request $request): JsonResponse
