@@ -5,6 +5,8 @@ import 'package:opfin/credit_offers_screen.dart';
 import 'package:opfin/essentials_screen.dart';
 import 'package:opfin/financial_spaces_screen.dart';
 import 'package:opfin/workspace_switcher_screen.dart';
+import 'package:opfin/workspace_access.dart';
+import 'package:opfin/my_employment_screen.dart';
 import 'package:opfin/financial_hubs.dart';
 import 'package:opfin/protection_screen.dart';
 import 'package:opfin/personal_money_screen.dart';
@@ -35,6 +37,13 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (_) => const WorkspaceSwitcherScreen()),
     );
     if (!mounted || selected == null) return;
+    if (!WorkspaceAccess.canViewFinances(selected)) {
+      if (WorkspaceAccess.canOpenPeople(selected)) {
+        await Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const MyEmploymentScreen()));
+      }
+      return;
+    }
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => FinancialSpaceDetailScreen(space: selected)),
