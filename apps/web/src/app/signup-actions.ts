@@ -2,20 +2,13 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { normaliseUgandanPhone, validSignupPin } from "@/lib/signup-validation";
 
 type Result = { ok: boolean; message: string };
 type ApiPayload = { success?: boolean; message?: string; data?: { verification_token?: string; access_token?: string; user?: { role?: string; name?: string } } };
 const API_URL = process.env.OPFIN_API_URL || process.env.NEXT_PUBLIC_OPFIN_API_URL;
 const verifiedCookie = "opfin_signup_verified";
 const SIGNUP_POLICY_VERSION = "onboarding-web-v1";
-
-function normalisePhone(raw: string): string | null {
-  const phone = raw.replace(/[\s()-]/g, "");
-  if (/^07\d{8}$/.test(phone)) return "256" + phone.slice(1);
-  if (/^\+2567\d{8}$/.test(phone)) return phone.slice(1);
-  if (/^2567\d{8}$/.test(phone)) return phone;
-  return null;
-}
 
 async function post(path: string, data: object): Promise<{ ok: boolean; payload: ApiPayload }> {
   if (!API_URL || process.env.NEXT_PUBLIC_USE_MOCK_API === "true") {
@@ -36,7 +29,7 @@ async function post(path: string, data: object): Promise<{ ok: boolean; payload:
 }
 
 export async function startSignup(phoneInput: string): Promise<Result> {
-  const phone = normalisePhone(phoneInput);
+  const phone = normaliseUgandanPhone(phoneInput);
   if (!phone) return { ok: false, message: "Enter a valid Ugandan mobile phone number." };
   (await cookies()).delete(verifiedCookie);
   const response = await post("/generate-otp", { phone, purpose: "REGISTRATION", otp_channel: "sms" });
@@ -44,7 +37,7 @@ export async function startSignup(phoneInput: string): Promise<Result> {
 }
 
 export async function verifySignup(phoneInput: string, otp: string): Promise<Result> {
-  const phone = normalisePhone(phoneInput);
+  const phone = normaliseUgandanPhone(phoneInput);
   if (!phone || !/^\d{6}$/.test(otp)) return { ok: false, message: "Enter a valid phone and six-digit code." };
   const response = await post("/verify-otp", { phone, otp });
   const token = response.payload?.data?.verification_token;
@@ -73,7 +66,7 @@ export async function finishSignup(formData: FormData): Promise<Result> {
   const confirmation = String(formData.get("pin_confirmation") || "");
   const accepted = formData.get("terms_accepted") === "yes";
   if (!firstName || !lastName || firstName.length > 80 || lastName.length > 80) return { ok: false, message: "Enter your first and last names." };
-  if (!/^\d{6}$/.test(pin) || pin !== confirmation) return { ok: false, message: "Enter matching six-digit PINs." };
+  if (!validSignupPin(pin, confirmation)) return { ok: false, message: "Enter matching six-digit PINs." };
   if (!accepted) return { ok: false, message: "Accept the terms and privacy notice to continue." };
   const response = await post("/register", {
     phone: verified.phone, verification_token: verified.token,
