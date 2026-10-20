@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Stolets;
 
+use App\Models\ConsentRecord;
+use App\Models\FinancialSpace;
+use App\Models\FinancialSpaceMembership;
+use App\Models\LoanProduct;
+use App\Services\LenderAuthorityEvidence;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
@@ -15,7 +20,7 @@ use RuntimeException;
  */
 final class BusinessPassportShadowService
 {
-    /** @param array{tenantId:string,consentGrantId:string,passportShareId:string,featureSnapshotId:string} $references */
+    /** @param array<string, mixed> $references */
     public function inspect(array $references): array
     {
         if (! config('services.stolets_shadow.enabled', false)) {
@@ -38,10 +43,64 @@ final class BusinessPassportShadowService
             }
         }
 
+        // OpFin-owned customer grant, Financial Space and lender configuration must
+        // be resolved server-side before passing any merchant references to Stolets.
+        $borrowerId = (int) ($references['borrowerUserId'] ?? 0);
+        $productId = (int) ($references['loanProductId'] ?? 0);
+        $spaceId = (int) ($references['financialSpaceId'] ?? 0);
+        $product = LoanProduct::withoutGlobalScopes()->with('institution')->find($productId);
+        $space = FinancialSpace::query()->find($spaceId);
+        $lender = $product?->institution;
+        if (! $product || ! $lender || ! $space
+            || $space->country !== 'UG' || $product->country !== 'UG'
+            || $product->currency !== 'UGX'
+            || stripos((string) $product->product_category, 'merchant') === false
+            || strcasecmp((string) $product->status, 'Active') !== 0
+            || strcasecmp((string) $lender->status, 'Active') !== 0
+            || ! LenderAuthorityEvidence::complete([
+                'authority_basis' => $lender->authority_basis,
+                'authority_reference' => $lender->authority_reference,
+                'regulator' => $lender->regulator_code,
+            ])
+            || ($lender->authority_valid_until && $lender->authority_valid_until->isPast())) {
+            throw new RuntimeException('The merchant product and lender authority configuration are not eligible for shadow assessment.');
+        }
+        $member = FinancialSpaceMembership::query()
+            ->where('financial_space_id', $spaceId)
+            ->where('user_id', $borrowerId)
+            ->where('status', 'active')
+            ->whereIn('role', ['owner', 'admin', 'administrator'])
+            ->exists();
+        if (! $member || ($space->metadata['stolets_tenant_id'] ?? null) !== $references['tenantId']) {
+            throw new RuntimeException('Merchant business ownership or source linkage requires independent verification.');
+        }
+
+        // An authenticated borrower must have granted a separate purpose-bound
+        // OpFin consent. An administrator cannot supply or mint this authorisation.
+        $consent = ConsentRecord::query()
+            ->where('user_id', $borrowerId)
+            ->where('purpose', 'merchant_finance_assessment')
+            ->latest('id')->first();
+        $expectedLender = 'opfin-lender-'.$lender->id;
+        $meta = $consent?->metadata ?? [];
+        if (! $consent || $consent->status !== ConsentRecord::STATUS_GRANTED
+            || $consent->revoked_at || ! $consent->granted_at
+            || $consent->granted_at->isFuture()
+            || ($meta['financial_space_id'] ?? null) != $spaceId
+            || ($meta['stolets_tenant_id'] ?? null) !== $references['tenantId']
+            || ($meta['lender_recipient_id'] ?? null) !== $expectedLender) {
+            throw new RuntimeException('Independent borrower consent for this merchant and lender is absent or revoked.');
+        }
+
+        $providerRequest = array_intersect_key($references, array_flip([
+            'tenantId', 'consentGrantId', 'passportShareId', 'featureSnapshotId',
+        ]));
+        $providerRequest['providerOfRecordId'] = $expectedLender;
+
         try {
             $response = Http::acceptJson()->withToken($token)
                 ->timeout(6)->connectTimeout(3)->withoutRedirecting()
-                ->post($base.'/v1/partner-evidence/opfin/credit-shadow', $references);
+                ->post($base.'/v1/partner-evidence/opfin/credit-shadow', $providerRequest);
         } catch (ConnectionException) {
             throw new RuntimeException('Stolets evidence provider is currently unavailable.');
         }
@@ -62,7 +121,8 @@ final class BusinessPassportShadowService
             || ($body['tenantId'] ?? null) !== $references['tenantId']
             || ($body['consentGrantId'] ?? null) !== $references['consentGrantId']
             || ($body['sharePackageId'] ?? null) !== $references['passportShareId']
-            || ($body['featureSnapshotId'] ?? null) !== $references['featureSnapshotId']) {
+            || ($body['featureSnapshotId'] ?? null) !== $references['featureSnapshotId']
+            || ($body['providerOfRecordId'] ?? null) !== $expectedLender) {
             throw new RuntimeException('Merchant evidence provider returned an invalid or mismatched contract.');
         }
 
@@ -121,6 +181,9 @@ final class BusinessPassportShadowService
             'decision' => 'manual_review',
             'execution_authorised' => false,
             'existing_credit_policy_unchanged' => true,
+            'lender_authority_status' => 'source_configuration_only_external_confirmation_required',
+            'customer_consent_status' => 'opfin_granted_and_stolets_verified_at_request',
+            'borrower_space_link_status' => 'self_reported_source_link_requires_operational_confirmation',
             'probability_of_default' => null,
             'approved_loan_amount_minor' => null,
             'verified_disposable_cash_flow_minor' => null,
@@ -130,6 +193,11 @@ final class BusinessPassportShadowService
                 'feature_snapshot_id' => $references['featureSnapshotId'],
                 'consent_grant_id' => $references['consentGrantId'],
                 'share_package_id' => $references['passportShareId'],
+                'borrower_user_id' => $borrowerId,
+                'financial_space_id' => $spaceId,
+                'loan_product_id' => $productId,
+                'lender_id' => $lender->id,
+                'lender_recipient_id' => $expectedLender,
             ],
             'observation_window_end' => $asOf,
             'quality_reason_codes' => $reasons,
