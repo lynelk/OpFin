@@ -167,11 +167,18 @@ class _FinancialSpaceBudgetScreenState extends State<FinancialSpaceBudgetScreen>
                 child: ListTile(
                   leading: const Icon(Icons.pie_chart_outline),
                   title: Text(row['category']?.toString() ?? 'Category'),
-                  subtitle: Text('Monthly planned limit · $currency'),
+                  subtitle: Text(
+                    'Planned: $currency ${_numbers.format((row['monthly_limit_minor'] as num?)?.toInt() ?? 0)}'
+                    '\\nStatement-matched: $currency ${_numbers.format((row['statement_matched_actual_minor'] as num?)?.toInt() ?? 0)}'
+                    '\\n${row['over_planned_limit'] == true ? 'Over planned limit' : row['alert_threshold_reached'] == true ? 'Approaching planned limit' : 'Within planned limit'}',
+                  ),
+                  isThreeLine: true,
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text(_numbers.format(
-                        (row['monthly_limit_minor'] as num?)?.toInt() ?? 0),
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Icon(row['over_planned_limit'] == true
+                        ? Icons.warning_amber_outlined
+                        : row['alert_threshold_reached'] == true
+                            ? Icons.notifications_active_outlined
+                            : Icons.check_circle_outline),
                     if (canEdit)
                       PopupMenuButton<String>(
                         tooltip: 'Budget actions',
@@ -191,9 +198,11 @@ class _FinancialSpaceBudgetScreenState extends State<FinancialSpaceBudgetScreen>
           },
         ),
         const SizedBox(height: 16),
-        const Text('These are planned budget limits, not reconciled spending '
-            'or confirmed balances. Actual spending and alerts will be shown '
-            'only after categorised financial records are connected.',
+        const Text(
+            'Actuals count only categorised debit transactions matched to an '
+            'imported statement. Pending transactions and unclassified spending '
+            'are excluded from category alerts. A statement match is not independent '
+            'bank/provider settlement confirmation.',
             style: TextStyle(fontSize: 12)),
       ]),
     ),
