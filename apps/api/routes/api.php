@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\LocationContextController;
 use App\Http\Controllers\Api\LongRangeGovernanceController;
 use App\Http\Controllers\Api\LongRangePlatformController;
 use App\Http\Controllers\Api\MobileHomeController;
+use App\Http\Controllers\Api\MyFinancialSpacesReportController;
 use App\Http\Controllers\Api\OpFinPeopleMembershipController;
 use App\Http\Controllers\Api\OpFinPeopleServiceController;
 use App\Http\Controllers\Api\OpFinServiceRegistryController;
@@ -94,6 +95,7 @@ Route::post('/programme-partner/invitations/accept', [ProgrammeCompletionControl
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/service-registry', OpFinServiceRegistryController::class);
+    Route::get('/my-spaces/report', MyFinancialSpacesReportController::class);
     Route::get('/people/business-spaces', [OpFinPeopleMembershipController::class, 'index']);
     Route::get('/people/business-spaces/{publicId}', [OpFinPeopleMembershipController::class, 'show']);
     Route::post('/admin/cito-baas/intents', [CitoBaasGovernanceController::class, 'draft']);
