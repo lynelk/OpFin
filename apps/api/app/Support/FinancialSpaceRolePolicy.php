@@ -44,7 +44,19 @@ final class FinancialSpaceRolePolicy
 
     public static function canManagePeople(string $type, string $role): bool
     {
-        return $type === 'business' && in_array($role, ['owner', 'administrator', 'director'], true);
+        return $type === 'business' && in_array($role, ['owner', 'administrator', 'director', 'hr_admin', 'people_admin'], true);
+    }
+
+    public static function canManagePayroll(string $type, string $role): bool
+    {
+        return $type === 'business' && in_array($role, ['owner', 'administrator', 'director', 'payroll_manager'], true);
+    }
+
+    public static function canSupervisePeople(string $type, string $role): bool
+    {
+        return $type === 'business' && in_array($role, [
+            'owner', 'administrator', 'director', 'hr_admin', 'people_admin', 'supervisor', 'manager',
+        ], true);
     }
 
     public static function label(string $type): string
