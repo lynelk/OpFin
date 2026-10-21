@@ -382,3 +382,26 @@ These routes are behind `auth:sanctum` and standard API throttling. Records rema
 **Savings Groups** is the product-facing label; `savings_group` remains the stable persisted Financial Space type for backwards compatibility. Server-side checks govern every write even when the Flutter interface hides an action. All amounts are integer currency minor units as defined in the financial core; no automatic transfer, provider finality or accounting posting is inferred from a budget declaration.
 
 **Business finance privacy:** ordinary employee/member Business Space roles may discover an OpFin People connection but cannot read the organisation's assets, debt positions or budgets. Role-scoped finance viewing requires an approved business finance role, and all checks are repeated server-side.
+
+
+## Savings Groups cycle and governance API (21 October 2026)
+
+The Savings Groups persisted type remains `savings_group`. Routes under `/api/financial-spaces/{space}/savings-groups` require Sanctum authentication, an **active exact-Space membership** and the Savings Group type; draft creation, cycle approval, reconciliation verification and share-out proposals require designated financial officials.
+
+| Method | Suffix | Action and settlement boundary |
+| --- | --- | --- |
+| GET / POST | `/cycles` | List member cycles / official creates draft with dated term |
+| POST | `/cycles/{cycle}/activate` | Separate official activates; never author approves their own cycle |
+| POST | `/cycles/{cycle}/close` | Official closes after cycle end date |
+| GET / POST | `/cycles/{cycle}/contributions` | Member-visible ledger / record contribution **pledge**, no money moved |
+| POST | `/cycles/{cycle}/contributions/{contribution}/verify` | Different financial official links exact-amount statement-matched credit, unique transaction allocation |
+| POST | `/cycles/{cycle}/meetings` | Official records scheduled meeting and required quorum |
+| POST | `/cycles/{cycle}/meetings/{meeting}/record` | Records declared attendance count and minutes; does **not** create a verified vote |
+| POST | `/cycles/{cycle}/loans` | Member creates un-disbursed loan request |
+| POST | `/cycles/{cycle}/loans/{loan}/approve` | Independent official approves proposal; disbursement remains **disabled** without separate lender/legal controls |
+| POST | `/cycles/{cycle}/social-claims` | Member requests welfare support |
+| POST | `/cycles/{cycle}/social-claims/{claim}/approve` | Independent official approves request; no payment implied |
+| GET / POST | `/cycles/{cycle}/shareouts` and `/prepare` | View or propose member allocations of statement-matched saved principal only |
+| POST | `/cycles/{cycle}/shareouts/{allocation}/approve` | Independent official approves the proposal; no payout implied |
+
+**Not finality:** An imported statement match supports internal evidence, not independent provider/bank settlement. Loans, social claims and share-outs do not disburse or report as paid in these endpoints. Unsupported financial movements must not be inferred from a request or approval.
