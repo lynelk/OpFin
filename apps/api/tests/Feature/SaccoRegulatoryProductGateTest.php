@@ -76,9 +76,21 @@ class SaccoRegulatoryProductGateTest extends TestCase
         $this->postJson($base.'/products/'.$product.'/activate', [
             'attestation_id' => $attestation,
         ])->assertStatus(409);
-        $this->postJson($base.'/accounts', [
+        $opened = $this->postJson($base.'/accounts', [
             'user_id' => $member->id,
             'product_id' => $product,
         ])->assertCreated();
+        $accountId = $opened->json('data.account.id');
+        DB::table('sacco_member_accounts')->where('id', $accountId)->update([
+            'balance_minor' => 125000,
+            'held_minor' => 10000,
+        ]);
+        $this->postJson($base.'/accounts', [
+            'user_id' => $member->id,
+            'product_id' => $product,
+        ])->assertCreated()
+            ->assertJsonPath('data.account.id', $accountId)
+            ->assertJsonPath('data.account.balance_minor', 125000)
+            ->assertJsonPath('data.account.held_minor', 10000);
     }
 }
