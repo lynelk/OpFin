@@ -1,11 +1,12 @@
 # OpFin Financial Intelligence
 
-Status: Partial implementation candidate; not complete, build-accepted or deployed
-Work record: 26 September 2026
+Status: Source integrated into main; controlled feature activation, issuer authenticity and full acceptance remain separate
+Original work record: 26 September 2026  
+Source review: 21 October 2026
 Language: English (United Kingdom)
-Repository branch: feat/financial-intelligence-20260926
-Pull request: #132 (draft)
-Source baseline: 3924a26913f85067a3ac900c78fa80125ca589fc
+Historical branch: feat/financial-intelligence-20260926  
+Historical PR #132: merged into main; its old branch test results are not current-head acceptance  
+Current source baseline: c04d72f894aba163e6c8aaae668d8ad35a7af731
 
 ## Product boundary
 
@@ -46,3 +47,7 @@ GitHub Actions remains disabled at the owner's direction. No new infrastructure 
 Run actual Laravel feature/full suites, Pint and dependency audit; PostgreSQL migration, trigger, replay and concurrency checks; full Web dependency audit/typecheck/lint/tests/build; authenticated browser tests; and affected Flutter analysis/tests/release compiles with real supported-device evidence. Independently review source reconciliation, currency units, statutory definitions, cross-Space denial, removed-member denial, report sharing, authority revocation and source-data retention. A passing standalone engine is not proof that the application or migration works.
 
 See the API contract in apps/api/docs/api/FINANCIAL_INTELLIGENCE_CONTRACT.md and the controlled runbook in docs/operations/FINANCIAL_INTELLIGENCE_RUNBOOK.md.
+
+## Current-source clarification (21 October 2026)
+
+The Financial Intelligence provider registers source import, scoped reports, case events and grant controls, issuer versioning, original statement ingestion, review/appeal and analysis through the current API route file. The feature remains guarded by Sanctum, Space membership/entitlement, purpose, consent and a feature switch. A parsed statement or issuer name is not independent verification. No external authenticated bank ledger, issuer-specific reader, qualified credit/ECL validation or live institution permission may be assumed from source. See [exact API contract](../../apps/api/docs/api/FINANCIAL_INTELLIGENCE_CONTRACT.md), [operations runbook](../operations/FINANCIAL_INTELLIGENCE_RUNBOOK.md) and [release evidence](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).

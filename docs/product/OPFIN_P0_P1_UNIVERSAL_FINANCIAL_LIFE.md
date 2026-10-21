@@ -1,6 +1,6 @@
 # OpFin P0–P1: One Universal Financial Life Programme
 
-**Status:** Approved strategic direction; implementation backlog and acceptance gates **proposed**, not delivered.
+**Status:** Approved strategic direction. Selected foundational source slices exist; the overall P0–P1 roadmap and acceptance gates are not fully delivered.
 **Prepared:** 17 October 2026 | **Language:** British English | **Canonical repository:** `lynelk/OpFin`
 
 ## The North Star
@@ -100,3 +100,7 @@ See [Financial Life Architecture](../architecture/FINANCIAL_LIFE_CONTINUITY_AND_
 - **Already in separate draft UI work:** [PR #187](https://github.com/lynelk/OpFin/pull/187) contains a compact Home candidate and separate youth-access proposal. That PR is not proof of deployment or approval. Coordinate acceptance/rebase rather than copying unfinished UI changes into main.
 - **This programme delivers first:** constitutional documentation, a testable source-backed guidance improvement and future structural contracts. It does not create or authorise youth financial accounts, migrations, provider savings products, or completed life-stage transitions.
 - **Required before any declaration of completion:** actual CI, authenticated browsers, Flutter device tests, security/privacy, minor safeguarding and exact financial journey verification; capture before/after production-route screenshots on matching state. Do not merge solely on attractive prototypes.
+
+## Implementation review (21 October 2026)
+
+Current source contains early Financial Life/Today, aspirations and learning enhancements, but not the complete age-inclusive lifecycle, safeguarding, offline/assisted channels, all approved institutional products or long-range financial-coaching objectives. The [current source-to-release register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) separates implemented foundations from remaining aspirations and regulated activation. The standing North Star is unchanged.
