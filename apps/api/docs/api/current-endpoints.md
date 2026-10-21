@@ -361,7 +361,7 @@ For Essentials, collection identity is persisted before provider submission and 
 
 ## 21 October 2026 source-linked quick navigation
 
-The current `main` source baseline for this index is `c04d72f894aba163e6c8aaae668d8ad35a7af731`. Routes listed below come from checked-in Laravel route files. Registration does not prove that a feature flag, institution, issuer, payment rail or licence is active. Start with the [integrator guide](INTEGRATOR_GUIDE.md) for authentication, examples, error handling and AI discovery.
+This documentation update was initially reviewed against source baseline `c04d72f894aba163e6c8aaae668d8ad35a7af731`, then integrated with subsequent merged changes; use the merged release SHA for authoritative runtime status. Routes listed below come from checked-in Laravel route files. Registration does not prove that a feature flag, institution, issuer, payment rail or licence is active. Start with the [integrator guide](INTEGRATOR_GUIDE.md) for authentication, examples, error handling and AI discovery.
 
 | Purpose | Source route | Detailed reference |
 | --- | --- | --- |
@@ -376,3 +376,12 @@ The current `main` source baseline for this index is `c04d72f894aba163e6c8aaae66
 | Growth readiness | `GET /api/admin/growth-readiness` | [Configuration versus activation](../../../../docs/operations/ISSUES_17_103_128_136_176_190_STATUS.md) |
 
 Native API catalogue OpenAPI export includes reviewed operations only. Some individual domain APIs still lack reviewed request/response contracts. Inspect actual controller tests and role/Space checks before enabling an SDK or AI-based integration. Refer to the [source-to-release evidence register](../../../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) for explicit outstanding acceptance.
+
+## Optional merchant Business Passport shadow verification (20 October 2026)
+
+| Method | Route | Authority | Behaviour |
+| --- | --- | --- | --- |
+| POST | `/api/admin/business-passport/shadow-review` | Authenticated platform administrator only; feature flag and independently configured HTTPS partner credentials required | Reads a consent-checked, source-quality-gated, time-bound third-party commerce-evidence snapshot. Returns quality indicators and `manual_review`; no loan eligibility, score, recognised borrower income, product quote, disbursement, investor subscription, ledger write or customer-facing decision. |
+
+Body: three positive internal IDs `borrowerUserId`, `loanProductId`, `financialSpaceId`, plus four strict opaque references `tenantId`, `consentGrantId`, `passportShareId`, `featureSnapshotId`. OpFin requires an active merchant loan product, locally configured active lender authority, the borrower's active owner/admin Financial Space membership, exact tenant linkage and a current borrower-owned `merchant_finance_assessment` grant explicitly scoped to the Space, tenant and exact `opfin-lender-{institutionId}` recipient **before** making the external request. Stolets must independently verify its own current source grant and share for the same actual lender; merchant receipts from either application cannot alone establish business ownership, legal lender authority or permission to disburse. Responses use the conventional `success/message/data` envelope. Disabled, revoked, mismatched, unavailable, stale or invalid upstream evidence fails closed; public/customer accounts cannot invoke this admin endpoint. The external candidate recipient must run separately permissioned consent verification and does not delegate OpFin's lender or borrower authorisation. A configured lender reference is **not externally certified legal authority**, and source Space metadata alone is **not verified incorporation/business ownership**. Production credit usage requires an independently accepted identity-link evidence record, applicable lender licensing/mandate and underwriting acceptance. Default feature setting is **off**. This is not a live credit product activation, and participation remains optional within the wider OpFin Financial Spaces system.
+

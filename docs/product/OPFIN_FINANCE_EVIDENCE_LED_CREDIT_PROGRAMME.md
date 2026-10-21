@@ -1,11 +1,21 @@
-# OpFin Finance: Evidence-Led Merchant Credit and Portfolio Control Programme
+# OpFin Finance: Evidence-Led Credit Capability with Optional Merchant Integration
 
 **Status:** Revised growth mandate adopted 17 October 2026: **immediate lending-volume and investor-participation expansion**. No blanket pilot, vintage-count, calendar, volume-growth or investor-channel moratorium. Actual transactions remain subject to existing lawful provider, capital, affordability, contractual, settlement and customer-protection controls. **Prepared:** 17 October 2026. **Market of initial evidence:** Uganda. **Canonical owner:** OpFin Finance, governed within the universal OpFin financial-life platform.
 **Related:** [Canonical Product Breakdown](OPFIN_CANONICAL_PRODUCT_BREAKDOWN.md), [Universal Financial Life P0–P1 Programme](OPFIN_P0_P1_UNIVERSAL_FINANCIAL_LIFE.md), [Financial Life Architecture](../architecture/FINANCIAL_LIFE_CONTINUITY_AND_DIGNITY.md), [Financial Spaces Domain Model](../architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md).
 
+## Implementation and acceptance baseline (20 October 2026)
+
+See [Embedded Merchant Finance Capability, Evidence and Delivery](../operations/OPFIN_BUSINESS_LENDING_EXECUTION_20261020.md) for the candidate merchant product matrix, controlled Stolets shadow/pilot protocol, business affordability and review contract, real contribution-margin calculation, Cito integration gates, portfolio and stop-loss definitions, and the explicit distinction between experimental three-vintage evidence and **immediate authorised lending/investor growth**. It is an execution specification, not a signed live-product policy or permission to move money.
+
+## Product-boundary clarification (20 October 2026)
+
+The canonical OpFin [North Star and product blueprint](OPFIN_PRODUCT_BLUEPRINT.md) are unchanged: **“Every financial life deserves a future worth looking forward to.”** OpFin remains a **personal financial operating platform** centred on one person's continuity, dignity and aspirations, with Financial Spaces and many appropriate financial services. **Stolets-enabled merchant finance is an optional, provider-neutral third-party integration and product capability inside Borrow / Finance, not a platform pivot or a new definition of OpFin.** It neither takes priority over personal money, planning, saving, investing, protection and education nor becomes a compulsory source of customer identity, financial records or credit eligibility. Non-borrowers retain the full lawful non-credit experience. The customer promise remains **“Your next step, clearer.”**
+
+The longer merchant-lending execution specification is a **module delivery and risk-control plan** only. Its new-product pilot, shadow underwriting, two cohorts, mature-vintage evidence and exposure controls do not redefine OpFin-wide milestones or slow separately authorised existing services. [Embedded finance execution and North Star invariants](../operations/OPFIN_BUSINESS_LENDING_EXECUTION_20261020.md).
+
 ## Strategy reconciliation: both requirements stay
 
-OpFin is a **universal financial operating platform**, not a lending-only marketplace. Inside that platform, **OpFin Finance** must become a controlled, evidence-led credit and financial-products capability that protects customers, lenders and capital providers. The near-term **credit commercial priority** is responsible, purpose-linked merchant finance powered by separately governed business evidence, **alongside immediate growth of every already authorised and operationally supported lending and investor channel**. New underwriting models can be validated in shadow mode without suspending properly authorised existing live services. Individuals who cannot or choose not to borrow retain OpFin Today, financial education, planning, personal goals and support.
+OpFin is a **universal financial operating platform**, not a lending-only marketplace. Inside that platform, **OpFin Finance** must become a controlled, evidence-led credit and financial-products capability that protects customers, lenders and capital providers. One optional **credit capability enhancement** is responsible, purpose-linked merchant finance using separately consented commerce evidence, alongside all other appropriate credit services and immediate growth through every already authorised and operationally supported lending and investor channel. It is a module-level engineering priority, not an OpFin-wide commercial or experience priority. New underwriting models can be validated in shadow mode without suspending properly authorised existing live services. Individuals who cannot or choose not to borrow retain OpFin Today, financial education, planning, personal goals and support.
 
 **No universal mandatory credit funnel:** age, income, geography, sex or unavailable alternative data never removes a person's right to appropriate financial information. Customer-selected aspirations never silently become credit inputs. Underwriting, eligibility, advice, consent, borrower safeguards, group Space rights and commercial priority remain separately governed.
 
@@ -21,7 +31,7 @@ A product can only execute a transaction when actual legal/product authority, le
 
 **No automatic freezes on expansion:** loan-vintage count, elapsed months, pilot cohort number or an arbitrary percentage limit increase are **not** prerequisites to market growth. Commercial teams can scale acquisition and investor participation immediately; financial execution remains conditional on validated capacity and actual risk policy. Keep audited override and kill-switch capability for exceptional safety events, not routine suppression of growth.
 
-## Fourteen mandatory credit workstreams
+## Fourteen controls for applicable credit capabilities
 
 | ID | Workstream | Preserved requirements | Engineering and governance acceptance |
 | --- | --- | --- | --- |
