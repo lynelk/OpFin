@@ -178,3 +178,10 @@ OpFin People connections appear within authorised Business Spaces and under More
 Mobile regression requirements: switch Personal → Savings Groups → SACCO → Investment Club → Business and back; ensure private financial data never carries across Spaces, inactive/suspended Spaces are absent, unauthorised actions never appear and backend writes remain forbidden; verify app logout, token expiry, offline handling and existing Borrow, Home, Activity and More journeys. Run Flutter analyse/tests for this feature before merging.
 
 Employees who have People-only business membership are routed to their authorised employer connection instead of the organisation's financial position. This prevents accidental exposure of corporate balances through general workspace switching.
+
+
+## Savings Groups embedded mobile workspace (21 October 2026)
+
+Financial Spaces now links a Savings Groups operational workspace for active members and officials. An official can create a draft savings cycle, a separate official can activate it, members can pledge contributions and request support or loans, and officials can close a cycle and prepare proposed share-outs. Contribution verification requires a separately statement-matched exact amount; non-final evidence never becomes money automatically.
+
+The app labels these records as pledges, requests and proposals until authoritative confirmation. This is **not** a completed end-to-end regulated savings or lending product; physical meeting quorum, actual loan funding, interest allocation, social-fund payout and share-out settlement remain dedicated acceptance tasks. Test offline/retry safety, exact-Space ownership and denial paths on Android and iOS.
