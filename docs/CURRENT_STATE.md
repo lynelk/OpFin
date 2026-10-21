@@ -76,3 +76,9 @@ These are code candidates, not blanket release acceptance. Targeted transport/po
 ## Current documentation authority
 
 Read the [21 October source and release register](operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md), [API integrator guide](../apps/api/docs/api/INTEGRATOR_GUIDE.md), [role-based training](manuals/ROLE_BASED_TRAINING_PATHS.md) and [publication register](PUBLICATION_REGISTER.md). These supersede the use of September-only evidence as an undated current status. They do not overwrite the historical records.
+
+## 21 October post-baseline implementation update
+
+The reviewed `c04d72f...` source baseline above is historical, **not the latest merge**. Subsequent reviewed merges on `main` include ESLint 10.13.0 ([PR #202](https://github.com/lynelk/OpFin/pull/202)), the default-disabled consent-checked Stolets **shadow-only** Business Passport adapter and administrator screen ([PR #201](https://github.com/lynelk/OpFin/pull/201)), and a patched API asset lockfile for high-severity `follow-redirects` advisories ([PR #208](https://github.com/lynelk/OpFin/pull/208), merge `a5ede03fd64b1f7c61d35be94e6c2d293209284c`). The security-fix candidate passed complete monorepo API/Web/Android/iOS, security, publication and build checks before merge.
+
+Railway production health, exact live deployment SHA, retained legal/customer consents, lender authority and settlements require **post-merge** verification; no code merge is a licence, a funded mandate, a provider contract or live third-party acceptance. The Stolets counterpart remains an independent optional service ([Stolets PR #226](https://github.com/lynelk/Stolets/pull/226)); do not presume it is in production.
