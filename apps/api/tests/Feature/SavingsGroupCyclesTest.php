@@ -92,8 +92,8 @@ class SavingsGroupCyclesTest extends TestCase
             ->json('data.allocations.0.id');
         $this->postJson($base.'/cycles/'.$cycle.'/shareouts/'.$allocation.'/approve')->assertForbidden();
         Sanctum::actingAs($treasurer);
-        $this->postJson($base.'/cycles/'.$cycle.'/shareouts/'.$allocation.'/approve')
-            ->assertOk()->assertJsonPath('data.allocation.status', 'approved_not_paid');
+        $shareoutApproval = $this->postJson($base.'/cycles/'.$cycle.'/shareouts/'.$allocation.'/approve')->assertOk();
+        $this->assertSame('approved_not_paid', $shareoutApproval->json('data.allocation.status'), $shareoutApproval->getContent());
     }
 
     public function test_loans_and_social_claims_remain_requests_not_fabricated_payments(): void
@@ -118,8 +118,8 @@ class SavingsGroupCyclesTest extends TestCase
         ])->assertCreated()->json('data.claim.id');
 
         Sanctum::actingAs($treasurer);
-        $this->postJson($base.'/cycles/'.$cycle.'/loans/'.$loan.'/approve')
-            ->assertOk()->assertJsonPath('data.loan_request.status', 'approved_not_disbursed');
+        $loanApproval = $this->postJson($base.'/cycles/'.$cycle.'/loans/'.$loan.'/approve')->assertOk();
+        $this->assertSame('approved_not_disbursed', $loanApproval->json('data.loan_request.status'), $loanApproval->getContent());
         $this->postJson($base.'/cycles/'.$cycle.'/social-claims/'.$claim.'/approve')
             ->assertOk()->assertJsonPath('data.claim.status', 'approved_not_paid');
     }
