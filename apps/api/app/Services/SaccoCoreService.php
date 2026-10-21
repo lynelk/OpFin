@@ -46,23 +46,36 @@ class SaccoCoreService
             throw new InvalidArgumentException('Active SACCO product not found in this Space.');
         }
 
-        DB::table('sacco_member_accounts')->updateOrInsert([
-            'user_id' => $member->id,
-            'sacco_product_id' => $p->id,
-        ], [
-            'financial_space_id' => $space->id,
-            'account_number' => 'SAC-'.$space->id.'-'.$member->id.'-'.$p->id.'-'.Str::upper(Str::random(5)),
-            'balance_minor' => 0,
-            'held_minor' => 0,
-            'status' => 'active',
-            'updated_at' => now(),
-            'created_at' => now(),
-        ]);
+        // Opening an account is idempotent. Never reset previously funded
+        // savings/share balances, holds, status or account numbers on retry.
+        return DB::transaction(function () use ($space, $member, $p) {
+            $query = DB::table('sacco_member_accounts')
+                ->where('financial_space_id', $space->id)
+                ->where('user_id', $member->id)
+                ->where('sacco_product_id', $p->id);
+            $existing = $query->lockForUpdate()->first();
+            if ($existing) {
+                return $existing;
+            }
 
-        return DB::table('sacco_member_accounts')
-            ->where('user_id', $member->id)
-            ->where('sacco_product_id', $p->id)
-            ->first();
+            DB::table('sacco_member_accounts')->insertOrIgnore([
+                'user_id' => $member->id,
+                'sacco_product_id' => $p->id,
+                'financial_space_id' => $space->id,
+                'account_number' => 'SAC-'.$space->id.'-'.$member->id.'-'.$p->id.'-'.Str::upper(Str::random(5)),
+                'balance_minor' => 0,
+                'held_minor' => 0,
+                'status' => 'active',
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]);
+
+            return DB::table('sacco_member_accounts')
+                ->where('financial_space_id', $space->id)
+                ->where('user_id', $member->id)
+                ->where('sacco_product_id', $p->id)
+                ->first();
+        });
     }
 
     public function memberPosition(FinancialSpace $space, User $member): array
