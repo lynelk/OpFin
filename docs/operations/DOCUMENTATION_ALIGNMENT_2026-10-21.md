@@ -55,3 +55,11 @@ The [six-issue record](ISSUES_17_103_128_136_176_190_STATUS.md) and [institution
 6. Maintain British English and preserve exact route/field spellings. Respect publication classes in [publication register](../PUBLICATION_REGISTER.md).
 
 **Review outcome:** current reference documentation updated to describe source and limitations. No new API/provider activation, financial transaction or production configuration change is authorised by this document.
+
+## Documentation candidate CI, 21 October 2026
+
+For the first documentation PR #207 candidate `ecd33f3eb4fd1e486592e687c75708153c407649`, the **publication-readiness job passed** its base comparison/drift check, the editorial gate on 22 public or controlled-external documents, and local-link verification of **39 current Markdown documents and 417 relative link targets with zero defects**. The link-checker regression suite passed **5 tests**. At observation, the API, Web, layout, financial-review metadata and repository-security jobs were also successful; remaining mobile jobs were still running. These are actual candidate-specific CI findings, not a statement about every external publication approval.
+
+**Release blocker discovered, not fixed by documentation:** both the `api-assets` CI job and the separate `security-api-assets` audit failed. npm audit reported high-severity `follow-redirects` version `1.16.0` with advisories `GHSA-q3jh-wrc6-jgq8` and `GHSA-8r9p-f939-6h3c` concerning cross-origin/sensitive credential-header handling. The full release and security gate remain failed until the affected dependency is safely upgraded, the lockfile and dependency tree audited and the complete candidate checks rerun. Do **not** relax audit thresholds or call this a fully green release.
+
+The above are observations for the named candidate/run, not promises of future CI results. They neither expose credentials nor resolve the separately recorded security-history incident.
