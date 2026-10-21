@@ -543,4 +543,5 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
 
 require __DIR__.'/financial_space_operations.php';
 require __DIR__.'/sacco_core.php';
+require __DIR__.'/savings_group_cycles.php';
 require __DIR__.'/audmon.php';
