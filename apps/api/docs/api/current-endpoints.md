@@ -430,3 +430,14 @@ The backend feature is a modular domain inside the existing OpFin Laravel API wh
 ## Authorised cross-Space position report (21 October 2026)
 
 `GET /api/my-spaces/report` returns up to 200 signed-in user's active Financial Spaces for which the caller has finance-view permission. Each Space is a separate ownership boundary with its own currency and recorded positions; **no cross-Space personal net-worth sum** is returned. People-only corporate memberships cannot access employer cash/assets/debts. Figures are recorded positions and are not represented as independently verified bank/provider balances.
+
+
+## SACCO regulatory product controls (21 October 2026)
+
+New `sacco_products` records are always created with `status=draft`; draft products cannot be used to open member accounts. `GET/POST /api/financial-spaces/{space}/sacco/regulatory-attestations` records officer-submitted jurisdiction/licence documents, with `review_status=pending_review`. `POST /api/admin/sacco/{space}/regulatory-attestations/{attestation}/review` is restricted to authenticated platform compliance/operations roles distinct from the submitting actor, and accepts `reviewed` or `rejected`. `POST /api/financial-spaces/{space}/sacco/products/{product}/activate` requires a different SACCO officer, a currently reviewed attestation, the matching jurisdiction and an explicitly permitted product type.
+
+Document review is not independent registry verification and never itself proves deposit-taking/lending authorisation, custody, liquidity or provider certification. Historical products remain unchanged pending separate migration and risk review.
+
+## Signed-in cross-Space reporting (21 October 2026)
+
+`GET /api/my-spaces/report` provides per-Space, per-currency recorded cash/assets/liabilities/receivables to a signed-in member **only** when that member has finance-view authority for the exact Space. The report deliberately returns `personal_aggregate_minor=null`; no group, employer or SACCO value is silently included in the user's personal assets. Values in other currencies are not converted or mixed, and bank/provider reconciliation is separately evidenced. Member-only Business roles cannot view employer finance positions.
