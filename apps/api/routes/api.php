@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AdminEssentialsController;
 use App\Http\Controllers\Api\AssetFinanceLifecycleController;
 use App\Http\Controllers\Api\AssetRegistryController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BusinessPassportShadowController;
 use App\Http\Controllers\Api\CapabilityController;
 use App\Http\Controllers\Api\CitoBaasGovernanceController;
 use App\Http\Controllers\Api\CitoOperationsController;
@@ -365,6 +366,7 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
     });
     Route::get('/admin/lending-platform', [LendingPlatformController::class, 'index']);
     Route::get('/admin/growth-readiness', [GrowthReadinessController::class, 'index']);
+    Route::post('/admin/business-passport/shadow-review', BusinessPassportShadowController::class);
     Route::post('/admin/lending-platform/institutions', [LendingPlatformController::class, 'institution']);
     Route::post('/admin/lending-platform/products', [LendingPlatformController::class, 'product']);
     Route::post('/admin/lending-platform/products/{product}/terms', [LendingPlatformController::class, 'term']);

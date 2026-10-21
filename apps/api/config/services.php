@@ -144,6 +144,14 @@ return [
         ],
     ],
 
+    'stolets_shadow' => [
+        // Optional merchant data source. No external production flow without
+        // separately approved consent, partner credentials and product mandate.
+        'enabled' => filter_var(env('OPFIN_STOLETS_SHADOW_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'base_url' => env('STOLETS_PARTNER_BASE_URL'),
+        'partner_token' => env('STOLETS_OPFIN_PARTNER_TOKEN'),
+    ],
+
     // Airtel integration retained here is KYC-related unless a separately certified money adapter is configured.
     'airtel' => [
         'client_id' => env('AIRTEL_CLIENT_ID'),
