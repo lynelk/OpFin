@@ -36,13 +36,57 @@ class FinancialSpaceBudgetController extends Controller
             ->orderBy('category')
             ->get(['id', 'category', 'monthly_limit_minor', 'currency', 'effective_from', 'effective_to', 'alert_threshold_percent', 'active']);
 
+        // Only statement-matched cashbook debits qualify as observed actuals.
+        // A manual entry, pending provider intent or accepted exception must
+        // never be promoted into verified spending.
+        $matchedByCategory = [];
+        $unallocatedMinor = 0;
+        $matchedTotalMinor = 0;
+        $matchedCount = 0;
+        $transactions = DB::table('financial_space_transactions')
+            ->where('financial_space_id', $space->id)
+            ->where('currency', $space->currency)
+            ->where('direction', 'debit')
+            ->where('reconciliation_status', 'matched')
+            ->whereBetween('transaction_date', [$from, $to])
+            ->cursor(['amount_minor', 'metadata']);
+        foreach ($transactions as $transaction) {
+            $amount = (int) $transaction->amount_minor;
+            $matchedTotalMinor += $amount;
+            $matchedCount++;
+            $metadata = json_decode((string) ($transaction->metadata ?? '{}'), true);
+            $category = is_array($metadata) ? ($metadata['budget_category'] ?? null) : null;
+            if (! is_string($category) || trim($category) === '') {
+                $unallocatedMinor += $amount;
+
+                continue;
+            }
+            $matchedByCategory[$category] = ($matchedByCategory[$category] ?? 0) + $amount;
+        }
+
+        $budgetResults = $budgets->map(function ($budget) use ($matchedByCategory) {
+            $row = (array) $budget;
+            $actual = (int) ($matchedByCategory[$budget->category] ?? 0);
+            $limit = (int) $budget->monthly_limit_minor;
+            $threshold = (int) $budget->alert_threshold_percent;
+            $row['statement_matched_actual_minor'] = $actual;
+            $row['remaining_planned_minor'] = $limit - $actual;
+            $row['alert_threshold_reached'] = $limit > 0 && $actual * 100 >= $limit * $threshold;
+            $row['over_planned_limit'] = $actual > $limit;
+
+            return $row;
+        });
+
         return response()->json(['data' => [
             'space_id' => $space->public_id,
             'month' => $month->format('Y-m'),
             'currency' => $space->currency,
-            'budgets' => $budgets,
-            // Planned limits are not reconciled provider balances or spending actuals.
-            'actuals_status' => 'not_included',
+            'budgets' => $budgetResults,
+            'actuals_status' => 'statement_matched_only',
+            'matched_transaction_count' => $matchedCount,
+            'matched_debits_minor' => $matchedTotalMinor,
+            'unallocated_matched_debits_minor' => $unallocatedMinor,
+            'evidence_note' => 'Matched to an imported statement; not independently confirmed bank or provider settlement.',
         ]])->header('Cache-Control', 'private, no-store');
     }
 
