@@ -40,6 +40,8 @@ class FinancialSpaceController extends Controller
                     'can_manage_members' => FinancialSpaceRolePolicy::canManageMembers($space->role),
                     'can_open_people_connections' => $space->type === 'business',
                     'can_manage_people' => FinancialSpaceRolePolicy::canManagePeople($space->type, $space->role),
+                    'can_manage_payroll' => FinancialSpaceRolePolicy::canManagePayroll($space->type, $space->role),
+                    'can_supervise_people' => FinancialSpaceRolePolicy::canSupervisePeople($space->type, $space->role),
                 ];
 
                 return $row;
