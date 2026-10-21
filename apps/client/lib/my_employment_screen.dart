@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:opfin/services/opfin_people_api.dart';
+import 'package:opfin/services/financial_spaces_api.dart';
+import 'package:opfin/people_hub_screen.dart';
+import 'package:opfin/workspace_access.dart';
 
 class MyEmploymentScreen extends StatefulWidget {
   const MyEmploymentScreen({super.key});
@@ -14,10 +16,14 @@ class _MyEmploymentScreenState extends State<MyEmploymentScreen> {
   @override
   void initState() {
     super.initState();
-    _spaces = OpFinPeopleApi.businessSpaces();
+    _spaces = _load();
   }
 
-  void _refresh() => setState(() => _spaces = OpFinPeopleApi.businessSpaces());
+  static Future<List<Map<String, dynamic>>> _load() async =>
+      (await FinancialSpacesApi.spaces())
+          .where((space) => WorkspaceAccess.canOpenPeople(space)).toList();
+
+  void _refresh() => setState(() => _spaces = _load());
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -46,13 +52,15 @@ class _MyEmploymentScreenState extends State<MyEmploymentScreen> {
         return ListView(padding: const EdgeInsets.all(16), children: [
           const Text('Linked organisations', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text('These are your active OpFin Business Space memberships. HR records and payslips will appear only after your employer securely connects OpFin People.'),
+          const Text('Select an authorised organisation to access your work records, leave, attendance and other available People services.'),
           const SizedBox(height: 16),
           ...spaces.map((space) => Card(child: ListTile(
             leading: const Icon(Icons.business_outlined),
             title: Text(space['name']?.toString() ?? 'Organisation'),
             subtitle: Text('Membership: ${space['role'] ?? 'member'}'),
-            trailing: const Icon(Icons.verified_user_outlined),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => PeopleHubScreen(space: space))),
           ))),
         ]);
       },
