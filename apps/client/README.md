@@ -185,3 +185,12 @@ Employees who have People-only business membership are routed to their authorise
 Financial Spaces now links a Savings Groups operational workspace for active members and officials. An official can create a draft savings cycle, a separate official can activate it, members can pledge contributions and request support or loans, and officials can close a cycle and prepare proposed share-outs. Contribution verification requires a separately statement-matched exact amount; non-final evidence never becomes money automatically.
 
 The app labels these records as pledges, requests and proposals until authoritative confirmation. This is **not** a completed end-to-end regulated savings or lending product; physical meeting quorum, actual loan funding, interest allocation, social-fund payout and share-out settlement remain dedicated acceptance tasks. Test offline/retry safety, exact-Space ownership and denial paths on Android and iOS.
+
+
+## Embedded OpFin People workspace (21 October 2026)
+
+Under More > My employment and eligible Business Financial Space navigation, authorised users enter `PeopleHubScreen` without leaving the OpFin Flutter app. The hub has real scoped API views for workforce engagements, leave, attendance, asset custody, KPIs, appraisals, rewards, field assignments, payslips, payroll periods (payroll roles) and pending biometric connectors (HR roles). Approved actions issue authenticated API requests; absent/inactive memberships cannot view the employer's work records.
+
+Worker engagement ID, user ID and employer-owned asset ID are currently entered through operational forms; these inputs need a reviewed picker/workflow before consumer-grade UAT. Payroll uses manual amounts and does **not** yet compute certified statutory deductions; biometric connectors cannot ingest biometric templates or device attendance while pending legal/vendor validation. No action may be displayed as a completed financial transfer solely because HR has approved it.
+
+Acceptance must include physical-device navigation, employer/employee role privacy, multi-business switching and sign-out, short/long sessions, offline queued attendance with replay resistance, API tests, localisation and accessibility; automated smoke tests do not substitute for UAT.
