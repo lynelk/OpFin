@@ -140,7 +140,8 @@ class SaccoRegulatoryController extends Controller
                 'updated_at' => now(),
             ]);
 
-            return $productQuery->first();
+            return DB::table('sacco_products')
+                ->where('financial_space_id', $space->id)->find($product);
         });
 
         return response()->json(['data' => [
