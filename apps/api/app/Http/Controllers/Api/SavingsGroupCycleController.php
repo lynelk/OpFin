@@ -348,7 +348,8 @@ class SavingsGroupCycleController extends Controller
         ]);
 
         return response()->json(['data' => [
-            'loan_request' => $query->first(),
+            'loan_request' => DB::table('savings_group_member_loans')
+                ->where('financial_space_id', $space->id)->find($loan),
             'disbursement_enabled' => false,
             'notice' => 'Approval is internal only. Funding, eligibility, loan agreement and provider settlement remain separate.',
         ]]);
@@ -395,7 +396,8 @@ class SavingsGroupCycleController extends Controller
         ]);
 
         return response()->json(['data' => [
-            'claim' => $query->first(),
+            'claim' => DB::table('savings_group_social_claims')
+                ->where('financial_space_id', $space->id)->find($claim),
             'payout_enabled' => false,
         ]]);
     }
@@ -473,6 +475,7 @@ class SavingsGroupCycleController extends Controller
             'updated_at' => now(),
         ]);
 
-        return response()->json(['data' => ['allocation' => $query->first()]]);
+        return response()->json(['data' => ['allocation' => DB::table('savings_group_shareout_allocations')
+                ->where('financial_space_id', $space->id)->find($allocation)]]);
     }
 }
