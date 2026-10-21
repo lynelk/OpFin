@@ -9,10 +9,10 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class SaccoCoreService {
- public function createProduct(FinancialSpace $space,array $d): object {
+ public function createProduct(FinancialSpace $space,array $d,?User $creator=null): object {
   $this->sacco($space);$id=DB::table('sacco_products')->insertGetId([
    'financial_space_id'=>$space->id,'code'=>strtoupper($d['code']),'name'=>$d['name'],'product_type'=>$d['product_type'],
-   'currency'=>strtoupper($space->currency?:'UGX'),'status'=>$d['status']??'active','withdrawable'=>$d['withdrawable']??false,
+   'currency'=>strtoupper($space->currency?:'UGX'),'status'=>'draft','created_by_user_id'=>$creator?->id,'withdrawable'=>$d['withdrawable']??false,
    'mandatory'=>$d['mandatory']??false,'minimum_balance_minor'=>$d['minimum_balance_minor']??0,'annual_rate_bps'=>$d['annual_rate_bps']??0,
    'rules'=>json_encode($d['rules']??[],JSON_THROW_ON_ERROR),'created_at'=>now(),'updated_at'=>now()
   ]);return DB::table('sacco_products')->find($id);
