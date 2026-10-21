@@ -23,6 +23,13 @@ CURRENT = [
     "docs/PUBLICATION_REGISTER.md",
     "docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md",
     "docs/developer/API_AND_AGENT_PLATFORM.md",
+    "docs/product/OPFIN_PRODUCT_BLUEPRINT.md",
+    "docs/product/OPFIN_ESSENTIALS.md",
+    "docs/product/FINANCIAL_INTELLIGENCE.md",
+    "docs/product/OPFIN_CANONICAL_PRODUCT_BREAKDOWN.md",
+    "docs/product/OPFIN_P0_P1_UNIVERSAL_FINANCIAL_LIFE.md",
+    "docs/development/FINANCIAL_SPACES_COMMERCIAL_OPERATIONS_2026-09-29.md",
+    "docs/development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md",
 ]
 INCLUDE_DIRS = ("docs/manuals", "apps/api/docs/api")
 LINK = re.compile(r"(?<!!)\[[^\]\n]*\]\(\s*(<[^>]+>|[^\s)]+)(?:\s+['\"][^\n]*?['\"])?\s*\)")
