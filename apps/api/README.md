@@ -69,9 +69,11 @@ Missing costs/revenue remain missing. Principal, premium and investment capital 
 
 ```bash
 composer install
-test -f .env || cp .env.example .env
-# Generate an application key only for a newly created local environment.
-php artisan key:generate
+if [ ! -f .env ]; then
+  cp .env.example .env
+  php artisan key:generate
+fi
+# Verify the selected isolated local database before running migrations.
 php artisan migrate
 php artisan test
 ./vendor/bin/pint --test
