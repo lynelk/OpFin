@@ -77,8 +77,8 @@ class PeopleCoreWorkflowTest extends TestCase
         $this->postJson($base.'/leave/policies/'.$policy.'/approve')->assertForbidden();
 
         Sanctum::actingAs($hr);
-        $this->postJson($base.'/leave/policies/'.$policy.'/approve')->assertOk()
-            ->assertJsonPath('data.policy.status', 'approved');
+        $policyApproval = $this->postJson($base.'/leave/policies/'.$policy.'/approve')->assertOk();
+        $this->assertSame('approved', $policyApproval->json('data.policy.status'), $policyApproval->getContent());
 
         Sanctum::actingAs($worker);
         $leave = $this->postJson($base.'/leave/requests', [
