@@ -21,6 +21,70 @@ class FinancialSpacesApi {
     if(r.statusCode<200||r.statusCode>=300) { throw Exception(decoded['message']?.toString()??'Unable to complete request.'); }
     return decoded['data'];
   }
+  static Future<List<Map<String, dynamic>>> savingsCycles(int id) async =>
+      ((await _request('/financial-spaces/$id/savings-groups/cycles'))['cycles'] as List? ?? const [])
+          .whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+
+  static Future<Map<String, dynamic>> createSavingsCycle(int id,
+      String name, String startsOn, String endsOn) async =>
+      ((await _request('/financial-spaces/$id/savings-groups/cycles',
+          method: 'POST', body: {
+            'name': name, 'starts_on': startsOn, 'ends_on': endsOn,
+          }))['cycle'] as Map).cast<String, dynamic>();
+
+  static Future<void> activateSavingsCycle(int id, int cycleId) async {
+    await _request('/financial-spaces/$id/savings-groups/cycles/$cycleId/activate',
+        method: 'POST');
+  }
+
+  static Future<void> closeSavingsCycle(int id, int cycleId) async {
+    await _request('/financial-spaces/$id/savings-groups/cycles/$cycleId/close',
+        method: 'POST');
+  }
+
+  static Future<Map<String, dynamic>> savingsContributions(int id, int cycleId) async =>
+      (await _request('/financial-spaces/$id/savings-groups/cycles/$cycleId/contributions') as Map)
+          .cast<String, dynamic>();
+
+  static Future<void> savingsPledge(int id, int cycleId, String kind, int amountMinor) async {
+    await _request('/financial-spaces/$id/savings-groups/cycles/$cycleId/contributions',
+        method: 'POST', body: {
+          'kind': kind,
+          'amount_minor': amountMinor,
+          'idempotency_key': 'app-$id-$cycleId-${DateTime.now().microsecondsSinceEpoch}',
+        });
+  }
+
+  static Future<void> verifySavingsContribution(
+      int id, int cycleId, int contributionId, int transactionId) async {
+    await _request('/financial-spaces/$id/savings-groups/cycles/$cycleId/contributions/$contributionId/verify',
+        method: 'POST', body: {'transaction_id': transactionId});
+  }
+
+  static Future<void> savingsLoanRequest(
+      int id, int cycleId, int principalMinor, int termDays, int interestRateBps) async {
+    await _request('/financial-spaces/$id/savings-groups/cycles/$cycleId/loans',
+        method: 'POST', body: {
+          'principal_minor': principalMinor, 'term_days': termDays,
+          'interest_rate_bps': interestRateBps,
+        });
+  }
+
+  static Future<void> savingsSocialClaim(
+      int id, int cycleId, int amountMinor, String reason) async {
+    await _request('/financial-spaces/$id/savings-groups/cycles/$cycleId/social-claims',
+        method: 'POST', body: {'amount_minor': amountMinor, 'reason': reason});
+  }
+
+  static Future<void> prepareSavingsShareout(int id, int cycleId) async {
+    await _request('/financial-spaces/$id/savings-groups/cycles/$cycleId/shareouts/prepare',
+        method: 'POST');
+  }
+
+  static Future<List<Map<String, dynamic>>> savingsShareouts(int id, int cycleId) async =>
+      ((await _request('/financial-spaces/$id/savings-groups/cycles/$cycleId/shareouts'))['allocations']
+          as List? ?? const []).whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+
   static Future<Map<String, dynamic>> budgets(int id, {String? month}) async =>
       (await _request('/financial-spaces/$id/budgets'
           + (month == null ? '' : '?month=$month')) as Map).cast<String, dynamic>();
