@@ -40,10 +40,12 @@ class MyFinancialSpacesReportController extends Controller
             $assets = (int) DB::table('financial_assets')
                 ->where('financial_space_id', $space->id)
                 ->where('status', 'active')->whereNull('deleted_at')
+                ->where('currency', $space->currency)
                 ->sum('value_minor');
             $obligations = DB::table('financial_obligations')
                 ->where('financial_space_id', $space->id)
                 ->where('status', 'open')->whereNull('deleted_at')
+                ->where('currency', $space->currency)
                 ->selectRaw('direction, SUM(outstanding_amount_minor) as total_minor')
                 ->groupBy('direction')->get()->keyBy('direction');
             $debt = (int) ($obligations['i_owe']->total_minor ?? 0);
@@ -69,6 +71,7 @@ class MyFinancialSpacesReportController extends Controller
                 'ownership_scope' => $space->type === 'personal'
                     ? 'personal' : 'separate_shared_or_organisation_space',
                 'evidence_status' => 'recorded_not_independently_settled',
+                'currency_scope' => 'only_'.$space->currency,
             ];
         }
 
