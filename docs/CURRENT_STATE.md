@@ -1,9 +1,9 @@
 # OpFin current state
 
 Status: Current product and delivery evidence index  
-Reviewed: 26 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)  
-Reviewed source baseline: `b1686989a317619562a8592728a310fbcb8f9113`
+Reviewed source baseline: `c04d72f894aba163e6c8aaae668d8ad35a7af731`
 
 ## Product position
 
@@ -11,48 +11,37 @@ OpFin remains an integrated personal financial wellbeing and access ecosystem, i
 
 Read the [concept note](product/OPFIN_CONCEPT_NOTE.md) for the continuing vision and the [26 September evolution review](product/PRODUCT_EVOLUTION_2026-09-26.md) for changes, evidence and recommendations. Lending and Essentials are capabilities within OpFin, not its definition.
 
-## Latest observed deployment status
+## Observed source and deployment position (21 October 2026)
 
-The final connected GitHub status check for `b1686989a317619562a8592728a310fbcb8f9113` reports **success for all four service contexts**: API (`OpFin - OpFin`), Web, worker and scheduler.
+The GitHub combined status for `main` commit `c04d72f894aba163e6c8aaae668d8ad35a7af731` reports **successful API, Web, worker and scheduler deployment contexts**. This identifies recorded deployment context status, not newly executed live smoke, financial settlement, backend/mobile acceptance or proof every instance runs the same version. Historical deployment failures remain in dated evidence.
 
-The API success was recorded at 22:15:09 UTC on 25 September 2026, with deployment identifier `368657ce-46a7-49d4-a570-00c5bc157315`. It follows the earlier failed attempt at 21:07:15 UTC. Preserve that history, but do not present the earlier failed attempt as the latest deployment result.
+## Verification and historical evidence
 
-These are connected statuses, not newly executed live-health, exact running-version, customer or financial-activation tests. A successful deployment is not a complete release acceptance certificate.
+September's detailed PR/API/Web test results, the earlier six API failures, and the historical GitHub Actions-disabled note are **time-bound records**, not the latest all-product status. Do not transfer those tests to the current commit. GitHub Actions CI is currently configured and active; its gates must be checked on the exact release candidate.
 
-## Recorded verification and its scope
+Current external/operational evidence still needs separate scrutiny: original institution accounts, issuer authenticity, legal lender/custody arrangements, institutional impairment-model review, actual offsite restore and security-owner closure. See [21 October alignment/evidence register](operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md), [17 October six-issue review](operations/ISSUES_17_103_128_136_176_190_STATUS.md) and [institutional finance decision](finance/INSTITUTIONAL_RECONCILIATION_AND_SHARED_EXPOSURE_DECISION.md).
 
-The [25 September lending delivery record](operations/LENDING_DELIVERY_2026-09-25.md) reports 308 tests and 2,076 assertions passing after its timezone correction, plus two existing PHP deprecation notices. It separately records 35 Web tests and passing typecheck/lint/build for the lending candidate.
+## Source-backed capabilities and boundaries
 
-The later PR #124 merge record reports integrated candidate `ad79b8b4345fefa06c1c7e8ee37fad4d51e26c78` passed 332 API tests and 2,230 assertions, dependency audit, catalogue checks and assets. The earlier Composer timeout remains historical rather than the latest recorded audit outcome.
-
-These are attributed existing results, not application tests rerun by this documentation review. Full mobile release/device acceptance, rollback/recovery evidence and the earlier HTTP smoke mismatch still lack closure evidence in the reviewed material. Current PostgreSQL branch evidence is recorded separately below; it must not be omitted or transferred to main.
-
-The [24 September record](operations/DELIVERY_EVIDENCE_2026-09-24.md), including 257 passing/six failing tests and a Web typecheck failure, retains its original date and baseline. The current README records the treasury-baseline repair and governed NIN reuse as merged enhancements. Historical reports are not live status pages.
-
-## Source-backed achievements and boundaries
-
-| Area | Progress | Boundary |
+| Area | Current source position | Required distinction |
 | --- | --- | --- |
-| Canonical platform | Laravel API, Next.js Web and Flutter client; separate worker/scheduler responsibilities | Shared source does not prove complete cross-channel acceptance. |
-| Identity and Financial Spaces | Phone-first onboarding, consent, roles/membership and governed fresh NIN receipt reuse | Exact-Space authority must hold in every embedded path. NIN reuse is not complete KYC. |
-| Everyday financial life | Money records, assets, obligations, budget/calendar/goals and Compass surfaces | Estimates require data context; recorded settlements are not external payment proof. |
-| Credit and lenders | Assessment, offers, servicing and affiliated/independent lender distribution | Actual authority, capital, affordability and accepted financial controls remain necessary. |
-| Save, Protect and Grow | Product, position/order/policy and partner-confirmation foundations | Live custody, withdrawal, cover, claims and redemptions are individually gated. |
-| Inclusion programmes | Enrolment, instruments, follow-ups, localisation, assisted capture and suppressed reporting | Measurement is not underwriting or proven causal impact. |
-| Club treasury | Multiple accounts, cashbook, CSV import/reconciliation and frozen statements | Not full member-capital, NAV/unitisation, distributions or investment-performance accounting. |
-| Essentials | Purpose-bound bill/rent finance, named lenders, Cito/CPay integration and servicing | New financial paths require their own accounting, authority, deletion, reservation and recovery acceptance. |
-| Developer/AI discovery | Merged searchable Developer Centre and documentation-only MCP bridge | Native machine-readable contracts remain partial; discovery does not authorise money movement. |
-| Commercial/governance evidence | Cost/revenue reporting and proposed management-system registers | Customer capital is not revenue; reports and proposals are not profitability or certification. |
+| Personal Financial Life | Today/Home, aspirations, learning, finance/health records and planning | Guidance is not a credit decision or a guaranteed result. |
+| Identity and Spaces | One person with purpose-specific roles, consent and isolated Financial Spaces | One group's permissions do not unlock another or a personal history. |
+| Lenders and investment | Governed partner/product/mandate configuration, offers and growth-readiness inventory | Configuration is not funded custody, provider activation or legal investor authority. |
+| Investment clubs | Treasury plus separate ownership/capital/valuations/distributions, maker/checker approvals and saved-request recovery | Accounting approval is not an external payout or confirmed bank settlement. |
+| Essentials | Purpose finance, durable collection requests, pending capacity, original allocation/reversal and servicing | Complete lender release, biller settlement, activation and refund acceptance are separate. |
+| Financial Intelligence | Source-led portfolio import/analysis, statement review/appeal and protected reports behind capability gates | Parsing or issuer naming is not external authenticity/certification. |
+| SACCO, white label, asset finance | Source-defined membership/product/action intents, brand requests and evidence profiles | Regulated activity, domain control and provider activation require actual proof. |
+| Payroll/referrals | Undertaking/case controls and customer-confirmed partner intent | A referral is not an offer; unknown external reservation is not released. |
+| Developer/AI | Searchable, source-linked Developer Centre, partial reviewed OpenAPI, read-only agent tools | No generic native AI financial execution. |
+| Institutional ECL and shared exposure | Non-production preview and synthetic QA | Required external GL, agreements and qualified acceptance remain deferred/not certified. |
+| Security | History scan and Secret Scanning triage | Actual incident determination, rotation, restore and owner sign-off remain separate. |
 
-## Open financial-control work
+## Unresolved evidence and implementation
 
-[PR #113](https://github.com/lynelk/OpFin/pull/113) remained open, unmerged and conflicting. It proposes financial-readiness, durable-intent, wallet, product/funding/disclosure and reconciliation hardening. Its independent approval and exact-candidate checks remain required.
+Older PR #113/#118 descriptions apply to their **September** snapshots. PR #118 and PR #126 were subsequently closed **without merging those heads**; later integrated work may use different commits. They are not currently open PRs, and their test counts do not certify `main`.
 
-[PR #118](https://github.com/lynelk/OpFin/pull/118) remained open and unmerged. Its updated record reports candidate `e336daf4962cb735d1ff0b2360690b1eaffab83e` passed 358 tests and 2,362 assertions on both SQLite and PostgreSQL 18, including fresh isolated migrations and separate-session contention. The latest head `af4af405355cffbf5c44941ced66092b3da24f8e` adds documentation. Actual independent APPROVED review remains required before merge.
-
-That scoped branch evidence is not integrated-main acceptance, a production migration or completion of every Essentials accounting/pending-exposure requirement. The verification intentionally stopped before runtime deployment. These are targeted checks, not an exhaustive PR or security sweep.
-
-The separately recorded credential-log incident remains controlled security work; this documentation update does not close it.
+Keep material open work visible: complete provider-specific drawdown/settlement/release and refund lifecycles; older-record adoption; source-matched bank/issuer/custody reconciliation; institutional finance/legal and impairment evidence; client/device acceptance; full API schema review; and security incident closure. Product-owner-approved non-production deferrals do not authorise real-money shared origination or professional certification. Details are in the [source-to-acceptance register](operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).
 
 ## Continuing rules and next work
 
@@ -60,7 +49,7 @@ Personal remains the default Space. New App customers use phone, OTP, names and 
 
 The selected institution is the lender of record. Affiliated participation uses the governed institution/product/funding lifecycle and does not manufacture legal authority. Product configuration is separate from market/channel availability.
 
-Cito/CPay remain preferred integration/payment routes. Explicitly certified direct exceptions remain controlled, with no unsafe retry after an ambiguous original outcome. gnuGrid retains the specific Cito-only route. Stolets remains a separate SME operating product.
+Cito provides the governed external-service boundary where its capability and country permissions are verified. Any provider switch remains explicitly governed, and an ambiguous original payment may not be replayed on another route. Stolets remains a separate SME operating product.
 
 Complete outstanding control integration, current-release mobile/database/recovery evidence and normal personal/group acceptance; validate treasury history; activate contracted services; then complete the retained wellbeing, club-accounting, automation and longer-range scope. Keep the essential App-only Individual/Savings Group requirement in force.
 
@@ -73,7 +62,7 @@ Use the [documentation hub](README.md), [concept](product/OPFIN_CONCEPT_NOTE.md)
 Original requirements, later decisions, source observations and acceptance evidence are separate authorities. Update this index from new evidence rather than simply a new merge date.
 
 
-## Current application delta (18 October 2026)
+## Retained 18 October implementation note (historical)
 
 ### Club accounting
 The current candidate persists encrypted request envelopes for accounting instructions and statement issuance. Recovery verifies the original reference and content hash, scopes requests to user/book/purpose, rechecks current authorisation and allows resume/read after reload or device change. Acknowledgement releases the recovery slot; cancellation is only for a genuinely unsubmitted request. Former-member navigation exposes that member's own retained capital history only. Mobile statement save/share/print is read-only; opening a system dialogue does not prove delivery or printing.
@@ -83,3 +72,7 @@ The current candidate persists collection identity before provider submission an
 
 ### Acceptance boundary
 These are code candidates, not blanket release acceptance. Targeted transport/policy/arithmetic/syntax checks do not replace complete Laravel/database/migration/concurrency suites, Next.js build, Flutter analysis/tests, Android/iOS release builds, real browser/device/accessibility checks and independent financial review. Essentials lender funding/drawdown, biller settlement, lender release, activation/opening accounting, full mandate compatibility, older-record adoption and post-service-reversal customer refunds remain incomplete. The separate credential-log incident is unresolved. No provider activation, live payment, deployment or financial launch is asserted.
+
+## Current documentation authority
+
+Read the [21 October source and release register](operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md), [API integrator guide](../apps/api/docs/api/INTEGRATOR_GUIDE.md), [role-based training](manuals/ROLE_BASED_TRAINING_PATHS.md) and [publication register](PUBLICATION_REGISTER.md). These supersede the use of September-only evidence as an undated current status. They do not overwrite the historical records.

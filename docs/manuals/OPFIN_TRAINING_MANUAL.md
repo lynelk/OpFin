@@ -1,9 +1,25 @@
 # OpFin training manual
 
 Status: Controlled training manual  
-Version: 24 September 2026  
+Version: 21 October 2026  
 Language: English (United Kingdom)  
 Audience: customers, savings-group members, facilitators, support and authorised programme staff
+
+## 21 October 2026 course structure
+
+Use the [role-based training paths](ROLE_BASED_TRAINING_PATHS.md) to choose a customer, maker/checker, Essentials servicing, institutional reviewer, SACCO/organisation or developer exercise. The existing modules remain reusable. The facilitator must label each step as **source-defined**, **enabled in the test environment**, **provider-activated**, or **independently accepted**. Do not call a source feature a live financial service simply because its menu is present.
+
+For every exercise, collect an actor/role, Financial Space, environment, exact build, expected and observed outcomes, error states and a redacted evidence reference. Include negative tests: revoked role, expired consent, another Space, timeout/retry and incomplete provider finality. Preserve differences between financial education, underwriting, provider authentication and verified money movement.
+
+### Knowledge checks
+
+- Why does an HTTP 201 for a repayment record not necessarily mean money was collected?
+- When is a saved club request safe to cancel, and who may approve the accounting instruction?
+- Why is a parsed issuer statement not automatically authentic?
+- What distinguishes a configured capital mandate from custody of actual funds?
+- Why must an AI integration use the user's real permission and consent rather than a generated command?
+
+Correct answers must be demonstrated in a synthetic scenario before operational access.
 
 ## Training outcome and evidence
 

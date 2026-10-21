@@ -1,10 +1,10 @@
 # OpFin training and user-guide foundation
 
 Status: Controlled internal source for publication materials  
-Updated: 24 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
-This document is the canonical reusable source for customer help, staff training, FAQs, onboarding scripts and facilitated learning. Published customer material should use plain language and the labels visible in the current product.
+This document is the reusable source for customer help, staff training, FAQs, onboarding scripts and facilitated learning. The [role-based paths](manuals/ROLE_BASED_TRAINING_PATHS.md) and [source-to-release evidence register](operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) give the current examples and activation limits. Published customer material should use plain language and the labels visible in the current product.
 
 ## Training principles
 
@@ -108,3 +108,9 @@ Before turning this foundation into a customer guide, FAQ, leaflet or training p
 3. remove internal-only implementation detail;
 4. run `make publication-check`;
 5. obtain required legal/compliance/brand approval for the intended audience.
+
+## Current source and acceptance instructions (21 October 2026)
+
+The training materials must cover Personal Financial Life, role-scoped Spaces, club ownership and recovery, Essentials collections, Financial Intelligence statement provenance, institutional/source-led reporting, payroll/referral consent, SACCO controls and read-only AI discovery. Trainers shall use clearly synthetic test records and include both successful and denied/interrupted scenarios. Historical examples are not new proof of live providers, legal authority, authentic issuers, customer impact or tested devices.
+
+With every changed application task, update the [user manual](manuals/OPFIN_USER_MANUAL.md), [training manual](manuals/OPFIN_TRAINING_MANUAL.md), [operations manual](manuals/OPFIN_OPERATIONAL_MANUAL.md), [UAT manual](manuals/OPFIN_UAT_MANUAL.md) and [capability supplement](manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) together. Maintain exact screen labels, British English and accessible non-technical explanations. API changes also update the [integrator guide](../apps/api/docs/api/INTEGRATOR_GUIDE.md) or linked domain contract.

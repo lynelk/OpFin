@@ -1,7 +1,7 @@
 # OpFin mobile application
 
 Status: Controlled external developer/product reference  
-Updated: 27 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
 The Flutter application is OpFin's primary customer mobile experience. It presents a mobile-complete financial journey while the API remains authoritative for identity, permissions, eligibility, money, credit, provider finality, programme state, ledger and reconciliation.
@@ -163,3 +163,11 @@ Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/
 ## Club accounting client recovery and export
 
 Investment Club members can recover saved accounting requests and retain access to their own historical member statements after leaving a club. Native statement export supports controlled save/share and HTML print flows; exports contain document bytes rather than authentication credentials. Android combines this with the approximate-location-only Play policy, while iOS uses the native print/share bridge. Financial mutations remain server-authoritative and maker-checker controls are not bypassed by the client.
+
+## Current source journeys and mobile acceptance (21 October 2026)
+
+The App source includes Personal Financial Life, aspirations/learning, club accounting and saved-request recovery, own capital history after leaving a club, protected native statement save/share/print, and a Financial Intelligence statement journey where explicitly enabled. The same user can participate in several Financial Spaces without duplicating identity or granting one Space access to another.
+
+A recoverable club request must use its original identity/hash; a repayment timeout is not permission to collect again. Exporting a statement to a device never transfers bearer credentials into a native export call, and opening a share/print dialogue is not confirmed delivery. Recognised issuer layouts or parsed statements must not be shown as officially authenticated unless independent validation exists.
+
+Run Flutter analysis, tests, platform release compilation, actual-device accessibility, permissions, document-picker, interruption and cross-account checks before claiming a mobile release. GitHub/API deployment statuses do not prove a current App Store or Play Store build. See [source-to-release evidence](../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md), [club client workflows](../../docs/manuals/CLUB_ACCOUNTING_CLIENT_WORKFLOWS.md) and [role-based training](../../docs/manuals/ROLE_BASED_TRAINING_PATHS.md).

@@ -1,7 +1,7 @@
 # Durable Essentials collection and servicing contract
 
-Status: Implemented working branch; integrated release acceptance outstanding  
-Reviewed: 26 September 2026  
+Status: Current source-level repayment collection contract; end-to-end release acceptance remains separate  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
 ## Scope
@@ -72,3 +72,9 @@ Operators should exercise a synthetic timeout, locate the original instruction, 
 ## Remaining release work
 
 Run the environment preflight, full existing/new API suites, migration upgrades/rebuilds, PHP formatting, dependency audit, documentation checks and independent financial review. Native API compatibility, legacy repayment adoption, activation accounting, durable lender/biller instructions and complete post-fulfilment refund handling are not closed by this repayment slice. The credential-log incident remains independently unresolved.
+
+## Source-versus-activation review (21 October 2026)
+
+Durable collection and recovery routes are present in current `main` source, including `apps/api/routes/essentials_collections.php`. The older statement that this was only a working branch is superseded for **source placement**, not by an automatic claim of completed provider settlement. Original request identity, one-in-flight capacity, provider observation, exact allocation, immutable servicing and reversible evidence must be checked on the same integrated release.
+
+Separate lender drawdown, biller settlement, lender release, activation/opening journals, older-record adoption and complete post-service-reversal refunds remain distinct implementation and acceptance boundaries. See the [current source register](../../../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) and [integrator guide](INTEGRATOR_GUIDE.md).

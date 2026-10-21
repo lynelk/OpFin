@@ -1,12 +1,12 @@
 # OpFin API quick reference
 
 Status: Task-oriented source reference  
-Reviewed: 25 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
 An endpoint is an address and HTTP method for one API operation. Authentication identifies the caller; authorisation also checks the action and target record. A successful response is not automatically completed money movement.
 
-Use [current endpoints](current-endpoints.md) for navigation, [Domain endpoints](domain-endpoints.md) for the preserved detailed contracts, [Current capability contracts](CURRENT_CAPABILITY_CONTRACTS.md) for treasury/Essentials/location details, and [the client contract](frontend-backend-contract.md) for presentation and recovery. Exact registration comes from `php artisan route:list --json` in `apps/api`.
+Start with the [novice-to-expert integrator guide](INTEGRATOR_GUIDE.md). Use [current endpoints](current-endpoints.md) for navigation, [Domain endpoints](domain-endpoints.md) for the preserved detailed contracts, [Current capability contracts](CURRENT_CAPABILITY_CONTRACTS.md) for treasury/Essentials/location details, and [the client contract](frontend-backend-contract.md) for presentation and recovery. Exact registration comes from `php artisan route:list --json` in `apps/api`.
 
 The six API failures recorded on 24 September were subsequently repaired. Read [dated historical evidence](../../../../docs/operations/DELIVERY_EVIDENCE_2026-09-24.md) together with [later lender-release evidence](../../../../docs/operations/LENDING_DELIVERY_2026-09-25.md). Neither those repairs nor API discovery closes all remaining financial-control findings.
 
@@ -187,3 +187,19 @@ Closure checks include canonical financing arrangements, compatibility loans, Es
 Optional deletion categories are `location_context`, `financial_planning`, `linked_accounts`, `household_and_microbusiness`, and `profile_preferences`. Location deletion is restricted to the requester's optional personal discovery context; it cannot erase another member's data or regulated asset/claim evidence. Required accounting, KYC/AML, credit reporting, settlement, security, consent and audit evidence are retained.
 
 Partner source attribution is the separately reviewed `financial_intent_source_platform` of the partner account. Existing accounts are not backfilled with invented provenance. The existing independent partner approval workflow may configure the permitted source. `ALL_SUITABLE` does not waive valid Sharia approval for Islamic products.
+
+## Current route families and documentation authority (21 October 2026)
+
+The following source-registered routes are **discoverable**, not proof of feature activation or comprehensive schema review.
+
+| Role/task | Method and route | Contract and risk note |
+| --- | --- | --- |
+| New integrator | `GET /api/developer/manifest` | Public source-linked discovery; [integrator guide](INTEGRATOR_GUIDE.md) |
+| Authenticated developer | `GET /api/developer/catalogue` | Visible role-filtered contracts; [Developer interface](DEVELOPER_INTERFACE.md) |
+| Club maker or member | `GET /api/accounting/club-schema` | Authorised guided forms, backend business rules; [club accounting](CLUB_ACCOUNTING.md) |
+| Club interrupted request | `GET /api/accounting/saved-requests` | Original user/book/purpose only; [recovery](CLUB_CLIENT_RECOVERY.md) |
+| Essentials customer | `GET /api/essentials/repayments/{repayment}/collection-status` | Original provider state, not finality inferred from HTTP; [collections](ESSENTIALS_DURABLE_COLLECTIONS.md) |
+| Authorised Financial Intelligence user | `GET /api/financial-spaces/{space}/intelligence/context` | Feature, entitlement and exact-Space guarded; [FI contract](FINANCIAL_INTELLIGENCE_CONTRACT.md) |
+| Platform administrator | `GET /api/admin/growth-readiness` | Configuration/inventory, not funding or custody; [current evidence](../../../../docs/operations/ISSUES_17_103_128_136_176_190_STATUS.md) |
+
+Retrieve actual route registration from `php artisan route:list --json` on the **same build**. Full machine-readable SDK coverage must satisfy `php artisan api:catalogue --check --require-complete`; missing schemas remain visible gaps, not permissively generated contracts.

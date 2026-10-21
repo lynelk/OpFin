@@ -9,7 +9,7 @@ OpFin exists to help everyone understand their finances, make confident decision
 Financial continuity, dignity and personal aspiration are architectural obligations: retain people and attributable financial records across lawful life-stage transitions; preserve customer dignity when a specific service is restricted; and keep customer-owned goals separate from provider/product eligibility and underwriting. See [Financial Life Architecture](docs/architecture/FINANCIAL_LIFE_CONTINUITY_AND_DIGNITY.md) and [consolidated P0–P1 delivery](docs/product/OPFIN_P0_P1_UNIVERSAL_FINANCIAL_LIFE.md). These documents describe the target direction, not a completed youth-account or advanced-guidance release.
 
 Status: Public repository and product reference  
-Updated: 26 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
 OpFin helps people understand and manage their financial lives, build resilience and access appropriate financial services through one continuing, consent-led relationship. Personal money comes first. Households, savings groups, investment clubs, employers, SACCOs and financial partners extend that relationship through governed **Financial Spaces**.
@@ -24,15 +24,15 @@ Personal-first financial wellbeing; progressive verification; inclusion across l
 
 One person can participate in several Financial Spaces without duplicating identity or exposing private personal records. Essential Individual and Savings Group management remains intended to work in the App without a paid subscription or computer. A missing channel journey is acceptance work, not a reason to weaken that principle.
 
-## What has been enhanced
+## What the current source supports
 
-The current source connects identity/consent, Financial Spaces, everyday money and Compass surfaces, governed credit and servicing, provider-gated Save/Protect/Grow foundations, employer/community capabilities, inclusion programmes, commercial/service-economics reporting, investment-club treasury/statements and Essentials bill/rent financing.
+The platform has a continuing Financial Life experience with Today/Home, learning, aspirations, financial position and responsible product journeys. Financial Spaces support person-centred participation in households, groups, investment clubs and organisations. The backend owns the financial records and consent/role boundaries; a working screen is not proof that an external regulated service is activated.
 
-The latest lender-orchestration work adds explicit lender identity, independent and affiliated participation, funding ownership and country/product/channel distribution. The selected institution is the lender of record. Core Synergies affiliated participation must satisfy the same authority, funding and customer-protection controls; an affiliation setting is not a licence or funded balance.
+The source also contains lender/product/funding controls, governed partner referrals, payroll case handling, investment-club capital and investment accounting, separate treasury/statement workflows, durable saved-request recovery and native statement export. Essentials provides controlled purpose-bound finance and repayment servicing. Financial Intelligence includes source-referenced analysis and statement review/appeal flows behind role/entitlement and feature gates. SACCO/white-label, partner evidence, asset finance and institutional assurance have their own activation boundaries.
 
-The treasury-baseline repair and governed fresh NIN receipt reuse are recorded as merged. The merged Developer Centre extends source-linked discovery without enabling AI financial execution. These advances preserve earlier useful capabilities rather than authorising an indiscriminate rewrite.
+The searchable Developer Centre and documentation-only agent bridge expose registered routes, learning guides and reviewed contracts. Discovery does not give an agent permission to execute a financial transaction. New domain coverage is linked in the [documentation hub](docs/README.md), [integrator guide](apps/api/docs/api/INTEGRATOR_GUIDE.md) and [evidence register](docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).
 
-Club treasury is not complete member-capital/NAV/distribution accounting. Programme measurement is not underwriting. A reporting dashboard is not proof of profitability or causal impact. Implemented source, deployed source, provider activation and accepted customer delivery remain distinct.
+Implementations, activated providers, actual money movement, reconciled external records and independent acceptance are distinct states. Unknown financial values must remain unknown.
 
 ## Customer relationship
 
@@ -62,15 +62,13 @@ App, Web, Workspace, Partner, WhatsApp, USSD and assisted channels use server-au
 | `infrastructure/railway` | Existing service boundaries and release controls |
 | `distribution/google-play` | Controlled Android store/release material |
 
-## Partner boundaries
+## Provider and ecosystem boundaries
 
-OpFin owns customer/product state, financial intent, experience, intelligence, servicing and its financial evidence. Cito is the preferred third-party gateway and CPay the preferred payment route. Explicitly configured, production-certified direct-provider exceptions remain governed; an ambiguous primary request must be reconciled before switching routes. The specific requirement to consume gnuGrid services through Cito remains in force.
+OpFin owns customer identity/consent, Financial Space authority, financial intent, credit/product policy, servicing and its financial evidence. Cito is the governed external-service orchestration boundary where the capability and country permissions have been verified. OpFin must continue to provide internal record-keeping and guidance during external outages, without fabricating verification or automatically repeating an uncertain financial request.
 
-Essentials provides purpose-bound financing for verified electricity, water, connectivity, household energy and rent. It extends financial wellbeing without replacing planning, savings, protection or ordinary responsible-credit journeys. Every activated offer identifies its lender and satisfies the relevant authority, funding and acceptance controls.
+A configured provider, issuer, capital mandate or partner integration does not establish a licence, live custody, funding, statement authenticity or final settlement. Separate evidence and acceptance remain required for each capability. [Lender orchestration](docs/architecture/LENDER_ORCHESTRATION.md), [Essentials scope](docs/product/OPFIN_ESSENTIALS.md), [institutional accounting decision](docs/finance/INSTITUTIONAL_RECONCILIATION_AND_SHARED_EXPOSURE_DECISION.md) and [Cito integration matrix](docs/integrations/CITO_OPFIN_DELIVERY_MATRIX.md) provide the boundaries.
 
-Stolets remains a separate SME operating product. OpFin may consume approved, consented signals or refer customers, but does not absorb POS, inventory, purchasing or merchant operations.
-
-See the [lender contract](docs/architecture/LENDER_ORCHESTRATION.md), [Essentials specification](docs/product/OPFIN_ESSENTIALS.md) and [current state](docs/CURRENT_STATE.md). External credentials are not the only remaining work: internal controls and complete acceptance evidence also matter.
+Stolets remains an independently viable SME operations product. Where expressly approved, it may exchange consented financing-intent/evidence signals with OpFin; POS, inventory, procurement and merchant records do not become OpFin's owned operating modules.
 
 ## Developer and AI access
 
@@ -87,13 +85,13 @@ cd apps/api && php artisan api:catalogue --check --require-complete
 
 The strict completeness check must fail while native operations lack reviewed machine-readable contracts. Route discovery is not complete API specification. See [Developer interface](apps/api/docs/api/DEVELOPER_INTERFACE.md) and [API/AI platform](docs/developer/API_AND_AGENT_PLATFORM.md).
 
-## Where the platform currently stands
+## Verified source and release position (21 October 2026)
 
-The final connected status check for reviewed `main` commit `b1686989a317619562a8592728a310fbcb8f9113` reported successful API, Web, worker and scheduler deployments. The API success recorded at 22:15:09 UTC on 25 September follows an earlier failed attempt; historical failures remain in their dated records rather than being presented as the latest status.
+Current documentation baseline: `main` commit `c04d72f894aba163e6c8aaae668d8ad35a7af731`. At review, GitHub combined status reported **successful deployment contexts** for the API, Web, worker and scheduler. These are source/deployment-context signals, not new mobile release, provider, security or end-to-end acceptance evidence.
 
-The PR #124 merge record reports 332 API tests and 2,230 assertions, dependency audit, catalogue checks and assets passing for its integrated candidate. Known financial-control PRs #113 and #118 remain open at this review. PR #118 now records scoped SQLite/PostgreSQL 18 verification, but remains unmerged pending independent approval. The [evolution record](docs/product/PRODUCT_EVOLUTION_2026-09-26.md) keeps that branch evidence separate from main.
+The previously dated September test failures, PR findings and deployment attempts remain historical in their original records. Do not describe PR #118 as currently open: it and PR #126 were closed without merging, while later implementation changes entered `main` through other reviewed commits/PRs. Newer Financial Life, institutional-control, growth-readiness and dependency work has landed since those historical reports. Read the [21 October evidence register](docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md), not a September snapshot, for the source-to-acceptance distinction.
 
-Deployment statuses and recorded test results are not fresh live-health checks, universal financial acceptance, provider activation, store publication, ISO certification or business outcomes. The separately recorded credential-log incident remains controlled security work.
+Outstanding external evidence includes licensed/provider and issuer authenticity, signed institutional balances/agreements, qualified impairment-model acceptance where needed, and security incident remediation. The published source code and successful deployment statuses alone do not close these gates.
 
 ## Current documentation
 
@@ -105,6 +103,7 @@ Deployment statuses and recorded test results are not fresh live-health checks, 
 | Compare original requirements | [24 September concept/plan comparison](docs/product/CONCEPT_AND_PLAN_COMPARISON.md), [dated implementation index](docs/product/CANONICAL_IMPLEMENTATION_STATUS.md) |
 | Follow product and visual contracts | [Product Blueprint](docs/product/OPFIN_PRODUCT_BLUEPRINT.md), [Brand System v3 release candidate](brand/v3/OPFIN_BRAND_SYSTEM_V3.md) |
 | Set up development | [Developer start](docs/DEVELOPER_START_HERE.md), [API entry point](API.md) |
+| Learn APIs from first request to AI discovery | [Integrator guide](apps/api/docs/api/INTEGRATOR_GUIDE.md), [API entry](API.md) |
 | Find APIs | [Developer interface](apps/api/docs/api/DEVELOPER_INTERFACE.md), [quick reference](apps/api/docs/api/API_QUICK_REFERENCE.md), [endpoints](apps/api/docs/api/current-endpoints.md), [capability contracts](apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md) |
 | Use and train | [User](docs/manuals/OPFIN_USER_MANUAL.md), [training](docs/manuals/OPFIN_TRAINING_MANUAL.md), [capability supplement](docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) |
 | Operate and accept | [Operations](docs/manuals/OPFIN_OPERATIONAL_MANUAL.md), [UAT](docs/manuals/OPFIN_UAT_MANUAL.md), [lending delivery evidence](docs/operations/LENDING_DELIVERY_2026-09-25.md) |
@@ -129,10 +128,8 @@ Existing Web/API setup references are `https://opfin-web-production.up.railway.a
 Enhance working capabilities, preserve customer and financial history, and describe only what the evidence supports.
 
 
-## Current implementation and release status (18 October 2026)
+## Release boundaries and documentation maintenance (21 October 2026)
 
-Two current financial-control candidates have documentation updates underway: (1) club accounting request recovery, retained former-member own-history and native statement exports; and (2) Essentials durable repayment collection, capacity reservation, reconciliation and servicing controls. These are not blanket production-readiness claims.
+The source includes club accounting recovery/export and Essentials durable collections, but end-to-end financial acceptance remains evidence-driven. No documentation change activates lender funding, biller settlement, customer refunds, issuer verification, institutional shared origination or an investor custody rail.
 
-For club workflows, encrypted server-persisted request recovery supports resuming the original instruction/statement request after reload or device change; acknowledgement is not accounting approval or payment execution. Former members can access only their own retained capital history. For Essentials, uncertain collections must be reconciled against the original request; reserved financing is distinct from due debt.
-
-**Release boundary:** complete API/database/migration/concurrency tests, Web/App builds, real-device/accessibility acceptance and independent financial review remain outstanding. Essentials lender drawdown/funding, biller settlement, lender release, activation/opening accounting, full mandate compatibility, older-record adoption and refunds after service reversal remain incomplete. Do not infer provider activation, live payment, deployment or financial launch readiness from isolated checks. See [documentation hub](docs/README.md) and [current capability supplement](docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md).
+See the [current capability supplement](docs/manuals/CURRENT_CAPABILITY_SUPPLEMENT.md), [API integrator guide](apps/api/docs/api/INTEGRATOR_GUIDE.md), [role-based training](docs/manuals/ROLE_BASED_TRAINING_PATHS.md), and [21 October release-evidence register](docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md). Every code/API change must update its contract, task guide and negative UAT case in the same change.
