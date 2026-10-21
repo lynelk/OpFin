@@ -118,8 +118,11 @@ class PeopleWorkforceController extends Controller
         ]);
         $this->access->audit($request, $space, 'leave_policy.approved', 'leave_policy', $policy);
 
-        return response()->json(['data' => ['policy' => DB::table('people_leave_policies')
-                ->where('business_space_id', $space->id)->find($policy)]]);
+        $updated = DB::table('people_leave_policies')
+            ->where('business_space_id', $space->id)
+            ->where('id', $policy)->first();
+
+        return response()->json(['data' => ['policy' => $updated]]);
     }
 
     public function leaveRequests(Request $request, FinancialSpace $space): JsonResponse
