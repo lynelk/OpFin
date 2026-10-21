@@ -1,12 +1,12 @@
 # Developer and AI discovery API
 
-Status: Implemented candidate; full integration results are recorded in its pull request.  
-Reviewed: 25 September 2026  
+Status: Source-linked discovery reference; deployment and schema coverage assessed separately.  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
 ## Purpose
 
-This interface makes the running OpFin API discoverable to people and AI-assisted integrations without creating another financial execution engine. It complements [current domain contracts](current-endpoints.md) and the [client contract](frontend-backend-contract.md).
+This interface makes a deployed OpFin API discoverable to people and AI-assisted integrations without creating another financial execution engine. It complements [current domain contracts](current-endpoints.md) and the [client contract](frontend-backend-contract.md).
 
 The Developer Centre is `/developers` on the API origin. It offers public learning tracks, full-text search, authenticated role-filtered operation discovery, field/response inspection, explicit coverage status and export of reviewed OpenAPI contracts. A token entered into the browser stays in memory, is used only for same-origin documentation requests, and is not persisted.
 
@@ -49,8 +49,12 @@ The catalogue reads registered routes and checked-in guides from the running bui
 
 `php artisan api:catalogue` exports a snapshot, reviewed OpenAPI, coverage and guides. `--check` validates definitions; `--require-complete` fails for missing contracts; `--baseline` compares an approved earlier snapshot. Runtime-service changes still require substantive review even if the route signature is unchanged.
 
-Update the explicit contracts, examples, learning task and negative tests with each relevant change. GitHub Actions remains deferred; no hosted scheduled workload or new infrastructure is added by this interface.
+Update explicit contracts, examples, learning tasks and negative tests with each relevant change. GitHub Actions workflows are currently active; verify the exact candidate's gates instead of relying on earlier historical states. This discovery interface adds no hosted financial-command agent or new infrastructure.
 
 ## Verification
 
 The candidate includes standalone catalogue tests, Python MCP safety tests and Laravel feature tests. Record actual results at the exact revision. PHP syntax checks and standalone tests do not substitute for the full Laravel suite, deployment verification, PostgreSQL concurrency or independent financial review.
+
+## Practical examples and current scope
+
+Start with the [novice-to-advanced integrator guide](INTEGRATOR_GUIDE.md), which uses the actual `/api/developer/manifest`, `/guides`, `/catalogue`, `/operations/{operation}`, `/openapi` and `/agent-tools` routes. Keep authorization bound to actual users and record source fingerprints; no documentation search result authorises a payment, decision or change to a Financial Space. [Release-evidence register](../../../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).

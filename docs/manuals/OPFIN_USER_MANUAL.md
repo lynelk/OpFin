@@ -1,8 +1,16 @@
 # OpFin user manual
 
 Status: User guidance with explicit capability boundaries  
-Version: 24 September 2026  
+Version: 21 October 2026  
 Language: English (United Kingdom)
+
+## What is available in the current source
+
+OpFin's personal financial life includes Today/Home, aspirations, learning, planning and financial records. Financial Spaces extend participation to authorised groups and organisations. Source implementations also include governed credit, club accounting and treasury, financial-intelligence/statement review, purpose-bound Essentials, and role-specific organisational workflows. A visible action remains subject to its lender, institution, provider, entitlement and release gates. See the [current source/evidence register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).
+
+Use **Saved requests** to recover an interrupted club accounting instruction or statement request. Read its original result before acknowledging it; acknowledgement is not independent financial approval. For an uncertain collection, do not attempt another payment with a new key merely because the first result is delayed.
+
+For issuer statements, **analysis is not authentication**. An issuer name, PDF or CSV can be unverified, quarantined, stale or subject to appeal. A financial-health recommendation is not a credit assessment. The [current capability supplement](CURRENT_CAPABILITY_SUPPLEMENT.md) explains the limits.
 
 ## What OpFin is
 
@@ -106,3 +114,7 @@ If a club instruction or statement request times out, open **Saved requests** an
 ## Essentials repayment status
 
 A repayment can remain pending while the provider confirms the outcome. An uncertain result must be reconciled against the original request, not resolved by submitting a second payment. Reserved financing is not an amount currently due. Availability of any Essentials product depends on verified lender authority, product configuration and provider capability; this guide does not claim that every lender, biller, repayment route or refund path is live.
+
+## When external financial actions are unavailable
+
+If a lender, biller, issuer, savings provider, insurer or payment route is not activated for your country and product, continue using lawful record-keeping, planning, learning and support features where available. Never treat a suggested provider as an activated agreement or infer settlement from an initial response. Do not submit genuine funds to test a feature described only as source-defined. [Role-based guidance](ROLE_BASED_TRAINING_PATHS.md).
