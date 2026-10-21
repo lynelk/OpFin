@@ -405,3 +405,28 @@ The Savings Groups persisted type remains `savings_group`. Routes under `/api/fi
 | POST | `/cycles/{cycle}/shareouts/{allocation}/approve` | Independent official approves the proposal; no payout implied |
 
 **Not finality:** An imported statement match supports internal evidence, not independent provider/bank settlement. Loans, social claims and share-outs do not disburse or report as paid in these endpoints. Unsupported financial movements must not be inferred from a request or approval.
+
+
+## Embedded OpFin People workflow APIs (21 October 2026)
+
+OpFin mobile users must be active members of the exact Business Financial Space. Backend policy separates `HR`, `supervisor`, `payroll` and employee self-service; no role inherits financial visibility from employment. The People domain tables are isolated by `business_space_id` and commands emit restrained audit events. All routes are under `/api/people/spaces/{space}` with Sanctum authentication and throttling.
+
+| Module | Authenticated endpoints | Rules and current limits |
+| --- | --- | --- |
+| HR | `GET/POST employees` | HR officer creates engagements for a Business Space's **existing active member**; employees see only their own engagement |
+| Leave | `GET/POST leave/policies`, `POST leave/policies/{id}/approve`; `GET/POST leave/requests`, `POST leave/requests/{id}/decide` | Approved effective-dated policy; request overlap checks; independent decisions. Full accrual, holiday calculation and payroll deductions are not certified |
+| Attendance | `GET/POST attendance`, `POST attendance/{id}/approve` | Self clock events with idempotency and bounded offline capture; supervisor review. An event is not approved overtime without roster/timesheet reconciliation |
+| Biometric connectors | `GET/POST biometrics/connectors` | Pending device registration only. **No template storage**, biometric match or vendor event feed; activation requires DPIA/privacy and vendor validation |
+| Payroll | `GET/POST payroll/policies`, `POST payroll/policies/{id}/approve`, `GET/POST payroll/periods`, `GET/POST payroll/periods/{id}/lines`, `POST payroll/periods/{id}/prepare|approve|lock` | Separate payroll roles, effective-dated approved statutory policy reference, manually entered gross/deductions, independent approval and locked records; **not certified statutory calculation or payment instructions** |
+| Payslips | `GET payroll/my-payslips` | Locked records for the signed-in person's own engagement only |
+| Asset custody | `GET/POST assets/custody`, `POST assets/custody/{id}/acknowledge|return` | Asset must be owned by employer Space; acknowledgement only by assigned worker; no personal property reclassification |
+| KPI | `GET/POST kpis`, `POST kpis/{id}/report|approve` | Target/evidence owner and supervisor review; no automatic punitive scoring |
+| Appraisals | `GET/POST appraisals`, `POST appraisals/{id}/approve` | Employee self-assessment, supervisor sign-off with at least one approved KPI in the period |
+| Rewards | `GET/POST rewards`, `POST rewards/{id}/approve` | Independent nomination approval; never automatically pays a reward |
+| Field accountability | `GET/POST field-assignments`, `POST field-assignments/{id}/submit|approve` | Evidence and claimed expense require supervisor approval; no automatic reimbursement |
+
+The backend feature is a modular domain inside the existing OpFin Laravel API while the independently deployable People service is completed. **It does not yet satisfy the standalone-service and certified payroll/biometric conditions of the approved Core Release.**
+
+## Authorised cross-Space position report (21 October 2026)
+
+`GET /api/my-spaces/report` returns up to 200 signed-in user's active Financial Spaces for which the caller has finance-view permission. Each Space is a separate ownership boundary with its own currency and recorded positions; **no cross-Space personal net-worth sum** is returned. People-only corporate memberships cannot access employer cash/assets/debts. Figures are recorded positions and are not represented as independently verified bank/provider balances.
