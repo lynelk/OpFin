@@ -219,17 +219,35 @@ class ClubMigrationController extends Controller
         return $parsed;
     }
 
+    private function safeSum(array $rows, string $field): int
+    {
+        $total = 0;
+        foreach ($rows as $row) {
+            $amount = (int) $row[$field];
+            abort_unless(
+                $amount >= 0 && $amount <= 9007199254740991 - $total,
+                422,
+                'Opening total exceeds safe currency precision.'
+            );
+            $total += $amount;
+        }
+
+        return $total;
+    }
+
     private function safePreview(array $parsed): array
     {
         $payload = $parsed['opening_payload'];
-        $memberCapital = array_sum(array_column($payload['members'], 'capital_minor'));
-        $assetCarrying = array_sum(array_column($payload['assets'], 'carrying_value_minor'));
+        $memberCapital = $this->safeSum($payload['members'], 'capital_minor');
+        $assetCarrying = $this->safeSum($payload['assets'], 'carrying_value_minor');
         $debits = 0;
         $credits = 0;
         foreach ($payload['balances'] as $row) {
             if ($row['direction'] === 'debit') {
+                abort_unless($debits <= 9007199254740991 - $row['amount_minor'], 422, 'Debit total out of range.');
                 $debits += $row['amount_minor'];
             } else {
+                abort_unless($credits <= 9007199254740991 - $row['amount_minor'], 422, 'Credit total out of range.');
                 $credits += $row['amount_minor'];
             }
         }
