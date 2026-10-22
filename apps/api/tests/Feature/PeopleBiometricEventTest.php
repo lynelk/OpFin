@@ -66,7 +66,7 @@ class PeopleBiometricEventTest extends TestCase
         $nonce = bin2hex(random_bytes(16));
         $signature = hash_hmac(
             'sha256',
-            $timestamp."\n".$nonce."\n".$body,
+            "POST\n".$spaceId."\n".$connectorId."\n".$timestamp."\n".$nonce."\n".$body,
             str_repeat('f', 64)
         );
 
