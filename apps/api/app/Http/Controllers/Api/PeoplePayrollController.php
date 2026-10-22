@@ -285,7 +285,7 @@ class PeoplePayrollController extends Controller
                 (int) $data['other_authorised_deductions_minor'],
                 (bool) $data['nssf_applicable']
             );
-        } catch (\\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException $exception) {
             abort(422, $exception->getMessage());
         }
 
