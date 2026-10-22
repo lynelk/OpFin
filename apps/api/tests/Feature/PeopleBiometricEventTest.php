@@ -4,8 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -51,7 +52,7 @@ class PeopleBiometricEventTest extends TestCase
         return [$owner, $hr, $platform, $worker, $id, $engagement, $connector, $base];
     }
 
-    private function signedEvent(int $spaceId, int $connectorId, string $eventId): \Illuminate\Testing\TestResponse
+    private function signedEvent(int $spaceId, int $connectorId, string $eventId): TestResponse
     {
         $body = json_encode([
             'schema_version' => 1,
