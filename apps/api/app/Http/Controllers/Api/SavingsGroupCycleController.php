@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
+use App\Services\MemberSettlementJournalService;
 use App\Support\FinancialSpaceRolePolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,6 +13,8 @@ use Illuminate\Validation\Rule;
 
 class SavingsGroupCycleController extends Controller
 {
+    public function __construct(private readonly MemberSettlementJournalService $journals) {}
+
     private function role(Request $request, FinancialSpace $space): string
     {
         abort_unless(
@@ -242,6 +245,23 @@ class SavingsGroupCycleController extends Controller
                     ->where('statement_transaction_id', $data['transaction_id'])->exists(),
                 409,
                 'This statement transaction is already allocated.'
+            );
+            $credit = match ($row->kind) {
+                'savings' => ['code' => 'member_savings_liability', 'member' => (int) $row->member_user_id],
+                'social_fund' => ['code' => 'group_social_fund_liability', 'member' => null],
+                'fine' => ['code' => 'group_fines_income', 'member' => null],
+                default => abort(422, 'Invalid contribution accounting category.'),
+            };
+            $this->journals->postStatementMatched(
+                $space,
+                (int) $data['transaction_id'],
+                'savings_group_contribution:'.$contribution,
+                'group_'.$row->kind.'_contribution',
+                'credit',
+                (int) $row->amount_minor,
+                ['code' => 'group_treasury_cash', 'member' => null],
+                $credit,
+                $request->user()->id,
             );
             DB::table('savings_group_contributions')->where('id', $contribution)->update([
                 'statement_transaction_id' => $data['transaction_id'],
