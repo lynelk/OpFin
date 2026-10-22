@@ -14,6 +14,57 @@ class PeopleOperationsController extends Controller
 {
     public function __construct(private readonly PeopleSpaceAccess $access) {}
 
+    public function custodyIntegrity(Request $request, FinancialSpace $space): JsonResponse
+    {
+        $this->access->hr($request, $space);
+        $rows = DB::table('people_asset_custodies as custody')
+            ->join('people_engagements as employment', 'employment.id', '=', 'custody.engagement_id')
+            ->leftJoin('financial_assets as asset', 'asset.id', '=', 'custody.financial_asset_id')
+            ->where('custody.business_space_id', $space->id)
+            ->where('custody.status', 'issued')
+            ->select(
+                'custody.id', 'custody.financial_asset_id',
+                'custody.issued_on', 'custody.acknowledged_at',
+                'employment.status as employment_status',
+                'asset.status as asset_status',
+                'asset.financial_space_id as asset_space_id'
+            )
+            ->orderBy('custody.id')->limit(2000)->get();
+
+        $exceptions = [];
+        foreach ($rows as $row) {
+            $reason = match (true) {
+                $row->asset_space_id === null
+                    || (int) $row->asset_space_id !== (int) $space->id => 'asset_missing_or_wrong_organisation',
+                $row->asset_status !== 'active' => 'inactive_asset_still_assigned',
+                $row->employment_status !== 'active' => 'offboarded_worker_still_has_asset',
+                $row->acknowledged_at === null => 'worker_has_not_acknowledged_custody',
+                default => null,
+            };
+            if ($reason !== null) {
+                $exceptions[] = [
+                    'custody_id' => $row->id,
+                    'asset_id' => $row->financial_asset_id,
+                    'reason' => $reason,
+                ];
+            }
+        }
+        $openCount = DB::table('people_asset_custodies')
+            ->where('business_space_id', $space->id)
+            ->where('status', 'issued')->count();
+
+        return response()->json(['data' => [
+            'space_id' => $space->public_id,
+            'issued_custodies' => $openCount,
+            'reviewed_custodies' => $rows->count(),
+            'exceptions' => array_slice($exceptions, 0, 100),
+            'total_exceptions' => count($exceptions),
+            'review_complete' => $openCount <= 2000,
+            'evidence' => 'recorded_custody_not_physical_inventory_confirmation',
+            'notice' => 'Asset inspections, damage evidence, serial tags and physical handover signatures require separate operational verification.',
+        ]])->header('Cache-Control', 'private, no-store');
+    }
+
     public function assets(Request $request, FinancialSpace $space): JsonResponse
     {
         return $this->listing($request, $space, 'people_asset_custodies');
