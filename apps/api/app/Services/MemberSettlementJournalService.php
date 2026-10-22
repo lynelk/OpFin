@@ -195,6 +195,45 @@ class MemberSettlementJournalService
                 409,
                 'Exact currency, principal, direction and statement-matched cashbook evidence required.'
             );
+            // The cashbook and provider reports must refer to the same
+            // externally identified payment, not merely the same amount.
+            // A confirmed statement import preserves independent review
+            // of the reconciliation rather than relying on a client flag.
+            $provider = DB::table('mobile_money_transactions')
+                ->where('id', $action->mobile_money_transaction_id)->first();
+            $reference = trim((string) ($provider->provider_reference ?? ''));
+            abort_unless(
+                $provider
+                && $reference !== ''
+                && (string) $provider->currency === (string) $cash->currency
+                && (int) $provider->amount_minor === (int) (
+                    $action->direction === 'collection'
+                        ? $action->total_amount_minor : $action->principal_amount_minor
+                )
+                && (string) $provider->direction === (string) $action->direction,
+                409,
+                'Canonical provider payment is missing or differs from the booked instruction.'
+            );
+            abort_unless(
+                DB::table('financial_space_statement_rows as row')
+                    ->join('financial_space_statement_imports as statement',
+                        'statement.id', '=', 'row.statement_import_id')
+                    ->where('row.financial_space_id', $space->id)
+                    ->where('row.treasury_account_id', $cash->treasury_account_id)
+                    ->where('row.matched_transaction_id', $cash->id)
+                    ->where('row.reconciliation_status', 'matched')
+                    ->where('row.statement_reference', $reference)
+                    ->where('row.currency', $cash->currency)
+                    ->where('row.direction', $cash->direction)
+                    ->where('row.amount_minor', $amount)
+                    ->where('statement.financial_space_id', $space->id)
+                    ->where('statement.treasury_account_id', $cash->treasury_account_id)
+                    ->whereIn('statement.confirmation_status', ['confirmed', 'confirmed_with_exceptions'])
+                    ->whereNotNull('statement.confirmed_at')
+                    ->exists(),
+                409,
+                'A confirmed statement row with the exact provider transaction reference must support this allocation.'
+            );
             abort_if(
                 DB::table('financial_space_member_journals')
                     ->where('treasury_transaction_id', $treasuryTransactionId)->exists(),
