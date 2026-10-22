@@ -51,6 +51,21 @@ class FinancialSpaceActionSettlementService
             if ($money->statement_reconciliation_status !== MobileMoneyTransaction::STATEMENT_MATCHED) {
                 return $action;
             }
+            // A replayed successful provider callback cannot move an already
+            // posted economic event back into the unallocated queue.
+            if ($action->status === 'book_allocated') {
+                if ($money->status === MobileMoneyTransaction::STATUS_REVERSED) {
+                    DB::table('financial_space_action_intents')->where('id', $action->id)->update([
+                        'status' => 'reversed_requires_book_correction',
+                        'provider_statement_status' => (string) $money->status,
+                        'updated_at' => now(),
+                    ]);
+
+                    return DB::table('financial_space_action_intents')->find($action->id);
+                }
+
+                return $action;
+            }
             $status = match ($money->status) {
                 MobileMoneyTransaction::STATUS_SUCCESSFUL => 'statement_matched_unallocated',
                 MobileMoneyTransaction::STATUS_REVERSED => 'reversed_requires_book_correction',
