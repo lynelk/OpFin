@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
 use App\Services\FinancialSpaceActionService;
+use App\Support\FinancialSpaceRolePolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,10 +18,18 @@ class FinancialSpaceOperationsController extends Controller
 
     public function index(Request $request, FinancialSpace $space): JsonResponse
     {
-        $this->assertMember($request, $space);
-        $rows = DB::table('financial_space_action_intents')
-            ->where('financial_space_id', $space->id)->latest('id')->paginate(50);
-        return response()->json(['data' => ['actions' => $rows]]);
+        $role = $this->memberRole($request, $space);
+        $query = DB::table('financial_space_action_intents')
+            ->where('financial_space_id', $space->id);
+        if (! FinancialSpaceRolePolicy::canManageFinancialRecords($space->type, $role)) {
+            // Ordinary members must never browse other members' private
+            // payment phone numbers or unfinalised financial instructions.
+            $query->where('initiated_by_user_id', $request->user()->id);
+        }
+        $rows = $query->latest('id')->paginate(50);
+
+        return response()->json(['data' => ['actions' => $rows]])
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function store(Request $request, FinancialSpace $space): JsonResponse
@@ -43,6 +52,8 @@ class FinancialSpaceOperationsController extends Controller
 
     public function approve(Request $request, FinancialSpace $space, int $action): JsonResponse
     {
+        $role = $this->memberRole($request, $space);
+        abort_unless(FinancialSpaceRolePolicy::canManageFinancialRecords($space->type, $role), 403);
         $intent = DB::table('financial_space_action_intents')->where('financial_space_id',$space->id)->where('id',$action)->first();
         abort_if(! $intent,404);
         try { $intent = $this->actions->approveAndSubmit($space,$intent,$request->user()); }
@@ -52,6 +63,20 @@ class FinancialSpaceOperationsController extends Controller
 
     private function assertMember(Request $request, FinancialSpace $space): void
     {
-        abort_unless(DB::table('financial_space_memberships')->where('financial_space_id',$space->id)->where('user_id',$request->user()->id)->where('status','active')->whereNull('deleted_at')->exists(),403);
+        $this->memberRole($request, $space);
+    }
+
+    private function memberRole(Request $request, FinancialSpace $space): string
+    {
+        abort_unless($space->status === 'active' && $space->deleted_at === null, 403);
+        $role = DB::table('financial_space_memberships')
+            ->where('financial_space_id', $space->id)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'active')
+            ->whereNull('deleted_at')
+            ->value('role');
+        abort_unless(is_string($role) && $role !== '', 403);
+
+        return $role;
     }
 }
