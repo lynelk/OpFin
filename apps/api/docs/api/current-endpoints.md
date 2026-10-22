@@ -450,3 +450,49 @@ Document review is not independent registry verification and never itself proves
 
 Body: three positive internal IDs `borrowerUserId`, `loanProductId`, `financialSpaceId`, plus four strict opaque references `tenantId`, `consentGrantId`, `passportShareId`, `featureSnapshotId`. OpFin requires an active merchant loan product, locally configured active lender authority, the borrower's active owner/admin Financial Space membership, exact tenant linkage and a current borrower-owned `merchant_finance_assessment` grant explicitly scoped to the Space, tenant and exact `opfin-lender-{institutionId}` recipient **before** making the external request. Stolets must independently verify its own current source grant and share for the same actual lender; merchant receipts from either application cannot alone establish business ownership, legal lender authority or permission to disburse. Responses use the conventional `success/message/data` envelope. Disabled, revoked, mismatched, unavailable, stale or invalid upstream evidence fails closed; public/customer accounts cannot invoke this admin endpoint. The external candidate recipient must run separately permissioned consent verification and does not delegate OpFin's lender or borrower authorisation. A configured lender reference is **not externally certified legal authority**, and source Space metadata alone is **not verified incorporation/business ownership**. Production credit usage requires an independently accepted identity-link evidence record, applicable lender licensing/mandate and underwriting acceptance. Default feature setting is **off**. This is not a live credit product activation, and participation remains optional within the wider OpFin Financial Spaces system.
 
+
+
+## October 22, 2026: governed settlements, migration, payroll and privacy controls
+
+**Source contract, not activated product certification.** Routes below remain subject to the enclosing authentication and membership policies. Neither approval nor a provider HTTP acknowledgement is cash or accounting finality.
+
+### Savings Groups: reconciled member financial events
+
+Under `/api/financial-spaces/{space}/savings-groups`:
+
+- `POST cycles/{cycle}/loans/{loan}/allocate-disbursement`
+- `POST cycles/{cycle}/loans/{loan}/allocate-repayment`
+- `POST cycles/{cycle}/social-claims/{claim}/allocate-payout`
+- `POST cycles/{cycle}/shareouts/{allocation}/allocate-payout`
+
+Allocation bodies require `action_id` and `treasury_transaction_id`; never accept client-side amount, payout success or accounting account. The action must be the exact product instruction in the exact Financial Space. A provider **successful and statement-matched** action and a **confirmed, external-reference-matching bank/treasury statement row** are required. A new immutable member journal has two positive integer entries with equal debits and credits, and distinct action/cashbook uniqueness constraints. Unverified or ambiguous outcomes remain pending. Loan repayment implementation covers **principal only**, not interest, fees, instalment scheduling or statutory reporting. The source does not itself initiate a provider payment.
+
+Verified Savings Group contributions now also create a separate balanced member savings/social fund/fines accounting journal, labelled `cashbook_statement_matched_only` to distinguish it from independently provider-confirmed settlement.
+
+### SACCO member deposits, withdrawals and shares
+
+`POST /api/financial-spaces/{space}/sacco/accounts/{account}/allocate-settlement` accepts the same canonical evidence identifiers plus `movement_type=deposit|withdrawal`. An authorised SACCO officer may allocate only an exact member-initiated, provider- and bank-evidenced instruction to an active member/account/product subject to **current independently reviewed jurisdictional evidence**. Available balance, held funds and product minimum restrictions gate withdrawals. Share contributions require integer share-price allocation. Repeated identical evidence returns the original movement without double credit. Regulator document review and controls do not prove an externally issued licence or confer a deposit-taking mandate.
+
+`GET /api/financial-spaces/{space}/member-ledger/integrity` performs an internal, bounded, officer-only review of journal arithmetic, treasury and canonical action links. It **does not** claim external account confirmation, an audit certificate or complete historical verification when the 5,000-journal examination cap is exceeded.
+
+### Investment Clubs: opening import acceptance
+
+For an **investment_club** draft book under `/api/financial-spaces/{space}/accounting/books/{book}`:
+
+- `GET migration/template` gives an exact CSV header and active member identifiers.
+- `POST migration/preview` accepts a `file` CSV and returns member capital, opening assets, balance totals, source hash and import exceptions; no posting occurs.
+- `POST migration/submit` creates a pending, source-hash-idempotent **opening** Club Accounting instruction for a **different** authorised officer to inspect and approve. The existing ownership/trial-balance rules govern activation. This is a narrow CSV opening bridge, not full Excel/Himaya parsing, live portfolio valuation or independently proven historical settlements.
+
+### OpFin People: conditional statutory and device interfaces
+
+`POST /api/people/spaces/{space}/payroll/periods/{period}/statutory-preview` is a **non-posting** payroll-role operation for a draft period and an approved effective-dated resident Uganda policy `UG-RESIDENT-2026-07`. It produces integer PAYE/NSSF figures using the **1 July 2026** resident thresholds published by URA. It requires worker/benefits/residency evidence references and explicit LST and NSSF applicability inputs. Full taxable-benefits review, residence verification, exemptions, employer parallel-run validation and payroll certification remain external gates.
+
+`POST /api/people/device-ingest/{space}/{connector}` is **disabled unless explicitly enabled** with a separately configured HMAC secret. It accepts a strict no-template, signed device event with a 60-second clock window and unique nonce, binds the signature to the `POST` method, exact Business Space and connector, verifies a privacy-reviewed external-subject binding and persists a **submitted** attendance event for supervisor review. No biometric features/templates are stored. The device cannot activate itself: reviewed, independent, role-controlled activation and binding routes are `POST /api/admin/people/spaces/{space}/biometrics/connectors/{connector}/approve`, `POST /api/people/spaces/{space}/biometrics/connectors/{connector}/bindings`, and `POST .../bindings/{binding}/approve`. A real compatible vendor, lawful basis/DPIA, device trust/key rotation, employee notice, retention and device UAT remain outstanding.
+
+`GET /api/people/spaces/{space}/assets/custody-integrity` is an HR-authorised internal check of unacknowledged assignments, offboarded workers and inactive or missing assets. It is not a physical stocktake.
+
+### Shared advisory, privacy and tracking
+
+`GET /api/financial-spaces/{space}/advisories` returns user-permitted recorded debt due/overdue amounts, unreconciled cashbook and pending/ambiguous provider items. These are deterministic exceptions and suggested next review actions, **not credit decisions or bank-verified values**. Business employees with People-only roles do not see employer private finances. `GET /api/financial-spaces/{space}/operations` now restricts a non-officer to their own canonical actions and does not expose other members' phone numbers.
+
+**Not complete:** independent OpFin People deployment and identity federation; biometric vendor credential validation; payroll statutory/external certification; group lending interest/guarantee servicing and provider payment integration tests; SACCO regulator confirmation/complete loan accounting; end-to-end investment club valuation/distribution reconciliation; complete legacy auth endpoint audit; tested migration/rollback; Android/iOS real-device UAT and finance/compliance sign-off. No live production enablement is implied by these routes.
