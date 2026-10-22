@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
 use App\Http\Controllers\Api\FinancialSpaceBudgetController;
 use App\Http\Controllers\Api\FinancialSpaceAdvisoryController;
+use App\Http\Controllers\Api\FinancialSpaceMemberLedgerController;
 use App\Http\Controllers\Api\FinancialSpaceController;
 use App\Http\Controllers\Api\FinancialSpaceCredentialController;
 use App\Http\Controllers\Api\FinancialSpacePayoutMandateController;
@@ -99,6 +100,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/service-registry', OpFinServiceRegistryController::class);
     Route::get('/my-spaces/report', MyFinancialSpacesReportController::class);
     Route::get('/financial-spaces/{space}/advisories', FinancialSpaceAdvisoryController::class);
+    Route::get('/financial-spaces/{space}/member-ledger/integrity', [FinancialSpaceMemberLedgerController::class, 'integrity']);
     Route::get('/people/business-spaces', [OpFinPeopleMembershipController::class, 'index']);
     Route::get('/people/business-spaces/{publicId}', [OpFinPeopleMembershipController::class, 'show']);
     Route::post('/admin/cito-baas/intents', [CitoBaasGovernanceController::class, 'draft']);
