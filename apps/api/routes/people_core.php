@@ -32,6 +32,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])
         Route::get('payroll/periods', [PeoplePayrollController::class, 'periods']);
         Route::post('payroll/periods', [PeoplePayrollController::class, 'createPeriod']);
         Route::get('payroll/periods/{period}/lines', [PeoplePayrollController::class, 'lines'])->whereNumber('period');
+        Route::post('payroll/periods/{period}/statutory-preview', [PeoplePayrollController::class, 'previewStatutory'])->whereNumber('period');
         Route::post('payroll/periods/{period}/lines', [PeoplePayrollController::class, 'createLine'])->whereNumber('period');
         Route::post('payroll/periods/{period}/prepare', [PeoplePayrollController::class, 'prepare'])->whereNumber('period');
         Route::post('payroll/periods/{period}/approve', [PeoplePayrollController::class, 'approve'])->whereNumber('period');
