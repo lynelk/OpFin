@@ -130,7 +130,7 @@ class PeopleBiometricEventController extends Controller
         );
         $raw = $request->getContent();
         abort_unless(strlen($raw) <= 4096, 413);
-        $message = $timestamp."\n".$nonce."\n".$raw;
+        $message = "POST\n".$space->id."\n".$connector."\n".$timestamp."\n".$nonce."\n".$raw;
         abort_unless(hash_equals(hash_hmac('sha256', $message, $secret), $signature), 401);
         abort_unless(
             Cache::add('people:biometric:nonce:'.hash('sha256', $space->id.':'.$connector.':'.$nonce), 1, 120),
