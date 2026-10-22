@@ -31,6 +31,30 @@ class SaccoSettlementController extends Controller
                 ->where('status', 'active')
                 ->lockForUpdate()->first();
             abort_unless($memberAccount, 404);
+            // A canonical provider payment can only be credited to one member
+            // account. Exact repeats return the original allocation unchanged.
+            $prior = DB::table('sacco_member_cash_movements')
+                ->where('action_intent_id', $data['action_id'])->lockForUpdate()->first();
+            if ($prior) {
+                abort_unless(
+                    (int) $prior->financial_space_id === (int) $space->id
+                    && (int) $prior->member_account_id === (int) $account
+                    && (int) $prior->treasury_transaction_id === (int) $data['treasury_transaction_id']
+                    && $prior->movement_type === $data['movement_type'],
+                    409,
+                    'This canonical payment is already allocated to a different account or movement.'
+                );
+                $existingJournal = DB::table('financial_space_member_journals')
+                    ->where('action_intent_id', $data['action_id'])->first();
+                abort_unless($existingJournal, 409, 'Existing member movement has missing journal evidence.');
+
+                return [
+                    'movement' => $prior,
+                    'member_balance_minor' => (int) $memberAccount->balance_minor,
+                    'journal_id' => $existingJournal->id,
+                    'replayed' => true,
+                ];
+            }
             $product = DB::table('sacco_products')
                 ->where('financial_space_id', $space->id)
                 ->where('id', $memberAccount->sacco_product_id)
