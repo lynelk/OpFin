@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class MemberSettlementJournalTest extends TestCase
@@ -139,7 +140,7 @@ class MemberSettlementJournalTest extends TestCase
                 $checker->id
             );
             $this->fail('Unreconciled cashbook amount must not post.');
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+        } catch (HttpException $exception) {
             $this->assertSame(409, $exception->getStatusCode());
         }
         $this->assertDatabaseCount('financial_space_member_journals', 0);
@@ -156,7 +157,7 @@ class MemberSettlementJournalTest extends TestCase
                 $checker->id
             );
             $this->fail('Pending provider proof must not post.');
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+        } catch (HttpException $exception) {
             $this->assertSame(409, $exception->getStatusCode());
         }
         $this->assertDatabaseCount('financial_space_member_journals', 0);
@@ -205,7 +206,7 @@ class MemberSettlementJournalTest extends TestCase
             $space, $treasury, $member, 'collection', 2000,
             'sacco_member_cash', 'account:2:deposit'
         );
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         try {
             app(MemberSettlementJournalService::class)->post(
                 $space, $action, $cash, 'sacco_member_cash', 'account:1:deposit',
