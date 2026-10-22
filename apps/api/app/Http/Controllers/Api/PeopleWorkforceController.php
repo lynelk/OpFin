@@ -223,13 +223,17 @@ class PeopleWorkforceController extends Controller
         $employee = $this->access->engagement($request, $space, (int) $data['engagement_id']);
         abort_unless($employee->status === 'active', 409);
 
-        $observed = CarbonImmutable::parse($data['occurred_at']);
+        $observed = CarbonImmutable::parse($data['occurred_at'])->utc();
         abort_if(
             $observed->greaterThan(now()->addMinutes(5))
             || $observed->lessThan(now()->subDays(31)),
             422,
             'Attendance observation outside supported offline capture window.'
         );
+        // Normalise the wire ISO timestamp before both the duplicate comparison
+        // and persistence. Replayed offline events must not disagree because a
+        // database timestamp drops ISO separators, fractional seconds or 'Z'.
+        $data['occurred_at'] = $observed->format('Y-m-d H:i:s');
 
         $id = DB::transaction(function () use ($data, $request, $space) {
             $existing = DB::table('people_attendance_events')
