@@ -187,7 +187,8 @@ class PeopleBiometricEventController extends Controller
                 ->where('vendor_event_hash', $hash)->lockForUpdate()->first();
             if ($existing) {
                 abort_unless(
-                    (int) $existing->engagement_id === (int) $binding->engagement_id,
+                    (int) $existing->engagement_id === (int) $binding->engagement_id
+                    && hash_equals((string) $existing->signed_payload_hash, hash('sha256', $raw)),
                     409,
                     'A reused vendor event ID must not be reassigned to another worker.'
                 );
