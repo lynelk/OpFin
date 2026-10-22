@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\PeopleBiometricEventController;
 use App\Http\Controllers\Api\PeopleOperationsController;
 use App\Http\Controllers\Api\PeoplePayrollController;
 use App\Http\Controllers\Api\PeopleWorkforceController;
@@ -25,6 +26,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])
 
         Route::get('biometrics/connectors', [PeopleWorkforceController::class, 'biometricConnectors']);
         Route::post('biometrics/connectors', [PeopleWorkforceController::class, 'registerBiometricConnector']);
+        Route::post('biometrics/connectors/{connector}/bindings', [PeopleBiometricEventController::class, 'configureBinding'])->whereNumber('connector');
+        Route::post('biometrics/connectors/{connector}/bindings/{binding}/approve', [PeopleBiometricEventController::class, 'approveBinding'])
+            ->whereNumber('connector')->whereNumber('binding');
 
         Route::get('payroll/policies', [PeoplePayrollController::class, 'policies']);
         Route::post('payroll/policies', [PeoplePayrollController::class, 'createPolicy']);
@@ -62,3 +66,13 @@ Route::middleware(['auth:sanctum', 'throttle:api'])
         Route::post('field-assignments/{task}/submit', [PeopleOperationsController::class, 'submitFieldWork'])->whereNumber('task');
         Route::post('field-assignments/{task}/approve', [PeopleOperationsController::class, 'approveFieldWork'])->whereNumber('task');
     });
+
+Route::middleware(['throttle:api'])->post(
+    'people/device-ingest/{space}/{connector}',
+    [PeopleBiometricEventController::class, 'ingest']
+)->whereNumber('space')->whereNumber('connector');
+
+Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->post(
+    'admin/people/spaces/{space}/biometrics/connectors/{connector}/approve',
+    [PeopleBiometricEventController::class, 'approveConnector']
+)->whereNumber('space')->whereNumber('connector');
