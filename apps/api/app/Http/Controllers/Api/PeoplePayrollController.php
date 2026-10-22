@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialSpace;
+use App\Services\People\UgandaPayrollCalculator;
 use App\Support\PeopleSpaceAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -242,6 +243,65 @@ class PeoplePayrollController extends Controller
             'period' => $this->period($space, $period),
             'payment_instructions_created' => false,
         ]]);
+    }
+
+    /**
+     * Payroll-team-only, non-posting resident Uganda monthly preview. A live
+     * payroll line still requires verified benefits, LST, residency, exemptions,
+     * approved policy and independent maker-checker before final certification.
+     */
+    public function previewStatutory(Request $request, FinancialSpace $space, int $period): JsonResponse
+    {
+        $this->access->payroll($request, $space);
+        abort_unless($space->country === 'UG' && $space->currency === 'UGX', 422);
+        $record = $this->period($space, $period);
+        abort_unless($record->status === 'draft', 409);
+
+        $data = $request->validate([
+            'engagement_id' => ['required', 'integer', 'min:1'],
+            'gross_minor' => ['required', 'integer', 'min:0', 'max:100000000000'],
+            'local_service_tax_minor' => ['required', 'integer', 'min:0', 'max:100000000000'],
+            'other_authorised_deductions_minor' => ['required', 'integer', 'min:0', 'max:100000000000'],
+            'nssf_applicable' => ['required', 'boolean'],
+            'residency_evidence_reference' => ['required', 'string', 'min:12', 'max:160'],
+            'benefits_review_reference' => ['required', 'string', 'min:12', 'max:160'],
+        ]);
+        $employment = DB::table('people_engagements')
+            ->where('business_space_id', $space->id)
+            ->where('id', $data['engagement_id'])
+            ->where('status', 'active')->first();
+        abort_unless($employment, 422, 'Employee must have an active engagement in the employer Space.');
+        $policy = DB::table('people_payroll_policies')
+            ->where('id', $record->payroll_policy_id)
+            ->where('business_space_id', $space->id)
+            ->where('status', 'approved')->first();
+        abort_unless($policy && $policy->policy_version === UgandaPayrollCalculator::POLICY_VERSION, 422, 'Effective-dated resident Uganda 2026 PAYE policy is required.');
+
+        try {
+            $calculation = app(UgandaPayrollCalculator::class)->preview(
+                (string) $record->period_start,
+                (int) $data['gross_minor'],
+                (int) $data['local_service_tax_minor'],
+                (int) $data['other_authorised_deductions_minor'],
+                (bool) $data['nssf_applicable']
+            );
+        } catch (\\InvalidArgumentException $exception) {
+            abort(422, $exception->getMessage());
+        }
+
+        $this->access->audit($request, $space, 'payroll.calculation.previewed', 'payroll_period', $period);
+
+        return response()->json(['data' => [
+            'employee_engagement_id' => (int) $employment->id,
+            'period_id' => (int) $period,
+            'calculation' => $calculation,
+            'review_needed' => [
+                'verify_tax_residence', 'verify_taxable_benefits', 'verify_local_service_tax',
+                'verify_nssf_applicability', 'verify_other_deductions', 'certify_payroll_policy',
+            ],
+            'posting_enabled' => false,
+            'source_of_residency_evidence' => 'supplied_not_independently_verified',
+        ]])->header('Cache-Control', 'private, no-store');
     }
 
     public function myPayslips(Request $request, FinancialSpace $space): JsonResponse
