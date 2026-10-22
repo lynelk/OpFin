@@ -120,6 +120,44 @@ class MemberSettlementJournalTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        if ($statementMatched) {
+            // The imported bank or mobile-money statement must be confirmed
+            // and identify the exact provider payment, not just its amount.
+            $statementId = DB::table('financial_space_statement_imports')->insertGetId([
+                'public_id' => (string) Str::uuid(),
+                'financial_space_id' => $space->id,
+                'treasury_account_id' => $treasury,
+                'source_format' => 'csv',
+                'source_hash' => hash('sha256', (string) Str::uuid()),
+                'period_start' => today()->toDateString(),
+                'period_end' => today()->toDateString(),
+                'row_count' => 1,
+                'matched_count' => 1,
+                'status' => 'reconciled',
+                'confirmation_status' => 'confirmed',
+                'confirmed_by_user_id' => $initiator->id,
+                'confirmed_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            DB::table('financial_space_statement_rows')->insert([
+                'statement_import_id' => $statementId,
+                'financial_space_id' => $space->id,
+                'treasury_account_id' => $treasury,
+                'matched_transaction_id' => $cashId,
+                'row_hash' => hash('sha256', (string) Str::uuid()),
+                'statement_reference' => $tx->provider_reference,
+                'transaction_date' => today()->toDateString(),
+                'description' => 'Provider statement confirms exact collection/disbursement',
+                'direction' => $direction === 'collection' ? 'credit' : 'debit',
+                'amount_minor' => $amount,
+                'currency' => $space->currency,
+                'reconciliation_status' => 'matched',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
         return [$actionId, $cashId, $tx];
     }
 
