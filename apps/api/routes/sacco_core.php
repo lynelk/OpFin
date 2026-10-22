@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\FinancialSpaceBrandController;
 use App\Http\Controllers\Api\SaccoCoreController;
 use App\Http\Controllers\Api\SaccoRegulatoryController;
+use App\Http\Controllers\Api\SaccoSettlementController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/white-label/resolve', [FinancialSpaceBrandController::class, 'resolve']);
@@ -13,6 +14,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/financial-spaces/{space}/sacco/regulatory-attestations', [SaccoRegulatoryController::class, 'submitAttestation']);
     Route::post('/financial-spaces/{space}/sacco/products/{product}/activate', [SaccoRegulatoryController::class, 'activateProduct']);
     Route::post('/financial-spaces/{space}/sacco/accounts', [SaccoCoreController::class, 'openAccount']);
+    Route::post('/financial-spaces/{space}/sacco/accounts/{account}/allocate-settlement', [SaccoSettlementController::class, 'allocate'])->whereNumber('account');
     Route::get('/financial-spaces/{space}/sacco/me', [SaccoCoreController::class, 'myPosition']);
     Route::post('/financial-spaces/{space}/sacco/guarantees', [SaccoCoreController::class, 'guarantee']);
     Route::post('/financial-spaces/{space}/sacco/distributions', [SaccoCoreController::class, 'prepareDistribution']);
