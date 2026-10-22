@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:opfin/services/opfin_people_api.dart';
+import 'package:opfin/services/people_attendance_queue.dart';
 import 'package:opfin/workspace_access.dart';
 
 class PeopleHubScreen extends StatelessWidget {
@@ -131,6 +132,7 @@ class _PeopleModuleScreen extends StatefulWidget {
 
 class _PeopleModuleScreenState extends State<_PeopleModuleScreen> {
   late Future<Map<String, dynamic>> _records;
+  final PeopleAttendanceQueue _attendanceQueue = PeopleAttendanceQueue();
 
   int get spaceId => (widget.space['id'] as num).toInt();
   String get path => widget.module.path;
@@ -298,13 +300,69 @@ class _PeopleModuleScreenState extends State<_PeopleModuleScreen> {
         _creationFields());
     if (data == null) return;
     if (path == 'attendance') {
-      data['source'] = 'mobile';
-      data['occurred_at'] = DateTime.now().toUtc().toIso8601String();
-      data['idempotency_key'] =
-          'people-mobile-$spaceId-${DateTime.now().microsecondsSinceEpoch}';
+      try {
+        await _attendanceQueue.enqueue(
+          spaceId: spaceId,
+          engagementId: data['engagement_id'] as int,
+          direction: data['direction'] as String,
+        );
+        if (mounted) setState(() {});
+        await _syncOfflineAttendance();
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Unable to queue attendance: $error')));
+      }
+      return;
     }
     await _send(path, data);
   }
+
+  Future<void> _syncOfflineAttendance() async {
+    try {
+      final sent = await _attendanceQueue.flush(
+        spaceId,
+        (payload) async {
+          await OpFinPeopleApi.submit(spaceId, 'attendance', payload);
+        },
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(sent == 0 ? 'No queued events to sync.' :
+            '$sent attendance event(s) received by OpFin for supervisor review.'),
+      ));
+      await _reload();
+      if (mounted) setState(() {});
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Attendance remains encrypted on this device. '
+            'Sync once connected. Server access and approval are still required.'),
+      ));
+      setState(() {});
+    }
+  }
+
+  Widget _offlineAttendanceTools() => FutureBuilder<List<Map<String, dynamic>>>(
+    future: _attendanceQueue.pending(spaceId),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return const Card(child: Padding(padding: EdgeInsets.all(12),
+          child: Text('Encrypted pending events require local review.')));
+      }
+      final pending = snapshot.data ?? const <Map<String, dynamic>>[];
+      return Card(child: ListTile(
+        leading: const Icon(Icons.cloud_off_outlined),
+        title: Text('${pending.length} pending attendance event(s)'),
+        subtitle: const Text('Encrypted on device; only this signed-in user '
+            'and selected employer are eligible to sync.'),
+        trailing: FilledButton(
+          onPressed: pending.isEmpty ? null : _syncOfflineAttendance,
+          child: const Text('Sync'),
+        ),
+      ));
+    },
+  );
 
   List<({String label, String endpoint, List<_PeopleField> fields})> _actions(
       Map<String, dynamic> record) {
@@ -412,14 +470,16 @@ class _PeopleModuleScreenState extends State<_PeopleModuleScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return ListView(children: const [
-              Padding(padding: EdgeInsets.all(28),
+            return ListView(children: [
+              if (path == 'attendance') _offlineAttendanceTools(),
+              const Padding(padding: EdgeInsets.all(28),
                 child: Text('Unable to load work records. Pull down to retry.')),
             ]);
           }
           final records = OpFinPeopleApi.records(
               snapshot.data ?? const {}, widget.module.keyName);
           return ListView(padding: const EdgeInsets.all(18), children: [
+            if (path == 'attendance') _offlineAttendanceTools(),
             if (records.isEmpty) const Card(
               child: Padding(padding: EdgeInsets.all(20),
                   child: Text('No authorised records available yet.')),
