@@ -44,6 +44,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])
         Route::get('payroll/my-payslips', [PeoplePayrollController::class, 'myPayslips']);
 
         Route::get('assets/custody', [PeopleOperationsController::class, 'assets']);
+        Route::get('assets/custody-integrity', [PeopleOperationsController::class, 'custodyIntegrity']);
         Route::post('assets/custody', [PeopleOperationsController::class, 'assignAsset']);
         Route::post('assets/custody/{custody}/acknowledge', [PeopleOperationsController::class, 'acknowledgeAsset'])->whereNumber('custody');
         Route::post('assets/custody/{custody}/return', [PeopleOperationsController::class, 'returnAsset'])->whereNumber('custody');
