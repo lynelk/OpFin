@@ -237,6 +237,36 @@ class MemberSettlementJournalTest extends TestCase
         $this->assertSame('book_allocated', $replayed->status);
     }
 
+    public function test_equal_amount_from_wrong_bank_statement_reference_cannot_fund_another_member(): void
+    {
+        [$owner, $checker, $member, $space, $treasury] = $this->context();
+        [$action, $cash] = $this->moneyAndCash(
+            $space, $treasury, $member, 'collection', 50000,
+            'sacco_member_cash', 'account:8:deposit'
+        );
+        DB::table('financial_space_statement_rows')
+            ->where('financial_space_id', $space->id)
+            ->where('matched_transaction_id', $cash)
+            ->update(['statement_reference' => 'some-other-payment']);
+
+        try {
+            app(MemberSettlementJournalService::class)->post(
+                $space, $action, $cash, 'sacco_member_cash', 'account:8:deposit',
+                'sacco_member_deposit',
+                ['code' => 'sacco_treasury_cash', 'member' => null],
+                ['code' => 'sacco_member_deposits_liability', 'member' => $member->id],
+                $checker->id
+            );
+            $this->fail('Equal sums without identical provider reference must not post.');
+        } catch (HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+        }
+        $this->assertDatabaseCount('financial_space_member_journals', 0);
+        $this->assertDatabaseHas('financial_space_action_intents', [
+            'id' => $action, 'status' => 'statement_matched_unallocated',
+        ]);
+    }
+
     public function test_wrong_source_is_rejected_before_recording_financial_entry(): void
     {
         [$owner, $checker, $member, $space, $treasury] = $this->context();
