@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:opfin/services/user_session.dart';
 
 typedef PeopleQueueReader = Future<String?> Function(String key);
@@ -17,7 +16,6 @@ class PeopleAttendanceQueue {
         _read = reader ?? _secureRead,
         _write = writer ?? _secureWrite;
 
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
   static const int maxPending = 100;
 
   final Future<int?> Function() _currentUser;
@@ -25,9 +23,9 @@ class PeopleAttendanceQueue {
   final PeopleQueueWriter _write;
 
   static Future<String?> _secureRead(String key) =>
-      _storage.read(key: key);
+      UserSession.readPendingPayroll(key);
   static Future<void> _secureWrite(String key, String value) =>
-      _storage.write(key: key, value: value);
+      UserSession.writePendingPayroll(key, value);
 
   Future<String> _key() async {
     final id = await _currentUser();
