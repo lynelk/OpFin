@@ -15,6 +15,112 @@ use Illuminate\Support\Facades\DB;
 class MemberSettlementJournalService
 {
     /**
+     * Statement-only accounting is distinct from provider-confirmed settlement.
+     * This can verify a group member's recorded contribution, but may not be
+     * used to mark a regulated disbursement or reimbursement as paid.
+     */
+    public function postStatementMatched(
+        FinancialSpace $space,
+        int $treasuryTransactionId,
+        string $eventKey,
+        string $eventType,
+        string $direction,
+        int $expectedAmountMinor,
+        array $debit,
+        array $credit,
+        int $actorId
+    ): object {
+        return DB::transaction(function () use (
+            $space, $treasuryTransactionId, $eventKey, $eventType,
+            $direction, $expectedAmountMinor, $debit, $credit, $actorId
+        ) {
+            abort_unless($space->status === 'active' && $space->deleted_at === null, 403);
+            abort_unless($expectedAmountMinor > 0, 422);
+
+            $existing = DB::table('financial_space_member_journals')
+                ->where('financial_space_id', $space->id)
+                ->where('event_key', $eventKey)->lockForUpdate()->first();
+            if ($existing) {
+                abort_unless(
+                    $existing->event_type === $eventType
+                    && (int) $existing->treasury_transaction_id === $treasuryTransactionId
+                    && (int) $existing->amount_minor === $expectedAmountMinor,
+                    409,
+                    'A different event was already recorded using this economic reference.'
+                );
+
+                return $existing;
+            }
+            $cash = DB::table('financial_space_transactions')
+                ->where('financial_space_id', $space->id)
+                ->where('id', $treasuryTransactionId)
+                ->lockForUpdate()->first();
+            abort_unless($cash, 404);
+            abort_unless(
+                $cash->reconciliation_status === 'matched'
+                && $cash->reconciled_at !== null
+                && $cash->direction === $direction
+                && (string) $cash->currency === (string) $space->currency
+                && (int) $cash->amount_minor === $expectedAmountMinor,
+                409,
+                'The internal member entry requires the exact statement-matched cashbook movement.'
+            );
+            abort_if(
+                DB::table('financial_space_member_journals')
+                    ->where('treasury_transaction_id', $treasuryTransactionId)->exists(),
+                409,
+                'This reconciled cashbook movement has already been allocated.'
+            );
+            abort_unless(
+                preg_match('/^[a-z][a-z0-9_]{2,89}$/D', $debit['code']) === 1
+                && preg_match('/^[a-z][a-z0-9_]{2,89}$/D', $credit['code']) === 1
+                && $debit['code'] !== $credit['code'],
+                422,
+                'The member ledger accounts must be distinct and valid.'
+            );
+
+            $id = DB::table('financial_space_member_journals')->insertGetId([
+                'financial_space_id' => $space->id,
+                'treasury_transaction_id' => $treasuryTransactionId,
+                'action_intent_id' => null,
+                'recorded_by_user_id' => $actorId,
+                'event_key' => $eventKey,
+                'event_type' => $eventType,
+                'amount_minor' => $expectedAmountMinor,
+                'currency' => $space->currency,
+                'evidence_level' => 'cashbook_statement_matched_only',
+                'posted_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            DB::table('financial_space_member_journal_entries')->insert([
+                [
+                    'journal_id' => $id,
+                    'account_code' => $debit['code'],
+                    'member_user_id' => $debit['member'],
+                    'side' => 'debit',
+                    'amount_minor' => $expectedAmountMinor,
+                    'currency' => $space->currency,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+                [
+                    'journal_id' => $id,
+                    'account_code' => $credit['code'],
+                    'member_user_id' => $credit['member'],
+                    'side' => 'credit',
+                    'amount_minor' => $expectedAmountMinor,
+                    'currency' => $space->currency,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            ]);
+
+            return DB::table('financial_space_member_journals')->find($id);
+        }, 3);
+    }
+
+    /**
      * @param  array{code:string,member:?int}  $debit
      * @param  array{code:string,member:?int}  $credit
      */
