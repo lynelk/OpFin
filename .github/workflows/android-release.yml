@@ -35,14 +35,13 @@ jobs:
         working-directory: .
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           OPFIN_API_BASE_URL: ${{ secrets.OPFIN_API_BASE_URL }}
         run: |
           python3 - <<'PY'
           import os
-          names = ('ANDROID_KEYSTORE_BASE64', 'ANDROID_KEY_ALIAS',
+          names = ('ANDROID_KEYSTORE_BASE64',
                    'ANDROID_KEY_PASSWORD', 'ANDROID_KEYSTORE_PASSWORD',
                    'OPFIN_API_BASE_URL')
           missing = [name for name in names if not os.environ.get(name)]
@@ -52,10 +51,53 @@ jobs:
           print('Protected signing inputs are present; no debug signing is permitted.')
           PY
 
+      - name: Resolve and verify the protected upload-key alias
+        working-directory: .
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS_CANDIDATE: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          python3 - <<'PYALIAS'
+          import base64, os, re, subprocess
+          from pathlib import Path
+          key = Path(os.environ['RUNNER_TEMP']) / 'opfin-upload-keystore.jks'
+          key.write_bytes(base64.b64decode(''.join(os.environ['ANDROID_KEYSTORE_BASE64'].split()), validate=True))
+          key.chmod(0o600)
+          result = subprocess.run(
+              ['keytool', '-list', '-v', '-keystore', str(key), '-storepass:env', 'ANDROID_KEYSTORE_PASSWORD'],
+              check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+          )
+          if result.returncode:
+              print('::error::Protected upload keystore could not be inspected; verify password and file.')
+              raise SystemExit(1)
+          aliases = []
+          for block in re.split(r'(?m)^Alias name:\s*', result.stdout)[1:]:
+              if re.search(r'(?m)^Entry type:\s*PrivateKeyEntry\s*$', block):
+                  aliases.append(block.splitlines()[0].strip())
+          supplied = os.environ.get('ANDROID_KEY_ALIAS_CANDIDATE', '').strip()
+          if supplied:
+              if supplied not in aliases:
+                  print('::error::Configured upload alias does not identify a protected private-key entry.')
+                  raise SystemExit(1)
+              chosen = supplied
+          elif len(aliases) == 1:
+              chosen = aliases[0]
+          else:
+              print('::error::Provide ANDROID_KEY_ALIAS: keystore does not have exactly one private-key entry.')
+              raise SystemExit(1)
+          if not re.fullmatch(r'[A-Za-z0-9_.-]{1,100}', chosen):
+              print('::error::Upload-key alias requires explicit safe configuration.')
+              raise SystemExit(1)
+          print('::add-mask::' + chosen)
+          with Path(os.environ['GITHUB_ENV']).open('a') as environment:
+              environment.write('ANDROID_KEY_ALIAS=' + chosen + '\n')
+          print('Protected private-key alias verified without publishing the alias or key.')
+          PYALIAS
+
       - name: Restore protected upload key
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
@@ -97,6 +139,14 @@ jobs:
         env:
           OPFIN_API_BASE_URL: ${{ secrets.OPFIN_API_BASE_URL }}
         run: |
+          # Normalise a public HTTPS origin with no path to the canonical API
+          # base. The release script independently verifies safety and rejects
+          # any other path, insecure scheme, query, credentials or private host.
+          OPFIN_API_BASE_URL="${OPFIN_API_BASE_URL%/}"
+          if [[ "$OPFIN_API_BASE_URL" != */api ]]; then
+            OPFIN_API_BASE_URL="$OPFIN_API_BASE_URL/api"
+          fi
+          export OPFIN_API_BASE_URL
           bash tool/build_release.sh android
           CI=false flutter build apk --release --no-pub \
             "--dart-define=OPFIN_API_BASE_URL=${OPFIN_API_BASE_URL%/}" \
@@ -111,7 +161,6 @@ jobs:
 
       - name: Verify signatures, identity and release metadata
         env:
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           bundle='build/app/outputs/bundle/release/app-release.aab'
