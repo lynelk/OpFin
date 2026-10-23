@@ -21,4 +21,5 @@ jobs:
         run: |
           python3 scripts/tests/test_deployment_contract.py
           python3 scripts/tests/test_release_host_safety.py
+          python3 scripts/tests/test_release_signer_parser.py
           node --test apps/web/scripts/validate-production-env.node-test.mjs
