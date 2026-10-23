@@ -135,3 +135,9 @@ php artisan api:catalogue --check --require-complete
 `--require-complete` is expected to **fail** while registered operations lack reviewed schemas. An open coverage gap is not corrected by generating a permissive schema from method/path names. Review request/response shapes, role/Space ownership, errors, examples, consent, state transitions, accounting and negative tests before marking an operation documented.
 
 See [current application/release evidence](../../../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md). Full database, Web, Flutter, Android/iOS, device/accessibility and institutional/provider acceptance cannot be replaced by documentation checks.
+
+## Financial Spaces and People integration caution (23 October 2026)
+
+Use authenticated server-returned workspace permissions as the authority for UI operations. A `savings_group` Space may be labelled **Savings Club / VSLA**; clients must use the stable type identifier rather than the display label for business logic. The mobile 15-module catalogue is discovery metadata only and is **not** an API entitlement. Never assume that a catalogue item corresponds to a callable endpoint or an activated regulated product.
+
+People Core endpoints are feature-gated and require the correct active Business Space membership and role. Implement purpose-specific consent and tenant isolation before any optional integration with personal financial data. Treat transport ambiguity on financial requests as an unknown outcome to reconcile using the original operation reference, not as permission to resubmit. Validate endpoint paths and payloads against the deployed OpenAPI/route inventory before publishing an integration as supported.
