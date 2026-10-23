@@ -6,6 +6,13 @@ use App\Http\Controllers\Api\PeoplePayrollController;
 use App\Http\Controllers\Api\PeopleWorkforceController;
 use Illuminate\Support\Facades\Route;
 
+// Candidate routes are closed in production until all module-specific
+// legal, consent, employer and finance release gates are approved.
+if (! config('opfin_core.enabled')) {
+    return;
+}
+
+
 Route::middleware(['auth:sanctum', 'throttle:api'])
     ->prefix('people/spaces/{space}')
     ->where(['space' => '[0-9]+'])

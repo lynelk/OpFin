@@ -4,6 +4,13 @@ use App\Http\Controllers\Api\SavingsGroupCycleController;
 use App\Http\Controllers\Api\SavingsGroupSettlementController;
 use Illuminate\Support\Facades\Route;
 
+// Candidate routes are closed in production until all module-specific
+// legal, consent, employer and finance release gates are approved.
+if (! config('opfin_core.enabled')) {
+    return;
+}
+
+
 Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('financial-spaces/{space}/savings-groups')
     ->where(['space' => '[0-9]+'])->group(function (): void {
         Route::get('cycles', [SavingsGroupCycleController::class, 'index']);
