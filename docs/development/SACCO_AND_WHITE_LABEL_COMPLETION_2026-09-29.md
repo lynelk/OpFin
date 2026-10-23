@@ -59,3 +59,9 @@ SACCO Core is enabled in application defaults on this implementation branch. Thi
 ## Current source versus regulated readiness (21 October 2026)
 
 The current repository registers SACCO products, member positions, guarantees, distribution approvals and Financial Space brand/domain requests in `apps/api/routes/sacco_core.php`. This does not certify a particular SACCO, its legal authority, deposit-taking custody, share/savings/loan accounting, DNS/TLS hostname control or a production payout. Complete double-entry subledger, settlement reconciliation, branch/teller, member and institutional UAT, and verified host deployment must be assessed independently. See [source-to-release register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) and [role-based training](../manuals/ROLE_BASED_TRAINING_PATHS.md).
+
+## Candidate SACCO regulatory and settlement routes (23 October 2026)
+
+The Core Release adds `/api/financial-spaces/{space}/sacco/regulatory-attestations` (GET and POST), `/products/{product}/activate` (POST), `/accounts/{account}/allocate-settlement` (POST) and platform administrator/operations `/api/admin/sacco/{space}/regulatory-attestations/{attestation}/review` (POST). Submissions are evidence records pending independent verification; they are **not** a Uganda regulator confirmation. Product activation must require a current matching approved legal attestation, authorised maker/checker, product and lender scope and independently verified funding or deposit-taking arrangements where relevant. Settlement allocation must identify a unique externally confirmed source receipt, exact account and amount, reject conflicting allocations, and preserve immutable accounting reversal evidence.
+
+**Operational hold:** no SACCO live deposits, lending, payouts or licensing representation may be inferred from route availability or a synthetic attestation. Independent country/product/custody/legal and production finance acceptance remains outstanding.

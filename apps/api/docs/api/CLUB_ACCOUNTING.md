@@ -161,3 +161,7 @@ Web and Flutter source workflows, including saved-request recovery and native ex
 ## Current integrated-source note (21 October 2026)
 
 Club accounting and saved-request recovery are present in current `main` source, including `apps/api/routes/club_accounting.php` and `club_client_requests.php`. Original PR #126 was closed without merging that specific head; subsequent integration is not certified by its historical test counts. Do not imply that the ability to approve an instruction executes a payment or authenticates a bank record. Read [the saved-request/retained history/export contract](CLUB_CLIENT_RECOVERY.md), [integrator guide](INTEGRATOR_GUIDE.md) and [release-evidence register](../../../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).
+
+## Club migration contracts in the Core Release candidate (23 October 2026)
+
+The candidate adds **GET** `.../books/{book}/migration/template`, **POST** `.../books/{book}/migration/preview`, and **POST** `.../books/{book}/migration/submit`. These are authenticated, book-scoped routes handled by `ClubMigrationController`; migration must be previewed, validated and checked against its original book and member ownership before submission. Import is not bank statement verification or evidence of actual payment settlement. Test malformed/duplicate rows, member/role denial, replay, preview-versus-submit drift, amount/currency accuracy, balanced opening journals, rollback and retained history with real migration acceptance before production use.
