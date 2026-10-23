@@ -113,3 +113,19 @@ Using synthetic data and two authorised officers, prepare an instruction, interr
 ## Essentials interruption and reversal exercise
 
 Using synthetic accounts, interrupt repayment after preparation, provider submission and provider response. Reconcile the original request without creating a second collection. Check one-in-flight capacity, reservation-versus-due-debt display, legacy/production exposure deduplication, partial allocation against the original policy, duplicate provider references, contradictory finality and append-only balanced reversal movements. These are training/UAT scenarios, not proof that full release acceptance has passed.
+
+## Canonical v1.1 facilitator supplement (23 October 2026)
+
+**Release status:** candidate training material; not evidence of production activation. Train the seven role-aware experiences separately: Personal, Invest, Groups, People, Enterprise, Partners and Admin. One user may hold multiple roles, but access is always scoped to the selected Financial Space and server-issued permissions.
+
+### Group workshops
+
+For Investment Clubs, SACCOs, Savings Clubs and VSLAs, demonstrate discovery of the same 15 modules: Membership and KYC; Savings and contributions; Shares and ownership; Member loans and repayments; Investment portfolio; Dividends and profit distribution; Meetings and resolutions; Loan approval committees; Member statements; Accounting and reconciliation; Savings products and deposits; Group guarantees; Fines and penalties; Financial and regulatory reports; Data import and migration. **Discovery is not authority to transact.** Run member read-only, treasurer authorised, suspended-member denied, wrong-space denied, and maker/checker separation exercises. The client displays the `savings_group` type as **Savings Club / VSLA**; the identifier remains unchanged.
+
+### People workshops
+
+Train Core HR, Leave, Payroll, Attendance, Field accountability, Asset management, KPI tracking, Biometric connectors, Appraisals and Rewards as ten distinct workflows. Demonstrate employer role isolation, purpose-specific employee consent, effective-dated Uganda payroll configuration, offline attendance replay safety, biometric privacy, and audit review. Never show employee personal borrowing or savings information in an employer workspace without an independently authorised purpose-specific contract.
+
+### Trainer acceptance record
+
+Record candidate commit, Railway environment, API version, Flutter build, tester, role, Financial Space, test data, expected/actual result, denial cases, defect and sign-off. A demonstration cannot substitute for UAT or external settlement evidence.
