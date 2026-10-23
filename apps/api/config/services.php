@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'opfin_people' => [
+        'verification_secret' => env('OPFIN_PEOPLE_VERIFICATION_SECRET'),
+        'biometric_event_enabled' => (bool) env('OPFIN_PEOPLE_BIOMETRIC_EVENTS_ENABLED', false),
+        'biometric_event_secret' => env('OPFIN_PEOPLE_BIOMETRIC_EVENT_SECRET'),
+    ],
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],

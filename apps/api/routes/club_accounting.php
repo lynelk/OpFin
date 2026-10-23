@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ClubAccountingController;
+use App\Http\Controllers\Api\ClubMigrationController;
 use App\Http\Middleware\ProtectClubAccountingErrors;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +12,11 @@ Route::middleware(['api', 'auth:sanctum', 'throttle:api', ProtectClubAccountingE
         Route::get('books', [ClubAccountingController::class, 'index']);
         Route::post('books', [ClubAccountingController::class, 'createBook']);
         Route::prefix('books/{book}')->where(['book' => '[0-9]+'])->group(function (): void {
+            if (config('opfin_core.enabled')) {
+                Route::get('migration/template', [ClubMigrationController::class, 'template']);
+                Route::post('migration/preview', [ClubMigrationController::class, 'preview']);
+                Route::post('migration/submit', [ClubMigrationController::class, 'submit']);
+            }
             Route::get('catalogue', [ClubAccountingController::class, 'catalogue']);
             Route::get('report', [ClubAccountingController::class, 'report']);
             Route::get('integrity', [ClubAccountingController::class, 'integrity']);

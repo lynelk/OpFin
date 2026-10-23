@@ -5,6 +5,7 @@ import 'package:opfin/data_usage_screen.dart';
 import 'package:opfin/faq_screen.dart';
 import 'package:opfin/location_context_screen.dart';
 import 'package:opfin/profile_screen.dart';
+import 'package:opfin/my_employment_screen.dart';
 import 'package:opfin/wallets_screen.dart';
 
 class StoreReadyMoreMobileScreen extends StatelessWidget{
@@ -17,6 +18,8 @@ class StoreReadyMoreMobileScreen extends StatelessWidget{
       const SizedBox(height:20),
       _Tile(Icons.person_outline,'Profile & security','Identity, phones and sign-in.',
         ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfileScreen()))),
+      _Tile(Icons.badge_outlined,'My employment','View linked employer memberships and HR availability.',
+        ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyEmploymentScreen()))),
       _Tile(Icons.account_balance_wallet_outlined,'Wallets','Choose where payouts and repayments happen.',
         ()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const WalletsScreen()))),
       _Tile(Icons.accessibility_new,'Accessibility','Larger text, simple wording and reduced movement.',

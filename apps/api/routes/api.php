@@ -20,8 +20,11 @@ use App\Http\Controllers\Api\EssentialsController;
 use App\Http\Controllers\Api\FinancialAspirationController;
 use App\Http\Controllers\Api\FinancialControlController;
 use App\Http\Controllers\Api\FinancialLifeController;
+use App\Http\Controllers\Api\FinancialSpaceAdvisoryController;
+use App\Http\Controllers\Api\FinancialSpaceBudgetController;
 use App\Http\Controllers\Api\FinancialSpaceController;
 use App\Http\Controllers\Api\FinancialSpaceCredentialController;
+use App\Http\Controllers\Api\FinancialSpaceMemberLedgerController;
 use App\Http\Controllers\Api\FinancialSpacePayoutMandateController;
 use App\Http\Controllers\Api\FinancialSpaceStatementController;
 use App\Http\Controllers\Api\FinancialWellbeingController;
@@ -42,6 +45,10 @@ use App\Http\Controllers\Api\LocationContextController;
 use App\Http\Controllers\Api\LongRangeGovernanceController;
 use App\Http\Controllers\Api\LongRangePlatformController;
 use App\Http\Controllers\Api\MobileHomeController;
+use App\Http\Controllers\Api\MyFinancialSpacesReportController;
+use App\Http\Controllers\Api\OpFinPeopleMembershipController;
+use App\Http\Controllers\Api\OpFinPeopleServiceController;
+use App\Http\Controllers\Api\OpFinServiceRegistryController;
 use App\Http\Controllers\Api\OrganisationJourneyController;
 use App\Http\Controllers\Api\PartnerEssentialsController;
 use App\Http\Controllers\Api\PartnerReportingController;
@@ -69,6 +76,9 @@ use App\Http\Controllers\Api\V5P0PlatformController;
 use App\Http\Controllers\Api\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
+if (config('opfin_core.enabled')) {
+    Route::post('/people/service/verify-membership', [OpFinPeopleServiceController::class, 'verify'])->middleware('throttle:api');
+}
 Route::get('/health', [HealthController::class, 'show']);
 Route::get('/health/live', [HealthController::class, 'live']);
 Route::get('/health/ready', [HealthController::class, 'ready']);
@@ -89,6 +99,12 @@ Route::post('/guarantors/confirm', [GuarantorController::class, 'confirm'])->mid
 Route::post('/programme-partner/invitations/accept', [ProgrammeCompletionController::class, 'acceptPartnerInvitation'])->middleware('throttle:auth');
 
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    Route::get('/service-registry', OpFinServiceRegistryController::class);
+    Route::get('/my-spaces/report', MyFinancialSpacesReportController::class);
+    Route::get('/financial-spaces/{space}/advisories', FinancialSpaceAdvisoryController::class);
+    Route::get('/financial-spaces/{space}/member-ledger/integrity', [FinancialSpaceMemberLedgerController::class, 'integrity']);
+    Route::get('/people/business-spaces', [OpFinPeopleMembershipController::class, 'index']);
+    Route::get('/people/business-spaces/{publicId}', [OpFinPeopleMembershipController::class, 'show']);
     Route::post('/admin/cito-baas/intents', [CitoBaasGovernanceController::class, 'draft']);
     Route::get('/admin/cito-operations/snapshot', CitoOperationsController::class);
     Route::post('/admin/financial-spaces/{space}/payout-mandates', [FinancialSpacePayoutMandateController::class, 'store']);
@@ -115,6 +131,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/financial-spaces', [FinancialSpaceController::class, 'index']);
     Route::post('/financial-spaces', [FinancialSpaceController::class, 'store']);
     Route::post('/financial-spaces/invitations/accept', [FinancialSpaceController::class, 'acceptInvitation']);
+    Route::get('/financial-spaces/{space}/budgets', [FinancialSpaceBudgetController::class, 'index']);
+    Route::post('/financial-spaces/{space}/budgets', [FinancialSpaceBudgetController::class, 'store']);
+    Route::patch('/financial-spaces/{space}/budgets/{budget}', [FinancialSpaceBudgetController::class, 'update'])->whereNumber('budget');
     Route::get('/financial-spaces/{space}/members', [FinancialSpaceController::class, 'members']);
     Route::post('/financial-spaces/{space}/invitations', [FinancialSpaceController::class, 'invite']);
     Route::put('/financial-spaces/{space}/capabilities', [FinancialSpaceController::class, 'enableCapability']);
@@ -534,4 +553,6 @@ Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operatio
 
 require __DIR__.'/financial_space_operations.php';
 require __DIR__.'/sacco_core.php';
+require __DIR__.'/savings_group_cycles.php';
+require __DIR__.'/people_core.php';
 require __DIR__.'/audmon.php';

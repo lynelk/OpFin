@@ -359,6 +359,90 @@ For club recovery, use [Club Client Recovery API contract](CLUB_CLIENT_RECOVERY.
 
 For Essentials, collection identity is persisted before provider submission and uncertain outcomes are reconciled against the original request. Capacity reservation is separate from due debt; provider acknowledgement is not settlement finality. Do not infer a universal idempotency-key location or response status from route registration; consult the operation-specific contract. The current candidate does not establish complete lender funding/drawdown, biller settlement, lender release, activation/opening accounting, mandate compatibility, older-record adoption or post-service-reversal refunds. Full API/database/client acceptance remains outstanding.
 
+
+
+## Financial Space workspaces, Savings Groups and shared budgets (20 October 2026)
+
+These routes are behind `auth:sanctum` and standard API throttling. Records remain owned by the specified Financial Space. An API catalogue entry is **not** permission, entitlement, regulatory approval, or activation.
+
+| Method | Path | Access and purpose |
+| --- | --- | --- |
+| GET | `/api/service-registry` | Authenticated, non-authoritative discovery of the canonical 13 service families, 10 shared tools and People module identifiers |
+| GET | `/api/financial-spaces` | Active membership-only spaces with `workspace.label`, `can_view_finances`, `can_edit_finances`, `can_manage_members`, `can_open_people_connections` and `can_manage_people` hints |
+| GET | `/api/financial-spaces/{space}/budgets?month=YYYY-MM` | Active member may view the selected month's planned category limits; returns `actuals_status=not_included` |
+| POST | `/api/financial-spaces/{space}/budgets` | Financial manager only; `category`, `monthly_limit_minor`, `effective_from` and optional `effective_to` and `alert_threshold_percent` |
+| PATCH | `/api/financial-spaces/{space}/budgets/{budget}` | Financial manager only; update `monthly_limit_minor`, `alert_threshold_percent` or `active`; budget ownership verified within the given Space |
+| GET | `/api/financial-spaces/{space}/assets` | Active member, existing asset records; edits restricted to authorised managers |
+| POST | `/api/financial-spaces/{space}/assets` | Authorised financial manager only |
+| GET | `/api/financial-spaces/{space}/obligations` | Active member, existing liabilities and receivables |
+| POST | `/api/financial-spaces/{space}/obligations` | Authorised financial manager only |
+| POST | `/api/financial-spaces/{space}/obligations/{obligation}/settlements` | Authorised financial manager only; underlying obligation must belong to Space |
+| GET | `/api/people/business-spaces` | Authenticated first-party business membership discovery, not proof of HR service activation |
+| GET | `/api/people/business-spaces/{publicId}` | Own active business membership only, with People administrator hint |
+
+**Savings Groups** is the product-facing label; `savings_group` remains the stable persisted Financial Space type for backwards compatibility. Server-side checks govern every write even when the Flutter interface hides an action. All amounts are integer currency minor units as defined in the financial core; no automatic transfer, provider finality or accounting posting is inferred from a budget declaration.
+
+**Business finance privacy:** ordinary employee/member Business Space roles may discover an OpFin People connection but cannot read the organisation's assets, debt positions or budgets. Role-scoped finance viewing requires an approved business finance role, and all checks are repeated server-side.
+
+
+## Savings Groups cycle and governance API (21 October 2026)
+
+The Savings Groups persisted type remains `savings_group`. Routes under `/api/financial-spaces/{space}/savings-groups` require Sanctum authentication, an **active exact-Space membership** and the Savings Group type; draft creation, cycle approval, reconciliation verification and share-out proposals require designated financial officials.
+
+| Method | Suffix | Action and settlement boundary |
+| --- | --- | --- |
+| GET / POST | `/cycles` | List member cycles / official creates draft with dated term |
+| POST | `/cycles/{cycle}/activate` | Separate official activates; never author approves their own cycle |
+| POST | `/cycles/{cycle}/close` | Official closes after cycle end date |
+| GET / POST | `/cycles/{cycle}/contributions` | Member-visible ledger / record contribution **pledge**, no money moved |
+| POST | `/cycles/{cycle}/contributions/{contribution}/verify` | Different financial official links exact-amount statement-matched credit, unique transaction allocation |
+| POST | `/cycles/{cycle}/meetings` | Official records scheduled meeting and required quorum |
+| POST | `/cycles/{cycle}/meetings/{meeting}/record` | Records declared attendance count and minutes; does **not** create a verified vote |
+| POST | `/cycles/{cycle}/loans` | Member creates un-disbursed loan request |
+| POST | `/cycles/{cycle}/loans/{loan}/approve` | Independent official approves proposal; disbursement remains **disabled** without separate lender/legal controls |
+| POST | `/cycles/{cycle}/social-claims` | Member requests welfare support |
+| POST | `/cycles/{cycle}/social-claims/{claim}/approve` | Independent official approves request; no payment implied |
+| GET / POST | `/cycles/{cycle}/shareouts` and `/prepare` | View or propose member allocations of statement-matched saved principal only |
+| POST | `/cycles/{cycle}/shareouts/{allocation}/approve` | Independent official approves the proposal; no payout implied |
+
+**Not finality:** An imported statement match supports internal evidence, not independent provider/bank settlement. Loans, social claims and share-outs do not disburse or report as paid in these endpoints. Unsupported financial movements must not be inferred from a request or approval.
+
+
+## Embedded OpFin People workflow APIs (21 October 2026)
+
+OpFin mobile users must be active members of the exact Business Financial Space. Backend policy separates `HR`, `supervisor`, `payroll` and employee self-service; no role inherits financial visibility from employment. The People domain tables are isolated by `business_space_id` and commands emit restrained audit events. All routes are under `/api/people/spaces/{space}` with Sanctum authentication and throttling.
+
+| Module | Authenticated endpoints | Rules and current limits |
+| --- | --- | --- |
+| HR | `GET/POST employees` | HR officer creates engagements for a Business Space's **existing active member**; employees see only their own engagement |
+| Leave | `GET/POST leave/policies`, `POST leave/policies/{id}/approve`; `GET/POST leave/requests`, `POST leave/requests/{id}/decide` | Approved effective-dated policy; request overlap checks; independent decisions. Full accrual, holiday calculation and payroll deductions are not certified |
+| Attendance | `GET/POST attendance`, `POST attendance/{id}/approve` | Self clock events with idempotency and bounded offline capture; supervisor review. An event is not approved overtime without roster/timesheet reconciliation |
+| Biometric connectors | `GET/POST biometrics/connectors` | Pending device registration only. **No template storage**, biometric match or vendor event feed; activation requires DPIA/privacy and vendor validation |
+| Payroll | `GET/POST payroll/policies`, `POST payroll/policies/{id}/approve`, `GET/POST payroll/periods`, `GET/POST payroll/periods/{id}/lines`, `POST payroll/periods/{id}/prepare|approve|lock` | Separate payroll roles, effective-dated approved statutory policy reference, manually entered gross/deductions, independent approval and locked records; **not certified statutory calculation or payment instructions** |
+| Payslips | `GET payroll/my-payslips` | Locked records for the signed-in person's own engagement only |
+| Asset custody | `GET/POST assets/custody`, `POST assets/custody/{id}/acknowledge|return` | Asset must be owned by employer Space; acknowledgement only by assigned worker; no personal property reclassification |
+| KPI | `GET/POST kpis`, `POST kpis/{id}/report|approve` | Target/evidence owner and supervisor review; no automatic punitive scoring |
+| Appraisals | `GET/POST appraisals`, `POST appraisals/{id}/approve` | Employee self-assessment, supervisor sign-off with at least one approved KPI in the period |
+| Rewards | `GET/POST rewards`, `POST rewards/{id}/approve` | Independent nomination approval; never automatically pays a reward |
+| Field accountability | `GET/POST field-assignments`, `POST field-assignments/{id}/submit|approve` | Evidence and claimed expense require supervisor approval; no automatic reimbursement |
+
+The backend feature is a modular domain inside the existing OpFin Laravel API while the independently deployable People service is completed. **It does not yet satisfy the standalone-service and certified payroll/biometric conditions of the approved Core Release.**
+
+## Authorised cross-Space position report (21 October 2026)
+
+`GET /api/my-spaces/report` returns up to 200 signed-in user's active Financial Spaces for which the caller has finance-view permission. Each Space is a separate ownership boundary with its own currency and recorded positions; **no cross-Space personal net-worth sum** is returned. People-only corporate memberships cannot access employer cash/assets/debts. Figures are recorded positions and are not represented as independently verified bank/provider balances.
+
+
+## SACCO regulatory product controls (21 October 2026)
+
+New `sacco_products` records are always created with `status=draft`; draft products cannot be used to open member accounts. `GET/POST /api/financial-spaces/{space}/sacco/regulatory-attestations` records officer-submitted jurisdiction/licence documents, with `review_status=pending_review`. `POST /api/admin/sacco/{space}/regulatory-attestations/{attestation}/review` is restricted to authenticated platform compliance/operations roles distinct from the submitting actor, and accepts `reviewed` or `rejected`. `POST /api/financial-spaces/{space}/sacco/products/{product}/activate` requires a different SACCO officer, a currently reviewed attestation, the matching jurisdiction and an explicitly permitted product type.
+
+Document review is not independent registry verification and never itself proves deposit-taking/lending authorisation, custody, liquidity or provider certification. Historical products remain unchanged pending separate migration and risk review.
+
+## Signed-in cross-Space reporting (21 October 2026)
+
+`GET /api/my-spaces/report` provides per-Space, per-currency recorded cash/assets/liabilities/receivables to a signed-in member **only** when that member has finance-view authority for the exact Space. The report deliberately returns `personal_aggregate_minor=null`; no group, employer or SACCO value is silently included in the user's personal assets. Values in other currencies are not converted or mixed, and bank/provider reconciliation is separately evidenced. Member-only Business roles cannot view employer finance positions.
+
 ## 21 October 2026 source-linked quick navigation
 
 This documentation update was initially reviewed against source baseline `c04d72f894aba163e6c8aaae668d8ad35a7af731`, then integrated with subsequent merged changes; use the merged release SHA for authoritative runtime status. Routes listed below come from checked-in Laravel route files. Registration does not prove that a feature flag, institution, issuer, payment rail or licence is active. Start with the [integrator guide](INTEGRATOR_GUIDE.md) for authentication, examples, error handling and AI discovery.
@@ -385,3 +469,49 @@ Native API catalogue OpenAPI export includes reviewed operations only. Some indi
 
 Body: three positive internal IDs `borrowerUserId`, `loanProductId`, `financialSpaceId`, plus four strict opaque references `tenantId`, `consentGrantId`, `passportShareId`, `featureSnapshotId`. OpFin requires an active merchant loan product, locally configured active lender authority, the borrower's active owner/admin Financial Space membership, exact tenant linkage and a current borrower-owned `merchant_finance_assessment` grant explicitly scoped to the Space, tenant and exact `opfin-lender-{institutionId}` recipient **before** making the external request. Stolets must independently verify its own current source grant and share for the same actual lender; merchant receipts from either application cannot alone establish business ownership, legal lender authority or permission to disburse. Responses use the conventional `success/message/data` envelope. Disabled, revoked, mismatched, unavailable, stale or invalid upstream evidence fails closed; public/customer accounts cannot invoke this admin endpoint. The external candidate recipient must run separately permissioned consent verification and does not delegate OpFin's lender or borrower authorisation. A configured lender reference is **not externally certified legal authority**, and source Space metadata alone is **not verified incorporation/business ownership**. Production credit usage requires an independently accepted identity-link evidence record, applicable lender licensing/mandate and underwriting acceptance. Default feature setting is **off**. This is not a live credit product activation, and participation remains optional within the wider OpFin Financial Spaces system.
 
+
+
+## October 22, 2026: governed settlements, migration, payroll and privacy controls
+
+**Source contract, not activated product certification.** Routes below remain subject to the enclosing authentication and membership policies. Neither approval nor a provider HTTP acknowledgement is cash or accounting finality.
+
+### Savings Groups: reconciled member financial events
+
+Under `/api/financial-spaces/{space}/savings-groups`:
+
+- `POST cycles/{cycle}/loans/{loan}/allocate-disbursement`
+- `POST cycles/{cycle}/loans/{loan}/allocate-repayment`
+- `POST cycles/{cycle}/social-claims/{claim}/allocate-payout`
+- `POST cycles/{cycle}/shareouts/{allocation}/allocate-payout`
+
+Allocation bodies require `action_id` and `treasury_transaction_id`; never accept client-side amount, payout success or accounting account. The action must be the exact product instruction in the exact Financial Space. A provider **successful and statement-matched** action and a **confirmed, external-reference-matching bank/treasury statement row** are required. A new immutable member journal has two positive integer entries with equal debits and credits, and distinct action/cashbook uniqueness constraints. Unverified or ambiguous outcomes remain pending. Loan repayment implementation covers **principal only**, not interest, fees, instalment scheduling or statutory reporting. The source does not itself initiate a provider payment.
+
+Verified Savings Group contributions now also create a separate balanced member savings/social fund/fines accounting journal, labelled `cashbook_statement_matched_only` to distinguish it from independently provider-confirmed settlement.
+
+### SACCO member deposits, withdrawals and shares
+
+`POST /api/financial-spaces/{space}/sacco/accounts/{account}/allocate-settlement` accepts the same canonical evidence identifiers plus `movement_type=deposit|withdrawal`. An authorised SACCO officer may allocate only an exact member-initiated, provider- and bank-evidenced instruction to an active member/account/product subject to **current independently reviewed jurisdictional evidence**. Available balance, held funds and product minimum restrictions gate withdrawals. Share contributions require integer share-price allocation. Repeated identical evidence returns the original movement without double credit. Regulator document review and controls do not prove an externally issued licence or confer a deposit-taking mandate.
+
+`GET /api/financial-spaces/{space}/member-ledger/integrity` performs an internal, bounded, officer-only review of journal arithmetic, treasury and canonical action links. It **does not** claim external account confirmation, an audit certificate or complete historical verification when the 5,000-journal examination cap is exceeded.
+
+### Investment Clubs: opening import acceptance
+
+For an **investment_club** draft book under `/api/financial-spaces/{space}/accounting/books/{book}`:
+
+- `GET migration/template` gives an exact CSV header and active member identifiers.
+- `POST migration/preview` accepts a `file` CSV and returns member capital, opening assets, balance totals, source hash and import exceptions; no posting occurs.
+- `POST migration/submit` creates a pending, source-hash-idempotent **opening** Club Accounting instruction for a **different** authorised officer to inspect and approve. The existing ownership/trial-balance rules govern activation. This is a narrow CSV opening bridge, not full Excel/Himaya parsing, live portfolio valuation or independently proven historical settlements.
+
+### OpFin People: conditional statutory and device interfaces
+
+`POST /api/people/spaces/{space}/payroll/periods/{period}/statutory-preview` is a **non-posting** payroll-role operation for a draft period and an approved effective-dated resident Uganda policy `UG-RESIDENT-2026-07`. It produces integer PAYE/NSSF figures using the **1 July 2026** resident thresholds published by URA. It requires worker/benefits/residency evidence references and explicit LST and NSSF applicability inputs. Full taxable-benefits review, residence verification, exemptions, employer parallel-run validation and payroll certification remain external gates.
+
+`POST /api/people/device-ingest/{space}/{connector}` is **disabled unless explicitly enabled** with a separately configured HMAC secret. It accepts a strict no-template, signed device event with a 60-second clock window and unique nonce, binds the signature to the `POST` method, exact Business Space and connector, verifies a privacy-reviewed external-subject binding and persists a **submitted** attendance event for supervisor review. No biometric features/templates are stored. The device cannot activate itself: reviewed, independent, role-controlled activation and binding routes are `POST /api/admin/people/spaces/{space}/biometrics/connectors/{connector}/approve`, `POST /api/people/spaces/{space}/biometrics/connectors/{connector}/bindings`, and `POST .../bindings/{binding}/approve`. A real compatible vendor, lawful basis/DPIA, device trust/key rotation, employee notice, retention and device UAT remain outstanding.
+
+`GET /api/people/spaces/{space}/assets/custody-integrity` is an HR-authorised internal check of unacknowledged assignments, offboarded workers and inactive or missing assets. It is not a physical stocktake.
+
+### Shared advisory, privacy and tracking
+
+`GET /api/financial-spaces/{space}/advisories` returns user-permitted recorded debt due/overdue amounts, unreconciled cashbook and pending/ambiguous provider items. These are deterministic exceptions and suggested next review actions, **not credit decisions or bank-verified values**. Business employees with People-only roles do not see employer private finances. `GET /api/financial-spaces/{space}/operations` now restricts a non-officer to their own canonical actions and does not expose other members' phone numbers.
+
+**Not complete:** independent OpFin People deployment and identity federation; biometric vendor credential validation; payroll statutory/external certification; group lending interest/guarantee servicing and provider payment integration tests; SACCO regulator confirmation/complete loan accounting; end-to-end investment club valuation/distribution reconciliation; complete legacy auth endpoint audit; tested migration/rollback; Android/iOS real-device UAT and finance/compliance sign-off. No live production enablement is implied by these routes.

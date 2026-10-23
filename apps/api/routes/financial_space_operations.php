@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\FinancialSpaceAnalyticsController;
 use App\Http\Controllers\Api\FinancialSpaceOperationsController;
 use Illuminate\Support\Facades\Route;
 

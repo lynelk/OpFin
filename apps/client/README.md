@@ -164,6 +164,38 @@ Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/
 
 Investment Club members can recover saved accounting requests and retain access to their own historical member statements after leaving a club. Native statement export supports controlled save/share and HTML print flows; exports contain document bytes rather than authentication credentials. Android combines this with the approximate-location-only Play policy, while iOS uses the native print/share bridge. Financial mutations remain server-authoritative and maker-checker controls are not bypassed by the client.
 
+
+
+## Financial Spaces and Savings Groups (20 October 2026)
+
+The OpFin mobile app now has a **Switch workspace** action from Home and from each Financial Space detail screen. Only currently active memberships returned by `GET /api/financial-spaces` are offered. Roles and capabilities displayed by the UI come from server-issued `workspace` metadata; absent metadata defaults to **no write or management access**. Selection is a route-local session operation, not a locally persisted tenant identifier.
+
+Workspaces include Personal, Household, Business, Savings Groups (`savings_group` persisted type), SACCOs and Investment Clubs. Selecting a Space opens its own financial position, assets, obligations and the shared monthly budget manager. A non-manager can view authorised information without edit controls. All mutations independently enforce server authorisation.
+
+The budget view presents planned limits only. Recorded expense actuals and reconciliation are **not** claimed by the budget UI. The existing personal finance navigation remains unaffected when opening an organisation context.
+
+OpFin People connections appear within authorised Business Spaces and under More > My employment. This is membership discovery, **not** the completed People product; the ten-module People Core Release remains implementation pending and its full embedded experience must be tested before production.
+
+Mobile regression requirements: switch Personal → Savings Groups → SACCO → Investment Club → Business and back; ensure private financial data never carries across Spaces, inactive/suspended Spaces are absent, unauthorised actions never appear and backend writes remain forbidden; verify app logout, token expiry, offline handling and existing Borrow, Home, Activity and More journeys. Run Flutter analyse/tests for this feature before merging.
+
+Employees who have People-only business membership are routed to their authorised employer connection instead of the organisation's financial position. This prevents accidental exposure of corporate balances through general workspace switching.
+
+
+## Savings Groups embedded mobile workspace (21 October 2026)
+
+Financial Spaces now links a Savings Groups operational workspace for active members and officials. An official can create a draft savings cycle, a separate official can activate it, members can pledge contributions and request support or loans, and officials can close a cycle and prepare proposed share-outs. Contribution verification requires a separately statement-matched exact amount; non-final evidence never becomes money automatically.
+
+The app labels these records as pledges, requests and proposals until authoritative confirmation. This is **not** a completed end-to-end regulated savings or lending product; physical meeting quorum, actual loan funding, interest allocation, social-fund payout and share-out settlement remain dedicated acceptance tasks. Test offline/retry safety, exact-Space ownership and denial paths on Android and iOS.
+
+
+## Embedded OpFin People workspace (21 October 2026)
+
+Under More > My employment and eligible Business Financial Space navigation, authorised users enter `PeopleHubScreen` without leaving the OpFin Flutter app. The hub has real scoped API views for workforce engagements, leave, attendance, asset custody, KPIs, appraisals, rewards, field assignments, payslips, payroll periods (payroll roles) and pending biometric connectors (HR roles). Approved actions issue authenticated API requests; absent/inactive memberships cannot view the employer's work records.
+
+Worker engagement ID, user ID and employer-owned asset ID are currently entered through operational forms; these inputs need a reviewed picker/workflow before consumer-grade UAT. Payroll uses manual amounts and does **not** yet compute certified statutory deductions; biometric connectors cannot ingest biometric templates or device attendance while pending legal/vendor validation. No action may be displayed as a completed financial transfer solely because HR has approved it.
+
+Acceptance must include physical-device navigation, employer/employee role privacy, multi-business switching and sign-out, short/long sessions, offline queued attendance with replay resistance, API tests, localisation and accessibility; automated smoke tests do not substitute for UAT.
+
 ## Current source journeys and mobile acceptance (21 October 2026)
 
 The App source includes Personal Financial Life, aspirations/learning, club accounting and saved-request recovery, own capital history after leaving a club, protected native statement save/share/print, and a Financial Intelligence statement journey where explicitly enabled. The same user can participate in several Financial Spaces without duplicating identity or granting one Space access to another.

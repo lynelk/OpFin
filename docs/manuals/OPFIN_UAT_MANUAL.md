@@ -225,3 +225,13 @@ Use synthetic partners, licence references and wording only.
 - Run clean and populated migrations, repeat upgrades, SQLite/PostgreSQL suites, concurrent writers, API compatibility, Web production build, Flutter analysis/tests, Android/iOS release builds and independent financial review on the exact candidate.
 
 Record candidate commit, database state, device/OS and evidence. Targeted harnesses and syntax checks are not full acceptance. Essentials funding, settlement, release, activation/opening accounting, mandate compatibility, older-record adoption and post-reversal refunds require separate completed tests.
+
+## Core Release candidate UAT extension (23 October 2026)
+
+- **UAT-103 Club migration:** download migration template for an authorised book; preview valid, malformed, duplicate, wrong-member and wrong-book inputs; submit only approved balanced inputs; ensure retries do not duplicate members or ledger records, and preserve cutover/reversal provenance.
+- **UAT-104 SACCO regulatory:** submit an attestation as an allowed officer; ensure that author cannot independently approve it; confirm stale/rejected/wrong-jurisdiction evidence blocks product activation; verify no deposit or payout results from a mere review.
+- **UAT-105 SACCO settlement:** reconcile a unique matched provider/bank receipt to one account, repeat and conflict allocation, refund and reversal cases; ensure unverified provider acknowledgement does not become settled cash.
+- **UAT-106 People and Savings Groups:** test active/inactive role switching, cross-employer access denial, consent withdrawal, payroll preview versus payment, approvals, manual/offline attendance replay, contribution matched against bank credit, loan requests without disbursement and shareout proposals without payouts.
+- **UAT-107 Platform release:** verify latest Android/iOS signing, secure data migrations on a populated backup, rollback, Cito provider integration, mobile accessibility and resolved Financial Space tenancy, regulator and lender acceptance.
+
+These are required acceptance scenarios, not completed tests or permission to activate production money flows. Release remains conditional on named independent legal/risk/finance sign-off.
