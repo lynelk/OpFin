@@ -25,7 +25,8 @@ try:
              and len(labels) >= 2 and re.search('[a-z]', labels[-1])
              and all(re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', label) for label in labels)
              and not u.username and not u.password and not u.query and not u.fragment
-             and u.path in ('', '/', '/api', '/api/')
+             and (u.path in ('/api', '/api/') or
+                  (u.path in ('', '/') and host in ('api.opfin.co', 'opfin-production.up.railway.app')))
              and (u.port is None or 1 <= u.port <= 65535))
 except ValueError:
     valid = False
