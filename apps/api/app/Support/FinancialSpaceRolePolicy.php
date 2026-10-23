@@ -64,7 +64,8 @@ final class FinancialSpaceRolePolicy
         return match ($type) {
             'personal' => 'Personal',
             'household' => 'Household',
-            'savings_group' => 'Savings Groups',
+            'savings_group' => 'Savings Club / VSLA',
+            'vsla' => 'VSLA',
             'sacco' => 'SACCO',
             'investment_club' => 'Investment Club',
             'business' => 'Business',

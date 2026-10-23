@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opfin/workspace_access.dart';
 
 void main() {
-  test('Savings Groups uses the new display name without changing the type', () {
+  test('Savings Club / VSLA label preserves the savings_group type', () {
     final space = <String, dynamic>{'type': 'savings_group'};
-    expect(WorkspaceAccess.label(space), 'Savings Groups');
+    expect(WorkspaceAccess.label(space), 'Savings Club / VSLA');
     expect(space['type'], 'savings_group');
   });
 
