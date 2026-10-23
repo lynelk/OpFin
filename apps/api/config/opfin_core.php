@@ -7,7 +7,7 @@
  */
 return [
     'enabled' => filter_var(
-        env('OPFIN_CORE_RELEASE_ENABLED', app()->environment('testing')),
+        env('OPFIN_CORE_RELEASE_ENABLED', env('APP_ENV', 'production') === 'testing'),
         FILTER_VALIDATE_BOOL
     ),
 ];
