@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Route;
 
 // Candidate routes are closed in production until all module-specific
 // legal, consent, employer and finance release gates are approved.
-if (! config('opfin_core.enabled')) {
+if (config('opfin_core.enabled') !== true) {
     return;
 }
 

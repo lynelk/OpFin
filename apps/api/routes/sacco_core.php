@@ -28,9 +28,10 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 if (config('opfin_core.enabled')) {
-Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function (): void {
-    Route::post('/admin/sacco/{space}/regulatory-attestations/{attestation}/review',
-        [SaccoRegulatoryController::class, 'reviewAttestation']);
+    Route::middleware(['auth:sanctum', 'throttle:api', 'role:platform_admin,operations'])->group(function (): void {
+        Route::post('/admin/sacco/{space}/regulatory-attestations/{attestation}/review',
+            [SaccoRegulatoryController::class, 'reviewAttestation']);
+    });
 });
 
 }
