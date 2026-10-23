@@ -12,7 +12,6 @@ if (config('opfin_core.enabled') !== true) {
     return;
 }
 
-
 Route::middleware(['auth:sanctum', 'throttle:api'])
     ->prefix('people/spaces/{space}')
     ->where(['space' => '[0-9]+'])

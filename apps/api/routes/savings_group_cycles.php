@@ -10,7 +10,6 @@ if (config('opfin_core.enabled') !== true) {
     return;
 }
 
-
 Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('financial-spaces/{space}/savings-groups')
     ->where(['space' => '[0-9]+'])->group(function (): void {
         Route::get('cycles', [SavingsGroupCycleController::class, 'index']);
