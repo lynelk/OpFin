@@ -183,6 +183,7 @@ jobs:
             > "$RUNNER_TEMP/opfin-upload-fingerprint.txt"
           python3 - <<'PY'
           import hashlib, json, os, re, shutil
+          from tool.verify_release_signer import verify_single_apk_signer
           from pathlib import Path
           import xml.etree.ElementTree as ET
           temp = Path(os.environ['RUNNER_TEMP'])
@@ -207,8 +208,9 @@ jobs:
           if not match or (match[1], match[3], match[2]) != expected or re.search(r'^application-debuggable', badging, re.M):
               raise SystemExit('APK package, version or debuggability does not match the AAB.')
           fingerprint = (temp / 'opfin-upload-fingerprint.txt').read_text().strip().split('=', 1)[1].replace(':', '').lower()
-          signers = re.findall(r'^Signer #\d+ certificate SHA-256 digest:\s*([0-9a-fA-F]+)', (temp / 'opfin-apk-signature.txt').read_text(), re.M)
-          if len(signers) != 1 or signers[0].lower() != fingerprint:
+          if not verify_single_apk_signer(
+              (temp / 'opfin-apk-signature.txt').read_text(), fingerprint
+          ):
               raise SystemExit('APK signer does not match the protected upload certificate.')
           output = Path('build/release-delivery')
           output.mkdir(parents=True, exist_ok=True)
