@@ -70,3 +70,5 @@ All ten are required for Core Release acceptance; none may be replaced with a pl
 ## Protected source merge, not production activation (23 October 2026)
 
 New People and Savings Groups route trees and new SACCO attestation, product-activation and settlement endpoints require `OPFIN_CORE_RELEASE_ENABLED=true`; this flag defaults **false outside tests**. Legacy SACCO routes are unaffected. Internal tests use explicit testing defaults. This allows review/merge of additive tables and restricted source while employer identity federation, KYC/consent/DPIA, regulator authority, funding, statutory payroll, device attendance and actual customer UAT remain unaccepted. Only authorised operators may change the production flag after separate named sign-off and monitoring/rollback acceptance. No system should interpret a passed unit test, submitted licence reference or locked payroll entry as confirmed money movement.
+
+The same production-default-off gate covers the incoming signed People membership-verification endpoint and candidate club migration template/preview/submit routes; they are not live just because source is merged.

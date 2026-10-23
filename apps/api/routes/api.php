@@ -76,7 +76,9 @@ use App\Http\Controllers\Api\V5P0PlatformController;
 use App\Http\Controllers\Api\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/people/service/verify-membership', [OpFinPeopleServiceController::class, 'verify'])->middleware('throttle:api');
+if (config('opfin_core.enabled')) {
+    Route::post('/people/service/verify-membership', [OpFinPeopleServiceController::class, 'verify'])->middleware('throttle:api');
+}
 Route::get('/health', [HealthController::class, 'show']);
 Route::get('/health/live', [HealthController::class, 'live']);
 Route::get('/health/ready', [HealthController::class, 'ready']);
