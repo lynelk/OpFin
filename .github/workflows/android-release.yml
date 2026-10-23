@@ -139,6 +139,14 @@ jobs:
         env:
           OPFIN_API_BASE_URL: ${{ secrets.OPFIN_API_BASE_URL }}
         run: |
+          # Normalise a public HTTPS origin with no path to the canonical API
+          # base. The release script independently verifies safety and rejects
+          # any other path, insecure scheme, query, credentials or private host.
+          OPFIN_API_BASE_URL="${OPFIN_API_BASE_URL%/}"
+          if [[ "$OPFIN_API_BASE_URL" != */api ]]; then
+            OPFIN_API_BASE_URL="$OPFIN_API_BASE_URL/api"
+          fi
+          export OPFIN_API_BASE_URL
           bash tool/build_release.sh android
           CI=false flutter build apk --release --no-pub \
             "--dart-define=OPFIN_API_BASE_URL=${OPFIN_API_BASE_URL%/}" \

@@ -9,8 +9,7 @@ case "$target" in
     *) echo 'Usage: OPFIN_API_BASE_URL=https://host/api bash tool/build_release.sh android|huawei|ios' >&2; exit 2 ;;
 esac
 : "${OPFIN_API_BASE_URL:?Set the public HTTPS API base URL, including /api}"
-export OPFIN_API_BASE_URL
-python3 - <<'PY'
+OPFIN_API_BASE_URL="$(python3 - <<'PYURL'
 import os
 import re
 from urllib.parse import urlsplit
@@ -26,12 +25,17 @@ try:
              and len(labels) >= 2 and re.search('[a-z]', labels[-1])
              and all(re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', label) for label in labels)
              and not u.username and not u.password and not u.query and not u.fragment
-             and u.path in ('/api', '/api/') and (u.port is None or 1 <= u.port <= 65535))
+             and u.path in ('', '/', '/api', '/api/')
+             and (u.port is None or 1 <= u.port <= 65535))
 except ValueError:
     valid = False
 if not valid:
-    raise SystemExit('Release API URL must use HTTPS, a public DNS hostname and /api, without credentials, query or fragment.')
-PY
+    raise SystemExit('Release API URL must use HTTPS, a public DNS hostname and optional /api, without credentials, query or fragment.')
+# Only root-to-/api normalisation. No arbitrary path is allowed.
+print('https://' + host + ((':' + str(u.port)) if u.port else '') + '/api')
+PYURL
+)"
+export OPFIN_API_BASE_URL
 command -v flutter >/dev/null || { echo 'Flutter must be installed.' >&2; exit 1; }
 flutter pub get
 git diff --exit-code -- pubspec.lock
