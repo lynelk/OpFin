@@ -28,7 +28,8 @@ class WorkspaceAccess {
     switch (space['type']?.toString()) {
       case 'personal': return 'Personal';
       case 'household': return 'Household';
-      case 'savings_group': return 'Savings Groups';
+      case 'savings_group': return 'Savings Club / VSLA';
+      case 'vsla': return 'VSLA';
       case 'sacco': return 'SACCO';
       case 'investment_club': return 'Investment Club';
       case 'business': return 'Business';
