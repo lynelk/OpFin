@@ -28,7 +28,7 @@ class RoleAwareWorkspaceTest extends TestCase
         $spaces = $this->getJson('/api/financial-spaces')->assertOk();
         $group = collect($spaces->json('data.spaces'))->firstWhere('id', $id);
         $this->assertSame('savings_group', $group['type']);
-        $this->assertSame('Savings Groups', $group['workspace']['label']);
+        $this->assertSame('Savings Club / VSLA', $group['workspace']['label']);
         $this->assertTrue($group['workspace']['can_edit_finances']);
         $this->assertTrue($group['workspace']['can_manage_members']);
     }
