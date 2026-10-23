@@ -491,6 +491,15 @@ class AuthController extends Controller
      */
     private function emailResetCode(string $email, string $otp, Carbon $expiresAt)
     {
+        // Never queue one-time codes to log/array mailers in production. A queued job
+        // only means it was accepted by the worker, not delivered to the recipient.
+        // Make this check account-independent to preserve email enumeration protection.
+        if (app()->environment('production') && ! $this->staffResetEmailReady()) {
+            Log::warning('OpFin staff email recovery unavailable: outbound mail configuration is incomplete.');
+
+            return ApiResponse::error('Email password reset is temporarily unavailable. Use your registered phone number instead.', 503);
+        }
+
         $user = $this->staffByEmail($email);
         if ($user !== null && ! $user->hasRole(User::ROLE_STAFF_PENDING_REVIEW)) {
             Otp::updateOrCreate(['phone' => $user->phone], [
@@ -500,9 +509,6 @@ class AuthController extends Controller
                 'verified_at' => null,
                 'verification_token_hash' => null,
             ]);
-            if (app()->environment('production') && in_array(config('mail.default'), ['log', 'array'], true)) {
-                Log::warning('Password reset email requested but no mail provider is configured (MAIL_MAILER).');
-            }
             Mail::to($user->email)->queue(new PasswordResetCode($otp, 5));
         }
 
@@ -510,6 +516,27 @@ class AuthController extends Controller
             'expires_at' => $expiresAt->toIso8601String(),
             'max_attempts' => 3,
         ]);
+    }
+
+    /** Fail closed in production when transport credentials or sender identity are absent. */
+    private function staffResetEmailReady(): bool
+    {
+        $sender = trim((string) config('mail.from.address'));
+        if (! filter_var($sender, FILTER_VALIDATE_EMAIL)
+            || preg_match('/@example\.(com|org|test)$/i', $sender) === 1) {
+            return false;
+        }
+
+        return match ((string) config('mail.default')) {
+            // HTTPS API is supported on every Railway plan; sender-domain verification
+            // and actual delivery must still be verified externally.
+            'resend' => filled(config('services.resend.key')),
+            // SMTP requires verified provider credentials and Railway Pro or above.
+            'smtp' => ! in_array((string) config('mail.mailers.smtp.host'), ['', '127.0.0.1', 'localhost'], true)
+                && filled(config('mail.mailers.smtp.username'))
+                && filled(config('mail.mailers.smtp.password')),
+            default => false,
+        };
     }
 
     private function staffByEmail(string $email): ?User
