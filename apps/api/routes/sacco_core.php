@@ -32,6 +32,4 @@ if (config('opfin_core.enabled')) {
         Route::post('/admin/sacco/{space}/regulatory-attestations/{attestation}/review',
             [SaccoRegulatoryController::class, 'reviewAttestation']);
     });
-});
-
 }
