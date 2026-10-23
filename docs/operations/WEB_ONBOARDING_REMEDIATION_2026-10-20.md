@@ -28,3 +28,6 @@ Status: **DRAFT / NOT DEPLOYED / NOT END-TO-END VERIFIED** (20 October 2026).
 9. Verify website copy and API/operations documentation and complete controlled customer-data-migration/no-regression review.
 
 **Do not merge or deploy based on this document alone.** Collect CI logs, test reports, release SHA, deployment URL, smoke-test evidence and rollback confirmation.
+
+## Source integration hold (23 October 2026)
+The Web route, marketing and server actions are now guarded by **OPFIN_WEB_SIGNUP_ENABLED=true**, default **off**. This allows the source to merge without representing a disabled OTP / unapproved Terms and Privacy notice as an available production sign-up path. Releasing Web registration requires the verified Cito OTP route, actual provider credentials, published/legal version numbers on API and Web, and privacy/consent acceptance. Independently review customer flows and denial/replay cases before enabling; no checkout or loan permission follows registration.

@@ -10,6 +10,7 @@ const API_URL = process.env.OPFIN_API_URL || process.env.NEXT_PUBLIC_OPFIN_API_U
 const verifiedCookie = "opfin_signup_verified";
 const TERMS_VERSION = process.env.OPFIN_LEGAL_TERMS_VERSION;
 const PRIVACY_VERSION = process.env.OPFIN_LEGAL_PRIVACY_VERSION;
+const signupEnabled = () => process.env.OPFIN_WEB_SIGNUP_ENABLED === "true";
 
 async function post(path: string, data: object): Promise<{ ok: boolean; payload: ApiPayload }> {
   if (!API_URL || process.env.NEXT_PUBLIC_USE_MOCK_API === "true") {
@@ -30,6 +31,7 @@ async function post(path: string, data: object): Promise<{ ok: boolean; payload:
 }
 
 export async function startSignup(phoneInput: string, accountType: "individual" | "organisation" = "individual"): Promise<Result> {
+  if (!signupEnabled()) return { ok: false, message: "Web registration is not enabled. Use the OpFin App." };
   const phone = normaliseUgandanPhone(phoneInput);
   if (!phone) return { ok: false, message: "Enter a valid Ugandan mobile phone number." };
   const cookieStore = await cookies();
@@ -40,6 +42,7 @@ export async function startSignup(phoneInput: string, accountType: "individual" 
 }
 
 export async function verifySignup(phoneInput: string, otp: string): Promise<Result> {
+  if (!signupEnabled()) return { ok: false, message: "Web registration is not enabled. Use the OpFin App." };
   const phone = normaliseUgandanPhone(phoneInput);
   if (!phone || !/^\d{6}$/.test(otp)) return { ok: false, message: "Enter a valid phone and six-digit code." };
   const response = await post("/verify-otp", { phone, otp });
@@ -58,6 +61,7 @@ export async function verifySignup(phoneInput: string, otp: string): Promise<Res
 }
 
 export async function finishSignup(formData: FormData): Promise<Result> {
+  if (!signupEnabled()) return { ok: false, message: "Web registration is not enabled. Use the OpFin App." };
   const record = (await cookies()).get(verifiedCookie)?.value;
   if (!record) return { ok: false, message: "Verify your phone before continuing." };
   let verified: { phone: string; token: string };

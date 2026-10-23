@@ -18,6 +18,7 @@ export default async function LoginPage({
   const requestedNext = params?.next ?? "";
   const deletingAccount = requestedNext === "/account/delete";
   const context = params?.context ?? "";
+  const webSignupEnabled = process.env.OPFIN_WEB_SIGNUP_ENABLED === "true";
   const demoShortcutsEnabled =
     process.env.OPFIN_ENABLE_DEMO_SHORTCUTS === "true" && process.env.NODE_ENV !== "production";
 
@@ -48,7 +49,7 @@ export default async function LoginPage({
         <div className="auth-help-row">
           <Link href="/">Back to OpFin</Link>
           <Link href="/forgot-password">Forgot password?</Link>
-          <Link href="/signup">Create account</Link>
+          {webSignupEnabled ? <Link href="/signup">Create account</Link> : null}
           {!deletingAccount ? <Link href="/programme-partner/activate">Activate programme invitation</Link> : null}
         </div>
       }
@@ -96,7 +97,7 @@ export default async function LoginPage({
       </form>
 
       <p className="auth-note">
-        New customers can create an account on Web or in the OpFin App.
+        {webSignupEnabled ? "New customers can create an account on Web or in the OpFin App." : "New customers register through the OpFin App. Web sign-in is for existing authorised customers."}
       </p>
 
       {demoShortcutsEnabled ? (
