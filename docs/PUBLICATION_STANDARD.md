@@ -2,13 +2,14 @@
 
 Status: Canonical documentation control  
 Effective: 23 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
 ## Purpose
 
 This standard defines when an OpFin document is ready to publish, share externally or use as a controlled internal reference.
 
-A document is publication-ready only when its audience, authority, evidence boundary and unresolved gates are clear. Attractive formatting cannot repair an unsupported claim. Humanity has tried.
+A document is publication-ready only when its audience, authority, evidence boundary and unresolved gates are clear. Attractive formatting cannot repair an unsupported claim.
 
 ## Publication classes
 
@@ -97,10 +98,16 @@ Before publication:
 
 1. confirm the document class and audience;
 2. run `make publication-check`;
-3. reconcile product/API facts against current `main`;
+3. reconcile product/API facts against current `main` and the [source-evidence register](operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md);
 4. confirm legal/regulatory/provider facts that cannot be proven by source;
 5. verify external URLs where possible;
 6. confirm no sensitive information is embedded;
 7. record the publication date/version where required.
 
 See `docs/PUBLICATION_REGISTER.md` for the repository classification.
+
+## Route and document synchronisation
+
+Publication-ready API documentation distinguishes registered routes from human-reviewed schema coverage, and provides a plain-language explanation, authenticated audience, exact Financial Space and consent requirements, versioned request/response examples, errors, idempotency and safe recovery for each activated financial operation. A checked-in reference is not a provider acceptance certificate. See the [API integrator guide](../apps/api/docs/api/INTEGRATOR_GUIDE.md) and [publication register](PUBLICATION_REGISTER.md).
+
+For application changes, update user, training, operations and UAT guidance and the source-to-release evidence register in the same pull request. Historical audit records retain their dates and are not silently rewritten to appear current.

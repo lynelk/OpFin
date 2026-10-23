@@ -11,10 +11,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_CURRENT_DOCS = [
     "README.md",
+    "API.md",
     "AGENTS.md",
     "SECURITY.md",
     "docs/README.md",
     "docs/DEVELOPER_START_HERE.md",
+    "docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md",
+    "docs/manuals/ROLE_BASED_TRAINING_PATHS.md",
+    "apps/api/docs/api/INTEGRATOR_GUIDE.md",
     "docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md",
     "docs/product/OPFIN_PRODUCT_BLUEPRINT.md",
     "docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md",
@@ -36,7 +40,7 @@ REQUIRED_CURRENT_DOCS = [
 
 FORBIDDEN_CURRENT_PHRASES = {
     "apps/client/README.md": ["A new Flutter project."],
-    "apps/web/README.md": ["Home | Borrow | Save | Grow | More", "lynelk/OpFin-BE"],
+    "apps/web/README.md": ["Home | Borrow | Save | Grow | More", "lynelk/OpFin-BE", "GitHub Actions remains disabled"],
     "apps/web/docs/api/frontend-backend-contract.md": ['"password": "password"', "investor-demo screens"],
     "apps/web/docs/frontend/screen-map.md": ["phone/password login", "backend offer module is missing"],
     "packages/contracts/README.md": ["initial migration deliberately does not invent"],
@@ -78,6 +82,31 @@ def main() -> int:
         )
         client_changed = any(path.startswith("apps/client/lib/") for path in changes)
         web_changed = any(path.startswith("apps/web/src/") for path in changes)
+
+        # Require the corresponding field-level contract and UAT reference
+        # alongside material changes to registered financial API routes.
+        route_documents = {
+            "apps/api/routes/developer.php": "apps/api/docs/api/DEVELOPER_INTERFACE.md",
+            "apps/api/routes/club_accounting.php": "apps/api/docs/api/CLUB_ACCOUNTING.md",
+            "apps/api/routes/club_client_requests.php": "apps/api/docs/api/CLUB_CLIENT_RECOVERY.md",
+            "apps/api/routes/essentials_collections.php": "apps/api/docs/api/ESSENTIALS_DURABLE_COLLECTIONS.md",
+            "apps/api/routes/financial_intelligence.php": "apps/api/docs/api/FINANCIAL_INTELLIGENCE_CONTRACT.md",
+            "apps/api/routes/payroll_deduction.php": "apps/api/docs/api/PAYROLL_DEDUCTION.md",
+            "apps/api/routes/sacco_core.php": "docs/development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md",
+        }
+        for route, contract in route_documents.items():
+            if route in changes and contract not in changes:
+                errors.append(f"{route} changed without updating contract {contract}")
+        financial_routes = {
+            "apps/api/routes/club_accounting.php",
+            "apps/api/routes/club_client_requests.php",
+            "apps/api/routes/essentials_collections.php",
+            "apps/api/routes/financial_intelligence.php",
+            "apps/api/routes/payroll_deduction.php",
+            "apps/api/routes/sacco_core.php",
+        }
+        if financial_routes.intersection(changes) and "docs/manuals/OPFIN_UAT_MANUAL.md" not in changes:
+            errors.append("Financial API routes changed without corresponding UAT manual review")
 
         if route_changed and "apps/api/docs/api/current-endpoints.md" not in changes:
             errors.append("API routes changed without updating apps/api/docs/api/current-endpoints.md")

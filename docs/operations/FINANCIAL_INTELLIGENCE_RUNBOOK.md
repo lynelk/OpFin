@@ -1,12 +1,13 @@
 # Financial Intelligence operational and acceptance runbook
 
-Status: Draft candidate; not authorised for production activation
+Status: Operational acceptance requirements; feature activation and external issuer evidence remain gated  
+Reviewed: 21 October 2026
 
 ## Release controls
 
-Keep OPFIN_FINANCIAL_INTELLIGENCE_ENABLED false in API and Web until the complete source scope and all quality gates have been accepted. Do not create a Railway resource, enable GitHub Actions, change provider routing, assign a real subscription charge or publish an issuer licence merely to make a demonstration succeed. Existing signed-off services and source-core accounting remain authoritative.
+Keep OPFIN_FINANCIAL_INTELLIGENCE_ENABLED false in API and Web until the complete source scope and all quality gates have been accepted. Do not create a Railway resource, disable or weaken GitHub Actions gates, change provider routing, assign a real subscription charge or publish an issuer licence merely to make a demonstration succeed. Existing signed-off services and source-core accounting remain authoritative.
 
-The initial candidate is PR #132 on feat/financial-intelligence-20260926. Main and unrelated delivery branches are not changed. The local package is a source overlay, not a complete repository checkout or deployable release artifact.
+The initial 26 September candidate was PR #132; the source routes and controllers now exist in current `main`. Earlier isolated tests and unavailable-toolchain notes below are **historical candidate evidence**, not the current integrated release results. Do not infer that a source merge activates an issuer or completes production acceptance.
 
 ## Prerequisites and observed execution
 
@@ -61,3 +62,7 @@ PDF parsing, structural screening and retention purging now exist in source and 
 Resolve outstanding commercial, reporting and analytical scope in the product register. Update existing manuals and endpoint indexes without deleting their prior requirements.
 
 An absent data source, unknown financial amount, quarantined document or unexecuted test must remain visibly unknown. No mock institution, fabricated statement, seeded licence, causal NPL claim or invented profitability measure belongs in production evidence.
+
+## Current review and external gates (21 October 2026)
+
+Read the [Financial Intelligence API contract](../../apps/api/docs/api/FINANCIAL_INTELLIGENCE_CONTRACT.md), [role-based training](../manuals/ROLE_BASED_TRAINING_PATHS.md), [source-to-release register](DOCUMENTATION_ALIGNMENT_2026-10-21.md) and [issuer/statement six-issue register](ISSUES_17_103_128_136_176_190_STATUS.md). The 17 October source advances included statement review/appeal and issuer-trust handling, but issuer-specific genuine source samples, external statement authenticity, retention/hold drills and device acceptance remain separate. Do not publish a third-party issuer as certified based on a synthetic parser or an internal approval label.

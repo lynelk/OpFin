@@ -1,9 +1,9 @@
 # Current capability supplement: clubs, Essentials and release evidence
 
 Status: Controlled task, training and acceptance reference  
-Reviewed: 25 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)  
-Authority/closure verification candidate: `e336daf4962cb735d1ff0b2360690b1eaffab83e`
+Historical 25 September authority/closure test candidate: `e336daf4962cb735d1ff0b2360690b1eaffab83e`
 
 Read with the [user](OPFIN_USER_MANUAL.md), [training](OPFIN_TRAINING_MANUAL.md), [operational](OPFIN_OPERATIONAL_MANUAL.md) and [UAT](OPFIN_UAT_MANUAL.md) manuals. The [24 September evidence](../operations/DELIVERY_EVIDENCE_2026-09-24.md) is a historical record, not a live deployment status. The [25 September verification record](../operations/ESSENTIALS_AUTHORITY_VERIFICATION_2026-09-25.md) distinguishes tested source, independent approval and actual deployment. These tasks are not a blanket production acceptance certificate.
 
@@ -92,7 +92,7 @@ Record task ID, tester/role, source commit, build/environment/channel, synthetic
 A passing lesson does not certify the whole product. A passing build does not certify provider activation. A published manual does not certify an untested or still-failing workflow.
 
 
-## Current application alignment and acceptance boundary (18 October 2026)
+## 18 October source observations, reviewed again 21 October 2026
 
 ### Club accounting recovery/export
 The candidate includes encrypted server-persisted request envelopes for instructions and statement issuance; original reference/content-hash resume after reload/device change; explicit acknowledgement or cancellation only before domain submission; current-authorisation checks; former-member access restricted to own retained capital history; and authenticated Web/native mobile statement export. Acknowledgement is not accounting approval or payment execution. A system share/print dialogue does not prove delivery.
@@ -101,4 +101,10 @@ The candidate includes encrypted server-persisted request envelopes for instruct
 The candidate includes payload-bound durable collection identity; persistence before provider submission; provider-observation retention before accounting application; original-request reconciliation for uncertain outcomes; one-in-flight capacity control; reservation-versus-due-debt separation; exposure deduplication across production/legacy copies; original-policy repayment allocation/reversal; and append-only balanced servicing evidence.
 
 ### Not accepted / incomplete
-The complete Laravel recovery/Essentials integration tests have not run in the full application environment. Full database/migration/concurrency suites, Next.js production build, Flutter analysis/tests, Android/iOS release builds, browser/device/accessibility checks and independent financial review remain outstanding. Essentials lender funding/drawdown, biller settlement, lender release, activation/opening accounting, full mandate-origination compatibility, older-record adoption and customer refunds after service reversal remain incomplete. The separate credential-log incident is unresolved. No merge/deployment/provider activation/live payment/financial-launch acceptance is implied by targeted local checks.
+The isolated September Laravel recovery/Essentials tests did not establish current-head acceptance; check the exact integrated build and release gates separately. Full database/migration/concurrency suites, Next.js production build, Flutter analysis/tests, Android/iOS release builds, browser/device/accessibility checks and independent financial review remain outstanding. Essentials lender funding/drawdown, biller settlement, lender release, activation/opening accounting, full mandate-origination compatibility, older-record adoption and customer refunds after service reversal remain incomplete. The separate credential-log incident is unresolved. Earlier isolated test results do not prove current `main` acceptance, provider activation or a financial launch.
+
+## Current modules and learning boundaries (21 October 2026)
+
+The current repository includes separate investment-club accounting and treasury domains, encrypted saved-request recovery, guarded Essentials repayment servicing, Financial Intelligence/statement analysis and review, SACCO/white-label and asset-finance source workflows, lender/investor growth-readiness inventory, payroll/referral cases and the read-only Developer Centre. This list describes source scope, not universal activation. Review the [latest source-to-release register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) and [role-based training](ROLE_BASED_TRAINING_PATHS.md) for who may do what and how to demonstrate it.
+
+Retain the original September arithmetic/training cases as examples, not as contemporary certification. Live institutional financial claims still need reconciled source statements, actual provider finality, binding agreements and appropriate regulatory acceptance. Unfinished Essentials funding, settlement, release and reversal-related refunds remain separate controls.

@@ -1,15 +1,17 @@
 # Canonical OpFin implementation status
 
-Status: Current implementation evidence index  
+Status: Historical implementation evidence index, baseline 24 September 2026  
 Reviewed: 24 September 2026  
 Language: English (United Kingdom)  
 Source baseline: `35abeeef57ff8b4a29d6bd5ba2d6575fa9e54c7f`
 
-## Current interpretation
+## Interpretation at the original review date
 
-This register identifies source capabilities and historical milestones. It does not label the entire platform accepted or fully deployed. The [concept/plan comparison](CONCEPT_AND_PLAN_COMPARISON.md) preserves the original requirements, and the [delivery evidence](../operations/DELIVERY_EVIDENCE_2026-09-24.md) records the current build failures and unresolved Essentials findings.
+**This document preserves the 24 September 2026 evidence and terminology.** Its test totals, failures, disabled CI assertion and open-work wording are historical, not the current `main` status as of 21 October. Read [current state](../CURRENT_STATE.md) and the [21 October source-to-release register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) for current interpretation.
 
-The current API build executed 263 tests: 257 passed and six failed. Web compiled but failed TypeScript checking. Worker/scheduler deployment successes do not establish API/Web parity. Internal defects, missing acceptance evidence and external activation are separate categories.
+This register identifies source capabilities and historical milestones. It does not label the entire platform accepted or fully deployed. The [concept/plan comparison](CONCEPT_AND_PLAN_COMPARISON.md) preserves the original requirements, and the [delivery evidence](../operations/DELIVERY_EVIDENCE_2026-09-24.md) records build failures at that date and unresolved Essentials findings.
+
+The API build reviewed on 24 September executed 263 tests: 257 passed and six failed. Web compiled but failed TypeScript checking. Worker/scheduler deployment successes do not establish API/Web parity. Internal defects, missing acceptance evidence and external activation are separate categories.
 
 ## Financial Space and commercial foundations
 
@@ -54,7 +56,7 @@ The 23 September register records Cito-preferred routing and controlled direct b
 
 The earlier register reported API, worker and scheduler success, current schema, first-attempt readiness, no observed fatal runtime errors and no new infrastructure for commit `e8e11b1d348f252cae7c5ee3870145c8cb733e10`. These are preserved as historical recorded assertions for that commit, not independently re-certified here and not evidence for the current head.
 
-GitHub Actions remains disabled at the owner's direction. Do not interpret older wording about enabling Actions as permission to change that setting. Equivalent candidate-specific evidence remains required.
+At the 24 September review, GitHub Actions was disabled at the owner's direction. This is historical policy context; later workflows are active, and their current release gates must be assessed at the exact commit.
 
 ## Subsequent treasury, location and Essentials work
 
@@ -62,7 +64,7 @@ GitHub Actions remains disabled at the owner's direction. Do not interpret older
 
 Implemented source provides account records, cashbook transactions, mapped CSV imports, source-hash reuse, suggested matching, explicit exception decisions, confirmation and frozen account/consolidated statements with currency separation and HTML/CSV representations.
 
-Five current historical-date/baseline regression failures prevent acceptance. Treasury is not full capital-call/member-capital, NAV/unitisation, distributions or investment-performance accounting. Detailed import/reconciliation is a Web workflow; complete mobile administration is not established. See [treasury scope](INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md).
+Five historical-date/baseline regression failures prevented acceptance at this snapshot; later source changes require independent candidate-specific evidence. Treasury is not full capital-call/member-capital, NAV/unitisation, distributions or investment-performance accounting. Detailed import/reconciliation is a Web workflow; complete mobile administration is not established. See [treasury scope](INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md).
 
 ### Optional Location Context
 

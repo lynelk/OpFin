@@ -1,7 +1,8 @@
 # OpFin — Canonical Product Breakdown
 
-**Classification:** Canonical product architecture and capability register, **proposed for review** (not yet merged to `main`).
-**Prepared:** 17 October 2026
+**Classification:** Canonical product architecture and capability register. This document is in `main`; proposed requirements are not necessarily implemented or release-accepted.
+**Prepared:** 17 October 2026  
+**Source review:** 21 October 2026
 **Language:** English (United Kingdom)
 **Source of truth:** `lynelk/OpFin`; `docs/product/OPFIN_PRODUCT_BLUEPRINT.md`, `docs/product/OPFIN_CONCEPT_NOTE.md`, `docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md`, `docs/CURRENT_STATE.md`, `docs/product/CANONICAL_IMPLEMENTATION_STATUS.md`, and the P0–P1 architecture proposal in this draft branch. Code examples were checked against Next.js portal and Flutter Home source.
 
@@ -297,3 +298,7 @@ Every implementation task must declare:
 - effect on financial continuity, dignity and customer-defined aspirations.
 
 **Canonical reference set:** [Product Blueprint](OPFIN_PRODUCT_BLUEPRINT.md); [Concept Note](OPFIN_CONCEPT_NOTE.md); [Financial Spaces Domain Model](../architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md); [Financial Life Architecture](../architecture/FINANCIAL_LIFE_CONTINUITY_AND_DIGNITY.md); [P0–P1 Universal Financial Life Programme](OPFIN_P0_P1_UNIVERSAL_FINANCIAL_LIFE.md); [Current State](../CURRENT_STATE.md). These documents retain their separate purposes; the present breakdown is a navigation and decision register, not permission to replace their detailed legal/accounting contracts.
+
+## Source implementation versus target register (21 October 2026)
+
+This complete product breakdown is the product requirement and ownership reference. Its presence in `main` does not mean every listed financial product, agent, safeguarding workflow or regulated service is delivered. Review the [source-to-release register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md), [current state](../CURRENT_STATE.md) and [integrator guide](../../apps/api/docs/api/INTEGRATOR_GUIDE.md) for what is registered and what is externally gated. Source-backed client/server features, legal provider authority, money settlement and real-device acceptance must remain separately marked.

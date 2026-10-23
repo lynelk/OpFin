@@ -1,6 +1,6 @@
 # OpFin Backend
 
-Updated: 23 September 2026
+Reviewed: 21 October 2026
 
 OpFin is the server-authoritative financial, customer, programme and partner-state layer for the Uganda-first OpFin platform.
 
@@ -39,11 +39,7 @@ Clients render and submit authorised instructions. They do not create competing 
 
 ## Integrations
 
-Cito is the preferred third-party gateway where configured. gnuGrid/CRB and MNO data may route through Cito under the configured capability policy.
-
-CPay is the preferred production money-movement route. Certified direct-provider fallback remains an explicit, governed configuration, not an automatic escape hatch.
-
-KYC capability routing may use Cito/gnuGrid for NIN/phone evidence while biometric/document evidence uses an evidence-capable provider until an equivalent certified contract exists.
+Cito is the governed third-party orchestration boundary where capability and country permissions are verified. Identity, credit-information, communications and money movement retain separate consent, source and regulatory controls. A certified provider route may be explicitly configured, but an ambiguous original request must be reconciled before any different route is considered. Biometric/document/official identity evidence is not fabricated when a verified provider capability is absent.
 
 ## New-customer authentication
 
@@ -73,8 +69,11 @@ Missing costs/revenue remain missing. Principal, premium and investment capital 
 
 ```bash
 composer install
-cp .env.example .env
-php artisan key:generate
+if [ ! -f .env ]; then
+  cp .env.example .env
+  php artisan key:generate
+fi
+# Verify the selected isolated local database before running migrations.
 php artisan migrate
 php artisan test
 ./vendor/bin/pint --test
@@ -92,6 +91,12 @@ php artisan route:list --json
 
 ## Release evidence
 
-At reviewed `main` commit `1a580e490ccb4cd5cc55f06ea9d09fad6619fd7e`, Railway statuses report successful API/web/worker/scheduler deployment, but no GitHub Actions workflow run is attached to that exact head. Do not represent the exact head as fully release-certified until the required gates run.
+At 21 October 2026, baseline `main` `c04d72f894aba163e6c8aaae668d8ad35a7af731` has successful GitHub deployment-status contexts for API, Web, worker and scheduler. This is not a fresh full Laravel/PostgreSQL, Flutter/device, live provider or financial acceptance pass. Follow the [source-to-release register](../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).
 
 External provider credentials/contracts, legal approvals, programme agreements and production certification remain activation evidence, not values to invent in source or documentation.
+
+## Developer and agent discovery (21 October 2026)
+
+Read [API entry](../../API.md) and the [novice-to-advanced integrator guide](docs/api/INTEGRATOR_GUIDE.md). Discovery routes are in `routes/developer.php`; public manifest/guides differ from Sanctum-authenticated role-filtered catalogue, reviewed-only OpenAPI and read-only agent-tool descriptions. Routes in `routes/financial_intelligence.php`, `club_accounting.php`, `club_client_requests.php`, `essentials_collections.php`, `sacco_core.php` and `payroll_deduction.php` have different role, consent, feature and provider gates. The route list alone is not their contract or proof of activation.
+
+Before publishing an endpoint change, update [current routes](docs/api/current-endpoints.md), field-level contract, positive and denied tests, operator/user tasks and UAT. `php artisan api:catalogue --check --require-complete` must expose missing reviewed schemas rather than guess them.

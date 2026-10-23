@@ -1,11 +1,11 @@
 # Current API endpoints
 
 Status: Current endpoint navigation and contract index  
-Reviewed: 27 September 2026  
+Reviewed: 21 October 2026  
 Reviewed: 3 October 2026  
 Language: English (United Kingdom)
 
-The complete domain reference from main `3924a26913f85067a3ac900c78fa80125ca589fc` is preserved without content loss in [Domain endpoints](domain-endpoints.md), including the lender-orchestration additions. This index joins that detailed reference with the [Developer Centre contract](DEVELOPER_INTERFACE.md). Registration, reviewed schema, authorisation, provider activation and financial acceptance are separate states.
+The dated domain reference from the earlier `3924a26913f85067a3ac900c78fa80125ca589fc` baseline is preserved for compatibility in [Domain endpoints](domain-endpoints.md), including the lender-orchestration additions. This index joins that detailed reference with the [Developer Centre contract](DEVELOPER_INTERFACE.md). Registration, reviewed schema, authorisation, provider activation and financial acceptance are separate states.
 
 ## Developer and AI discovery
 
@@ -358,3 +358,30 @@ A configured product or capital mandate is **not** asserted to have certified pa
 For club recovery, use [Club Client Recovery API contract](CLUB_CLIENT_RECOVERY.md). Saved requests are encrypted, user/book/purpose-scoped, hash-bound and re-authorised on recovery. Resume returns the original domain result; acknowledgement releases the recovery slot and is not accounting approval or payment execution. Cancellation applies only before domain submission.
 
 For Essentials, collection identity is persisted before provider submission and uncertain outcomes are reconciled against the original request. Capacity reservation is separate from due debt; provider acknowledgement is not settlement finality. Do not infer a universal idempotency-key location or response status from route registration; consult the operation-specific contract. The current candidate does not establish complete lender funding/drawdown, biller settlement, lender release, activation/opening accounting, mandate compatibility, older-record adoption or post-service-reversal refunds. Full API/database/client acceptance remains outstanding.
+
+## 21 October 2026 source-linked quick navigation
+
+This documentation update was initially reviewed against source baseline `c04d72f894aba163e6c8aaae668d8ad35a7af731`, then integrated with subsequent merged changes; use the merged release SHA for authoritative runtime status. Routes listed below come from checked-in Laravel route files. Registration does not prove that a feature flag, institution, issuer, payment rail or licence is active. Start with the [integrator guide](INTEGRATOR_GUIDE.md) for authentication, examples, error handling and AI discovery.
+
+| Purpose | Source route | Detailed reference |
+| --- | --- | --- |
+| Public discovery | `GET /api/developer/manifest`, `/public`, `/guides` | [Developer interface](DEVELOPER_INTERFACE.md) |
+| Role-filtered operations | `GET /api/developer/catalogue`, `/operations/{operation}`, `/openapi`, `/agent-tools` | Reviewed schema coverage and AI read-only boundary |
+| Club book and ownership | `GET /api/accounting/club-schema`, `GET /api/accounting/my-club-books` | [Club accounting](CLUB_ACCOUNTING.md) |
+| Club saved requests | `GET /api/accounting/saved-requests`, `POST /api/financial-spaces/{space}/accounting/books/{book}/client-requests/prepare/{purpose}`, `/inspect`, `/submit`, `/acknowledge`, `/cancel` | [Exact recovery](CLUB_CLIENT_RECOVERY.md) |
+| Essentials recovery | `GET /api/essentials/repayments/{repayment}/collection-status`, `POST /api/essentials/repayments/{repayment}/cancel-unsubmitted` | [Durable collections](ESSENTIALS_DURABLE_COLLECTIONS.md) |
+| Financial Intelligence | `GET /api/financial-spaces/{space}/intelligence/context`, sources/imports/reports and issuer/statement review routes | [Feature-gated FI contract](FINANCIAL_INTELLIGENCE_CONTRACT.md) |
+| SACCO and white-label | `GET /api/financial-spaces/{space}/sacco/products`, `GET /api/white-label/resolve` | [SACCO plan](../../../../docs/development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md) |
+| Payroll and referrals | `GET /api/payroll-deduction/cases`, `POST /api/partner/financial-intents/{customer}` | [Payroll and partner contracts](ACCOUNT_AND_DATA_DELETION.md), [referrals](PARTNER_FINANCIAL_INTENTS.md) |
+| Growth readiness | `GET /api/admin/growth-readiness` | [Configuration versus activation](../../../../docs/operations/ISSUES_17_103_128_136_176_190_STATUS.md) |
+
+Native API catalogue OpenAPI export includes reviewed operations only. Some individual domain APIs still lack reviewed request/response contracts. Inspect actual controller tests and role/Space checks before enabling an SDK or AI-based integration. Refer to the [source-to-release evidence register](../../../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) for explicit outstanding acceptance.
+
+## Optional merchant Business Passport shadow verification (20 October 2026)
+
+| Method | Route | Authority | Behaviour |
+| --- | --- | --- | --- |
+| POST | `/api/admin/business-passport/shadow-review` | Authenticated platform administrator only; feature flag and independently configured HTTPS partner credentials required | Reads a consent-checked, source-quality-gated, time-bound third-party commerce-evidence snapshot. Returns quality indicators and `manual_review`; no loan eligibility, score, recognised borrower income, product quote, disbursement, investor subscription, ledger write or customer-facing decision. |
+
+Body: three positive internal IDs `borrowerUserId`, `loanProductId`, `financialSpaceId`, plus four strict opaque references `tenantId`, `consentGrantId`, `passportShareId`, `featureSnapshotId`. OpFin requires an active merchant loan product, locally configured active lender authority, the borrower's active owner/admin Financial Space membership, exact tenant linkage and a current borrower-owned `merchant_finance_assessment` grant explicitly scoped to the Space, tenant and exact `opfin-lender-{institutionId}` recipient **before** making the external request. Stolets must independently verify its own current source grant and share for the same actual lender; merchant receipts from either application cannot alone establish business ownership, legal lender authority or permission to disburse. Responses use the conventional `success/message/data` envelope. Disabled, revoked, mismatched, unavailable, stale or invalid upstream evidence fails closed; public/customer accounts cannot invoke this admin endpoint. The external candidate recipient must run separately permissioned consent verification and does not delegate OpFin's lender or borrower authorisation. A configured lender reference is **not externally certified legal authority**, and source Space metadata alone is **not verified incorporation/business ownership**. Production credit usage requires an independently accepted identity-link evidence record, applicable lender licensing/mandate and underwriting acceptance. Default feature setting is **off**. This is not a live credit product activation, and participation remains optional within the wider OpFin Financial Spaces system.
+
