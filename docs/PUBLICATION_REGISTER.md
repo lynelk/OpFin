@@ -1,6 +1,6 @@
 # OpFin publication register
 
-Reviewed: 26 September 2026  
+Reviewed: 21 October 2026  
 Authority: `docs/PUBLICATION_STANDARD.md`
 
 This register controls how repository documentation should be published or shared. Publication classes identify intended audiences, not access controls; a public repository does not protect a document labelled internal.
@@ -32,6 +32,7 @@ Suitable for the named professional audience rather than unrestricted consumer p
 - `docs/COMMUNITY_FINANCE_AND_SACCO_CORE.md`
 - `docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md`
 - `apps/api/docs/README.md`
+- `API.md`, `apps/api/docs/api/INTEGRATOR_GUIDE.md` and `apps/api/docs/api/DEVELOPER_INTERFACE.md`
 - `apps/api/docs/api/API_QUICK_REFERENCE.md`
 - `apps/api/docs/api/current-endpoints.md`
 - `apps/api/docs/api/frontend-backend-contract.md`
@@ -48,6 +49,8 @@ Publication-quality for internal controlled use, but not intended for unrestrict
 - `docs/FINANCIAL_CHANGE_GOVERNANCE.md`;
 - `docs/TRAINING_AND_USER_GUIDE_FOUNDATION.md`;
 - `docs/manuals/OPFIN_TRAINING_MANUAL.md`;
+- `docs/manuals/ROLE_BASED_TRAINING_PATHS.md`;
+- `docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md`;
 - `docs/manuals/OPFIN_OPERATIONAL_MANUAL.md`;
 - `docs/manuals/OPFIN_UAT_MANUAL.md`;
 - `docs/product/CANONICAL_IMPLEMENTATION_STATUS.md`;
@@ -72,7 +75,7 @@ The following paths retain historical context and must not be presented as curre
 - `docs/releases/`;
 - dated gap analyses where superseded by current canonical status.
 
-Historical evidence can be published as historical evidence if its original date, scope and limitations remain clear. The 24 September comparison and delivery records are not silently rewritten by the 26 September concept review; use the new current-state index for the fresher evidence.
+Historical evidence can be published as historical evidence if its original date, scope and limitations remain clear. The 24 September comparison, earlier test failures and dated release records retain their original evidence scope; use the 21 October current-state index and alignment register for the later source baseline.
 
 ## Known publication gates
 
@@ -104,7 +107,7 @@ A document moves to Public or Controlled external status only when:
 
 - content matches current `main`;
 - unresolved factual gates are completed or clearly excluded from the published artefact;
-- `make publication-check` passes;
+- `make publication-check` and applicable documentation-link and API-contract checks pass;
 - required legal/compliance/brand approval has been obtained for the intended audience.
 
 This register identifies intended audience and review boundaries. It does not claim those approvals, full-repository validation or financial activation have occurred merely because a documentation change is committed.

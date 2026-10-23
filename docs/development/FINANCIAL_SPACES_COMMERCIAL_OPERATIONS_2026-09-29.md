@@ -1,6 +1,7 @@
 # Financial Spaces commercial operations completion programme
 
-Status: Implementation branch; not production activation
+Status: Current source implementation programme with remaining activation and acceptance gates  
+Reviewed: 21 October 2026
 Branch: `feature/financial-spaces-commercial-operations-20260929`
 
 ## Target
@@ -52,3 +53,7 @@ No AudMon code contract exists in current OpFin source. Integration remains bloc
 - add AudMon after supplied contract;
 - extend pricing administration, approval/versioning and partner settlement;
 - end-to-end tests on PostgreSQL plus browser/device/accessibility and provider sandbox acceptance.
+
+## Current route and source clarification (21 October 2026)
+
+Current `main` registers Financial Space operational action and analytics routes in `apps/api/routes/financial_space_operations.php`; this is source registration only. End-to-end provider finality, full club cash-intent linkage, SACCO subledger/regulated activation, verified service-pricing, browser/App acceptance and third-party contract evidence remain explicit tasks. Do not describe a configured operational intent as an externally settled payment. See [current evidence register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) and [operations manual](../manuals/OPFIN_OPERATIONAL_MANUAL.md).

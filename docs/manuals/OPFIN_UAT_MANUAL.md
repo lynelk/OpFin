@@ -1,12 +1,29 @@
 # OpFin user acceptance testing manual
 
 Status: Controlled acceptance requirements, not a completed test certificate  
-Version: 24 September 2026  
+Version: 21 October 2026  
 Language: English (United Kingdom)
 
 Record tester/role, exact source and build, environment/channel/device, date, fixture, actual result, non-sensitive evidence, defect reference and accountable sign-off for every case. Use synthetic data unless a separately authorised production exercise requires otherwise.
 
 Existing UAT identifiers 01–66 are retained. New treasury/Essentials/release cases use `DEL-` identifiers in the [current capability supplement](CURRENT_CAPABILITY_SUPPLEMENT.md), which forms part of this manual. No expected result below is a claim that the test has passed.
+
+## 21 October 2026 cross-domain release matrix
+
+**This is an acceptance plan, not a pass certificate.** Verify the exact running build, migration and feature flag in each environment. The four successful deployment contexts observed at the review baseline are not a substitute for scenario-by-scenario evidence.
+
+| Journey | Positive scenario | Required negative/recovery scenario | Separate acceptance |
+| --- | --- | --- | --- |
+| Personal Financial Life | View goals/financial position and source-led guidance | Missing data, privacy/consent withdrawal, another Space | No risk-scoring or suitability claim from wellbeing alone |
+| Club capital and treasury | Submit instruction, independent checker approves, issue statement | Interrupted request resumes once; self-approval denied; former member sees only own history | Reconciled external source is distinct from ledger posting |
+| Essentials | Purpose-bound offer and exact partial repayment allocation | Ambiguous collection, duplicate provider reference, pending capacity, reversal | Lender authority, beneficiary settlement, funding/release/refund and older records |
+| Financial Intelligence/issuer statements | Scoped source import, independent publication, statement review/appeal | Bad controls, cross-Space access, unsupported PDF, revoked consent, stale issuer | Independent issuer authenticity and source-led approval |
+| Payroll and partner intent | Confirm authorised undertaking/referral | Missing undertaking, expired reservation, changed idempotency payload | Provider evidence, no invented reservation release or offer approval |
+| SACCO, asset finance and white label | Governed member/product/case/brand journeys | Missing legal/KYB, guarantor consent or domain proof | Regulated product, custody and verified TLS/DNS activation |
+| Investor/lender growth | Read configured/eligible product inventory and proper disclosures | Unfunded mandate, missing consent, invalid role, other customer's records | Real custody/capital, legally supported product/channel |
+| APIs and AI discovery | Search reviewed contract as actual role | Unreviewed registration-only contract, wrong role/Space, forbidden financial executor | Full current contract and safety tests |
+
+Run API (SQLite and PostgreSQL where applicable), migration/upgrade, replay/concurrency, privacy, Web build/browsers, Flutter Android/iOS tests and real-device/accessibility acceptance. Record owner sign-off and missing external evidence; do not convert a non-production synthetic test into production authorisation. See [training paths](ROLE_BASED_TRAINING_PATHS.md) and [source-to-release evidence](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).
 
 ## Current acceptance position
 

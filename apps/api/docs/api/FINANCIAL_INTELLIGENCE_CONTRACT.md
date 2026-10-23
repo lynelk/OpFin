@@ -1,6 +1,7 @@
 # Financial Intelligence API contract
 
-Status: Source candidate; full framework integration and release acceptance outstanding
+Status: Source-registered, feature- and evidence-gated contract; live institutional acceptance separate  
+Reviewed: 21 October 2026
 Language: English (United Kingdom)
 
 ## Authentication and authority
@@ -128,3 +129,7 @@ The Web workspace is /spaces/{id}/intelligence. Its typed server-only client is 
 ## Acceptance limitations
 
 This contract describes source intent, not a completed live integration. Exact route-cache behaviour, model binding, database schema compatibility, grant revocation races, migrations, rendering and all dependent workflows require actual framework/build/browser tests. No direct bank/MNO/core connector is advertised as certified by this candidate.
+
+## Current source and issuer-trust boundary (21 October 2026)
+
+Financial Intelligence routes are registered in current `main` through `FinancialIntelligenceServiceProvider` and are protected by Sanctum, throttling, the feature gate and a Financial Space request guard. Source support for review/appeal and original-statement analysis does not authenticate an issuer, validate an institution's bank ledger or authorise a credit decision. Unrecognised, stale or unsupported layouts remain unconfirmed. Current external evidence and acceptance limits are in the [21 October release-evidence register](../../../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) and [operational runbook](../../../../docs/operations/FINANCIAL_INTELLIGENCE_RUNBOOK.md).

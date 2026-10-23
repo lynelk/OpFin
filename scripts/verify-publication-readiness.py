@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 PUBLIC_FILES = [
     "README.md",
+    "API.md",
     "docs/CURRENT_STATE.md",
     "docs/README.md",
     "docs/BRAND_IMPLEMENTATION.md",
@@ -26,9 +27,19 @@ CONTROLLED_EXTERNAL_FILES = [
     "docs/COMMUNITY_FINANCE_AND_SACCO_CORE.md",
     "docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md",
     "apps/api/docs/README.md",
+    "apps/api/docs/api/INTEGRATOR_GUIDE.md",
+    "apps/api/docs/api/DEVELOPER_INTERFACE.md",
+    "apps/api/docs/api/CLUB_ACCOUNTING.md",
+    "apps/api/docs/api/CLUB_CLIENT_RECOVERY.md",
+    "apps/api/docs/api/ESSENTIALS_DURABLE_COLLECTIONS.md",
+    "apps/api/docs/api/FINANCIAL_INTELLIGENCE_CONTRACT.md",
+    "docs/product/FINANCIAL_INTELLIGENCE.md",
+    "docs/product/OPFIN_CANONICAL_PRODUCT_BREAKDOWN.md",
+    "docs/product/OPFIN_P0_P1_UNIVERSAL_FINANCIAL_LIFE.md",
     "apps/api/docs/api/API_QUICK_REFERENCE.md",
     "apps/api/docs/api/current-endpoints.md",
     "apps/api/docs/api/frontend-backend-contract.md",
+    "docs/manuals/ROLE_BASED_TRAINING_PATHS.md",
 ]
 
 BLOCKERS = [
