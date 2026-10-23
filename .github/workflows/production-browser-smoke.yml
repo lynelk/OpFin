@@ -1,0 +1,40 @@
+name: Production browser smoke (read-only)
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'scripts/production-browser-smoke.cjs'
+      - '.github/workflows/production-browser-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guest-browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out exact commit
+        uses: actions/checkout@v4
+      - name: Install Playwright without modifying application dependencies
+        run: |
+          mkdir -p "$RUNNER_TEMP/opfin-browser"
+          cd "$RUNNER_TEMP/opfin-browser"
+          npm init -y
+          npm install --no-audit --no-fund --save-exact playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Run read-only browser checks against current production
+        env:
+          NODE_PATH: ${{ runner.temp }}/opfin-browser/node_modules
+          OPFIN_PRODUCTION_WEB_URL: https://opfin-web-production.up.railway.app
+        run: node scripts/production-browser-smoke.cjs
+      - name: Archive non-sensitive login-page screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opfin-production-browser-smoke
+          path: opfin-production-login-smoke.png
+          if-no-files-found: ignore
+          retention-days: 7

@@ -63,6 +63,8 @@ class AuthController extends Controller
                 'password' => ['nullable', 'string'],
                 'password_confirmation' => 'nullable|string|same:password',
                 'terms_accepted' => 'nullable|accepted',
+                'terms_policy_version' => 'nullable|string|max:64',
+                'privacy_policy_version' => 'nullable|string|max:64',
                 'preferred_language' => 'nullable|string|max:16',
                 'accessibility_preferences' => 'nullable|array',
                 'acquisition_channel' => ['nullable', Rule::in(CommercialInsightsService::ACQUISITION_CHANNELS)],
@@ -72,6 +74,18 @@ class AuthController extends Controller
 
             if ($validator->fails()) {
                 return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
+            }
+
+            $webRegistration = $request->input('acquisition_channel') === 'web';
+            $termsVersion = (string) config('services.opfin.legal_terms_version');
+            $privacyVersion = (string) config('services.opfin.legal_privacy_version');
+            if ($webRegistration && ($termsVersion === '' || $privacyVersion === '')) {
+                return ApiResponse::error('Approved registration policies are not configured.', 503);
+            }
+            if ($webRegistration && (! $request->boolean('terms_accepted')
+                || $request->input('terms_policy_version') !== $termsVersion
+                || $request->input('privacy_policy_version') !== $privacyVersion)) {
+                return ApiResponse::error('Acceptance of the current legal policies is required.', 422);
             }
 
             $first = trim((string) $request->input('first_name'));
@@ -129,18 +143,39 @@ class AuthController extends Controller
                 ? $legacyName
                 : trim(implode(' ', array_filter([$first, $other, $last])));
 
-            $user = User::create([
-                'name' => $name,
-                'first_name' => $first !== '' ? $first : null,
-                'other_name' => $other !== '' ? $other : null,
-                'last_name' => $last !== '' ? $last : null,
-                'phone' => $request->phone,
-                'phone_verified_at' => now(),
-                'role' => User::ROLE_CUSTOMER,
-                'password' => Hash::make($pin !== '' ? $pin : $legacyPassword),
-                'preferred_language' => $request->input('preferred_language', 'en'),
-                'accessibility_preferences' => $request->input('accessibility_preferences'),
-            ]);
+            $user = DB::transaction(function () use ($name, $first, $other, $last, $request, $pin, $legacyPassword, $webRegistration, $termsVersion, $privacyVersion) {
+                $user = User::create([
+                    'name' => $name,
+                    'first_name' => $first !== '' ? $first : null,
+                    'other_name' => $other !== '' ? $other : null,
+                    'last_name' => $last !== '' ? $last : null,
+                    'phone' => $request->phone,
+                    'phone_verified_at' => now(),
+                    'role' => User::ROLE_CUSTOMER,
+                    'password' => Hash::make($pin !== '' ? $pin : $legacyPassword),
+                    'preferred_language' => $request->input('preferred_language', 'en'),
+                    'accessibility_preferences' => $request->input('accessibility_preferences'),
+                ]);
+
+                if ($webRegistration) {
+                    DB::table('consent_records')->insert([
+                        [
+                            'user_id' => $user->id, 'purpose' => 'registration_terms_acceptance',
+                            'policy_version' => $termsVersion, 'status' => 'granted', 'channel' => 'web',
+                            'granted_at' => now(), 'metadata' => json_encode(['method' => 'explicit_checkbox']),
+                            'created_at' => now(), 'updated_at' => now(),
+                        ],
+                        [
+                            'user_id' => $user->id, 'purpose' => 'registration_privacy_acknowledgement',
+                            'policy_version' => $privacyVersion, 'status' => 'granted', 'channel' => 'web',
+                            'granted_at' => now(), 'metadata' => json_encode(['method' => 'explicit_checkbox']),
+                            'created_at' => now(), 'updated_at' => now(),
+                        ],
+                    ]);
+                }
+
+                return $user;
+            });
 
             $otpRecord?->delete();
             if (app(CitoFeatureGate::class)->enabled('otp')) {

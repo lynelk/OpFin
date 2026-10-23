@@ -185,6 +185,8 @@ return [
     'opfin' => [
         'enable_demo_routes' => env('OPFIN_ENABLE_DEMO_ROUTES', false),
         'web_url' => env('OPFIN_WEB_URL'),
+        'legal_terms_version' => env('OPFIN_LEGAL_TERMS_VERSION'),
+        'legal_privacy_version' => env('OPFIN_LEGAL_PRIVACY_VERSION'),
     ],
     'ussd' => [
         'shared_secret' => env('USSD_SHARED_SECRET'),
