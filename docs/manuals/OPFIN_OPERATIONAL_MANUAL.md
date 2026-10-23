@@ -156,3 +156,11 @@ For an uncertain club request, preserve the saved reference and content hash; gu
 Reconcile uncertain repayment outcomes against the persisted original collection identity. Do not submit a new collection after a timeout. Check customer, advance, verified source wallet, payer/beneficiary, amount, currency, merchant/environment, route and allocation version. Keep contradictory provider finality, duplicate references and uncertain reversals as exceptions. Do not manually mark obligations paid or delete original servicing movements. Reserved financing is separate from due debt.
 
 Essentials lender funding/drawdown, biller settlement, lender release, activation/opening accounting, complete mandate compatibility, older-record adoption and customer refunds after service reversal remain unfinished. The separate credential-log incident must be resolved before release approval. No provider activation or production acceptance is implied.
+
+## Canonical v1.1 controlled release procedure (23 October 2026)
+
+**Preconditions:** identify the exact GitHub SHA and Railway production services; require successful API, web, Android, iOS, financial-control, security, documentation and deployment-contract CI on that SHA. Verify migrations against an isolated database and document tested rollback, encrypted backup and restore evidence. Confirm the ten People and fifteen group catalogue acceptance cases in the UAT manual. Preserve existing feature flags and default-off financial integrations until separately approved.
+
+**Promotion:** merge only an approved, tested release candidate into `main`; verify the Railway deployment for API, web, worker and scheduler individually reaches terminal `SUCCESS`. Do not redeploy PostgreSQL simply to pick up application code. Check the API health, customer sign-in, role-based Space access, denied cross-tenant access, queue/cron execution, audit events and error rates. Stop and roll back on migration incompatibility, unexpected financial write, consent leakage or failing health checks.
+
+**Record:** commit SHA, CI run links, approvers, backup/restore evidence, migration version, deployment IDs, observed status, smoke-test results, incident/rollback decision and UAT sign-off. A successful Railway container is not proof of payment settlement or regulatory approval.
