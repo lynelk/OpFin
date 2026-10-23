@@ -1,13 +1,13 @@
 # OpFin Essentials
 
-Status: Product contract with tested authority/closure remediation and outstanding financial acceptance  
-Reviewed: 25 September 2026  
+Status: Product contract; repayment/authority source in main, complete provider and financial acceptance separate  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)  
-Authority/closure verification candidate: `e336daf4962cb735d1ff0b2360690b1eaffab83e`
+Historical authority/closure test candidate (25 September): `e336daf4962cb735d1ff0b2360690b1eaffab83e`
 
 ## Current acceptance position
 
-Essentials source capability has been merged, but the whole capability is not financially launch-certified. PR #118 now implements exact Financial Space partner authority, a minimal eligibility response, open-advance account-deletion protection and a shared customer-operation mutex. Its integrated candidate passed 358 tests and 2,362 assertions on both SQLite and PostgreSQL 18. These are source and test results, not a merged/deployed financial-release approval. See [authority and closure](../../apps/api/docs/api/ESSENTIALS_AUTHORITY_AND_CLOSURE.md) and the [25 September verification record](../operations/ESSENTIALS_AUTHORITY_VERIFICATION_2026-09-25.md).
+Essentials source capability has been merged, but the whole capability is not financially launch-certified. The historical PR #118 supplied exact Financial Space partner-authority, minimal eligibility, account-closure and customer-mutex work; its unmerged head is not the current source authority. Later integrated code includes durable collections, uncertain-result reconciliation and servicing controls. The September PR recorded 358 tests and 2,362 assertions on SQLite and PostgreSQL 18, but these figures do not certify the current head. These are source and test results, not a merged/deployed financial-release approval. See [authority and closure](../../apps/api/docs/api/ESSENTIALS_AUTHORITY_AND_CLOSURE.md) and the [25 September verification record](../operations/ESSENTIALS_AUTHORITY_VERIFICATION_2026-09-25.md).
 
 Separate expected-accounting, durable provider-instruction, pending-exposure, full repayment/reversal and capital-mandate acceptance remain open until their own evidence closes them. Serialising an in-flight method does not reserve a provider collection still pending after that method returns. Independent financial approval and production operating acceptance remain required.
 
@@ -133,3 +133,7 @@ Use `python3 scripts/search-api.py "essentials"` from repository root with local
 First close the remaining internal findings with candidate-specific tests and required independent financial approval. Then verify the named participating lender's legal evidence, approved product/pricing, usable funded mandate or certified Cito route, certified CPay lookup/payment/repayment/reconciliation, verified-beneficiary rent settlement, signed biller agreements, approved customer disclosures, recovery/reconciliation exercises, assigned operations owners, server-enforced store policy and operational monitoring/complaints/audit.
 
 Affected financial routes must remain unactivated until internal acceptance and external gates are satisfied. A merged source commit or updated manual is not activation approval. See the [concept comparison](CONCEPT_AND_PLAN_COMPARISON.md) and [manual supplement](../manuals/CURRENT_CAPABILITY_SUPPLEMENT.md) for priorities and safe training boundaries.
+
+## Current implementation and acceptance note (21 October 2026)
+
+The current `main` source registers customer repayment recovery at `GET /api/essentials/repayments/{repayment}/collection-status` and safe cancellation before submission at `POST /api/essentials/repayments/{repayment}/cancel-unsubmitted`. Durable collection identity, reserved pending capacity, original-policy allocation and append-only reversal/servicing evidence are implemented in source. They remain separate from complete lender drawdown, biller beneficiary settlement, lender release, activation/opening ledgers, older-record adoption and customer refunds after service reversal. Do not treat a collection acknowledgement as final settlement or a configured lender as certified funding. Read [durable collections](../../apps/api/docs/api/ESSENTIALS_DURABLE_COLLECTIONS.md) and the [current evidence register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).

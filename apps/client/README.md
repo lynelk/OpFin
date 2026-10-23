@@ -1,7 +1,7 @@
 # OpFin mobile application
 
 Status: Controlled external developer/product reference  
-Updated: 27 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
 The Flutter application is OpFin's primary customer mobile experience. It presents a mobile-complete financial journey while the API remains authoritative for identity, permissions, eligibility, money, credit, provider finality, programme state, ledger and reconciliation.
@@ -165,6 +165,7 @@ Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/
 Investment Club members can recover saved accounting requests and retain access to their own historical member statements after leaving a club. Native statement export supports controlled save/share and HTML print flows; exports contain document bytes rather than authentication credentials. Android combines this with the approximate-location-only Play policy, while iOS uses the native print/share bridge. Financial mutations remain server-authoritative and maker-checker controls are not bypassed by the client.
 
 
+
 ## Financial Spaces and Savings Groups (20 October 2026)
 
 The OpFin mobile app now has a **Switch workspace** action from Home and from each Financial Space detail screen. Only currently active memberships returned by `GET /api/financial-spaces` are offered. Roles and capabilities displayed by the UI come from server-issued `workspace` metadata; absent metadata defaults to **no write or management access**. Selection is a route-local session operation, not a locally persisted tenant identifier.
@@ -194,3 +195,11 @@ Under More > My employment and eligible Business Financial Space navigation, aut
 Worker engagement ID, user ID and employer-owned asset ID are currently entered through operational forms; these inputs need a reviewed picker/workflow before consumer-grade UAT. Payroll uses manual amounts and does **not** yet compute certified statutory deductions; biometric connectors cannot ingest biometric templates or device attendance while pending legal/vendor validation. No action may be displayed as a completed financial transfer solely because HR has approved it.
 
 Acceptance must include physical-device navigation, employer/employee role privacy, multi-business switching and sign-out, short/long sessions, offline queued attendance with replay resistance, API tests, localisation and accessibility; automated smoke tests do not substitute for UAT.
+
+## Current source journeys and mobile acceptance (21 October 2026)
+
+The App source includes Personal Financial Life, aspirations/learning, club accounting and saved-request recovery, own capital history after leaving a club, protected native statement save/share/print, and a Financial Intelligence statement journey where explicitly enabled. The same user can participate in several Financial Spaces without duplicating identity or granting one Space access to another.
+
+A recoverable club request must use its original identity/hash; a repayment timeout is not permission to collect again. Exporting a statement to a device never transfers bearer credentials into a native export call, and opening a share/print dialogue is not confirmed delivery. Recognised issuer layouts or parsed statements must not be shown as officially authenticated unless independent validation exists.
+
+Run Flutter analysis, tests, platform release compilation, actual-device accessibility, permissions, document-picker, interruption and cross-account checks before claiming a mobile release. GitHub/API deployment statuses do not prove a current App Store or Play Store build. See [source-to-release evidence](../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md), [club client workflows](../../docs/manuals/CLUB_ACCOUNTING_CLIENT_WORKFLOWS.md) and [role-based training](../../docs/manuals/ROLE_BASED_TRAINING_PATHS.md).

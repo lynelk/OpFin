@@ -1,9 +1,17 @@
 # OpFin operational manual
 
 Status: Controlled operations and release reference  
-Version: 25 September 2026  
+Version: 21 October 2026  
 Language: English (United Kingdom)  
 Audience: operations, support, Finance, Compliance and authorised institutional/programme administrators
+
+## Current operational evidence and escalation (21 October 2026)
+
+The reviewed `main` baseline is `c04d72f894aba163e6c8aaae668d8ad35a7af731`. Its API, Web, worker and scheduler **deployment status contexts** were successful, but that is not a settlement, device acceptance, issuer-authenticity or financial control sign-off. Confirm the exact running revision, migrations, health and actual operation before marking a service live. Read the [source-to-release register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) and [financial governance](../FINANCIAL_CHANGE_GOVERNANCE.md).
+
+Daily control owners should distinguish (1) ordinary customer-support issues, (2) ambiguous provider submissions with a frozen request identity, (3) unapplied/reversed ledger and cross-institution reconciliation exceptions, (4) revoked consent/Space/role access, and (5) suspected security incidents. Do not reset economic identities, invent provider confirmation, erase original evidence or use production as a destructive test database. Preserve original request/attempt and route, provider reference, currency, source statement, account/loan, actor and timestamp before correction.
+
+**Externally gated:** issuer authentication, institution-specific bank/GL statements, legally accepted shared exposure/ECL, capital/custody/underwriting mandates, certified provider capability, security rotation/restore acceptance and SACCO legal activation. Unverified evidence remains unverified. Synthetic preview controls are non-production only. See [institutional decision](../finance/INSTITUTIONAL_RECONCILIATION_AND_SHARED_EXPOSURE_DECISION.md), [Financial Intelligence runbook](../operations/FINANCIAL_INTELLIGENCE_RUNBOOK.md) and [security triage](../operations/SECURITY_HISTORY_TRIAGE_20261017.md).
 
 ## Operating model
 

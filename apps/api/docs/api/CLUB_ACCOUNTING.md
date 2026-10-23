@@ -1,9 +1,9 @@
 # Investment-club accounting API and operator guide
 
-Status: Implemented and database-tested backend candidate in PR #126; full channel release pending  
-Reviewed: 25 September 2026  
+Status: Current source contract for club accounting; financial/device acceptance assessed separately  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)  
-Verified application candidate: `1f82f821163ac7058f0e2f2b44672a45a754a166`
+Historical September backend-test candidate: `1f82f821163ac7058f0e2f2b44672a45a754a166`
 
 ## What this module does
 
@@ -156,4 +156,8 @@ The [executed verification record](../../../../docs/operations/CLUB_ACCOUNTING_V
 
 Missing authentication, denied Space/role access, unknown records, invalid payloads and financial conflicts remain distinct error conditions. Read the actual status and message. Never use a new idempotency key merely because a response was lost; inspect the original instruction first.
 
-A full channel release still requires the remaining Web Workspace/Flutter implementation and verification, complete publication checks and the mandatory independent financial APPROVED review. Do not label the entire club product ready because its backend tests pass. Broader Essentials controls, statement-source authenticity and the separate credential-log security incident remain separate workstreams.
+Web and Flutter source workflows, including saved-request recovery and native exports, have subsequently been implemented; complete release/device and financial acceptance must still be evidenced on the integrated candidate per current governance. Do not label the entire club product ready because its backend tests pass. Broader Essentials controls, statement-source authenticity and the separate credential-log security incident remain separate workstreams.
+
+## Current integrated-source note (21 October 2026)
+
+Club accounting and saved-request recovery are present in current `main` source, including `apps/api/routes/club_accounting.php` and `club_client_requests.php`. Original PR #126 was closed without merging that specific head; subsequent integration is not certified by its historical test counts. Do not imply that the ability to approve an instruction executes a payment or authenticates a bank record. Read [the saved-request/retained history/export contract](CLUB_CLIENT_RECOVERY.md), [integrator guide](INTEGRATOR_GUIDE.md) and [release-evidence register](../../../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).

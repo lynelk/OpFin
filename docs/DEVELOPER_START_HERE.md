@@ -1,10 +1,10 @@
 # OpFin developer start here
 
 Status: Current developer and verification guide  
-Reviewed: 24 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
-Read [current state](CURRENT_STATE.md), the [original concept comparison](product/CONCEPT_AND_PLAN_COMPARISON.md) and [current delivery evidence](operations/DELIVERY_EVIDENCE_2026-09-24.md) before changing the platform. Source implementation, passing tests, deployed versions and activated providers are different states.
+Read [current state](CURRENT_STATE.md), the [21 October source-to-release evidence](operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) and the [original concept comparison](product/CONCEPT_AND_PLAN_COMPARISON.md) before changing the platform. Source implementation, passing tests, deployed versions and activated providers are different states.
 
 ## Repository and domain map
 
@@ -79,7 +79,7 @@ Set the established API build configuration for an authorised test environment. 
 
 New App onboarding remains phone → OTP → names → six-digit PIN → authenticated Home with progressive verification. Web uses unified role-routed access and retains legacy-password compatibility; it does not create a new person for each portal.
 
-Treasury account/statement foundations do not equal complete member-capital/NAV/distribution accounting. Detailed import/reconciliation currently uses Web administration. Essentials arranges named third-party lender finance to verified service/rental beneficiaries, not unrestricted wallet cash-out. Its financial controls are still under acceptance review.
+Treasury and member-capital/NAV/distribution accounting now have separate backend and guided client workflows. Source implementation does not certify external bank settlement or complete device acceptance. Detailed import/reconciliation remains governed by its own evidence. Essentials arranges named third-party lender finance to verified service/rental beneficiaries, not unrestricted wallet cash-out. Its financial controls are still under acceptance review.
 
 ## Find the API
 
@@ -90,7 +90,7 @@ python3 scripts/search-api.py "essentials"
 python3 scripts/search-api.py "statement"
 ```
 
-With API dependencies installed, `cd apps/api && php artisan route:list --json` supplies registered metadata. Read the [new-capability contracts](../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md), [current endpoints](../apps/api/docs/api/current-endpoints.md) and [client contract](../apps/api/docs/api/frontend-backend-contract.md) alongside handlers/tests.
+With API dependencies installed, `cd apps/api && php artisan route:list --json` supplies registered metadata. Start with the [practical integrator guide](../apps/api/docs/api/INTEGRATOR_GUIDE.md). Read the [new-capability contracts](../apps/api/docs/api/CURRENT_CAPABILITY_CONTRACTS.md), [current endpoints](../apps/api/docs/api/current-endpoints.md) and [client contract](../apps/api/docs/api/frontend-backend-contract.md) alongside handlers/tests.
 
 For example, ordinary loan repayment and Essentials repayment do not have identical status/idempotency contracts. Essentials requires a body key and returns 201 for a created repayment record, not final money collection. CSV/HTML exports and framework errors are not all custom JSON envelopes.
 
@@ -105,11 +105,11 @@ For example, ordinary loan repayment and Essentials repayment do not have identi
 | Web/App workflow | Component README, exact screen labels, task/training/UAT including recovery/accessibility |
 | Release/security/configuration | Current evidence, manifest, runbooks and configuration/deployment tests |
 
-## Current build correction and remaining blockers
+## Source and financial release status
 
-The Web login-error query object receives an explicit `Record<string, string>` annotation in this change. An isolated TypeScript 5.8.3 strict test reproduced TS2345 before and passed afterwards. It is a type-only correction: credentials, cookies, role checks and redirects are unchanged. Full repository and deployment results must be recorded separately.
+The old 24 September six-failure API/TypeScript note is a **historical** defect record, not an assertion that those same failures still block current `main`. On 21 October the reviewed source baseline is `c04d72f894aba163e6c8aaae668d8ad35a7af731`; deployment contexts report success for API, Web, worker and scheduler. No new complete API/mobile release suites were executed by this documentation review.
 
-The six current API failures and Essentials review findings are not solved by this annotation or by new documentation. Historical treasury dates must remain valid test cases, and new financial paths need their own expected accounting and concurrency tests.
+The current higher-risk work includes original provider-request recovery, financial-ledger/reversal evidence, institution/issuer authenticity, cross-Space and current-role denial, and actual legal/provider acceptance. Read the [current evidence register](operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) and [financial change governance](FINANCIAL_CHANGE_GOVERNANCE.md) rather than relying on old branch-review descriptions.
 
 ## Verify and release
 

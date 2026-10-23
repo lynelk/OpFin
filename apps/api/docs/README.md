@@ -1,14 +1,14 @@
 # OpFin API documentation
 
 Status: Source-based developer, integration and operations reference  
-Reviewed: 25 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
 ## Start by purpose
 
 | Need | Reference |
 | --- | --- |
-| New developer or AI integrator | [Root API entry point](../../../API.md), [Developer Centre interface](api/DEVELOPER_INTERFACE.md) |
+| New developer or AI integrator | [Root API entry point](../../../API.md), [practical guide](api/INTEGRATOR_GUIDE.md), [Developer Centre interface](api/DEVELOPER_INTERFACE.md) |
 | Current achievements and restrictions | [Current state](../../../docs/CURRENT_STATE.md), [concept/plan comparison](../../../docs/product/CONCEPT_AND_PLAN_COMPARISON.md) |
 | Find an endpoint | [Quick reference](api/API_QUICK_REFERENCE.md), [current endpoint index](api/current-endpoints.md), [preserved detailed domain contracts](api/domain-endpoints.md) |
 | Integrate treasury, Essentials or Location Context | [Current capability contracts](api/CURRENT_CAPABILITY_CONTRACTS.md) |
@@ -57,7 +57,7 @@ Treasury imports are reviewable source evidence, not confirmed money movement. I
 
 PR #117 added governed internal Cito NIN evidence reuse and scheduled revalidation. Its reviewed API build passed 283 tests. The capability remains unactivated until genuine policy settings and subject consent exist; it does not establish a direct NIRA API contract or full KYC reuse.
 
-Essentials names the third-party lender and intends settlement to a verified biller/rental beneficiary. Its controller requires a body `idempotency_key` for repayment and returns 201 for accepted repayment records; neither that status nor a success envelope proves collection finality. Current unresolved financial-control reviews, including unmerged changes, remain separate work.
+Essentials names the third-party lender and intends settlement to a verified biller/rental beneficiary. Its controller requires a body `idempotency_key` for repayment and returns 201 for accepted repayment records; neither that status nor a success envelope proves collection finality. Current provider/accounting release and external activation gaps remain separate acceptance work. Historical unmerged branches are not the authoritative current source.
 
 Location is purpose-specific optional context with server-side provider access. Programme measurements and health outcomes remain non-credit. `programme_partner` and Essentials `partner_api` roles are not interchangeable.
 
@@ -69,4 +69,4 @@ The catalogue reads routes and checked-in guides from the running build. Fingerp
 
 API changes update affected fields, errors, client contracts, manual tasks and UAT evidence in the same change. Existing documentation/publication checks have a limited scope and are not full schema, permission or financial certification.
 
-GitHub Actions remains deferred by owner instruction. Keep equivalent candidate-specific tests/audits and independent review. The new interface does not close outstanding Essentials, full club accounting, native-schema coverage, PostgreSQL/concurrency or the credential-log security incident. Its own integration results are recorded against the exact PR candidate.
+GitHub Actions workflows are currently active. Check the actual candidate's API, security, documentation, Web and client gates. Discovery does not close the missing reviewed API schemas, external financial acceptance or security incident. See the [21 October source-to-release register](../../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md).

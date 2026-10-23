@@ -1,7 +1,7 @@
 # OpFin web application
 
 Status: Current developer and product reference  
-Reviewed: 24 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
 
 The Next.js application provides marketing, customer Web, institutional Workspaces and role-gated operations. It consumes `apps/api`; it does not own authoritative credit calculations, balances, provider finality, accounting or regulatory state.
@@ -58,7 +58,7 @@ npm run test
 npm run build
 ```
 
-GitHub Actions remains disabled at the owner's direction; equivalent candidate-specific build/security/operations evidence is still required. Do not disable type checking to resolve a build error.
+GitHub Actions workflows are currently active. Validate the exact current candidate's lint, type checks, tests and production build. Do not disable type checking, permission checks or security gates to resolve a build error.
 
 Existing setup addresses are `https://opfin-web-production.up.railway.app` and `https://opfin-production.up.railway.app/api`. They do not prove custom-domain cutover or health. The [dated release evidence](../../docs/operations/DELIVERY_EVIDENCE_2026-09-24.md) records the previous failed API/Web attempts; verify running-version parity and supported API contracts before declaring production aligned.
 
@@ -79,3 +79,9 @@ Read the current payroll/referral/account-deletion tables in `apps/api/docs/api/
 - The sign-in form takes a phone number or a staff email. `identityFields` in `src/lib/api/credentials.ts` sends `email` for anything containing `@` and otherwise normalises the phone to the app's `256XXXXXXXXX` form.
 - A login with `password_change_required` sets the `opfin_password_change_required` cookie and opens `/account/change-password`. `src/proxy.ts` keeps the user there until the change succeeds; the API enforces the same rule.
 - `/forgot-password` sends a code by email (staff) or SMS, and `/reset-password` sets the new password. The identifier is held only in a 10-minute HTTP-only cookie, never in the URL. Error messages are plain language and never echo a code or password.
+
+## Current Financial Life and governed Workspace surfaces (21 October 2026)
+
+The current Web source adds a compact Financial Life/Today experience, aspirations and learning, investment-club accounting and saved-request recovery, source-led Financial Intelligence/statement reviews, institutional assurance preview and platform-admin growth-readiness views. The backend remains the only authority for financial calculation, account balances, lender suitability, member ownership and provider finality. A configured product, approved-looking document or source preview is not proof of live regulated activation.
+
+Club actions must resume the exact saved request after reload/uncertainty, with current authorisation and clear distinction between acknowledgement, checker approval and executed money movement. Sensitive issuer documents and API tokens must not appear in unprotected Web links or browser storage. See [current release evidence](../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md), [club recovery](../api/docs/api/CLUB_CLIENT_RECOVERY.md), [role-based training](../../docs/manuals/ROLE_BASED_TRAINING_PATHS.md) and the [API integration guide](../api/docs/api/INTEGRATOR_GUIDE.md).

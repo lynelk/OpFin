@@ -1,8 +1,14 @@
 # OpFin Product Blueprint
 
 Status: Canonical product contract  
-Updated: 28 September 2026  
+Reviewed: 21 October 2026  
 Language: English (United Kingdom)
+
+## Source-to-vision alignment (21 October 2026)
+
+This is the canonical **product contract**, not a claim that every proposed workstream is implemented or externally activated. Current `main` contains Personal Financial Life, aspirations and learning, role-scoped Financial Spaces, club treasury and separate accounting with saved-request recovery, Essentials repayment servicing, Financial Intelligence source/statement review, and governed lending/investor and organisational foundations. Later approved targets, age-inclusive journeys and institutional partner work remain subject to their own implementation/acceptance gates.
+
+Use the [source-to-release evidence register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) for current placement, [API integrator guide](../../apps/api/docs/api/INTEGRATOR_GUIDE.md) for actual routes and [role-based training](../manuals/ROLE_BASED_TRAINING_PATHS.md) for operating scenarios. A visible screen or deployed backend is not proof of a live issuer, regulated SACCO, funded lender, investor custody or financial settlement.
 
 ## Product position
 

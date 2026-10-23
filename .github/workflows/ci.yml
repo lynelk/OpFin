@@ -32,9 +32,18 @@ jobs:
             git -c "http.extraheader=AUTHORIZATION: basic $AUTH" fetch --depth=1 origin "$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
           fi
       - name: Verify documentation drift
-        run: python3 scripts/verify-documentation-drift.py
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" && -n "${GITHUB_BASE_REF:-}" ]]; then
+            python3 scripts/verify-documentation-drift.py --base "origin/${GITHUB_BASE_REF}"
+          else
+            python3 scripts/verify-documentation-drift.py
+          fi
       - name: Verify publication readiness
         run: python3 scripts/verify-publication-readiness.py
+      - name: Verify current documentation links and checker regression tests
+        run: |
+          python3 scripts/verify-documentation-links.py
+          python3 -m unittest discover -s scripts/tests -p 'test_documentation_links.py'
       - name: Validate canonical public-site navigation
         run: node sites/opfin-public/check-links.mjs
 

@@ -1,11 +1,11 @@
 # Current API endpoints
 
 Status: Current endpoint navigation and contract index  
-Reviewed: 27 September 2026  
+Reviewed: 21 October 2026  
 Reviewed: 3 October 2026  
 Language: English (United Kingdom)
 
-The complete domain reference from main `3924a26913f85067a3ac900c78fa80125ca589fc` is preserved without content loss in [Domain endpoints](domain-endpoints.md), including the lender-orchestration additions. This index joins that detailed reference with the [Developer Centre contract](DEVELOPER_INTERFACE.md). Registration, reviewed schema, authorisation, provider activation and financial acceptance are separate states.
+The dated domain reference from the earlier `3924a26913f85067a3ac900c78fa80125ca589fc` baseline is preserved for compatibility in [Domain endpoints](domain-endpoints.md), including the lender-orchestration additions. This index joins that detailed reference with the [Developer Centre contract](DEVELOPER_INTERFACE.md). Registration, reviewed schema, authorisation, provider activation and financial acceptance are separate states.
 
 ## Developer and AI discovery
 
@@ -360,6 +360,7 @@ For club recovery, use [Club Client Recovery API contract](CLUB_CLIENT_RECOVERY.
 For Essentials, collection identity is persisted before provider submission and uncertain outcomes are reconciled against the original request. Capacity reservation is separate from due debt; provider acknowledgement is not settlement finality. Do not infer a universal idempotency-key location or response status from route registration; consult the operation-specific contract. The current candidate does not establish complete lender funding/drawdown, biller settlement, lender release, activation/opening accounting, mandate compatibility, older-record adoption or post-service-reversal refunds. Full API/database/client acceptance remains outstanding.
 
 
+
 ## Financial Space workspaces, Savings Groups and shared budgets (20 October 2026)
 
 These routes are behind `auth:sanctum` and standard API throttling. Records remain owned by the specified Financial Space. An API catalogue entry is **not** permission, entitlement, regulatory approval, or activation.
@@ -441,6 +442,24 @@ Document review is not independent registry verification and never itself proves
 ## Signed-in cross-Space reporting (21 October 2026)
 
 `GET /api/my-spaces/report` provides per-Space, per-currency recorded cash/assets/liabilities/receivables to a signed-in member **only** when that member has finance-view authority for the exact Space. The report deliberately returns `personal_aggregate_minor=null`; no group, employer or SACCO value is silently included in the user's personal assets. Values in other currencies are not converted or mixed, and bank/provider reconciliation is separately evidenced. Member-only Business roles cannot view employer finance positions.
+
+## 21 October 2026 source-linked quick navigation
+
+This documentation update was initially reviewed against source baseline `c04d72f894aba163e6c8aaae668d8ad35a7af731`, then integrated with subsequent merged changes; use the merged release SHA for authoritative runtime status. Routes listed below come from checked-in Laravel route files. Registration does not prove that a feature flag, institution, issuer, payment rail or licence is active. Start with the [integrator guide](INTEGRATOR_GUIDE.md) for authentication, examples, error handling and AI discovery.
+
+| Purpose | Source route | Detailed reference |
+| --- | --- | --- |
+| Public discovery | `GET /api/developer/manifest`, `/public`, `/guides` | [Developer interface](DEVELOPER_INTERFACE.md) |
+| Role-filtered operations | `GET /api/developer/catalogue`, `/operations/{operation}`, `/openapi`, `/agent-tools` | Reviewed schema coverage and AI read-only boundary |
+| Club book and ownership | `GET /api/accounting/club-schema`, `GET /api/accounting/my-club-books` | [Club accounting](CLUB_ACCOUNTING.md) |
+| Club saved requests | `GET /api/accounting/saved-requests`, `POST /api/financial-spaces/{space}/accounting/books/{book}/client-requests/prepare/{purpose}`, `/inspect`, `/submit`, `/acknowledge`, `/cancel` | [Exact recovery](CLUB_CLIENT_RECOVERY.md) |
+| Essentials recovery | `GET /api/essentials/repayments/{repayment}/collection-status`, `POST /api/essentials/repayments/{repayment}/cancel-unsubmitted` | [Durable collections](ESSENTIALS_DURABLE_COLLECTIONS.md) |
+| Financial Intelligence | `GET /api/financial-spaces/{space}/intelligence/context`, sources/imports/reports and issuer/statement review routes | [Feature-gated FI contract](FINANCIAL_INTELLIGENCE_CONTRACT.md) |
+| SACCO and white-label | `GET /api/financial-spaces/{space}/sacco/products`, `GET /api/white-label/resolve` | [SACCO plan](../../../../docs/development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md) |
+| Payroll and referrals | `GET /api/payroll-deduction/cases`, `POST /api/partner/financial-intents/{customer}` | [Payroll and partner contracts](ACCOUNT_AND_DATA_DELETION.md), [referrals](PARTNER_FINANCIAL_INTENTS.md) |
+| Growth readiness | `GET /api/admin/growth-readiness` | [Configuration versus activation](../../../../docs/operations/ISSUES_17_103_128_136_176_190_STATUS.md) |
+
+Native API catalogue OpenAPI export includes reviewed operations only. Some individual domain APIs still lack reviewed request/response contracts. Inspect actual controller tests and role/Space checks before enabling an SDK or AI-based integration. Refer to the [source-to-release evidence register](../../../../docs/operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) for explicit outstanding acceptance.
 
 ## Optional merchant Business Passport shadow verification (20 October 2026)
 

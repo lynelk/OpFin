@@ -1,6 +1,7 @@
 # SACCO and white-label completion programme
 
-Status: active implementation on PR #147; production acceptance remains evidence-driven.
+Status: Source merged through PR #147; regulated activation and complete product acceptance remain evidence-driven.  
+Reviewed: 21 October 2026
 
 ## Benchmark used
 
@@ -54,3 +55,7 @@ SACCO Core is enabled in application defaults on this implementation branch. Thi
 - member and management analytics dashboards;
 - Uganda regulatory report pack configured from approved filing schemas;
 - PostgreSQL, browser, device, accessibility, security and financial acceptance.
+
+## Current source versus regulated readiness (21 October 2026)
+
+The current repository registers SACCO products, member positions, guarantees, distribution approvals and Financial Space brand/domain requests in `apps/api/routes/sacco_core.php`. This does not certify a particular SACCO, its legal authority, deposit-taking custody, share/savings/loan accounting, DNS/TLS hostname control or a production payout. Complete double-entry subledger, settlement reconciliation, branch/teller, member and institutional UAT, and verified host deployment must be assessed independently. See [source-to-release register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) and [role-based training](../manuals/ROLE_BASED_TRAINING_PATHS.md).
