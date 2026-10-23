@@ -20,7 +20,7 @@ It must not expose internal operations as public navigation, present planned/pro
 
 ## Access model
 
-- New customers start phone-first in the OpFin App.
+- New customers start phone-first on Web or in the OpFin App using the shared registration API.
 - Existing customers and authorised workspace users use one Web sign-in.
 - Employer, partner and OpFin Operations routing happens after authentication and role checks.
 - Separate public “Borrower Dashboard”, “Admin Portal”, “Support Portal” and similar entry points are intentionally not shown.
@@ -30,6 +30,7 @@ It must not expose internal operations as public navigation, present planned/pro
 
 The candidate currently uses repository-documented setup addresses:
 
+- Web sign-up: https://opfin-web-production.up.railway.app/signup
 - Web sign-in: https://opfin-web-production.up.railway.app/login
 - Privacy policy: https://opfin-production.up.railway.app/privacy-policy
 - Account deletion: https://opfin-web-production.up.railway.app/account/delete

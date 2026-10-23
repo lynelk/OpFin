@@ -63,6 +63,8 @@ class AuthController extends Controller
                 'password' => ['nullable', 'string'],
                 'password_confirmation' => 'nullable|string|same:password',
                 'terms_accepted' => 'nullable|accepted',
+                'terms_policy_version' => 'nullable|string|max:64',
+                'privacy_policy_version' => 'nullable|string|max:64',
                 'preferred_language' => 'nullable|string|max:16',
                 'accessibility_preferences' => 'nullable|array',
                 'acquisition_channel' => ['nullable', Rule::in(CommercialInsightsService::ACQUISITION_CHANNELS)],
@@ -72,6 +74,18 @@ class AuthController extends Controller
 
             if ($validator->fails()) {
                 return ApiResponse::error('Validation failed.', 422, $validator->errors()->toArray());
+            }
+
+            $webRegistration = $request->input('acquisition_channel') === 'web';
+            $termsVersion = (string) config('services.opfin.legal_terms_version');
+            $privacyVersion = (string) config('services.opfin.legal_privacy_version');
+            if ($webRegistration && ($termsVersion === '' || $privacyVersion === '')) {
+                return ApiResponse::error('Approved registration policies are not configured.', 503);
+            }
+            if ($webRegistration && (! $request->boolean('terms_accepted')
+                || $request->input('terms_policy_version') !== $termsVersion
+                || $request->input('privacy_policy_version') !== $privacyVersion)) {
+                return ApiResponse::error('Acceptance of the current legal policies is required.', 422);
             }
 
             $first = trim((string) $request->input('first_name'));
@@ -129,18 +143,39 @@ class AuthController extends Controller
                 ? $legacyName
                 : trim(implode(' ', array_filter([$first, $other, $last])));
 
-            $user = User::create([
-                'name' => $name,
-                'first_name' => $first !== '' ? $first : null,
-                'other_name' => $other !== '' ? $other : null,
-                'last_name' => $last !== '' ? $last : null,
-                'phone' => $request->phone,
-                'phone_verified_at' => now(),
-                'role' => User::ROLE_CUSTOMER,
-                'password' => Hash::make($pin !== '' ? $pin : $legacyPassword),
-                'preferred_language' => $request->input('preferred_language', 'en'),
-                'accessibility_preferences' => $request->input('accessibility_preferences'),
-            ]);
+            $user = DB::transaction(function () use ($name, $first, $other, $last, $request, $pin, $legacyPassword, $webRegistration, $termsVersion, $privacyVersion) {
+                $user = User::create([
+                    'name' => $name,
+                    'first_name' => $first !== '' ? $first : null,
+                    'other_name' => $other !== '' ? $other : null,
+                    'last_name' => $last !== '' ? $last : null,
+                    'phone' => $request->phone,
+                    'phone_verified_at' => now(),
+                    'role' => User::ROLE_CUSTOMER,
+                    'password' => Hash::make($pin !== '' ? $pin : $legacyPassword),
+                    'preferred_language' => $request->input('preferred_language', 'en'),
+                    'accessibility_preferences' => $request->input('accessibility_preferences'),
+                ]);
+
+                if ($webRegistration) {
+                    DB::table('consent_records')->insert([
+                        [
+                            'user_id' => $user->id, 'purpose' => 'registration_terms_acceptance',
+                            'policy_version' => $termsVersion, 'status' => 'granted', 'channel' => 'web',
+                            'granted_at' => now(), 'metadata' => json_encode(['method' => 'explicit_checkbox']),
+                            'created_at' => now(), 'updated_at' => now(),
+                        ],
+                        [
+                            'user_id' => $user->id, 'purpose' => 'registration_privacy_acknowledgement',
+                            'policy_version' => $privacyVersion, 'status' => 'granted', 'channel' => 'web',
+                            'granted_at' => now(), 'metadata' => json_encode(['method' => 'explicit_checkbox']),
+                            'created_at' => now(), 'updated_at' => now(),
+                        ],
+                    ]);
+                }
+
+                return $user;
+            });
 
             $otpRecord?->delete();
             if (app(CitoFeatureGate::class)->enabled('otp')) {
@@ -491,6 +526,15 @@ class AuthController extends Controller
      */
     private function emailResetCode(string $email, string $otp, Carbon $expiresAt)
     {
+        // Never queue one-time codes to log/array mailers in production. A queued job
+        // only means it was accepted by the worker, not delivered to the recipient.
+        // Make this check account-independent to preserve email enumeration protection.
+        if (app()->environment('production') && ! $this->staffResetEmailReady()) {
+            Log::warning('OpFin staff email recovery unavailable: outbound mail configuration is incomplete.');
+
+            return ApiResponse::error('Email password reset is temporarily unavailable. Use your registered phone number instead.', 503);
+        }
+
         $user = $this->staffByEmail($email);
         if ($user !== null && ! $user->hasRole(User::ROLE_STAFF_PENDING_REVIEW)) {
             Otp::updateOrCreate(['phone' => $user->phone], [
@@ -500,9 +544,6 @@ class AuthController extends Controller
                 'verified_at' => null,
                 'verification_token_hash' => null,
             ]);
-            if (app()->environment('production') && in_array(config('mail.default'), ['log', 'array'], true)) {
-                Log::warning('Password reset email requested but no mail provider is configured (MAIL_MAILER).');
-            }
             Mail::to($user->email)->queue(new PasswordResetCode($otp, 5));
         }
 
@@ -510,6 +551,27 @@ class AuthController extends Controller
             'expires_at' => $expiresAt->toIso8601String(),
             'max_attempts' => 3,
         ]);
+    }
+
+    /** Fail closed in production when transport credentials or sender identity are absent. */
+    private function staffResetEmailReady(): bool
+    {
+        $sender = trim((string) config('mail.from.address'));
+        if (! filter_var($sender, FILTER_VALIDATE_EMAIL)
+            || preg_match('/@example\.(com|org|test)$/i', $sender) === 1) {
+            return false;
+        }
+
+        return match ((string) config('mail.default')) {
+            // HTTPS API is supported on every Railway plan; sender-domain verification
+            // and actual delivery must still be verified externally.
+            'resend' => filled(config('services.resend.key')),
+            // SMTP requires verified provider credentials and Railway Pro or above.
+            'smtp' => ! in_array((string) config('mail.mailers.smtp.host'), ['', '127.0.0.1', 'localhost'], true)
+                && filled(config('mail.mailers.smtp.username'))
+                && filled(config('mail.mailers.smtp.password')),
+            default => false,
+        };
     }
 
     private function staffByEmail(string $email): ?User
