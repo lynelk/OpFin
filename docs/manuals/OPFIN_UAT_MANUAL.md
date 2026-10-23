@@ -235,3 +235,22 @@ Record candidate commit, database state, device/OS and evidence. Targeted harnes
 - **UAT-107 Platform release:** verify latest Android/iOS signing, secure data migrations on a populated backup, rollback, Cito provider integration, mobile accessibility and resolved Financial Space tenancy, regulator and lender acceptance.
 
 These are required acceptance scenarios, not completed tests or permission to activate production money flows. Release remains conditional on named independent legal/risk/finance sign-off.
+
+## Canonical v1.1 release-candidate cases (23 October 2026)
+
+The following are **required test cases, not recorded passes**. Record exact commit, deployment, device, tester, role, tenant and redacted evidence for each.
+
+| ID | Scenario | Expected evidence |
+| --- | --- | --- |
+| CV11-01 | Personal, Invest, Groups, People, Enterprise, Partners and Admin navigation | Each authorised role reaches only its own experience; unauthorised navigation is denied by API |
+| CV11-02 | Four financial group types | Investment Club, SACCO, Savings Club and VSLA expose 15 catalogue items, without implying entitlement |
+| CV11-03 | Group privilege escalation | Ordinary member, suspended member and cross-space actor cannot edit shared balances or debts |
+| CV11-04 | Group financial maker/checker | Same actor cannot bypass approval, with immutable audit record and idempotent retries |
+| CV11-05 | Group migration | Invalid, duplicated and incomplete member/ledger imports are quarantined and reconciled |
+| CV11-06 | People ten-module matrix | HR, leave, payroll, attendance, field, assets, KPI, biometric, appraisals, rewards each pass positive and denied flows |
+| CV11-07 | Uganda payroll | Effective-date statutory policy, locked payroll, approval and exception handling independently checked |
+| CV11-08 | Attendance offline replay | Duplicate or tampered device event is rejected; original event retained for audit |
+| CV11-09 | Personal/employer segregation | Employer cannot retrieve personal loans, credit scores, savings or financial history through People membership |
+| CV11-10 | Operational release | Database migration, backup/restore, rollback, web, Android, iOS, worker, scheduler, logs and health all evidenced |
+
+Do not mark CV11-02 complete merely because the Flutter catalogue exists. Financial actions require backend entitlement, eligibility, maker/checker, compliance and actual provider activation. Production promotion requires passing GitHub Actions on the **exact merged commit** plus authorised release sign-off.

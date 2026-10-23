@@ -118,3 +118,9 @@ A repayment can remain pending while the provider confirms the outcome. An uncer
 ## When external financial actions are unavailable
 
 If a lender, biller, issuer, savings provider, insurer or payment route is not activated for your country and product, continue using lawful record-keeping, planning, learning and support features where available. Never treat a suggested provider as an activated agreement or infer settlement from an initial response. Do not submit genuine funds to test a feature described only as source-defined. [Role-based guidance](ROLE_BASED_TRAINING_PATHS.md).
+
+## Canonical v1.1 workspace guide (release candidate, 23 October 2026)
+
+OpFin distinguishes Personal, Invest, Groups, People, Enterprise, Partners and Admin experiences. Your signed-in identity may belong to several Financial Spaces, but selecting a Space does not grant permissions in another. Group members can discover a common module catalogue for Investment Clubs, SACCOs, Savings Clubs and VSLAs; the available functions depend on membership, approval rights, product activation and applicable law. Savings Clubs may appear as **Savings Club / VSLA** while their underlying `savings_group` identifier remains unchanged.
+
+A catalogue item is not proof that a transaction is enabled. If an action is unavailable, request access from the authorised group administrator; do not use another person's login. Group financial changes may require separate preparation and approval. People functions are for authorised employer roles and do not grant access to employees' personal OpFin financial records. This section describes a candidate release and must not be presented as a production feature guarantee until UAT and deployment acceptance are recorded.
