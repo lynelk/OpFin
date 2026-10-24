@@ -63,6 +63,16 @@ describe("launch customer journey simplicity", () => {
     expect(kyc).toContain("Request assistance");
   });
 
+  it("keeps submitted institution KYB in read-only review and preserves prior evidence", () => {
+    const setup = source("../app/(portal)/setup/organisation/page.tsx");
+    const actions = source("../app/(portal)/setup/organisation/actions.ts");
+
+    expect(setup).toContain('onboarding?.status === "submitted"');
+    expect(setup).toContain("submitted and locked for review");
+    expect(actions).toContain("stage, requirements, submit: submitted");
+    expect(actions).not.toContain("evidence: {}");
+  });
+
   it("never asks for broad media or SMS permissions in Android manifest", () => {
     const manifest = source("../../../client/android/app/src/main/AndroidManifest.xml");
 
