@@ -171,5 +171,4 @@ class WebOnboardingAcceptanceTest extends TestCase
         $this->assertSame($submitted->submitted_at, $after->submitted_at);
         $this->assertSame($submitted->evidence, $after->evidence);
     }
-
 }
