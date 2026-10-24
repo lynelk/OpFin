@@ -74,7 +74,7 @@ class _DeviceSecurityScreenState extends State<DeviceSecurityScreen> {
                   ? 'No enrolled or supported device biometrics. Keep using your OpFin PIN.'
                   : '${_available!.label} is available. Opt in to enable it for this account on this device.'),
           value: _enabled,
-          onChanged: _busy || _available?.available != true
+          onChanged: _busy || (!_enabled && _available?.available != true)
               ? null
               : _setEnabled,
           secondary: const Icon(Icons.shield_outlined),
