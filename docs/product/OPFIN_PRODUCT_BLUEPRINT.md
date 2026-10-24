@@ -10,6 +10,12 @@ This is the canonical **product contract**, not a claim that every proposed work
 
 Use the [source-to-release evidence register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) for current placement, [API integrator guide](../../apps/api/docs/api/INTEGRATOR_GUIDE.md) for actual routes and [role-based training](../manuals/ROLE_BASED_TRAINING_PATHS.md) for operating scenarios. A visible screen or deployed backend is not proof of a live issuer, regulated SACCO, funded lender, investor custody or financial settlement.
 
+## Device security and payment-wallet doctrine (24 October 2026 candidate)
+
+OpFin offers optional native Touch ID/Face ID/Android enrolled biometric verification for already authenticated devices and appropriate on-device step-up. Biometrics do not create identity/KYC/legal signature, a fresh server session, financial approval, institution-wide permission or a settled provider transaction; accessible PIN login remains mandatory as a fallback. Stored opt-in is per account/device and discarded on sign-out.
+
+Apple Pay and Google Pay are conditional **tokenised checkout methods**, not a loan payout account or an OpFin-held balance. Initial Uganda activation is **not verified or enabled**. Wallet-specific user interfaces must be suppressed unless operating system/device, issuer, country, merchant/acquirer contract, product/currency, live server checkout authority and actual partner processing are separately evidenced; payment approval is distinct from final settlement. Digital in-app purchases use applicable platform billing rules. See [Device Biometrics and Express Wallets](../architecture/DEVICE_BIOMETRICS_EXPRESS_WALLETS.md).
+
 ## Unified five-direction relationship strategy (extension, 24 October 2026)
 
 **B2C, B2B, B2B2C, C2B and C2B2B are interaction directions within one OpFin, not five competing products.** Direct consumers receive provider-independent planning and full existing financial-life capability. Every institution retains an independently useful operating environment. Members enter its authorised Financial Space without releasing their Personal Space. Customer-originated requests require consent and institution authority; onward two-business processing additionally requires a separate destination mandate, contract, lawful purpose and real provider approval.
