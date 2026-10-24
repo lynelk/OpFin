@@ -41,25 +41,19 @@ export default async function DashboardPage() {
     const requiresAttention = ["cashflow_shortfall", "budget_overrun", "loan_due", "debt_due"].includes(compass.next_best_action.code);
 
 
-    // Immediate obligations outrank optional aspirations. KYC/credit permission
-    // remains mandatory at the actual product gate, not for personal planning.
+    // Put useful financial decisions before optional account completion.
+    // Immediate commitments still outrank aspirations; KYC/credit consent
+    // remains a distinct gate when a customer selects a regulated service.
     const nextAction = requiresAttention
       ? compass.next_best_action
-      : !activation.activation_complete
+      : preferredAspiration
         ? {
-            title: "Keep building your OpFin account",
-            text: `${activation.essential_complete} of ${activation.essential_total} setup steps complete. You can continue exploring your money and goals while finishing the steps relevant to your next financial service.`,
-            href: "/setup",
-            action: "Continue my setup"
+            title: `Move towards ${preferredAspiration.title}`,
+            text: "Your goal is yours to shape. Review it and choose one manageable next step. A plan is not a savings deposit or a product offer.",
+            href: "/ahead",
+            action: "Review my goal"
           }
-        : preferredAspiration
-          ? {
-              title: `Move towards ${preferredAspiration.title}`,
-              text: "Your goal is yours to shape. Review it and choose one manageable next step. A plan is not a savings deposit or a product offer.",
-              href: "/ahead",
-              action: "Review my goal"
-            }
-          : compass.next_best_action;
+        : compass.next_best_action;
 
     return (
       <Screen
