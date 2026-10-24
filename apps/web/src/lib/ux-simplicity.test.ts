@@ -53,7 +53,9 @@ describe("launch customer journey simplicity", () => {
     const kyc = source("../../../client/lib/kyc_setup_screen.dart");
 
     expect(onboarding).toContain("Skip");
-    expect(onboarding).toContain("Know what matters");
+    expect(onboarding).toContain("Know where you stand");
+    expect(onboarding).toContain("Try a money check without internet");
+    expect(onboarding).toContain("Get started");
     expect(accessibility).toContain("VoiceOver");
     expect(accessibility).toContain("TalkBack");
     expect(accessibility).toContain("Larger text");
