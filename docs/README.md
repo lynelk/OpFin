@@ -6,6 +6,10 @@ Language: English (United Kingdom)
 
 Start with the [updated concept note](product/OPFIN_CONCEPT_NOTE.md), [product evolution and current position](product/PRODUCT_EVOLUTION_2026-09-26.md), and [current state](CURRENT_STATE.md). They preserve the original financial-wellbeing ethos while distinguishing the continuing product ambition, source implementation, recorded tests, deployment, acceptance and external activation.
 
+## Unified B2C, B2B, B2B2C, C2B and C2B2B strategy (24 October 2026)
+
+Read the [Unified Five-Direction Strategy](product/OPFIN_UNIFIED_FIVE_DIRECTION_STRATEGY.md) as the **single cross-relationship operating doctrine**, with the [five-direction functional acceptance register](development/OPFIN_UNIFIED_FIVE_DIRECTION_ACCEPTANCE.md). It unifies individual-first financial life, independent institutional SaaS, member-facing experiences, customer-originated services and explicitly consented two-business handoffs. The detailed B2C and B2B blueprints remain supporting domain specifications, **not competing North Stars**. Source implementation, provider activation, financial settlement and accepted release remain separately evidenced.
+
 ## B2C financial companion and offline-first design
 
 [Customer companion, decisions and earned reliance](product/OPFIN_B2C_FINANCIAL_COMPANION_STRATEGY.md) describes the provider-independent consumer growth/product model. The [Complete End-User Scope](product/OPFIN_B2C_COMPLETE_END_USER_SCOPE.md) ensures this covers the entire OpFin consumer/member portfolio without functional regressions, including all licensed-provider services and Financial Spaces. The [Lightweight, Offline-First B2C Contract](architecture/B2C_LIGHT_OFFLINE_FIRST_CONTRACT.md) adds device, data, security, draft and sync acceptance requirements and preserves the existing [Lightweight and Sponsored Data Standard](architecture/LIGHTWEIGHT_SPONSORED_DATA.md). These are controlled proposed requirements; review actual accepted delivery separately.
