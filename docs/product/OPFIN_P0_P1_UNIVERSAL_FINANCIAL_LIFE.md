@@ -104,3 +104,19 @@ See [Financial Life Architecture](../architecture/FINANCIAL_LIFE_CONTINUITY_AND_
 ## Implementation review (21 October 2026)
 
 Current source contains early Financial Life/Today, aspirations and learning enhancements, but not the complete age-inclusive lifecycle, safeguarding, offline/assisted channels, all approved institutional products or long-range financial-coaching objectives. The [current source-to-release register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) separates implemented foundations from remaining aspirations and regulated activation. The standing North Star is unchanged.
+
+## B2C financial companion and offline-first extension (24 October 2026)
+
+The North Star is not only correct financial decisions. **Earned, voluntary reliance** is a co-equal consumer experience objective: customers should return because OpFin reliably remembers their context, helps them plan recurring financial events, offers meaningful next actions and preserves their progress and rights. This is a customer-value dependency, not lock-in.
+
+**P0:** extend FL-01 Today, FL-04 goals, FL-06 Compass and FL-08 low-data inclusion to support a useful zero-provider first session, income-cycle planning, clear source/unknown labels, fast finance capture and an offline guest money check. Real offline financial journals and protected cached account snapshots require a separate reviewed encryption, user/Space isolation, sync-operation allowlist and reconciliation acceptance. They cannot inherit permission to persist sensitive money details in generic preferences or an unsecured queue.
+
+**P1:** review events, consent-controlled reminders, contextual learning, explainable scenario comparisons, safe offline drafts where P0 prerequisites pass, and calibrated financial-health tracking. These are enhancements of existing financial-life workstreams, not a rival navigation/product hierarchy.
+
+**Release tests:** airline/airplane mode; 2G/3G fluctuations; low storage; device switch; logout and session expiry; revoked Space membership; duplicate replay; tampered clock; data/privacy/cellular budget; reminder opt-out; invalid financial certainty. Label each capability as implemented source, deployed candidate, device-tested, externally activated and accepted separately.
+
+References: [B2C Financial Companion Strategy](OPFIN_B2C_FINANCIAL_COMPANION_STRATEGY.md); [B2C Lightweight, Offline-First Contract](../architecture/B2C_LIGHT_OFFLINE_FIRST_CONTRACT.md); [Lightweight and Sponsored Data Standard](../architecture/LIGHTWEIGHT_SPONSORED_DATA.md).
+
+### Whole-feature preservation and full user scope
+
+The B2C priority does not displace any currently supported customer/member feature, including credit, Essentials, savings, investment, protection, statements, Financial Spaces, savings groups, clubs, SACCOs, People/employment and future approved partner offerings. Delivery sequencing is based on useful first value **plus** continued full product scope and non-regression. The [Complete B2C End-User Capability and Channel Parity Contract](OPFIN_B2C_COMPLETE_END_USER_SCOPE.md) is the full-coverage acceptance map. "Light" refers to download/data/storage/UX cost, not product scope.
