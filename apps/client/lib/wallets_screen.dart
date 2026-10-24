@@ -5,6 +5,7 @@ import 'package:opfin/services/opfin_http.dart';
 import 'package:opfin/constants.dart';
 import 'package:opfin/services/credit_profile_api.dart';
 import 'package:opfin/services/user_session.dart';
+import 'package:opfin/services/device_biometrics.dart';
 
 class WalletsScreen extends StatefulWidget{
   const WalletsScreen({super.key});
@@ -14,6 +15,17 @@ class _WalletsScreenState extends State<WalletsScreen>{
   late Future<List<Map<String,dynamic>>> _wallets;
   @override void initState(){super.initState();_wallets=CreditProfileApi.wallets();}
   Future<void> _default(Map<String,dynamic> w) async{
+    final biometrics = DeviceBiometrics();
+    // Optional local step-up before changing payout/repayment destination.
+    // The server remains the authority for eligibility, ownership and mutation.
+    if (await biometrics.isEnabledForCurrentUser()) {
+      final accepted = await biometrics.verify(reason: 'Confirm your OpFin payout and repayment wallet change');
+      if (!accepted) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Wallet change cancelled. Nothing was updated.')));
+        return;
+      }
+    }
     final token=await UserSession.getAccessToken();
     final r=await OpFinHttp.patch(Uri.parse('$apiUrl/wallets/${w['id']}/default'),headers:{
       'Authorization':'Bearer $token','Accept':'application/json','Content-Type':'application/json'
@@ -36,6 +48,13 @@ class _WalletsScreenState extends State<WalletsScreen>{
         const SizedBox(height:8),
         const Text('Choose one verified wallet for loan payouts and repayments.'),
         const SizedBox(height:18),
+        const Card(child:ListTile(
+          leading:Icon(Icons.payment_outlined),
+          title:Text('Apple Pay and Google Pay'),
+          subtitle:Text('Not currently enabled for OpFin checkout in Uganda. Payment options appear only where the device, issuing bank, market, provider and transaction are all approved. These methods are not loan payout wallets.'),
+          isThreeLine:true,
+        )),
+        const SizedBox(height:10),
         ...list.map((w)=>Card(child:ListTile(
           minVerticalPadding:14,leading:const Icon(Icons.account_balance_wallet_outlined),
           title:Text(_mask(w['msisdn']?.toString()??'')),

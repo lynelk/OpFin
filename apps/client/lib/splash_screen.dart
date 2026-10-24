@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/brand/opfin_theme.dart';
 import 'package:opfin/home_screen.dart';
+import 'package:opfin/biometric_unlock_screen.dart';
+import 'package:opfin/services/device_biometrics.dart';
 import 'package:opfin/login_screen.dart';
 import 'package:opfin/onboarding_screen.dart';
 import 'package:opfin/services/user_session.dart';
@@ -40,7 +42,9 @@ class SplashScreenState extends State<SplashScreen> {
         final userId = await UserSession.getUserId();
         final token = await UserSession.getAccessToken();
         if (userId != null && token != null && token.isNotEmpty) {
-          destination = const HomeScreen();
+          destination = (await DeviceBiometrics().isEnabledForCurrentUser())
+              ? const BiometricUnlockScreen()
+              : const HomeScreen();
         }
       }
     } catch (_) {

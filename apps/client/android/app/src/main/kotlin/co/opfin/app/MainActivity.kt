@@ -7,6 +7,10 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.hardware.biometrics.BiometricManager
+import android.hardware.biometrics.BiometricPrompt
+import android.os.Build
+import android.os.CancellationSignal
 import android.net.Uri
 import android.os.Looper
 import androidx.core.app.ActivityCompat
@@ -17,6 +21,8 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val locationChannel = "co.opfin/location"
+    private var biometricResult: MethodChannel.Result? = null
+    private var biometricCancellation: CancellationSignal? = null
     private val locationRequestCode = 7401
     private var pendingLocationResult: MethodChannel.Result? = null
     private var statementExports: ClubStatementExports? = null
@@ -24,6 +30,19 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         statementExports = ClubStatementExports(this)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "co.opfin/device_biometrics")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "availability" -> result.success(
+                        mapOf("available" to biometricAvailable(), "kind" to
+                            if (biometricAvailable()) "biometric" else "none")
+                    )
+                    "authenticate" -> authenticateBiometric(
+                        call.argument<String>("reason") ?: "Confirm your identity for OpFin", result
+                    )
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "co.opfin/club_statement_export")
             .setMethodCallHandler { call, result ->
                 if (call.method == "export") statementExports?.handle(call.arguments, result) else result.notImplemented()
@@ -52,9 +71,68 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        biometricCancellation?.cancel()
+        biometricCancellation = null
+        biometricResult?.success(false)
+        biometricResult = null
         statementExports?.dispose()
         statementExports = null
         super.onDestroy()
+    }
+
+
+    @Suppress("DEPRECATION")
+    private fun biometricAvailable(): Boolean {
+        // Use the framework enrolment check available since Android 10.
+        // Android 9 and older remain supported through OpFin PIN login.
+        // Never treat a secure screen lock as an enrolled biometric.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        val manager = getSystemService(Context.BIOMETRIC_SERVICE) as? BiometricManager
+        return manager?.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
+    }
+
+    private fun completeBiometric(result: Boolean) {
+        val callback = biometricResult
+        biometricResult = null
+        biometricCancellation = null
+        callback?.success(result)
+    }
+
+    private fun authenticateBiometric(reason: String, result: MethodChannel.Result) {
+        if (!biometricAvailable() || Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            result.success(false)
+            return
+        }
+        if (biometricResult != null) {
+            result.error("biometric_busy", "A device authentication prompt is already open.", null)
+            return
+        }
+        biometricResult = result
+        try {
+            val cancellation = CancellationSignal()
+            biometricCancellation = cancellation
+            val prompt = BiometricPrompt.Builder(this)
+                .setTitle("Confirm it's you")
+                .setSubtitle(reason.take(120))
+                .setNegativeButton("Use OpFin PIN", mainExecutor) { _, _ ->
+                    completeBiometric(false)
+                }
+                .build()
+            prompt.authenticate(cancellation, mainExecutor,
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(
+                        response: BiometricPrompt.AuthenticationResult
+                    ) {
+                        completeBiometric(true)
+                    }
+
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        completeBiometric(false)
+                    }
+                })
+        } catch (_: Exception) {
+            completeBiometric(false)
+        }
     }
 
     private fun requestCurrentLocation(result: MethodChannel.Result) {

@@ -10,6 +10,7 @@ import 'package:opfin/secondary_phone_screen.dart';
 import 'package:opfin/services/credit_profile_api.dart';
 import 'package:opfin/services/user_session.dart';
 import 'package:opfin/wallets_screen.dart';
+import 'package:opfin/device_security_screen.dart';
 
 class ProfileScreen extends StatefulWidget{
   const ProfileScreen({super.key});
@@ -71,6 +72,12 @@ class _ProfileScreenState extends State<ProfileScreen>{
           leading:const Icon(Icons.account_balance_wallet_outlined),
           title:const Text('Wallets'),subtitle:const Text('Choose payout and repayment wallet.'),
           trailing:const Icon(Icons.chevron_right),onTap:()=>_open(const WalletsScreen()))),
+        Card(child:ListTile(
+          leading:const Icon(Icons.fingerprint),
+          title:const Text('Device biometrics'),
+          subtitle:const Text('Optional fingerprint or face unlock.'),
+          trailing:const Icon(Icons.chevron_right),
+          onTap:()=>_open(const DeviceSecurityScreen()))),
         Card(child:ListTile(
           leading:const Icon(Icons.accessibility_new),
           title:const Text('Accessibility'),subtitle:const Text('Larger text, simpler wording and reduced movement.'),
