@@ -48,6 +48,13 @@ class _WalletsScreenState extends State<WalletsScreen>{
         const SizedBox(height:8),
         const Text('Choose one verified wallet for loan payouts and repayments.'),
         const SizedBox(height:18),
+        const Card(child:ListTile(
+          leading:Icon(Icons.payment_outlined),
+          title:Text('Apple Pay and Google Pay'),
+          subtitle:Text('Not currently enabled for OpFin checkout in Uganda. Payment options appear only where the device, issuing bank, market, provider and transaction are all approved. These methods are not loan payout wallets.'),
+          isThreeLine:true,
+        )),
+        const SizedBox(height:10),
         ...list.map((w)=>Card(child:ListTile(
           minVerticalPadding:14,leading:const Icon(Icons.account_balance_wallet_outlined),
           title:Text(_mask(w['msisdn']?.toString()??'')),
