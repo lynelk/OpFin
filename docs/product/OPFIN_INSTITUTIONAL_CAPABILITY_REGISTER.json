@@ -1,0 +1,777 @@
+{
+  "schema_version": 1,
+  "reviewed_date": "2026-10-24",
+  "status": "proposed_b2b_register_not_a_release_attestation",
+  "owner": "Unassigned; product leadership to assign accountable owner per institution",
+  "source_branch": "main",
+  "status_legend": {
+    "source_foundation": "Source or reviewed repository contracts indicate implemented components. No current exact-head end-to-end acceptance or production activation implied.",
+    "candidate_source": "Protected/default-off, prototype or candidate source; not established as live.",
+    "acceptance_gap": "Some foundational source exists but named full workflow and independent acceptance remain open.",
+    "target_scope": "Product requirement; no claimed implementation."
+  },
+  "activation_rule": "Management SaaS may be used only under ordinary contract, data protection and organisational permission. Regulated money activity requires separate current proof of institution/product/country authority, custody, finance controls, settlement and device/channel acceptance.",
+  "institutions": [
+    {
+      "code": "investment_club",
+      "label": "Investment Club",
+      "priority": "P0",
+      "model": "management_saas_then_connected",
+      "journey": "member>capital_call>contribution>approval>investment>ledger>valuation>distribution>statement",
+      "roles": [
+        "member",
+        "chairperson",
+        "treasurer",
+        "maker",
+        "checker",
+        "auditor"
+      ],
+      "client": "Flutter member views; Web treasury and accounting administration",
+      "modules": [
+        {
+          "key": "member_capital_ownership",
+          "status": "source_foundation",
+          "notes": "club accounting and member capital books; current device/operating acceptance unverified",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "treasury_import_reconciliation",
+          "status": "source_foundation",
+          "notes": "cashbook, CSV mapping, statement matching and frozen reporting",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "investment_nav_distribution",
+          "status": "source_foundation",
+          "notes": "club asset/valuation and distribution source; external custody/payment settlement not certified",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "meeting_governance",
+          "status": "target_scope",
+          "notes": "proposal/vote/quorum decisions and end-to-end member governance",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "apps/api/routes/club_accounting.php",
+        "apps/api/docs/api/CLUB_ACCOUNTING.md",
+        "docs/product/INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md",
+        "docs/operations/CLUB_ACCOUNTING_VERIFICATION_2026-09-25.md"
+      ],
+      "financial_gate": "External account authenticity, club mandate, issuer/custodian evidence, maker/checker, accepted statement matching and provider payout finality",
+      "offline": "Previously authorised member statements and encrypted non-final proposals where security approved; no offline payouts",
+      "pricing": "Institution subscription; optional advanced governance/portfolio reporting",
+      "metric": "Accurate member capital and reconciled month-end statement; time to close; distribution disputes",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "apps/api/routes/club_accounting.php",
+        "apps/api/docs/api/CLUB_ACCOUNTING.md",
+        "docs/product/INVESTMENT_CLUB_TREASURY_AND_STATEMENTS.md",
+        "docs/operations/CLUB_ACCOUNTING_VERIFICATION_2026-09-25.md"
+      ],
+      "financial_activation_gate": "External account authenticity, club mandate, issuer/custodian evidence, maker/checker, accepted statement matching and provider payout finality",
+      "offline_scope": "Previously authorised member statements and encrypted non-final proposals where security approved; no offline payouts",
+      "pricing_hypothesis": "Institution subscription; optional advanced governance/portfolio reporting",
+      "north_star_metric": "Accurate member capital and reconciled month-end statement; time to close; distribution disputes"
+    },
+    {
+      "code": "sacco",
+      "label": "SACCO or Cooperative",
+      "priority": "P0",
+      "model": "management_saas_then_approved_products",
+      "journey": "member>shares>deposit_product>loan_guarantee>decision>settlement>ledger>period_close>report",
+      "roles": [
+        "member",
+        "administrator",
+        "teller",
+        "loan_officer",
+        "credit_committee",
+        "treasurer",
+        "checker",
+        "auditor"
+      ],
+      "client": "Flutter member/officer; deeper Web institutional administration",
+      "modules": [
+        {
+          "key": "membership_shares_accounts",
+          "status": "source_foundation",
+          "notes": "SACCO product/member positions/guarantee source; branch/member acceptance outstanding",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "savings_lending_guarantors",
+          "status": "source_foundation",
+          "notes": "Core API and candidate legal attestation/action gates; independent finance acceptance outstanding",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "double_entry_subledger_reporting",
+          "status": "acceptance_gap",
+          "notes": "complete SACCO-specific GL, settlement, reporting and regulated finance validation",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "white_label",
+          "status": "source_foundation",
+          "notes": "brand/domain requests exist; DNS/TLS control and active origin not demonstrated",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "apps/api/routes/sacco_core.php",
+        "docs/development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md",
+        "docs/COMMUNITY_FINANCE_AND_SACCO_CORE.md"
+      ],
+      "financial_gate": "Current institution-specific regulator, custody, product authority, funded lender and exact external receipt plus immutable subledger and maker/checker",
+      "offline": "Permitted member read-only cached statements and protected draft requests only; no deposit or loan offline approval",
+      "pricing": "Scale- and enabled-module-based institutional subscription",
+      "metric": "Statement/GL reconciliation; PAR/NPL and liquidity; approved loan turnaround; complaints",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "apps/api/routes/sacco_core.php",
+        "docs/development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md",
+        "docs/COMMUNITY_FINANCE_AND_SACCO_CORE.md"
+      ],
+      "financial_activation_gate": "Current institution-specific regulator, custody, product authority, funded lender and exact external receipt plus immutable subledger and maker/checker",
+      "offline_scope": "Permitted member read-only cached statements and protected draft requests only; no deposit or loan offline approval",
+      "pricing_hypothesis": "Scale- and enabled-module-based institutional subscription",
+      "north_star_metric": "Statement/GL reconciliation; PAR/NPL and liquidity; approved loan turnaround; complaints"
+    },
+    {
+      "code": "savings_group",
+      "label": "Savings Group or VSLA",
+      "priority": "P0",
+      "model": "affordable_member_management",
+      "journey": "formation>cycle>pledge>verified_contribution>member_loan>welfare>repayment>shareout>renewal",
+      "roles": [
+        "member",
+        "chairperson",
+        "treasurer",
+        "secretary",
+        "checker"
+      ],
+      "client": "Offline-aware Flutter first; Web optional for administration",
+      "modules": [
+        {
+          "key": "cycles_pledges_member_loans",
+          "status": "source_foundation",
+          "notes": "cycle and pledges, meeting/loan request paths exist",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "verified_money_allocations",
+          "status": "source_foundation",
+          "notes": "statement-matched contributions and candidate settlement routes; external money completion separately gated",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "social_fund_shareout",
+          "status": "source_foundation",
+          "notes": "social-claim/allocations and proposed shareout source; final payout acceptance outstanding",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "historical_import_offline_sync",
+          "status": "acceptance_gap",
+          "notes": "low-end Android, records migration, encrypted drafts, exact replay/reconciliation testing",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "apps/api/routes/savings_group_cycles.php",
+        "apps/client/lib/savings_groups_workspace_screen.dart",
+        "docs/COMMUNITY_FINANCE_AND_SACCO_CORE.md"
+      ],
+      "financial_gate": "Group mandate, member consent, payer/payee verification, matched receipts, agreement, fees and real settlement",
+      "offline": "Group diary/meeting/pledge drafts only after secure user+Space storage; never settled money",
+      "pricing": "Low predictable group fee; optionally programme-sponsored",
+      "metric": "Verified contribution coverage, share-out accuracy, disputes, completed cycles",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "apps/api/routes/savings_group_cycles.php",
+        "apps/client/lib/savings_groups_workspace_screen.dart",
+        "docs/COMMUNITY_FINANCE_AND_SACCO_CORE.md"
+      ],
+      "financial_activation_gate": "Group mandate, member consent, payer/payee verification, matched receipts, agreement, fees and real settlement",
+      "offline_scope": "Group diary/meeting/pledge drafts only after secure user+Space storage; never settled money",
+      "pricing_hypothesis": "Low predictable group fee; optionally programme-sponsored",
+      "north_star_metric": "Verified contribution coverage, share-out accuracy, disputes, completed cycles"
+    },
+    {
+      "code": "lender",
+      "label": "Bank, MFI or Digital Lender",
+      "priority": "P0",
+      "model": "licensed_financial_service_provider",
+      "journey": "legal_authority>product_funding>acquisition>assessment>offer>funding>repayment>collections>risk_reporting",
+      "roles": [
+        "institution_admin",
+        "credit_officer",
+        "underwriter",
+        "risk",
+        "operations",
+        "collections",
+        "auditor"
+      ],
+      "client": "Institutional Web/partner APIs plus customer Flutter and approved channels",
+      "modules": [
+        {
+          "key": "lender_product_orchestration",
+          "status": "source_foundation",
+          "notes": "institution/product/channel/funding lifecycle source",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "eligibility_pricing_offers",
+          "status": "source_foundation",
+          "notes": "server-authoritative offers and consent; actual lender finality remains gated",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "loan_servicing_portfolio_reporting",
+          "status": "source_foundation",
+          "notes": "servicing/risk/report contract foundations; institution-by-institution certification outstanding",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "full_lender_b2b2c_portal",
+          "status": "acceptance_gap",
+          "notes": "isolated partner administration, white-label and exact production UAT",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "docs/architecture/LENDER_ORCHESTRATION.md",
+        "docs/product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md",
+        "apps/api/docs/api/current-endpoints.md"
+      ],
+      "financial_gate": "Actual licensed lender of record, approved product/capital, pricing, country/store policy, borrower consent/affordability and finality/reconciliation",
+      "offline": "Education/affordability planning and last-confirmed data only; never approve/fund/recover loan offline",
+      "pricing": "Institution platform/servicing contract and permitted origination fees",
+      "metric": "Risk-adjusted contribution margin, PAR/NPL, reconciled repayments, turnaround and borrower complaints",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "docs/architecture/LENDER_ORCHESTRATION.md",
+        "docs/product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md",
+        "apps/api/docs/api/current-endpoints.md"
+      ],
+      "financial_activation_gate": "Actual licensed lender of record, approved product/capital, pricing, country/store policy, borrower consent/affordability and finality/reconciliation",
+      "offline_scope": "Education/affordability planning and last-confirmed data only; never approve/fund/recover loan offline",
+      "pricing_hypothesis": "Institution platform/servicing contract and permitted origination fees",
+      "north_star_metric": "Risk-adjusted contribution margin, PAR/NPL, reconciled repayments, turnaround and borrower complaints"
+    },
+    {
+      "code": "employer",
+      "label": "Employer and OpFin People",
+      "priority": "P1",
+      "model": "standalone_people_saas",
+      "journey": "organisation>hire>attendance_leave>expenses_kpis>approved_payroll>benefits>exit",
+      "roles": [
+        "employer_admin",
+        "HR",
+        "supervisor",
+        "payroll_officer",
+        "finance",
+        "employee",
+        "auditor"
+      ],
+      "client": "Embedded Flutter People workspace plus independent People backend and Web employer Workspace",
+      "modules": [
+        {
+          "key": "people_10_module_core",
+          "status": "candidate_source",
+          "notes": "ten mandatory source modules with protected gate; full independent product UAT pending",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "workforce_governance",
+          "status": "candidate_source",
+          "notes": "role-scoped employee, leave, attendance, field and assets source",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "statutory_payroll",
+          "status": "acceptance_gap",
+          "notes": "effective-dated verified Uganda rules, parallel runs, maker/checker and payout reconciliation",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "financial_benefits_bridge",
+          "status": "target_scope",
+          "notes": "separate voluntary employee access and institution-approved finance products",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "docs/architecture/OPFIN_PEOPLE_CORE_RELEASE_SCOPE.md",
+        "apps/client/lib/people_hub_screen.dart"
+      ],
+      "financial_gate": "Employer payroll is not payment; no employee Personal Space disclosure; certified statutory rules and real remittance evidence",
+      "offline": "Role-scoped attendance and field drafts only under approved encrypted/replay-safe queue",
+      "pricing": "Employer subscription plus scoped user/feature tiers",
+      "metric": "Payroll accuracy, field/attendance exception closure, leave throughput and cost-to-serve",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "docs/architecture/OPFIN_PEOPLE_CORE_RELEASE_SCOPE.md",
+        "apps/client/lib/people_hub_screen.dart"
+      ],
+      "financial_activation_gate": "Employer payroll is not payment; no employee Personal Space disclosure; certified statutory rules and real remittance evidence",
+      "offline_scope": "Role-scoped attendance and field drafts only under approved encrypted/replay-safe queue",
+      "pricing_hypothesis": "Employer subscription plus scoped user/feature tiers",
+      "north_star_metric": "Payroll accuracy, field/attendance exception closure, leave throughput and cost-to-serve"
+    },
+    {
+      "code": "investment_fund",
+      "label": "Investment Manager and Fund",
+      "priority": "P1",
+      "model": "mandate_administration",
+      "journey": "KYB>mandate>investor_suitability>commitment>custody>allocation>valuation>reporting>distribution",
+      "roles": [
+        "fund_manager",
+        "investment_committee",
+        "compliance",
+        "finance",
+        "investor",
+        "auditor"
+      ],
+      "client": "Institutional Web and permissioned investor reporting",
+      "modules": [
+        {
+          "key": "capital_mandates",
+          "status": "source_foundation",
+          "notes": "funding allocations and investor/capital source family",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "mandate_custody_valuation",
+          "status": "acceptance_gap",
+          "notes": "external custody and legal fund interests not yet certified",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "investor_reporting_distributions",
+          "status": "target_scope",
+          "notes": "rights-based performance, income, redemptions, statement/reconciliation",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "docs/product/OPFIN_CANONICAL_PRODUCT_BREAKDOWN.md",
+        "docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md"
+      ],
+      "financial_gate": "Applicable CMA/market authority, legal mandate, suitability, custody, valuation and distribution rights",
+      "offline": "Approved educational scenarios and labelled last-known reports; no investments offline",
+      "pricing": "Mandate/platform subscription and lawful administration fee",
+      "metric": "Custodian reconciliation, permitted mandate concentration, on-time investor statements",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "docs/product/OPFIN_CANONICAL_PRODUCT_BREAKDOWN.md",
+        "docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md"
+      ],
+      "financial_activation_gate": "Applicable CMA/market authority, legal mandate, suitability, custody, valuation and distribution rights",
+      "offline_scope": "Approved educational scenarios and labelled last-known reports; no investments offline",
+      "pricing_hypothesis": "Mandate/platform subscription and lawful administration fee",
+      "north_star_metric": "Custodian reconciliation, permitted mandate concentration, on-time investor statements"
+    },
+    {
+      "code": "insurer",
+      "label": "Insurer and Broker",
+      "priority": "P1",
+      "model": "regulated_protection_distribution",
+      "journey": "provider_activation>product>quote>underwriting>premium>policy>claim>renewal",
+      "roles": [
+        "partner_admin",
+        "broker_agent",
+        "underwriter",
+        "claims_handler",
+        "finance",
+        "auditor"
+      ],
+      "client": "Partner Workspace/API and customer App policy/claim experience",
+      "modules": [
+        {
+          "key": "product_quote_protection",
+          "status": "source_foundation",
+          "notes": "protection product and client journey foundations",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "policy_premium_claim_reporting",
+          "status": "source_foundation",
+          "notes": "reporting/policy state foundations; actual insurer issuance/claims outcome gated",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "institution_claim_admin",
+          "status": "target_scope",
+          "notes": "partner self-serve claims, renewal, exception, fee audit and settlement",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md",
+        "docs/product/OPFIN_CANONICAL_PRODUCT_BREAKDOWN.md"
+      ],
+      "financial_gate": "Actual insurer/underwriter and approved product, policy issuance evidence, premium reconciliation and claims authority",
+      "offline": "Policy explanatory content and permitted stale-labelled view; no policy activation offline",
+      "pricing": "Platform/servicing and legally permitted distribution fees",
+      "metric": "Policy status accuracy, premium reconciliation, servicing turnaround and complaints",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md",
+        "docs/product/OPFIN_CANONICAL_PRODUCT_BREAKDOWN.md"
+      ],
+      "financial_activation_gate": "Actual insurer/underwriter and approved product, policy issuance evidence, premium reconciliation and claims authority",
+      "offline_scope": "Policy explanatory content and permitted stale-labelled view; no policy activation offline",
+      "pricing_hypothesis": "Platform/servicing and legally permitted distribution fees",
+      "north_star_metric": "Policy status accuracy, premium reconciliation, servicing turnaround and complaints"
+    },
+    {
+      "code": "payment_provider",
+      "label": "Payment Institution or Wallet",
+      "priority": "P1",
+      "model": "approved_integration_partner",
+      "journey": "contract>channel_certification>payment_intent>provider_execution>settlement>reconciliation>dispute",
+      "roles": [
+        "partner_admin",
+        "settlement_officer",
+        "compliance",
+        "support",
+        "auditor"
+      ],
+      "client": "API/partner operations and exception reporting",
+      "modules": [
+        {
+          "key": "payment_instruction_adapter",
+          "status": "source_foundation",
+          "notes": "provider service boundary, reconciliation and idempotency source",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "provider_settlement_recovery",
+          "status": "acceptance_gap",
+          "notes": "actual provider reconciliation and ambiguous status acceptance",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "partner_sla_fee_reporting",
+          "status": "source_foundation",
+          "notes": "service-economics/report structures; verified production partner access requires UAT",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md",
+        "docs/development/FINANCIAL_SPACES_COMMERCIAL_OPERATIONS_2026-09-29.md"
+      ],
+      "financial_gate": "Verified payment provider authority, named executor, real status and receipt, reversals, dispute and settlement assurance",
+      "offline": "None for executing money instructions; explain last confirmed state",
+      "pricing": "Contracted integration and permitted service fees",
+      "metric": "Reconciliation latency, exception ageing, duplications and transaction cost",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md",
+        "docs/development/FINANCIAL_SPACES_COMMERCIAL_OPERATIONS_2026-09-29.md"
+      ],
+      "financial_activation_gate": "Verified payment provider authority, named executor, real status and receipt, reversals, dispute and settlement assurance",
+      "offline_scope": "None for executing money instructions; explain last confirmed state",
+      "pricing_hypothesis": "Contracted integration and permitted service fees",
+      "north_star_metric": "Reconciliation latency, exception ageing, duplications and transaction cost"
+    },
+    {
+      "code": "programme",
+      "label": "NGO, Development Programme or Agency",
+      "priority": "P1",
+      "model": "programme_service_contract",
+      "journey": "agreement>participants>consent>intervention>checkin>outcome>privacy_safe_reporting>closure",
+      "roles": [
+        "programme_admin",
+        "field_officer",
+        "MEL_officer",
+        "reviewer",
+        "auditor"
+      ],
+      "client": "Programme partner Web plus member Flutter/approved assisted channel",
+      "modules": [
+        {
+          "key": "participant_enrolment_consent",
+          "status": "source_foundation",
+          "notes": "consented enrolment, exit and evidence rules",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "measurement_and_reporting",
+          "status": "source_foundation",
+          "notes": "instrument/outcome and privacy aggregation foundations",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "independent_programme_operating_UAT",
+          "status": "acceptance_gap",
+          "notes": "actual contractual indicators, field/device translation and baseline reliability",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md"
+      ],
+      "financial_gate": "Programme grant and active participant consent; programme outcomes not credit eligible by default",
+      "offline": "Reviewed educational materials and explicitly allowed draft field instruments",
+      "pricing": "Contracted implementation, reporting and managed programme services",
+      "metric": "Valid records, intervention completion, independent outcome quality and support cost",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md"
+      ],
+      "financial_activation_gate": "Programme grant and active participant consent; programme outcomes not credit eligible by default",
+      "offline_scope": "Reviewed educational materials and explicitly allowed draft field instruments",
+      "pricing_hypothesis": "Contracted implementation, reporting and managed programme services",
+      "north_star_metric": "Valid records, intervention completion, independent outcome quality and support cost"
+    },
+    {
+      "code": "merchant_partner",
+      "label": "Merchant and Supplier Partner",
+      "priority": "P1",
+      "model": "embedded_referral_partner",
+      "journey": "KYB>commercial_agreement>permissioned_referral>customer_confirmation>underwriting>servicing>fee_reconciliation",
+      "roles": [
+        "merchant_admin",
+        "operations",
+        "finance",
+        "customer"
+      ],
+      "client": "Partner referral/API integration and customer Flutter",
+      "modules": [
+        {
+          "key": "customer_confirmed_referrals",
+          "status": "source_foundation",
+          "notes": "customer-controlled financial-intent referral route exists",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "merchant_evidence_consent",
+          "status": "candidate_source",
+          "notes": "limited permissioned evidence path; external source authorisation/contract gated",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "embedded_settlement_and_fees",
+          "status": "acceptance_gap",
+          "notes": "actual inventory/asset finance, supplier payee and commercial reconciliation",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "apps/api/docs/api/PARTNER_FINANCIAL_INTENTS.md",
+        "docs/product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md"
+      ],
+      "financial_gate": "No merchant-originated loan without customer confirmation, provider authority and independent decision",
+      "offline": "Draft financing needs only; no third-party data sync or credit approval offline",
+      "pricing": "Permitted integration and referral contract fees",
+      "metric": "Consent-to-valid-intent rate, correct disbursement beneficiary and support burden",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "apps/api/docs/api/PARTNER_FINANCIAL_INTENTS.md",
+        "docs/product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md"
+      ],
+      "financial_activation_gate": "No merchant-originated loan without customer confirmation, provider authority and independent decision",
+      "offline_scope": "Draft financing needs only; no third-party data sync or credit approval offline",
+      "pricing_hypothesis": "Permitted integration and referral contract fees",
+      "north_star_metric": "Consent-to-valid-intent rate, correct disbursement beneficiary and support burden"
+    },
+    {
+      "code": "fintech_partner",
+      "label": "Fintech and Technology Integrator",
+      "priority": "P2",
+      "model": "api_and_verified_white_label",
+      "journey": "contract>KYB>API_credentials>scoped_integration>sandbox_certification>production_review>metering_billing",
+      "roles": [
+        "partner_admin",
+        "developer",
+        "security",
+        "commercial",
+        "auditor"
+      ],
+      "client": "Governed developer/interface and administration Workspace",
+      "modules": [
+        {
+          "key": "developer_discovery",
+          "status": "source_foundation",
+          "notes": "API documentation and restricted contract discovery source",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "institution_white_label",
+          "status": "candidate_source",
+          "notes": "brand/domain request capability for eligible Spaces; domain control to prove",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "partner_billing_api_metering",
+          "status": "acceptance_gap",
+          "notes": "usage, subscription, exception and commercial reconciliation per live contract",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "apps/api/docs/api/INTEGRATOR_GUIDE.md",
+        "docs/development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md"
+      ],
+      "financial_gate": "No API scope grants financial licence, member permission or payment settlement authority",
+      "offline": "Documentation locally possible; scoped API/network calls online only",
+      "pricing": "Contracted API/platform fees with metering and support costs",
+      "metric": "Time to certified integration, uptime, active tenant cost and reconciliation",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "apps/api/docs/api/INTEGRATOR_GUIDE.md",
+        "docs/development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md"
+      ],
+      "financial_activation_gate": "No API scope grants financial licence, member permission or payment settlement authority",
+      "offline_scope": "Documentation locally possible; scoped API/network calls online only",
+      "pricing_hypothesis": "Contracted API/platform fees with metering and support costs",
+      "north_star_metric": "Time to certified integration, uptime, active tenant cost and reconciliation"
+    },
+    {
+      "code": "welfare_association",
+      "label": "Member Association and Welfare Society",
+      "priority": "P2",
+      "model": "independent_membership_saas",
+      "journey": "formation>member_due>welfare_rule>request>approval>verified_payment>statement",
+      "roles": [
+        "member",
+        "chairperson",
+        "secretary",
+        "treasurer",
+        "checker",
+        "auditor"
+      ],
+      "client": "Mobile membership/benefit experience and Web governance",
+      "modules": [
+        {
+          "key": "association_membership",
+          "status": "target_scope",
+          "notes": "could reuse Financial Space membership with own association semantics",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "dues_claims_approvals",
+          "status": "target_scope",
+          "notes": "member dues, welfare rules, claim and maker/checker lifecycle",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        },
+        {
+          "key": "reconciled_welfare_reporting",
+          "status": "target_scope",
+          "notes": "benefit eligibility, external receipt, ledger and historical statements",
+          "owner": "TBD",
+          "acceptance": "pending_independent_evidence"
+        }
+      ],
+      "sources": [
+        "docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md",
+        "docs/COMMUNITY_FINANCE_AND_SACCO_CORE.md"
+      ],
+      "financial_gate": "Governing instrument, legal structure and actual funds/custodian authority; welfare claims not paid until verified",
+      "offline": "Member dues/claim drafts once secure store approved",
+      "pricing": "Small organisation subscription or sponsored group tier",
+      "metric": "Dues reconciliation, member claim resolution and governance disputes",
+      "owner": "TBD",
+      "readiness_status": "requires_exact_head_and_external_evidence",
+      "regulatory_status": "per_institution_per_product_verification_required",
+      "commercial_price_approved": null,
+      "financially_activated": false,
+      "source_evidence_paths": [
+        "docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md",
+        "docs/COMMUNITY_FINANCE_AND_SACCO_CORE.md"
+      ],
+      "financial_activation_gate": "Governing instrument, legal structure and actual funds/custodian authority; welfare claims not paid until verified",
+      "offline_scope": "Member dues/claim drafts once secure store approved",
+      "pricing_hypothesis": "Small organisation subscription or sponsored group tier",
+      "north_star_metric": "Dues reconciliation, member claim resolution and governance disputes"
+    }
+  ]
+}
