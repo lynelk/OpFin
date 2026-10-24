@@ -28,7 +28,15 @@ Do not attempt to eliminate reliance. Build **functional, trusted, reversible re
 
 The relationship must remain useful if no financial providers, employer, SACCO, group, insurer or add-on is connected. No customer must buy a regulated product to obtain core value.
 
-## 2. Product contract: the complete personal financial-life loop
+## 2. Complete B2C scope: no feature loss
+
+The financial-life loop is the **primary consumer organising experience**, not a reduced product scope. The B2C strategy encompasses every appropriate end-user feature in the existing [Canonical Product Breakdown](OPFIN_CANONICAL_PRODUCT_BREAKDOWN.md): personal records and wellbeing; full borrowing/Essentials; savings; investments; insurance; participatory/asset/digital products where authorised; payments, statements and dispute handling; Financial Spaces for households, savings groups, clubs, SACCOs, People/employment, businesses and programmes; identity, consent, accessibility, support, preferences and account rights.
+
+Use the mandatory [Complete B2C End-User Capability and Channel Parity Contract](OPFIN_B2C_COMPLETE_END_USER_SCOPE.md) for the **whole-functionality inventory, offline/online boundary by domain, non-regression standards and role/channel acceptance matrix**.
+
+No "lean B2C" proposal may delete, hide permanently, degrade or disable a valid existing journey. "Light" means economical device/data use and simple presentation, **not fewer financial capabilities or weakened controls**. Existing service families progress in parallel subject to their own licensing, operational and funding/custody evidence.
+
+## 3. Product contract: the complete personal financial-life loop
 
 **Recognise need → Obtain a first useful answer → Record/confirm facts → Plan a manageable next step → Follow through → Review real outcomes → Adapt the next plan.**
 
