@@ -17,6 +17,12 @@ class ProductionCreditDecisionService
 
     public function decide(LoanApplication $application, ?User $actor = null): CreditDecision
     {
+        $evidence = app(CreditEvidenceGate::class)->check($application);
+        if (! $evidence['passed']) {
+            return $this->record($application, $actor, CreditDecision::STATUS_REFERRED, 0,
+                $evidence['reason_codes'], 'Mandatory credit evidence is incomplete or revoked.');
+        }
+
         $application->loadMissing('user');
         $user = $application->user;
 
