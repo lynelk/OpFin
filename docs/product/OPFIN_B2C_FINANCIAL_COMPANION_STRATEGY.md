@@ -7,6 +7,8 @@ Scope: Direct-to-consumer OpFin Web, Flutter, Financial Life API and authorised 
 Authority: [Product Blueprint](OPFIN_PRODUCT_BLUEPRINT.md), [P0–P1 Universal Financial Life](OPFIN_P0_P1_UNIVERSAL_FINANCIAL_LIFE.md), [Financial Life Continuity and Dignity](../architecture/FINANCIAL_LIFE_CONTINUITY_AND_DIGNITY.md)
 Non-goal: change OpFin's North Star, brand promise, independent add-on architecture, provider-of-record policy or regulated product permissions.
 
+**Core delivery constraint: light, offline-first, low-data B2C.** The companion must work helpfully without continuous connectivity or financial partners, on affordable devices. See the [B2C Lightweight, Offline-First Contract](../architecture/B2C_LIGHT_OFFLINE_FIRST_CONTRACT.md). Offline planning and local drafts must never imply verified balances, settlement or current permissions. This is a P0 acceptance condition, not a future nice-to-have.
+
 ## 1. Standing identity
 
 **North Star:** Every financial life deserves a future worth looking forward to.
@@ -167,7 +169,7 @@ Evidence: device/viewport screenshots, user task tests, accessible focus order, 
 
 **Days 1–30:** audit current experience; test a first-value financial check-up and fix the main non-credit Home priority. Instrument valid first actions and data/source labels.
 
-**Days 31–60:** complete fast money capture, real planned-versus-actual expenditure, calendar and income-cycle planning. Validate common tasks on low-end Android and Web.
+**Days 31–60:** complete fast money capture, real planned-versus-actual expenditure, calendar and income-cycle planning; assess a protected per-user offline draft store, server-operation allowlist and explicit sync conflicts before promising offline persistence. Validate common tasks in airplane mode and on low-end Android and Web.
 
 **Days 61–90:** test the weekly review and opt-in event reminders with salaried and irregular-income cohorts. Assess sustained useful activity, outcome trends, safeguards and operating cost, then decide on scaled acquisition. Numerical targets are hypotheses until actual cohort baselines exist.
 
