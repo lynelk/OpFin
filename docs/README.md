@@ -6,6 +6,10 @@ Language: English (United Kingdom)
 
 Start with the [updated concept note](product/OPFIN_CONCEPT_NOTE.md), [product evolution and current position](product/PRODUCT_EVOLUTION_2026-09-26.md), and [current state](CURRENT_STATE.md). They preserve the original financial-wellbeing ethos while distinguishing the continuing product ambition, source implementation, recorded tests, deployment, acceptance and external activation.
 
+## Native device authentication and wallet-payment readiness (24 October 2026)
+
+[Device Biometrics and Express Wallets](architecture/DEVICE_BIOMETRICS_EXPRESS_WALLETS.md) covers optional native Face ID/Touch ID/Android enrolled biometric checks, secure per-account opt-in, cold-start access, PIN recovery, transaction assurance boundaries and **fail-closed** Apple Pay/Google Pay readiness. The latter are **not active Uganda payment methods**, and no consumer checkout is implied by this architecture.
+
 ## Unified B2C, B2B, B2B2C, C2B and C2B2B strategy (24 October 2026)
 
 Read the [Unified Five-Direction Strategy](product/OPFIN_UNIFIED_FIVE_DIRECTION_STRATEGY.md) as the **single cross-relationship operating doctrine**, with the [five-direction functional acceptance register](development/OPFIN_UNIFIED_FIVE_DIRECTION_ACCEPTANCE.md). It unifies individual-first financial life, independent institutional SaaS, member-facing experiences, customer-originated services and explicitly consented two-business handoffs. The detailed B2C and B2B blueprints remain supporting domain specifications, **not competing North Stars**. Source implementation, provider activation, financial settlement and accepted release remain separately evidenced.
