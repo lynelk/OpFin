@@ -19,7 +19,7 @@ Neither relationship automatically authorises the other. The individual remains 
 
 **B2B** means a directly contracted institutional operating customer. **B2B2C** means an institution extends an authorised service or branded experience to its members/customers through OpFin, subject to actual contractual ownership and user consent. **Hybrid** means both customer-origin routes coexist: no double-counted people, no inferred cross-Space rights and no duplicate financial obligations.
 
-This strategy extends, rather than replaces, the [canonical product blueprint](OPFIN_PRODUCT_BLUEPRINT.md), [Financial Spaces domain](../architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md), [service registry](../architecture/OPFIN_CANONICAL_SERVICE_REGISTRY.md), [commercial operations programme](../development/FINANCIAL_SPACES_COMMERCIAL_OPERATIONS_2026-09-29.md) and [B2C strategy candidate](OPFIN_B2C_FINANCIAL_COMPANION_STRATEGY.md). The last link exists in B2C draft PR #221, so do not make this B2B branch or release depend on that PR merging.
+This strategy extends, rather than replaces, the [canonical product blueprint](OPFIN_PRODUCT_BLUEPRINT.md), [Financial Spaces domain](../architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md), [service registry](../architecture/OPFIN_CANONICAL_SERVICE_REGISTRY.md), [commercial operations programme](../development/FINANCIAL_SPACES_COMMERCIAL_OPERATIONS_2026-09-29.md) and [B2C strategy candidate (separate PR #221)](https://github.com/lynelk/OpFin/pull/221). The last link exists in B2C draft PR #221, so do not make this B2B branch or release depend on that PR merging.
 
 ## 2. The institutional product hierarchy
 
@@ -181,7 +181,7 @@ No extra database service or duplicate finance engine is justified by this bluep
 - **SACCO:** `apps/api/routes/sacco_core.php`, [completion programme](../development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md), regulatory/product/settlement source gates. Neither core routes nor saved legal attestations prove live custody or authorised deposits.
 - **Savings Groups:** `apps/api/routes/savings_group_cycles.php` and group Workspace. Draft activation, pledges, contribution matching, loan/welfare requests, settlement proposals and actual money must be traced separately; certain newer settlement routes exist but no blanket verified payout claim.
 - **Lenders:** [lender orchestration](../architecture/LENDER_ORCHESTRATION.md), finance contracts and named institution authority. Independent product/market/channel/financial and consumer checks remain.
-- **People:** [People Core Release](../architecture/OPFIN_PEOPLE_CORE_RELEASE_SCOPE.md) describes ten required modules and protected candidate source. Full payroll/statu­tory/device acceptance is not complete.
+- **People:** [People Core Release](../architecture/OPFIN_PEOPLE_CORE_RELEASE_SCOPE.md) describes ten required modules and protected candidate source. Full payroll/statutory/device acceptance is not complete.
 - **Programmes:** [inclusive finance](INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md) and source-constrained monitoring/reporting; no inferred programme-caused improvement or underwriting use.
 - **Existing state:** [CURRENT_STATE](../CURRENT_STATE.md) and [21 October alignment register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) overrule older snapshot status claims where they conflict.
 
