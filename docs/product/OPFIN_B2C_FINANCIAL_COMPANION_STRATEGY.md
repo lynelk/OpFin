@@ -9,6 +9,10 @@ Non-goal: change OpFin's North Star, brand promise, independent add-on architect
 
 **Core delivery constraint: light, offline-first, low-data B2C.** The companion must work helpfully without continuous connectivity or financial partners, on affordable devices. See the [B2C Lightweight, Offline-First Contract](../architecture/B2C_LIGHT_OFFLINE_FIRST_CONTRACT.md). Offline planning and local drafts must never imply verified balances, settlement or current permissions. This is a P0 acceptance condition, not a future nice-to-have.
 
+## Unified relationship alignment (24 October 2026)
+
+The B2C customer companion is the **individual-first foundation**, not a separate identity or navigation product. The [Unified Five-Direction Strategy](OPFIN_UNIFIED_FIVE_DIRECTION_STRATEGY.md) preserves every B2C function while allowing institutions to provide independent B2B operations, permissioned B2B2C member journeys, direct C2B customer requests and expressly authorised C2B2B service handoffs. Neither member onboarding nor an institution's contract may commandeer a person's Personal Space or make planning dependent on a provider. [Unified Functional Acceptance](../development/OPFIN_UNIFIED_FIVE_DIRECTION_ACCEPTANCE.md) distinguishes available source, validated end-to-end journeys and activated regulated products.
+
 ## 1. Standing identity
 
 **North Star:** Every financial life deserves a future worth looking forward to.
