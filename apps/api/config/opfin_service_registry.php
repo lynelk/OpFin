@@ -7,6 +7,52 @@
 return [
     'schema_version' => 1,
     'spaces' => ['personal', 'household', 'business', 'savings_group', 'sacco', 'investment_club', 'institution'],
+    // Relationship directions are discoverable product boundaries, not
+    // entitlements, institution licences, consent grants or money permissions.
+    // All five reuse the same person, Financial Spaces and domain APIs.
+    'relationship_models' => [
+        'b2c' => [
+            'originator' => 'opfin_and_customer',
+            'consumer' => 'person',
+            'owner' => 'financial_records',
+            'scope' => 'provider_independent_financial_life',
+            'source_foundation' => 'personal_financial_life',
+            'provider_activated' => false,
+        ],
+        'b2b' => [
+            'originator' => 'institution',
+            'consumer' => 'institution',
+            'owner' => 'institutional_operations',
+            'scope' => 'independent_institution_management',
+            'source_foundation' => 'financial_spaces_and_institutional_workspace',
+            'provider_activated' => false,
+        ],
+        'b2b2c' => [
+            'originator' => 'institution',
+            'consumer' => 'authorised_member_or_customer',
+            'owner' => 'financial_spaces',
+            'scope' => 'institution_scoped_member_experience',
+            'source_foundation' => 'financial_space_membership',
+            'provider_activated' => false,
+        ],
+        'c2b' => [
+            'originator' => 'person',
+            'consumer' => 'authorised_institution',
+            'owner' => 'financing',
+            'scope' => 'customer_initiated_financial_intent',
+            'source_foundation' => 'financial_intents',
+            'provider_activated' => false,
+        ],
+        'c2b2b' => [
+            'originator' => 'person_via_institution',
+            'consumer' => 'contracted_second_institution',
+            'owner' => 'integrations_and_financing',
+            'scope' => 'customer_confirmed_scoped_partner_handoff',
+            'source_foundation' => 'partner_financial_intent_requests',
+            'multi_hop_generalised' => false,
+            'provider_activated' => false,
+        ],
+    ],
     'tools' => [
         'budgets' => ['owner' => 'financial_records', 'spaces' => ['personal', 'household', 'business', 'savings_group', 'sacco', 'investment_club', 'institution']],
         'asset_register' => ['owner' => 'financial_records', 'spaces' => ['personal', 'household', 'business', 'savings_group', 'sacco', 'investment_club', 'institution']],
