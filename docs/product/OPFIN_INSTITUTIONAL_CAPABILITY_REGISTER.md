@@ -71,7 +71,7 @@ A programme manager must not translate a 'source foundation' into 100% technical
 
 ## 5. Outcome and economics measures
 
-The primary B2B KPI should be **Institutional Financially Completed Cycles**, segmented by institution type: an institution finishes its true operating cycle with required records, approvals, reconciliations and member/customer access intact.
+The primary B2B KPI should be **Institutional Operating Cycles Completed with Evidence**, segmented by institution type: an institution finishes its own relevant operating cycle with the necessary records, approvals, financial reconciliation *where applicable*, and member/customer access intact. For employers, this could be an approved hire-to-payroll period; for programmes, an evidence-backed participant intervention and reporting cycle; for clubs, an actually reconciled financial period.
 
 Support it with:
 - **Institution adoption:** truly active institutions, onboarding-to-first-value, member utilisation and subscription renewal.
