@@ -16,7 +16,7 @@
 | --- | --- | --- |
 | Flutter security client | `apps/client/lib/services/device_biometrics.dart` | Native channel `co.opfin/device_biometrics`; only enrolled OS biometrics; returns available/not available and success/fail; exception fails closed |
 | iOS | `apps/client/ios/Runner/AppDelegate.swift` + `Info.plist` | LocalAuthentication Touch ID/Face ID, purpose-specific native OS prompt and Face ID purpose text |
-| Android | `apps/client/android/app/src/main/kotlin/co/opfin/app/MainActivity.kt` and `AndroidManifest.xml` | Native BiometricPrompt on API 28+ when compatible enrolled biometrics exist, USE_BIOMETRIC; older/unsupported phones use OpFin PIN |
+| Android | `apps/client/android/app/src/main/kotlin/co/opfin/app/MainActivity.kt` and `AndroidManifest.xml` | Native BiometricPrompt with framework enrolment check on API 29+ when compatible enrolled biometrics exist, USE_BIOMETRIC; Android 9 and older or unsupported phones use OpFin PIN |
 | Opt-in settings | `apps/client/lib/device_security_screen.dart`, Profile and More | Customer explicitly verifies biometrics before enabling. Setting stored securely, bound to current user and wiped by sign-out |
 | Existing-session cold start | Splash → `BiometricUnlockScreen` | Biometrically unlock only an existing authenticated session; cancellation/failure never opens Home; PIN alternative clears cached session and requires new server login |
 | Sensitive local change | `apps/client/lib/wallets_screen.dart` | When opted in, confirm device biometrics before requesting change to saved payout/repayment wallet. API still performs real mutation and checks |
@@ -29,7 +29,7 @@
 - Biometric matching happens in secure OS facilities; OpFin never stores or transfers raw biometrics.
 - Existing-session access is gated at **cold start**. A complete resume-from-background privacy shield, compromised/rooted-device handling, OS enrolment change assurance, additional sensitive steps and lower-API device compatibility remain separate security/device-acceptance work before describing this as comprehensive application locking.
 - Device security settings are per account, and sign-out wipes the setting and session secrets. Access without enrolled biometrics falls back to server-verified OpFin PIN, never an unverified skip.
-- Android native prompt is **SDK 28+**. Older Android users still have the normal PIN entry. This avoids adding a new SDK host, dependency and persistent network traffic to low-cost devices.
+- Android native prompt is **SDK 29+**. Android 9 (API 28) and older users still have the normal PIN entry. This avoids adding a new SDK host, dependency and persistent network traffic to low-cost devices.
 - Biometric enrolment information must not be mistaken for a person's lawful identity proof, legal signature or age verification. No institutional admin can enable it on behalf of a member.
 
 ## 3. Apple Pay and Google Pay eligibility
