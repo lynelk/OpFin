@@ -30,5 +30,29 @@ class OpFinServiceRegistryTest extends TestCase
         }
         $this->assertContains('sacco', $response->json('data.registry.spaces'));
         $this->assertContains('investment_club', $response->json('data.registry.spaces'));
+        $this->assertSame(
+            ['b2c', 'b2b', 'b2b2c', 'c2b', 'c2b2b'],
+            array_keys($response->json('data.registry.relationship_models'))
+        );
+        $this->assertSame(
+            'personal_financial_life',
+            $response->json('data.registry.relationship_models.b2c.source_foundation')
+        );
+        $this->assertSame(
+            'independent_institution_management',
+            $response->json('data.registry.relationship_models.b2b.scope')
+        );
+        $this->assertSame(
+            'customer_initiated_financial_intent',
+            $response->json('data.registry.relationship_models.c2b.scope')
+        );
+        $this->assertSame(
+            'partner_financial_intent_requests',
+            $response->json('data.registry.relationship_models.c2b2b.source_foundation')
+        );
+        $this->assertFalse($response->json('data.registry.relationship_models.c2b2b.multi_hop_generalised'));
+        foreach (array_keys($response->json('data.registry.relationship_models')) as $mode) {
+            $this->assertFalse($response->json('data.registry.relationship_models.'.$mode.'.provider_activated'));
+        }
     }
 }
