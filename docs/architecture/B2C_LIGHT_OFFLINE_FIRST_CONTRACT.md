@@ -15,6 +15,8 @@
 
 Financial decisions and earned, voluntary customer reliance are joint goals. Reliance depends on remembered and usable financial context, dependable offline planning, transparent state and timely synchronisation, not lock-in or high-frequency engagement.
 
+**Whole end-user scope:** This architecture applies to *every* financial-life function, not just calculators, budget tracking and Home. Its domain-by-domain application is defined in the [Complete B2C End-User Scope](../product/OPFIN_B2C_COMPLETE_END_USER_SCOPE.md): borrowing, Essentials, saving, investing, protection, payments, participatory/asset finance, statements, groups, clubs, SACCOs, People, support, account rights and future add-ons. Offline capability must coexist with **complete, non-regressed online functionality**.
+
 ## 2. User-visible offline capability matrix
 
 | Experience | Airplane mode / no connection | Needs network and server | Offline state label |
