@@ -162,6 +162,14 @@ Commercial terms remain downstream of customer need, eligibility and suitability
 ### Controls
 KYC/KYB, consent, role-based permissions, entitlements, eligibility, maker-checker where required, audit, idempotency, ledger integrity, reconciliation, data protection and country policy.
 
+## Institution-complete B2B and B2B2C operation (proposed extension, 24 October 2026)
+
+An institution can be both an independently viable SaaS customer and a separately authorised financial-service provider/distributor. Investment Clubs, SACCOs, Savings Groups, lenders, People/employers, funds, insurers, programmes and other institutions each require their **own complete operating cycle**, roles, source-of-truth, statements, controls, customer/member experience, costs and acceptance gates. The common Financial Space, membership, accounting, governance and integration infrastructure is reused without assuming identical legal/accounting meaning or copying records across contexts.
+
+Institutional Management SaaS is useful **without** connected funding or marketplace services. Any optional linked/embedded/white-labelled finance is allowed only after real per-institution and per-product regulatory, contract, custody, customer, settlement and security acceptance. The person retains a separately private Personal Financial Life and authorised member access. A generic module catalogue, brand/logo setting or invoice does not establish end-to-end operational completion.
+
+For the detailed scope, read the [B2B Institutional Operating Blueprint](OPFIN_B2B_INSTITUTIONAL_OPERATING_BLUEPRINT.md), [Institutional Capability Register](OPFIN_INSTITUTIONAL_CAPABILITY_REGISTER.md), [structured catalogue](OPFIN_INSTITUTIONAL_CAPABILITY_REGISTER.json) and [Delivery/Acceptance Programme](../development/OPFIN_B2B_INSTITUTIONAL_ACCEPTANCE_PROGRAMME.md). These are **proposed requirements and tracking**, not proof that all modules are present, that institutions are licenced or that providers are live. Current release evidence remains governed by the existing source-to-release register.
+
 ## Core experience model
 
 Observe → Understand → Plan → Act → Monitor → Adjust.

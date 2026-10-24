@@ -6,6 +6,14 @@ Language: English (United Kingdom)
 
 Start with the [updated concept note](product/OPFIN_CONCEPT_NOTE.md), [product evolution and current position](product/PRODUCT_EVOLUTION_2026-09-26.md), and [current state](CURRENT_STATE.md). They preserve the original financial-wellbeing ethos while distinguishing the continuing product ambition, source implementation, recorded tests, deployment, acceptance and external activation.
 
+## Institutional B2B and B2B2C operating strategy (proposed, 24 October 2026)
+
+The [institutional operating blueprint](product/OPFIN_B2B_INSTITUTIONAL_OPERATING_BLUEPRINT.md) defines independently complete operating cycles for Investment Clubs, SACCOs, Savings Groups, lenders, People/employers, funds, insurers, providers, programmes and other institutions. The [readiness register](product/OPFIN_INSTITUTIONAL_CAPABILITY_REGISTER.md) and [machine-readable capability register](product/OPFIN_INSTITUTIONAL_CAPABILITY_REGISTER.json) track 12 institution types, source foundations, technical/financial/regulatory acceptance gaps and commercial hypotheses. The [institutional delivery and UAT programme](development/OPFIN_B2B_INSTITUTIONAL_ACCEPTANCE_PROGRAMME.md) specifies task-level outcomes and release gates.
+
+These documents **do not certify institution authorisation or production activation**. An independently useful management SaaS experience is separate from lender, savings/deposit, capital custody, payment settlement, insurance or regulated-product permission. Personal remains the individual's private default Space, and any separate B2C draft PR is not a technical dependency for this strategy.
+
+Validate the structured register with `python3 scripts/verify-institutional-capability-register.py` or the repository's `make docs-check`. Source references and status flags are evidence pointers, not verified live deployment records.
+
 ## Find the right document
 
 | Audience or task | Current reference | Supporting material |
