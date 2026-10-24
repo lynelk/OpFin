@@ -8,7 +8,7 @@ Start with the [updated concept note](product/OPFIN_CONCEPT_NOTE.md), [product e
 
 ## B2C financial companion and offline-first design
 
-[Customer companion, decisions and earned reliance](product/OPFIN_B2C_FINANCIAL_COMPANION_STRATEGY.md) describes the provider-independent consumer growth/product model. The [Lightweight, Offline-First B2C Contract](architecture/B2C_LIGHT_OFFLINE_FIRST_CONTRACT.md) adds device, data, security, draft and sync acceptance requirements and preserves the existing [Lightweight and Sponsored Data Standard](architecture/LIGHTWEIGHT_SPONSORED_DATA.md). These are controlled proposed requirements; review actual accepted delivery separately.
+[Customer companion, decisions and earned reliance](product/OPFIN_B2C_FINANCIAL_COMPANION_STRATEGY.md) describes the provider-independent consumer growth/product model. The [Complete End-User Scope](product/OPFIN_B2C_COMPLETE_END_USER_SCOPE.md) ensures this covers the entire OpFin consumer/member portfolio without functional regressions, including all licensed-provider services and Financial Spaces. The [Lightweight, Offline-First B2C Contract](architecture/B2C_LIGHT_OFFLINE_FIRST_CONTRACT.md) adds device, data, security, draft and sync acceptance requirements and preserves the existing [Lightweight and Sponsored Data Standard](architecture/LIGHTWEIGHT_SPONSORED_DATA.md). These are controlled proposed requirements; review actual accepted delivery separately.
 
 ## Find the right document
 
