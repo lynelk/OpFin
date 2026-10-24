@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:opfin/brand/brand_colors.dart';
 import 'package:opfin/register_screen.dart';
+import 'package:opfin/offline_money_check_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OnboardingScreen extends StatefulWidget{
@@ -10,8 +11,9 @@ class OnboardingScreen extends StatefulWidget{
 class _OnboardingScreenState extends State<OnboardingScreen>{
   final _controller=PageController();int _index=0;
   final _pages=const[
-    _Page(Icons.wallet_outlined,'Know what matters','See what you can borrow, what you owe, and the next action in one place.'),
-    _Page(Icons.shield_outlined,'Borrow with clear costs','Review the amount you receive, fees, interest and repayment dates before you accept.'),
+    _Page(Icons.wallet_outlined,'Know where you stand','Track what you have, what you owe and what is coming up.'),
+    _Page(Icons.calendar_month_outlined,'Plan your next move','Set goals, prepare for bills and make clearer money decisions, even before connecting a provider.'),
+    _Page(Icons.shield_outlined,'Access help when you need it','Learn, plan and explore appropriate financial services at your own pace.'),
   ];
   Future<void> _finish() async{
     final p=await SharedPreferences.getInstance();await p.setBool('seenOnboarding',true);
@@ -39,6 +41,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>{
             _controller.nextPage(duration:MediaQuery.of(context).disableAnimations?Duration.zero:const Duration(milliseconds:250),
               curve:Curves.easeOut);
           }},child:Text(_index==_pages.length-1?'Get started':'Next')))),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: TextButton.icon(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const OfflineMoneyCheckScreen()),
+          ),
+          icon: const Icon(Icons.offline_bolt_outlined),
+          label: const Text('Try a money check without internet'),
+        ),
+      ),
     ])));
 }
 class _Page{const _Page(this.icon,this.title,this.body);final IconData icon;final String title,body;}
