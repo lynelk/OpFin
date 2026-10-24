@@ -10,6 +10,12 @@ This is the canonical **product contract**, not a claim that every proposed work
 
 Use the [source-to-release evidence register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) for current placement, [API integrator guide](../../apps/api/docs/api/INTEGRATOR_GUIDE.md) for actual routes and [role-based training](../manuals/ROLE_BASED_TRAINING_PATHS.md) for operating scenarios. A visible screen or deployed backend is not proof of a live issuer, regulated SACCO, funded lender, investor custody or financial settlement.
 
+## Unified five-direction relationship strategy (extension, 24 October 2026)
+
+**B2C, B2B, B2B2C, C2B and C2B2B are interaction directions within one OpFin, not five competing products.** Direct consumers receive provider-independent planning and full existing financial-life capability. Every institution retains an independently useful operating environment. Members enter its authorised Financial Space without releasing their Personal Space. Customer-originated requests require consent and institution authority; onward two-business processing additionally requires a separate destination mandate, contract, lawful purpose and real provider approval.
+
+[Unified Five-Direction Strategy](OPFIN_UNIFIED_FIVE_DIRECTION_STRATEGY.md) is the cross-domain decision contract. [B2C complete scope](OPFIN_B2C_COMPLETE_END_USER_SCOPE.md), [B2C offline](../architecture/B2C_LIGHT_OFFLINE_FIRST_CONTRACT.md), [institutional B2B blueprint](OPFIN_B2B_INSTITUTIONAL_OPERATING_BLUEPRINT.md) and [functional acceptance](../development/OPFIN_UNIFIED_FIVE_DIRECTION_ACCEPTANCE.md) remain authoritative within their individual domains. Source and UI availability do not certify financial product activation or a fully operational two-business route.
+
 ## Product position
 
 OpFin is a personal financial operating platform with embedded financial services. It starts with the individual, particularly people who are underserved by conventional financial systems, and helps that person understand, manage, plan, protect and improve their financial life. Groups and organisations extend that personal financial life through governed Financial Spaces; they do not replace the individual as OpFin's centre of gravity. Lending is one capability, not the product boundary.
