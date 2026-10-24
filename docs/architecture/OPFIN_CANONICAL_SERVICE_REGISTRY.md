@@ -9,6 +9,14 @@ Authenticated discovery: `GET /api/service-registry`.
 
 The registry identifies Financial Space types, 13 customer-facing service families, 10 shared tools and the 10 mandatory OpFin People modules. It is intentionally metadata, **not** a substitute for live membership, role, commercial entitlement, regulatory eligibility, product activation or readiness checks.
 
+## Unified relationship-mode discovery (24 October 2026)
+
+The existing authenticated `GET /api/service-registry` now includes `registry.relationship_models` for **b2c, b2b, b2b2c, c2b and c2b2b** as source-foundation descriptors. This is intentionally the **same registry**, not an extra identity, marketing funnel, product, API permission endpoint or ledger.
+
+Every model carries `scope`, `owner`, `originator`, `consumer` and `source_foundation`. The `provider_activated: false` entry signals that **this metadata does not attest provider activation**; it does not assert no product is active in any individual environment. `c2b2b.multi_hop_generalised: false` explicitly blocks claims of arbitrary onward delegation. The existing response remains `discovery_only: true` and `activation_authoritative: false`.
+
+Real availability still comes from member/Space permission, customer consent, product/market eligibility, signed institutional and provider contracts, service status and immutable financial finality evidence. See [Unified Five-Direction Strategy](../product/OPFIN_UNIFIED_FIVE_DIRECTION_STRATEGY.md) and [Functional Acceptance](../development/OPFIN_UNIFIED_FIVE_DIRECTION_ACCEPTANCE.md).
+
 ## Ownership and reuse
 
 - Financial Spaces own membership and context boundaries.
