@@ -21,6 +21,12 @@ One person may access authorised Personal, Household, Savings Group, Investment 
 - Sign-in, registration, OTP, account-completion and PIN-reset screens use the current OpFin monogram and shared brand tokens rather than generic financial icons.
 - A second phone is optional.
 
+## Offline-first B2C companion candidate
+
+The consumer model treats better financial decisions and voluntary, earned reliance as equal goals. The Flutter source candidate includes a self-contained **Quick money check** from guest onboarding, authenticated Home and the Home outage view. It uses no network connection or financial provider; the amounts remain ephemeral and are never saved, and its calculation is not a verified account balance or money movement. This single local utility is **not** a claim of comprehensive offline-first personal finance.
+
+Full offline financial drafts, personal money history and protected last-known Financial Compass require further delivery: encrypted user/Space-scoped storage, operation-specific accepted sync APIs, conflict/duplicate testing, data and device budgets, source-freshness labels and privacy/security release review. The generic offline queue and SharedPreferences are not approved for raw personal financial diaries. Read [B2C Offline-First Contract](../../docs/architecture/B2C_LIGHT_OFFLINE_FIRST_CONTRACT.md).
+
 ## Personal Home and everyday money
 
 Home is personal-finance first. It uses the server-authoritative Financial Compass to show recorded available money/safe-to-spend, savings, debt, upcoming obligations, cash-flow context and one useful next action before presenting product choices.
