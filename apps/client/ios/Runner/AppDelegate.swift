@@ -1,10 +1,13 @@
 import CoreLocation
 import Flutter
+import LocalAuthentication
 import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, CLLocationManagerDelegate {
   private let locationChannelName = "co.opfin/location"
+  private var pendingBiometricResult: FlutterResult?
+  private var biometricContext: LAContext?
   private var locationManager: CLLocationManager?
   private var pendingLocationResult: FlutterResult?
   private var requestedPrecise = false
@@ -14,7 +17,56 @@ import UIKit
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
     if let controller = window?.rootViewController as? FlutterViewController {
-      let exports = ClubStatementExports(controller: controller)
+      FlutterMethodChannel(name: "co.opfin/device_biometrics", binaryMessenger: controller.binaryMessenger)
+        .setMethodCallHandler { [weak self] call, result in
+          guard let self else {
+            result(FlutterError(code: "biometric_unavailable", message: "Authentication is unavailable.", details: nil))
+            return
+          }
+          switch call.method {
+          case "availability":
+            let context = LAContext()
+            var error: NSError?
+            let available = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+            let kind: String
+            if available {
+              switch context.biometryType {
+              case .faceID: kind = "face"
+              case .touchID: kind = "fingerprint"
+              default: kind = "biometric"
+              }
+            } else { kind = "none" }
+            result(["available": available, "kind": kind])
+          case "authenticate":
+            guard self.pendingBiometricResult == nil else {
+              result(FlutterError(code: "biometric_busy", message: "Authentication is already open.", details: nil))
+              return
+            }
+            let context = LAContext()
+            var error: NSError?
+            guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+              result(false); return
+            }
+            context.localizedFallbackTitle = ""
+            context.localizedCancelTitle = "Use OpFin PIN"
+            self.biometricContext = context
+            self.pendingBiometricResult = result
+            let reason = ((call.arguments as? [String: Any])?["reason"] as? String)
+              ?? "Confirm your identity for OpFin"
+            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+              localizedReason: String(reason.prefix(120))) { [weak self] accepted, _ in
+                DispatchQueue.main.async {
+                  guard let self else { return }
+                  let callback = self.pendingBiometricResult
+                  self.pendingBiometricResult = nil
+                  self.biometricContext = nil
+                  callback?(accepted)
+                }
+            }
+          default: result(FlutterMethodNotImplemented)
+          }
+        }
+            let exports = ClubStatementExports(controller: controller)
       statementExports = exports
       FlutterMethodChannel(name: "co.opfin/club_statement_export", binaryMessenger: controller.binaryMessenger)
         .setMethodCallHandler { [weak exports] call, result in
