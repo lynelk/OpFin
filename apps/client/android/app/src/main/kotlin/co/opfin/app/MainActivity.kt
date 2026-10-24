@@ -9,7 +9,6 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt
-import android.hardware.fingerprint.FingerprintManager
 import android.os.Build
 import android.os.CancellationSignal
 import android.net.Uri
@@ -84,16 +83,12 @@ class MainActivity : FlutterActivity() {
 
     @Suppress("DEPRECATION")
     private fun biometricAvailable(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val manager = getSystemService(Context.BIOMETRIC_SERVICE) as? BiometricManager
-            manager?.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
-        } else {
-            // API 28 supports the OS biometric prompt but exposes enrolment
-            // through the fingerprint manager. Older devices retain PIN login.
-            val manager = getSystemService(Context.FINGERPRINT_SERVICE) as? FingerprintManager
-            manager?.isHardwareDetected == true && manager?.hasEnrolledFingerprints() == true
-        }
+        // Use the framework enrolment check available since Android 10.
+        // Android 9 and older remain supported through OpFin PIN login.
+        // Never treat a secure screen lock as an enrolled biometric.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        val manager = getSystemService(Context.BIOMETRIC_SERVICE) as? BiometricManager
+        return manager?.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
     }
 
     private fun completeBiometric(result: Boolean) {
