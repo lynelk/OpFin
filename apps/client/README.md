@@ -83,6 +83,16 @@ Offline actions use bounded queues and bounded sync batches. Oversized or sensit
 
 Client-facing hosts are controlled by `distribution/sponsored-data/whitelist-manifest.json`. New SDKs, media sources, direct provider hosts, polling loops or background traffic require a data-impact and whitelist review before release. See `../../docs/architecture/LIGHTWEIGHT_SPONSORED_DATA.md`.
 
+## Optional Touch ID, Face ID and Android biometrics (24 October 2026 candidate)
+
+Customers can opt into **native, operating-system biometric device unlock** under **More → Device security** or **Profile & security → Device biometrics**. On a supported device with enrolled biometrics, the app verifies the customer's choice, stores the opt-in securely per account, and requires local face/fingerprint verification before opening a previously authenticated cold-start session. A declined, unavailable or locked-out prompt cannot unlock Home; **Use OpFin PIN** returns to full server sign-in. Opted-in users also confirm native biometrics before a default payout-wallet change, while the server continues to own the real wallet permission and mutation.
+
+The current native Android route supports SDK 28+ where enrolled; older phones continue with PIN. Biometric samples never leave the device. This candidate is not proof of a complete resume-from-background lock, a server-authenticated transaction signature or full device/security UAT.
+
+**Apple Pay and Google Pay are not live checkout methods for the initial Ugandan OpFin release.** The Wallets screen remains the management interface for actual verified payout and repayment accounts, not a place to select tokenised card checkout as a disbursement wallet. A fail-closed, market/provider/product-aware wallet readiness policy is introduced, but live tokenised checkout requires an approved acquirer, merchant, issuer/card and country permissions, verified quote, signed settlement and separate app-store review.
+
+See [Device Biometrics and Express Wallets](../../docs/architecture/DEVICE_BIOMETRICS_EXPRESS_WALLETS.md) and [Unified Five-Direction Strategy](../../docs/product/OPFIN_UNIFIED_FIVE_DIRECTION_STRATEGY.md).
+
 ## Identity verification
 
 Where a selected service requires identity evidence, the App follows the configured KYC contract, including NIN and required document/selfie evidence.
