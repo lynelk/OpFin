@@ -54,6 +54,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('UGX -50,000'), findsOneWidget);
+    // The privacy explanation follows the result below the initial viewport.
+    await tester.drag(find.byType(ListView), const Offset(0, -450));
+    await tester.pumpAndSettle();
     expect(find.textContaining('not saved'), findsOneWidget);
   });
 }
