@@ -92,7 +92,7 @@ class MainActivity : FlutterActivity() {
             // API 28 supports the OS biometric prompt but exposes enrolment
             // through the fingerprint manager. Older devices retain PIN login.
             val manager = getSystemService(Context.FINGERPRINT_SERVICE) as? FingerprintManager
-            manager?.isHardwareDetected == true && manager.hasEnrolledFingerprints()
+            manager?.isHardwareDetected == true && manager?.hasEnrolledFingerprints() == true
         }
     }
 
