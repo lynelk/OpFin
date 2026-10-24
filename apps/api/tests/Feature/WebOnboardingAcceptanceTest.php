@@ -80,7 +80,7 @@ class WebOnboardingAcceptanceTest extends TestCase
             'stage' => 'kyb',
             'requirements' => ['registration_number' => 'PRIVATE-REG-001'],
             'evidence' => ['internal_note' => 'Institution due diligence only'],
-        ])->assertOk()->assertHeader('Cache-Control', 'private, no-store');
+        ])->assertOk()->assertHeader('Cache-Control', 'no-store, private');
 
         DB::table('financial_space_memberships')->insert([
             'financial_space_id' => $spaceId,
@@ -100,7 +100,7 @@ class WebOnboardingAcceptanceTest extends TestCase
         Sanctum::actingAs($member);
         $this->getJson("/api/financial-spaces/{$spaceId}/workspace")
             ->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store')
+            ->assertHeader('Cache-Control', 'no-store, private')
             ->assertJsonPath('data.onboarding', null)
             ->assertDontSee('PRIVATE-REG-001')
             ->assertDontSee('Institution due diligence only');
