@@ -52,7 +52,9 @@ export default async function OrganisationSetup({ searchParams }: { searchParams
         <p>Current status: {onboarding?.status ?? "not started"}. Select a stage to resume.</p>
         <nav aria-label="Onboarding stages">{stages.map(stage => <Link key={stage} href={`/setup/organisation?space=${id}&stage=${stage}`} style={{ marginRight: 12 }}>{stage}</Link>)}</nav>
         {["investment_club","savings_group"].includes(selected.type) ? <p>Group membership and governance configuration continues inside its Financial Space. Institutional KYB is not required for this group workflow.</p> : <>
-          <form className="form-grid" action={saveOrganisationStage}>
+          {onboarding?.status === "submitted" ? (
+            <p role="status">This organisation case is submitted and locked for review. Financial products remain subject to independent approval and verification.</p>
+          ) : <form className="form-grid" action={saveOrganisationStage}>
             <input type="hidden" name="space" value={id} /><input type="hidden" name="stage" value={current}/><input type="hidden" name="next" value={next}/>
             <p>Stage {index+1} of {stages.length}: {current}</p>
             <label className="field">Registered organisation name<input name="organisation_name" defaultValue={requirements.organisation_name ?? selected.name} maxLength={160} required /></label>
@@ -61,7 +63,7 @@ export default async function OrganisationSetup({ searchParams }: { searchParams
             <label className="field">Website (optional)<input type="url" name="website" defaultValue={requirements.website ?? ""} maxLength={254}/></label>
             <button className="button" type="submit">Save and continue</button>
             {current === "certification" && <button className="button secondary" name="submit" value="yes" type="submit">Submit for review</button>}
-          </form>
+          </form>}
           <p className="muted">Submission is for review, not automatic approval or service activation.</p>
         </>}
         <Link href={`/spaces/${id}`}>Open authorised Financial Space</Link>

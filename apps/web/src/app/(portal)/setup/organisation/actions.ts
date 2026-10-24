@@ -55,7 +55,7 @@ export async function saveOrganisationStage(form: FormData): Promise<void> {
   };
   try {
     await call(`/financial-spaces/${id}/organisation-onboarding`, "PUT", {
-      stage, requirements, evidence: {}, submit: submitted
+      stage, requirements, submit: submitted
     });
   } catch {
     redirect(`/setup/organisation?space=${id}&error=save`);

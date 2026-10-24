@@ -6,6 +6,10 @@
 **North Star retained:** *Every financial life deserves a future worth looking forward to.*  
 **Customer promise retained:** *Your next step, clearer.*
 
+## Relationship strategy alignment (24 October 2026)
+
+This B2B/B2B2C institutional specification is a **domain component** of the [Unified Five-Direction Strategy](OPFIN_UNIFIED_FIVE_DIRECTION_STRATEGY.md), not an alternative to B2C, C2B or C2B2B. Institution-owned software remains independently viable. Its lawful member-facing (B2B2C), customer-requested (C2B) and customer-confirmed institution-to-institution (C2B2B) relationships use the same identity, Financial Space, permission, consent and money-state controls. The [Unified Functional Acceptance Register](../development/OPFIN_UNIFIED_FIVE_DIRECTION_ACCEPTANCE.md) sets cross-mode tests and release boundaries.
+
 ## 1. Executive decision
 
 Build **one governed institutional foundation with distinctly complete operating products for each institution type**, not one generic dashboard with 15 interchangeable cards. OpFin is useful to an institution **before** it originates a loan, integrates a provider or redirects a consumer into OpFin Finance. End-to-end operating journeys, clear money ownership, member access, institutional controls and sustainable economics define completion.

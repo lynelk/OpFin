@@ -10,9 +10,25 @@ This is the canonical **product contract**, not a claim that every proposed work
 
 Use the [source-to-release evidence register](../operations/DOCUMENTATION_ALIGNMENT_2026-10-21.md) for current placement, [API integrator guide](../../apps/api/docs/api/INTEGRATOR_GUIDE.md) for actual routes and [role-based training](../manuals/ROLE_BASED_TRAINING_PATHS.md) for operating scenarios. A visible screen or deployed backend is not proof of a live issuer, regulated SACCO, funded lender, investor custody or financial settlement.
 
+## Unified five-direction relationship strategy (extension, 24 October 2026)
+
+**B2C, B2B, B2B2C, C2B and C2B2B are interaction directions within one OpFin, not five competing products.** Direct consumers receive provider-independent planning and full existing financial-life capability. Every institution retains an independently useful operating environment. Members enter its authorised Financial Space without releasing their Personal Space. Customer-originated requests require consent and institution authority; onward two-business processing additionally requires a separate destination mandate, contract, lawful purpose and real provider approval.
+
+[Unified Five-Direction Strategy](OPFIN_UNIFIED_FIVE_DIRECTION_STRATEGY.md) is the cross-domain decision contract. [B2C complete scope](OPFIN_B2C_COMPLETE_END_USER_SCOPE.md), [B2C offline](../architecture/B2C_LIGHT_OFFLINE_FIRST_CONTRACT.md), [institutional B2B blueprint](OPFIN_B2B_INSTITUTIONAL_OPERATING_BLUEPRINT.md) and [functional acceptance](../development/OPFIN_UNIFIED_FIVE_DIRECTION_ACCEPTANCE.md) remain authoritative within their individual domains. Source and UI availability do not certify financial product activation or a fully operational two-business route.
+
 ## Product position
 
 OpFin is a personal financial operating platform with embedded financial services. It starts with the individual, particularly people who are underserved by conventional financial systems, and helps that person understand, manage, plan, protect and improve their financial life. Groups and organisations extend that personal financial life through governed Financial Spaces; they do not replace the individual as OpFin's centre of gravity. Lending is one capability, not the product boundary.
+
+### B2C financial companion, useful reliance and offline-first access (extension candidate)
+
+The B2C experience aims at **better financial decisions** and **earned, voluntary day-to-day reliance**, together. OpFin is the continuing personal financial memory, commitment calendar, guidance and progress companion. Dependability is a feature; artificial lock-in, compulsory check-ins and commission-biased recommendations are not. The customer must retain control of lawful personal records and consent.
+
+**Lightweight offline-first behaviour is foundational for the target audience.** Basic education, a self-contained money check and appropriate local planning must offer value without an active financial provider or continuous connection. Subsequent private record caching and offline drafts require encrypted, user/Space-scoped storage, explicit accepted-operation allowlists, secure sync conflict handling and strict draft-versus-confirmed labelling. Offline never means a transaction, provider balance, credit decision, custody or settlement can be confirmed without the authoritative service.
+
+The [Complete B2C End-User Capability and Channel Parity Contract](OPFIN_B2C_COMPLETE_END_USER_SCOPE.md) preserves **all** existing and planned applicable consumer/member capabilities: personal financial management, lending, savings, investment, protection, payments, statements, Financial Spaces, groups, clubs, SACCOs, People/employment, support and privacy. The strategy is not permission to reduce the existing feature set. Complete B2C support means safe graceful offline behaviour for each domain, not offline finality for regulated transactions.
+
+The controlled scope, sequencing and acceptance requirements are in [B2C Financial Companion Strategy](OPFIN_B2C_FINANCIAL_COMPANION_STRATEGY.md) and [B2C Lightweight, Offline-First Contract](../architecture/B2C_LIGHT_OFFLINE_FIRST_CONTRACT.md). Source and documentation changes alone do not certify encrypted offline records or a customer-ready release.
 
 ## North Star: Every financial life deserves a future worth looking forward to
 

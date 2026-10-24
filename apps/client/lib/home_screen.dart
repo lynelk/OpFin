@@ -10,6 +10,7 @@ import 'package:opfin/my_employment_screen.dart';
 import 'package:opfin/financial_hubs.dart';
 import 'package:opfin/protection_screen.dart';
 import 'package:opfin/personal_money_screen.dart';
+import 'package:opfin/offline_money_check_screen.dart';
 import 'package:opfin/kyc_setup_screen.dart';
 import 'package:opfin/loan_application_screen.dart';
 import 'package:opfin/loan_applications_screen.dart';
@@ -125,6 +126,14 @@ class _HomePageState extends State<_HomePage> {
     await _reload();
   }
 
+  void _openOfflineMoneyCheck() {
+    // This calculator has no network, account or persistence dependency.
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const OfflineMoneyCheckScreen()),
+    );
+  }
+
   Future<void> _openSavings() async {
     await _open(Scaffold(
       appBar: AppBar(title: const Text('Savings & goals')),
@@ -216,6 +225,17 @@ class _HomePageState extends State<_HomePage> {
                   const SizedBox(height: 12),
                   FilledButton(
                       onPressed: _reload, child: const Text('Try again')),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                      onPressed: _openOfflineMoneyCheck,
+                      icon: const Icon(Icons.offline_bolt_outlined),
+                      label: const Text('Use the offline money check')),
+                  const SizedBox(height: 8),
+                  const Text(
+                      'Your account balances are unavailable until OpFin reconnects. '
+                      'The quick money check uses only figures you enter.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: OpFinColors.muted)),
                 ]);
               }
 
@@ -370,6 +390,16 @@ class _HomePageState extends State<_HomePage> {
                     style:
                         TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
+                Card(
+                    child: ListTile(
+                        leading: const Icon(Icons.offline_bolt_outlined),
+                        title: const Text('Quick money check',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: const Text(
+                            'Estimate your next money decision without mobile data. '
+                            'Nothing is sent or saved.'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: _openOfflineMoneyCheck)),
                 Card(
                     child: ListTile(
                         leading: const Icon(Icons.insights_outlined),

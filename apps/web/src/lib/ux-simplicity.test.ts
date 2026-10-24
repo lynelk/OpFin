@@ -53,12 +53,24 @@ describe("launch customer journey simplicity", () => {
     const kyc = source("../../../client/lib/kyc_setup_screen.dart");
 
     expect(onboarding).toContain("Skip");
-    expect(onboarding).toContain("Know what matters");
+    expect(onboarding).toContain("Know where you stand");
+    expect(onboarding).toContain("Try a money check without internet");
+    expect(onboarding).toContain("Get started");
     expect(accessibility).toContain("VoiceOver");
     expect(accessibility).toContain("TalkBack");
     expect(accessibility).toContain("Larger text");
     expect(kyc).toContain("I need help with this step");
     expect(kyc).toContain("Request assistance");
+  });
+
+  it("keeps submitted institution KYB in read-only review and preserves prior evidence", () => {
+    const setup = source("../app/(portal)/setup/organisation/page.tsx");
+    const actions = source("../app/(portal)/setup/organisation/actions.ts");
+
+    expect(setup).toContain('onboarding?.status === "submitted"');
+    expect(setup).toContain("submitted and locked for review");
+    expect(actions).toContain("stage, requirements, submit: submitted");
+    expect(actions).not.toContain("evidence: {}");
   });
 
   it("never asks for broad media or SMS permissions in Android manifest", () => {
