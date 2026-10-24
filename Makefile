@@ -36,6 +36,7 @@ client-test:
 docs-check:
 	python3 scripts/verify-documentation-drift.py
 	python3 scripts/verify-publication-readiness.py
+	python3 scripts/verify-institutional-capability-register.py
 
 publication-check:
 	python3 scripts/verify-publication-readiness.py
