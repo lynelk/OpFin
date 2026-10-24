@@ -71,7 +71,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "apps/api/routes/club_accounting.php",
         "apps/api/docs/api/CLUB_ACCOUNTING.md",
@@ -81,7 +80,8 @@
       "financial_activation_gate": "External account authenticity, club mandate, issuer/custodian evidence, maker/checker, accepted statement matching and provider payout finality",
       "offline_scope": "Previously authorised member statements and encrypted non-final proposals where security approved; no offline payouts",
       "pricing_hypothesis": "Institution subscription; optional advanced governance/portfolio reporting",
-      "north_star_metric": "Accurate member capital and reconciled month-end statement; time to close; distribution disputes"
+      "north_star_metric": "Accurate member capital and reconciled month-end statement; time to close; distribution disputes",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "sacco",
@@ -143,7 +143,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "apps/api/routes/sacco_core.php",
         "docs/development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md",
@@ -152,7 +151,8 @@
       "financial_activation_gate": "Current institution-specific regulator, custody, product authority, funded lender and exact external receipt plus immutable subledger and maker/checker",
       "offline_scope": "Permitted member read-only cached statements and protected draft requests only; no deposit or loan offline approval",
       "pricing_hypothesis": "Scale- and enabled-module-based institutional subscription",
-      "north_star_metric": "Statement/GL reconciliation; PAR/NPL and liquidity; approved loan turnaround; complaints"
+      "north_star_metric": "Statement/GL reconciliation; PAR/NPL and liquidity; approved loan turnaround; complaints",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "savings_group",
@@ -211,7 +211,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "apps/api/routes/savings_group_cycles.php",
         "apps/client/lib/savings_groups_workspace_screen.dart",
@@ -220,7 +219,8 @@
       "financial_activation_gate": "Group mandate, member consent, payer/payee verification, matched receipts, agreement, fees and real settlement",
       "offline_scope": "Group diary/meeting/pledge drafts only after secure user+Space storage; never settled money",
       "pricing_hypothesis": "Low predictable group fee; optionally programme-sponsored",
-      "north_star_metric": "Verified contribution coverage, share-out accuracy, disputes, completed cycles"
+      "north_star_metric": "Verified contribution coverage, share-out accuracy, disputes, completed cycles",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "lender",
@@ -281,7 +281,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "docs/architecture/LENDER_ORCHESTRATION.md",
         "docs/product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md",
@@ -290,7 +289,8 @@
       "financial_activation_gate": "Actual licensed lender of record, approved product/capital, pricing, country/store policy, borrower consent/affordability and finality/reconciliation",
       "offline_scope": "Education/affordability planning and last-confirmed data only; never approve/fund/recover loan offline",
       "pricing_hypothesis": "Institution platform/servicing contract and permitted origination fees",
-      "north_star_metric": "Risk-adjusted contribution margin, PAR/NPL, reconciled repayments, turnaround and borrower complaints"
+      "north_star_metric": "Risk-adjusted contribution margin, PAR/NPL, reconciled repayments, turnaround and borrower complaints",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "employer",
@@ -350,7 +350,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "docs/architecture/OPFIN_PEOPLE_CORE_RELEASE_SCOPE.md",
         "apps/client/lib/people_hub_screen.dart"
@@ -358,7 +357,8 @@
       "financial_activation_gate": "Employer payroll is not payment; no employee Personal Space disclosure; certified statutory rules and real remittance evidence",
       "offline_scope": "Role-scoped attendance and field drafts only under approved encrypted/replay-safe queue",
       "pricing_hypothesis": "Employer subscription plus scoped user/feature tiers",
-      "north_star_metric": "Payroll accuracy, field/attendance exception closure, leave throughput and cost-to-serve"
+      "north_star_metric": "Payroll accuracy, field/attendance exception closure, leave throughput and cost-to-serve",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "investment_fund",
@@ -410,7 +410,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "docs/product/OPFIN_CANONICAL_PRODUCT_BREAKDOWN.md",
         "docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md"
@@ -418,7 +417,8 @@
       "financial_activation_gate": "Applicable CMA/market authority, legal mandate, suitability, custody, valuation and distribution rights",
       "offline_scope": "Approved educational scenarios and labelled last-known reports; no investments offline",
       "pricing_hypothesis": "Mandate/platform subscription and lawful administration fee",
-      "north_star_metric": "Custodian reconciliation, permitted mandate concentration, on-time investor statements"
+      "north_star_metric": "Custodian reconciliation, permitted mandate concentration, on-time investor statements",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "insurer",
@@ -470,7 +470,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md",
         "docs/product/OPFIN_CANONICAL_PRODUCT_BREAKDOWN.md"
@@ -478,7 +477,8 @@
       "financial_activation_gate": "Actual insurer/underwriter and approved product, policy issuance evidence, premium reconciliation and claims authority",
       "offline_scope": "Policy explanatory content and permitted stale-labelled view; no policy activation offline",
       "pricing_hypothesis": "Platform/servicing and legally permitted distribution fees",
-      "north_star_metric": "Policy status accuracy, premium reconciliation, servicing turnaround and complaints"
+      "north_star_metric": "Policy status accuracy, premium reconciliation, servicing turnaround and complaints",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "payment_provider",
@@ -529,7 +529,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "docs/product/PARTNER_FINANCIAL_COMPLIANCE_REPORTING_STANDARD.md",
         "docs/development/FINANCIAL_SPACES_COMMERCIAL_OPERATIONS_2026-09-29.md"
@@ -537,7 +536,8 @@
       "financial_activation_gate": "Verified payment provider authority, named executor, real status and receipt, reversals, dispute and settlement assurance",
       "offline_scope": "None for executing money instructions; explain last confirmed state",
       "pricing_hypothesis": "Contracted integration and permitted service fees",
-      "north_star_metric": "Reconciliation latency, exception ageing, duplications and transaction cost"
+      "north_star_metric": "Reconciliation latency, exception ageing, duplications and transaction cost",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "programme",
@@ -587,14 +587,14 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "docs/product/INCLUSIVE_FINANCE_PROGRAMME_FRAMEWORK.md"
       ],
       "financial_activation_gate": "Programme grant and active participant consent; programme outcomes not credit eligible by default",
       "offline_scope": "Reviewed educational materials and explicitly allowed draft field instruments",
       "pricing_hypothesis": "Contracted implementation, reporting and managed programme services",
-      "north_star_metric": "Valid records, intervention completion, independent outcome quality and support cost"
+      "north_star_metric": "Valid records, intervention completion, independent outcome quality and support cost",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "merchant_partner",
@@ -644,7 +644,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "apps/api/docs/api/PARTNER_FINANCIAL_INTENTS.md",
         "docs/product/OPFIN_FINANCE_EVIDENCE_LED_CREDIT_PROGRAMME.md"
@@ -652,7 +651,8 @@
       "financial_activation_gate": "No merchant-originated loan without customer confirmation, provider authority and independent decision",
       "offline_scope": "Draft financing needs only; no third-party data sync or credit approval offline",
       "pricing_hypothesis": "Permitted integration and referral contract fees",
-      "north_star_metric": "Consent-to-valid-intent rate, correct disbursement beneficiary and support burden"
+      "north_star_metric": "Consent-to-valid-intent rate, correct disbursement beneficiary and support burden",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "fintech_partner",
@@ -703,7 +703,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "apps/api/docs/api/INTEGRATOR_GUIDE.md",
         "docs/development/SACCO_AND_WHITE_LABEL_COMPLETION_2026-09-29.md"
@@ -711,7 +710,8 @@
       "financial_activation_gate": "No API scope grants financial licence, member permission or payment settlement authority",
       "offline_scope": "Documentation locally possible; scoped API/network calls online only",
       "pricing_hypothesis": "Contracted API/platform fees with metering and support costs",
-      "north_star_metric": "Time to certified integration, uptime, active tenant cost and reconciliation"
+      "north_star_metric": "Time to certified integration, uptime, active tenant cost and reconciliation",
+      "financial_activation_status": "not_attested_by_this_register"
     },
     {
       "code": "welfare_association",
@@ -763,7 +763,6 @@
       "readiness_status": "requires_exact_head_and_external_evidence",
       "regulatory_status": "per_institution_per_product_verification_required",
       "commercial_price_approved": null,
-      "financially_activated": false,
       "source_evidence_paths": [
         "docs/architecture/FINANCIAL_SPACES_DOMAIN_MODEL.md",
         "docs/COMMUNITY_FINANCE_AND_SACCO_CORE.md"
@@ -771,7 +770,8 @@
       "financial_activation_gate": "Governing instrument, legal structure and actual funds/custodian authority; welfare claims not paid until verified",
       "offline_scope": "Member dues/claim drafts once secure store approved",
       "pricing_hypothesis": "Small organisation subscription or sponsored group tier",
-      "north_star_metric": "Dues reconciliation, member claim resolution and governance disputes"
+      "north_star_metric": "Dues reconciliation, member claim resolution and governance disputes",
+      "financial_activation_status": "not_attested_by_this_register"
     }
   ]
 }
